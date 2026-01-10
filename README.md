@@ -1,9 +1,11 @@
-# 🎓 AlphaZero — Modern Online Academy for Syrian 12th Grade Students
+# 🎓 AlphaZero 
 
 > **Empowering students. Elevating teachers. Revolutionizing Syrian education.**
 
 EduSyria is a next-generation **e-learning platform** designed to bring high-quality education, interactive quizzes, and a vibrant learning community to Syrian high school students.  
 Built for **low-bandwidth reliability**, **localized payment challenges**, and **real teacher empowerment**.
+
+a tenat-based saas for schools and universities to adopt as their online academy.
 
 ---
 
@@ -28,7 +30,8 @@ The first version focuses on the **12th grade** national subjects with:
 - 💬 **Community Q&A per course** (like Reddit/Stack Overflow)  
 - 🪙 **Gamification:** Tokens, badges, and leaderboards  
 - 🧩 **Role-based access control (RBAC)** with advanced roles:
-  - Admin  
+  - SuperAdmin for the whole app 
+  - Admin For tenat
   - Teacher / Co-worker  
   - Student  
   - Library Manager / Worker  
@@ -43,10 +46,10 @@ The first version focuses on the **12th grade** national subjects with:
 | **Frontend** | React & Flutter (Kotlin & Swift for better native performance in the future) |
 | **Backend** | ASP.NET Core Web API with JWT Authentication |
 | **Storage** | AWS S3 for videos and files |
-| **Database** | PostgreSQL (relational data with transactions) & MongoDB for quizzes|
+| **Database** | PostgreSQL (relational data with transactions) & DynamoDB for quizzes|
 | **Hosting** | AWS |
 | **Auth** | Identity + Role-based access (Admin, Teacher, Student, etc.) |
-| **Payments** | Code-based library system (offline sales) + Online Payments using Cards |
+| **Payments** | Code-based library system (offline sales) + Online Payments using Cards + Banks in syria (Sham Cash, Syriatel Cash, MTN Cash) |
 | **Community** | Threaded discussions per course & per tenat |
 | **AI Integration (future)** | Smart quiz generation & student progress analytics |
 ---
