@@ -54,3 +54,4 @@ TestResult.xml
 nunit-*.xml
 # Drawio Temp files
 *.bkp
+*.dtmp
