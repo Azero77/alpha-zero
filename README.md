@@ -1,6 +1,13 @@
 # 🎓 AlphaZero Learning Academy
 
 > **Empowering Students. Elevating Teachers. Revolutionizing Digital Education.**
+> **Shopify For Schools"
+
+As a school or academy they can manage:
+their own academy
+their own courses
+their own branding
+their own teachers
 
 AlphaZero is a next-generation **Tenant-Based SaaS e-learning platform** designed for schools and universities to launch their own online academies. Built for **low-bandwidth reliability**, **localized payment challenges** (offline codes), and **professional pedagogical workflows** (handwritten exam grading).
 

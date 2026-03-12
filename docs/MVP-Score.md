@@ -11,3 +11,68 @@ the app at its mvp should:
 5- the ability for teachers to track their students progress and see his courses statistics.
 
 6- Accounts can only be activated in one place at a time, so if a student logs in on a new device, the old session will be terminated.
+
+
+Phase 1:
+Multi-tenant
+Course videos
+Code redemption
+Quizzes
+
+
+Phase 2:
+Teacher grading
+discussion
+analytics
+
+Phase3:
+gamification
+AI features
+mobile offline
+
+
+MVP v1 Features
+
+Tenant system
+
+Create tenant
+
+subdomain routing
+
+tenant branding
+
+Course system
+
+courses
+
+lessons
+
+videos
+
+Student
+
+enroll
+
+watch lesson
+
+track progress
+
+Code redemption
+
+redeem code
+
+unlock course
+
+Quiz
+
+MCQ
+
+true/false
+
+Remove for now:
+
+❌ community
+❌ gamification
+❌ handwritten grading
+❌ advanced exams
+❌ leaderboards
