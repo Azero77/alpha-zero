@@ -13,6 +13,22 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "aspire", "aspire", "{02EA68
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Modules", "Modules", "{67CAD9C1-6ACD-4FEC-8FC4-1304E4070C85}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "VideoStreaming", "VideoStreaming", "{AE8C0CEC-A6F4-4BD9-9B8B-BA6E1B5F7D03}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Application", "src\Modules\VideoStreaming\Application\Application.csproj", "{98C42B3C-B7E7-438C-B619-C8308BDF26A8}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Infrastructure", "src\Modules\VideoStreaming\Infrastructure\Infrastructure.csproj", "{6EE941D2-BA91-49CD-BB56-D71194D50791}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IntegrationEvents", "src\Modules\VideoStreaming\IntegrationEvents\IntegrationEvents.csproj", "{2B45EBB8-740A-4D51-9659-935FA0DAB2C7}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AlphaZero.Shared", "AlphaZero.Shared\AlphaZero.Shared.csproj", "{1F3330DF-E05E-4114-86DA-E67CA745B58B}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{FBFC60C1-3CDC-4960-86B3-8EB0531B0CE6}"
+	ProjectSection(SolutionItems) = preProject
+		.editorconfig = .editorconfig
+		Directory.Packages.props = Directory.Packages.props
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -31,6 +47,22 @@ Global
 		{276F6FC8-D38F-D8E1-4EC3-A533A1160F45}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{276F6FC8-D38F-D8E1-4EC3-A533A1160F45}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{276F6FC8-D38F-D8E1-4EC3-A533A1160F45}.Release|Any CPU.Build.0 = Release|Any CPU
+		{98C42B3C-B7E7-438C-B619-C8308BDF26A8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{98C42B3C-B7E7-438C-B619-C8308BDF26A8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{98C42B3C-B7E7-438C-B619-C8308BDF26A8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{98C42B3C-B7E7-438C-B619-C8308BDF26A8}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6EE941D2-BA91-49CD-BB56-D71194D50791}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6EE941D2-BA91-49CD-BB56-D71194D50791}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6EE941D2-BA91-49CD-BB56-D71194D50791}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6EE941D2-BA91-49CD-BB56-D71194D50791}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2B45EBB8-740A-4D51-9659-935FA0DAB2C7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2B45EBB8-740A-4D51-9659-935FA0DAB2C7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2B45EBB8-740A-4D51-9659-935FA0DAB2C7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2B45EBB8-740A-4D51-9659-935FA0DAB2C7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1F3330DF-E05E-4114-86DA-E67CA745B58B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1F3330DF-E05E-4114-86DA-E67CA745B58B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1F3330DF-E05E-4114-86DA-E67CA745B58B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1F3330DF-E05E-4114-86DA-E67CA745B58B}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -38,6 +70,10 @@ Global
 	GlobalSection(NestedProjects) = preSolution
 		{E4A265BF-7210-4BF0-8D2A-13702781B1C0} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
 		{276F6FC8-D38F-D8E1-4EC3-A533A1160F45} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
+		{AE8C0CEC-A6F4-4BD9-9B8B-BA6E1B5F7D03} = {67CAD9C1-6ACD-4FEC-8FC4-1304E4070C85}
+		{98C42B3C-B7E7-438C-B619-C8308BDF26A8} = {AE8C0CEC-A6F4-4BD9-9B8B-BA6E1B5F7D03}
+		{6EE941D2-BA91-49CD-BB56-D71194D50791} = {AE8C0CEC-A6F4-4BD9-9B8B-BA6E1B5F7D03}
+		{2B45EBB8-740A-4D51-9659-935FA0DAB2C7} = {AE8C0CEC-A6F4-4BD9-9B8B-BA6E1B5F7D03}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {A4D73EED-30AF-4218-9197-D39806BE2055}
