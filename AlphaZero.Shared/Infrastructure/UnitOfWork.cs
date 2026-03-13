@@ -17,19 +17,28 @@ public class UnitOfWork<TContext> : IUnitOfWork
         _publisher = publisher;
     }
 
-    public async Task<int> SaveChangesAsync()
+    public async Task<int> SaveChangesAsync(CancellationToken cancellationToken)
     {
-        var domainEvents = _context.ChangeTracker
+        var entities = _context.ChangeTracker
             .Entries<AggregateRoot>()
-            .SelectMany(e => e.Entity.PopDomainEvents())
+            .ToList()
             ;
-        if (domainEvents is not null)
+
+        var domainEvents = entities
+            .SelectMany(e => e.Entity.PopDomainEvents())
+            .ToList();
+
+        if (domainEvents is not null
+            &&
+            domainEvents.Any())
         {
             foreach (var domainEvent in domainEvents)
             {
-                await _publisher.Publish(domainEvent);
+                await _publisher.Publish(domainEvent,cancellationToken);
             }
         }
-        return await _context.SaveChangesAsync();
+        //here we are saving after the domain events run, we see that domain changes and domain events changes are all one part of a transaction
+        //and everything exceeds the bounded context should be raised by the application layer and handled by an outbox and then a background service to publish the integration event
+        return await _context.SaveChangesAsync(cancellationToken);
     }
 }
