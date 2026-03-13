@@ -1,0 +1,6 @@
+@AlphaZero.API_HostAddress = http://localhost:5053
+
+GET {{AlphaZero.API_HostAddress}}/
+Accept: application/json
+
+###
