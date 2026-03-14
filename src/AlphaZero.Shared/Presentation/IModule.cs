@@ -1,9 +1,7 @@
 ﻿using Autofac;
-using Autofac.Core;
 using Autofac.Extensions.DependencyInjection;
 using MediatR;
-using Microsoft.EntityFrameworkCore;
-using System.Windows.Input;
+using Microsoft.Extensions.DependencyInjection;
 
 public interface IModule
 {

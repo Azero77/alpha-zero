@@ -2,24 +2,22 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
-using System.Threading.Tasks.Sources;
 
 namespace Presentation.Features;
 
-public static class RequestUpload
+public static class GetVideo
 {
-    public record Request();
-    public record Response();
     public class Endpoint : IEndpoint
     {
+        public record Request(Guid videoId);
+        public record Response(string presignedUrl);
         public void MapEndpoint(IEndpointRouteBuilder app)
         {
-            app.MapGet("/api/upload", Handler);
+            app.MapGet("api/video/{videoId:guid}", Handler);
         }
-
-        private IResult Handler(Request request)
+        public IResult Handler(Request request)
         {
-            return Results.Ok(new Response());
+            throw new NotImplementedException();
         }
     }
 }

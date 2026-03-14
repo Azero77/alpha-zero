@@ -1,4 +1,5 @@
 
+using Aspire.Shared;
 using Autofac;
 using Autofac.Extensions.DependencyInjection;
 using Presentation;
@@ -15,18 +16,18 @@ public class Program
 
         // Add services to the container.
         builder.Services.AddAuthorization();
-
+        ConfigureAWSResources(builder);
         // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
         builder.Services.AddOpenApi();
         List<Type> modules = AppDomain.CurrentDomain.GetAssemblies()
             .Where(a => !a.IsDynamic && (a.FullName?.StartsWith("AlphaZero") ?? false))
             .SelectMany(c => c.GetTypes().Where(t => t.IsClass && !t.IsAbstract && typeof(AppModule).IsAssignableFrom(t)))
             .ToList();
-        ConfigureModules(builder,modules);
+        ConfigureModules(builder, modules);
         var app = builder.Build();
 
+        InitializeModules(app, modules);
         app.MapDefaultEndpoints();
-        InitializeModules(app,modules);
 
         // Configure the HTTP request pipeline.
         if (app.Environment.IsDevelopment())
@@ -39,6 +40,13 @@ public class Program
         app.UseAuthorization();
 
         app.Run();
+    }
+
+    private static void ConfigureAWSResources(WebApplicationBuilder builder)
+    {
+        AWSResources awsResources = new();
+        builder.Configuration.Bind(AWSResources.Section, awsResources);
+        builder.Services.AddSingleton<AWSResources>(awsResources);
     }
 
     private static void InitializeModules(WebApplication app,IEnumerable<Type> modules)
