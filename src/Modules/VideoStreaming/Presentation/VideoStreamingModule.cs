@@ -1,22 +1,22 @@
-﻿using Autofac;
+﻿using Application;
+using Autofac;
 using MediatR;
+using Microsoft.Extensions.DependencyInjection;
+using System.Reflection;
 
 namespace Presentation;
 
-public class VideoStreamingModule : Module,IModule
+public class VideoStreamingModule : AppModule
 {
-    public Task Register(ContainerBuilder services)
+    public override void Register(IServiceCollection moduleServices, ContainerBuilder builder)
     {
-        throw new NotImplementedException();
+        moduleServices.AddMediatR(opts => opts.RegisterServicesFromAssembly(typeof(IVideoStreamingApplicationMarker).Assembly));
     }
 
-    public Task<TResponse> Send<TRequest, TResponse>(IRequestHandler<TRequest, TResponse> handler) where TRequest : IRequest<TResponse>
+    public override Task<TResponse> Send<TRequest, TResponse>(IRequest<TResponse> request)
     {
-        throw new NotImplementedException();
-    }
-
-    protected override void Load(ContainerBuilder builder)
-    {
-        base.Load(builder);
+        if (Scope is null) throw new NotImplementedException("Container not implemented");
+        var mediatr = Scope.Resolve<IMediator>();
+        return mediatr.Send(request);
     }
 }

@@ -1,4 +1,5 @@
 ﻿using Autofac;
+using Autofac.Core;
 using Autofac.Extensions.DependencyInjection;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -8,7 +9,7 @@ public interface IModule
 {
     Task<TResponse> Send<TRequest,TResponse>(IRequest<TResponse> request)
         where TRequest : IRequest<TResponse>;
-    void Register(IServiceCollection services);
+    void Register(IServiceCollection services, ContainerBuilder builder);
 
     void Initialize(ILifetimeScope scope);
 }
@@ -24,13 +25,13 @@ public abstract class AppModule : Module, IModule
         Scope = root.BeginLifetimeScope(b => b.RegisterModule(this));
     }
 
-    public abstract void Register(IServiceCollection moduleServices);
+    public abstract void Register(IServiceCollection moduleServices,ContainerBuilder builder);
 
     public abstract Task<TResponse> Send<TRequest, TResponse>(IRequest<TResponse> request) where TRequest : IRequest<TResponse>;
     protected override void Load(ContainerBuilder builder)
     {
         ServiceCollection services = new();
-        Register(services);
+        Register(services,builder);
         builder.Populate(services);
     }
 
