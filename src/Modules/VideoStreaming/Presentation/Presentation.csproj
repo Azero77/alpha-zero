@@ -4,7 +4,15 @@
     <TargetFramework>net9.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <AssemblyName>AlphaZero.Modules.VideoStreaming.Presentation</AssemblyName>
   </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="AWSSDK.CloudFront" />
+    <PackageReference Include="AWSSDK.Extensions.NETCore.Setup" />
+    <PackageReference Include="AWSSDK.S3" />
+    <PackageReference Include="ErrorOr" />
+  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\..\AlphaZero.Shared\AlphaZero.Shared.csproj" />

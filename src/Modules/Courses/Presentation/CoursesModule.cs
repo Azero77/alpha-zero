@@ -1,25 +1,22 @@
-﻿using Amazon.S3;
-using Application;
-using Autofac;
+﻿using Autofac;
 using Infrastructure;
 using MediatR;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using System.ComponentModel.DataAnnotations;
-using System.Reflection;
 
 namespace Presentation;
 
-public class VideoStreamingModule : AppModule
+public class CoursesModule : AppModule
 {
     public override void Register(IServiceCollection moduleServices, ContainerBuilder builder)
     {
         IConfiguration configuration = Scope?.Resolve<IConfiguration>() ?? throw new ArgumentException("Configuration in VideoStreaming are not found");
-        moduleServices.AddVideoStreamingInfrastructure(configuration);
+        moduleServices.AddCoursesInfrastructure(configuration);
     }
 
     public override Task<TResponse> Send<TRequest, TResponse>(IRequest<TResponse> request)
     {
+
         if (Scope is null) throw new NotImplementedException("Container not implemented");
         var mediatr = Scope.Resolve<IMediator>();
         return mediatr.Send(request);

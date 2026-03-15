@@ -1,8 +1,9 @@
 
+using AlphaZero.API.Shared;
+using Amazon.Extensions.NETCore.Setup;
 using Aspire.Shared;
 using Autofac;
 using Autofac.Extensions.DependencyInjection;
-using Presentation;
 using System.Reflection;
 
 namespace AlphaZero.API;
@@ -18,9 +19,20 @@ public class Program
         builder.Services.AddAuthorization();
         ConfigureAWSResources(builder);
         // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
-        builder.Services.AddOpenApi();
+        builder.Services.AddEndpointsApiExplorer();
+        builder.Services.AddSwaggerGen();
+
+        string[] assembliesPath = Directory.GetFiles(AppDomain.CurrentDomain.BaseDirectory, "*.dll");
+        foreach (var path in assembliesPath)
+        {
+            var assemblyName = AssemblyName.GetAssemblyName(path);
+            if (assemblyName.FullName.StartsWith("AlphaZero"))
+            {
+                Assembly.Load(assemblyName);
+            }
+        }
+
         List<Type> modules = AppDomain.CurrentDomain.GetAssemblies()
-            .Where(a => !a.IsDynamic && (a.FullName?.StartsWith("AlphaZero") ?? false))
             .SelectMany(c => c.GetTypes().Where(t => t.IsClass && !t.IsAbstract && typeof(AppModule).IsAssignableFrom(t)))
             .ToList();
         ConfigureModules(builder, modules);
@@ -28,11 +40,14 @@ public class Program
 
         InitializeModules(app, modules);
         app.MapDefaultEndpoints();
+        MapModulesEndpoint(app,modules);
 
         // Configure the HTTP request pipeline.
         if (app.Environment.IsDevelopment())
         {
-            app.MapOpenApi();
+
+            app.UseSwagger();
+            app.UseSwaggerUI();
         }
 
         app.UseHttpsRedirection();
@@ -42,11 +57,33 @@ public class Program
         app.Run();
     }
 
+    private static void MapModulesEndpoint(IEndpointRouteBuilder app,List<Type> modules)
+    {
+        foreach (var module in modules)
+        {
+            var endpointTypes = module.Assembly
+                .GetTypes()
+                .Where(t => !t.IsAbstract && t.IsClass && typeof(IEndpoint).IsAssignableFrom(t))
+                .ToList();
+
+            var endpoints = endpointTypes.Select(s =>
+            {
+                return (IEndpoint) Activator.CreateInstance(s)!;
+            });
+            foreach (var endpoint in endpoints)
+            {
+                endpoint.MapEndpoint(app);
+            }
+        }
+    }
+
     private static void ConfigureAWSResources(WebApplicationBuilder builder)
     {
         AWSResources awsResources = new();
+        AWSOptions options = builder.Configuration.GetAWSOptions();
         builder.Configuration.Bind(AWSResources.Section, awsResources);
         builder.Services.AddSingleton<AWSResources>(awsResources);
+        builder.Services.AddDefaultAWSOptions(options);
     }
 
     private static void InitializeModules(WebApplication app,IEnumerable<Type> modules)
