@@ -1,27 +1,13 @@
 <mxfile host="Electron" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/29.6.1 Chrome/142.0.7444.265 Electron/39.8.0 Safari/537.36" version="29.6.1">
   <diagram name="Page-1" id="2YBvvXClWsGukQMizWep">
-    <mxGraphModel dx="3877" dy="1529" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+    <mxGraphModel dx="2436" dy="801" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
-        <mxCell id="fEhu-Im4XUsm7cLr4Col-2" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="" vertex="1">
-          <mxGeometry height="730" width="1020" x="-460" y="40" as="geometry" />
-        </mxCell>
-        <mxCell id="fEhu-Im4XUsm7cLr4Col-4" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="" vertex="1">
-          <mxGeometry height="730" width="1020" x="650" y="50" as="geometry" />
-        </mxCell>
         <mxCell id="DL8JMz-Yp9jN-7elxGjb-4" edge="1" parent="1" source="DL8JMz-Yp9jN-7elxGjb-1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="DL8JMz-Yp9jN-7elxGjb-3" value="">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
         <mxCell id="DL8JMz-Yp9jN-7elxGjb-5" connectable="0" parent="DL8JMz-Yp9jN-7elxGjb-4" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" value="1" vertex="1">
-          <mxGeometry relative="1" x="-0.2711" y="4" as="geometry">
-            <mxPoint as="offset" />
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="fEhu-Im4XUsm7cLr4Col-5" edge="1" parent="1" source="fEhu-Im4XUsm7cLr4Col-9" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="fEhu-Im4XUsm7cLr4Col-15" value="">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="fEhu-Im4XUsm7cLr4Col-6" connectable="0" parent="fEhu-Im4XUsm7cLr4Col-5" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" value="1" vertex="1">
           <mxGeometry relative="1" x="-0.2711" y="4" as="geometry">
             <mxPoint as="offset" />
           </mxGeometry>
@@ -34,19 +20,8 @@
             <mxPoint as="offset" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="fEhu-Im4XUsm7cLr4Col-7" edge="1" parent="1" source="fEhu-Im4XUsm7cLr4Col-9" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="fEhu-Im4XUsm7cLr4Col-21" value="">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="fEhu-Im4XUsm7cLr4Col-8" connectable="0" parent="fEhu-Im4XUsm7cLr4Col-7" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" value="Upload using the url directly to s3" vertex="1">
-          <mxGeometry relative="1" x="-0.1385" y="-2" as="geometry">
-            <mxPoint as="offset" />
-          </mxGeometry>
-        </mxCell>
         <mxCell id="DL8JMz-Yp9jN-7elxGjb-1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="User wants to upload" vertex="1">
           <mxGeometry height="60" width="120" x="-20" y="130" as="geometry" />
-        </mxCell>
-        <mxCell id="fEhu-Im4XUsm7cLr4Col-9" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="User wants to upload" vertex="1">
-          <mxGeometry height="60" width="120" x="1090" y="140" as="geometry" />
         </mxCell>
         <mxCell id="DL8JMz-Yp9jN-7elxGjb-19" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="DL8JMz-Yp9jN-7elxGjb-18" value="">
           <mxGeometry relative="1" as="geometry">
@@ -70,9 +45,6 @@
         <mxCell id="DL8JMz-Yp9jN-7elxGjb-3" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="api/upload" vertex="1">
           <mxGeometry height="60" width="120" x="365" y="130" as="geometry" />
         </mxCell>
-        <mxCell id="fEhu-Im4XUsm7cLr4Col-15" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="api/upload" vertex="1">
-          <mxGeometry height="60" width="120" x="1475" y="140" as="geometry" />
-        </mxCell>
         <mxCell id="DL8JMz-Yp9jN-7elxGjb-6" edge="1" parent="1" source="DL8JMz-Yp9jN-7elxGjb-3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.984;entryY=0.818;entryDx=0;entryDy=0;entryPerimeter=0;" target="DL8JMz-Yp9jN-7elxGjb-1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
@@ -82,19 +54,6 @@
           </mxGeometry>
         </mxCell>
         <mxCell id="DL8JMz-Yp9jN-7elxGjb-8" connectable="0" parent="DL8JMz-Yp9jN-7elxGjb-6" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" value="2" vertex="1">
-          <mxGeometry relative="1" x="0.2098" y="2" as="geometry">
-            <mxPoint as="offset" />
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="fEhu-Im4XUsm7cLr4Col-16" edge="1" parent="1" source="fEhu-Im4XUsm7cLr4Col-15" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.984;entryY=0.818;entryDx=0;entryDy=0;entryPerimeter=0;" target="fEhu-Im4XUsm7cLr4Col-9">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="fEhu-Im4XUsm7cLr4Col-17" connectable="0" parent="fEhu-Im4XUsm7cLr4Col-16" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" value="return signed url" vertex="1">
-          <mxGeometry relative="1" x="0.5636" y="1" as="geometry">
-            <mxPoint as="offset" />
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="fEhu-Im4XUsm7cLr4Col-18" connectable="0" parent="fEhu-Im4XUsm7cLr4Col-16" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" value="2" vertex="1">
           <mxGeometry relative="1" x="0.2098" y="2" as="geometry">
             <mxPoint as="offset" />
           </mxGeometry>
@@ -110,43 +69,17 @@
         <mxCell id="DL8JMz-Yp9jN-7elxGjb-9" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="S3 for storing&amp;nbsp;&lt;div&gt;videos without segmentation&lt;/div&gt;" vertex="1">
           <mxGeometry height="60" width="120" x="-20" y="270" as="geometry" />
         </mxCell>
-        <mxCell id="fEhu-Im4XUsm7cLr4Col-42" edge="1" parent="1" source="fEhu-Im4XUsm7cLr4Col-21" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="fEhu-Im4XUsm7cLr4Col-41" value="">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="fEhu-Im4XUsm7cLr4Col-54" edge="1" parent="1" source="fEhu-Im4XUsm7cLr4Col-21" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" value="">
-          <mxGeometry relative="1" as="geometry">
-            <mxPoint x="1290" y="310.0000000000001" as="targetPoint" />
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="fEhu-Im4XUsm7cLr4Col-21" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="S3 for storing&amp;nbsp;&lt;div&gt;videos without segmentation&lt;/div&gt;" vertex="1">
-          <mxGeometry height="60" width="120" x="1090" y="280" as="geometry" />
-        </mxCell>
-        <mxCell id="fEhu-Im4XUsm7cLr4Col-60" edge="1" parent="1" source="fEhu-Im4XUsm7cLr4Col-58" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="fEhu-Im4XUsm7cLr4Col-23">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="fEhu-Im4XUsm7cLr4Col-58" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="&lt;br&gt;&lt;span style=&quot;text-wrap-mode: nowrap; font-size: 11px; background-color: rgb(18, 18, 18); float: none; display: inline !important; color: rgb(255, 255, 255);&quot;&gt;Transcoder&lt;/span&gt;&lt;div style=&quot;text-wrap-mode: nowrap; font-size: 11px; color: rgb(255, 255, 255);&quot;&gt;By media converter&amp;nbsp;&lt;/div&gt;&lt;div style=&quot;text-wrap-mode: nowrap; font-size: 11px; color: rgb(255, 255, 255);&quot;&gt;or lambda&lt;/div&gt;" vertex="1">
-          <mxGeometry height="60" width="120" x="1150" y="440" as="geometry" />
-        </mxCell>
         <mxCell id="DL8JMz-Yp9jN-7elxGjb-24" edge="1" parent="1" source="DL8JMz-Yp9jN-7elxGjb-12" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="DL8JMz-Yp9jN-7elxGjb-23" value="">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
         <mxCell id="DL8JMz-Yp9jN-7elxGjb-12" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="S3 for streaming&lt;div&gt;segments&amp;nbsp;&lt;/div&gt;&lt;div&gt;using DASH&lt;/div&gt;" vertex="1">
           <mxGeometry height="60" width="120" x="330" y="270" as="geometry" />
         </mxCell>
-        <mxCell id="fEhu-Im4XUsm7cLr4Col-23" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="S3 for streaming&lt;div&gt;segments&amp;nbsp;&lt;/div&gt;&lt;div&gt;using DASH&lt;/div&gt;" vertex="1">
-          <mxGeometry height="60" width="120" x="1420" y="410" as="geometry" />
-        </mxCell>
         <mxCell id="DL8JMz-Yp9jN-7elxGjb-15" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="S3 stores encrypted videos&amp;nbsp;" vertex="1">
           <mxGeometry height="40" width="120" x="-20" y="330" as="geometry" />
         </mxCell>
-        <mxCell id="fEhu-Im4XUsm7cLr4Col-24" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="S3 stores encrypted videos&amp;nbsp;" vertex="1">
-          <mxGeometry height="40" width="120" x="1090" y="340" as="geometry" />
-        </mxCell>
         <mxCell id="DL8JMz-Yp9jN-7elxGjb-16" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="Segments are encrypted along side the envolope key" vertex="1">
           <mxGeometry height="40" width="129" x="330" y="220" as="geometry" />
-        </mxCell>
-        <mxCell id="fEhu-Im4XUsm7cLr4Col-25" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="Segments are encrypted along side the envolope key" vertex="1">
-          <mxGeometry height="40" width="129" x="1440" y="230" as="geometry" />
         </mxCell>
         <mxCell id="DL8JMz-Yp9jN-7elxGjb-18" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="api/lessons/{id}" vertex="1">
           <mxGeometry height="60" width="120" x="190" y="610" as="geometry" />
@@ -199,44 +132,6 @@
         </mxCell>
         <mxCell id="DL8JMz-Yp9jN-7elxGjb-32" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="CDM" vertex="1">
           <mxGeometry height="60" width="120" x="150" y="510" as="geometry" />
-        </mxCell>
-        <mxCell id="fEhu-Im4XUsm7cLr4Col-3" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="&lt;font style=&quot;font-size: 48px;&quot;&gt;Video Streaming&lt;/font&gt;" vertex="1">
-          <mxGeometry height="80" width="360" x="-420" y="60" as="geometry" />
-        </mxCell>
-        <mxCell id="fEhu-Im4XUsm7cLr4Col-40" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="&lt;span style=&quot;font-size: 48px;&quot;&gt;Video Uploading&lt;/span&gt;" vertex="1">
-          <mxGeometry height="80" width="360" x="690" y="70" as="geometry" />
-        </mxCell>
-        <mxCell id="fEhu-Im4XUsm7cLr4Col-44" edge="1" parent="1" source="fEhu-Im4XUsm7cLr4Col-41" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="fEhu-Im4XUsm7cLr4Col-43" value="">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="fEhu-Im4XUsm7cLr4Col-47" edge="1" parent="1" source="fEhu-Im4XUsm7cLr4Col-41" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="fEhu-Im4XUsm7cLr4Col-43" value="">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="fEhu-Im4XUsm7cLr4Col-49" connectable="0" parent="fEhu-Im4XUsm7cLr4Col-47" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" value="Sends events" vertex="1">
-          <mxGeometry relative="1" x="-0.8932" y="-1" as="geometry">
-            <mxPoint as="offset" />
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="fEhu-Im4XUsm7cLr4Col-41" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="Raise&amp;nbsp;&lt;div&gt;VideoUploaded Event(CourseId,UserId,...)&lt;/div&gt;" vertex="1">
-          <mxGeometry height="70" width="160" x="870" y="275" as="geometry" />
-        </mxCell>
-        <mxCell id="fEhu-Im4XUsm7cLr4Col-43" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="Emailing" vertex="1">
-          <mxGeometry height="70" width="160" x="770" y="410" as="geometry" />
-        </mxCell>
-        <mxCell id="fEhu-Im4XUsm7cLr4Col-48" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="Courses Module to&amp;nbsp;&lt;div&gt;store new videos to the db&lt;/div&gt;" vertex="1">
-          <mxGeometry height="70" width="160" x="950" y="410" as="geometry" />
-        </mxCell>
-        <mxCell id="fEhu-Im4XUsm7cLr4Col-50" edge="1" parent="1" source="fEhu-Im4XUsm7cLr4Col-41" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.572;entryY=0.012;entryDx=0;entryDy=0;entryPerimeter=0;" target="fEhu-Im4XUsm7cLr4Col-48">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="fEhu-Im4XUsm7cLr4Col-59" edge="1" parent="1" source="fEhu-Im4XUsm7cLr4Col-41" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.494;entryY=0.103;entryDx=0;entryDy=0;entryPerimeter=0;" target="fEhu-Im4XUsm7cLr4Col-58">
-          <mxGeometry relative="1" as="geometry">
-            <Array as="points">
-              <mxPoint x="950" y="380" />
-              <mxPoint x="1209" y="380" />
-              <mxPoint x="1209" y="426" />
-            </Array>
-          </mxGeometry>
         </mxCell>
       </root>
     </mxGraphModel>

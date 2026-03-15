@@ -10,13 +10,12 @@ public static class GetVideo
 {
     public class Endpoint : IEndpoint
     {
-        public record Request(Guid videoId);
         public record Response(string presignedUrl);
         public void MapEndpoint(IEndpointRouteBuilder app)
         {
             app.MapGet("api/video/{videoId:guid}", Handler);
         }
-        public IResult Handler([AsParameters] Request request)
+        public IResult Handler(Guid videoId)
         {
             throw new NotImplementedException();
         }
