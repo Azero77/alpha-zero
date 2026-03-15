@@ -10,8 +10,9 @@ public class CoursesModule : AppModule
 {
     public override void Register(IServiceCollection moduleServices, ContainerBuilder builder)
     {
-        IConfiguration configuration = Scope?.Resolve<IConfiguration>() ?? throw new ArgumentException("Configuration in VideoStreaming are not found");
-        moduleServices.AddCoursesInfrastructure(configuration);
+        moduleServices.AddCoursesInfrastructure(Configuration ?? 
+        throw new ArgumentException("Configuration in Courses are not found")
+            );
     }
 
     public override Task<TResponse> Send<TRequest, TResponse>(IRequest<TResponse> request)

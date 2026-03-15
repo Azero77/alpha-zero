@@ -15,8 +15,10 @@ public static class DependencyInjection
         var awsOptions = configuration.GetAWSOptions();
         services.AddMediatR(opts => opts.RegisterServicesFromAssembly(typeof(ICoursesApplicationMarker).Assembly));
         services.AddSingleton<IAmazonS3>(sp => awsOptions.CreateServiceClient<IAmazonS3>());
-        AWSResources awsResources = configuration.GetValue<AWSResources>(AWSResources.Section) ?? throw new ArgumentException("AWS Resources are not configured in VideoStreaming module");
-        services.AddSingleton<S3Settings>(awsResources.s3 ?? throw new ArgumentException("S3 is not configured in video streaming"));
+        AWSResources awsResources = configuration.GetSection(AWSResources.Section).Get<AWSResources>() ?? throw new ArgumentException("AWS Resources are not configured in Courses module");
+        services.AddSingleton<S3Settings>(awsResources.s3 ?? throw new ArgumentException("S3 is not configured in Courses module"));
+
+        services.AddSingleton<IUploadService, S3UploadService>();
 
     }
 }

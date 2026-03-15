@@ -14,8 +14,8 @@ public class VideoStreamingModule : AppModule
 {
     public override void Register(IServiceCollection moduleServices, ContainerBuilder builder)
     {
-        IConfiguration configuration = Scope?.Resolve<IConfiguration>() ?? throw new ArgumentException("Configuration in VideoStreaming are not found");
-        moduleServices.AddVideoStreamingInfrastructure(configuration);
+        if (Configuration == null) throw new ArgumentException("Configuration in VideoStreaming are not found");
+        moduleServices.AddVideoStreamingInfrastructure(Configuration);
     }
 
     public override Task<TResponse> Send<TRequest, TResponse>(IRequest<TResponse> request)

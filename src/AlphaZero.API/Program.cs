@@ -1,4 +1,3 @@
-
 using AlphaZero.API.Shared;
 using Amazon.Extensions.NETCore.Setup;
 using Aspire.Shared;
@@ -103,7 +102,14 @@ public class Program
         {
             foreach (var module in modules)
             {
-                containerBuilder.RegisterType(module).AsSelf().SingleInstance();
+                var moduleInstance = (IModule)Activator.CreateInstance(module)!;
+                moduleInstance.Configuration = builder.Configuration;
+                
+                // Register as a native Autofac module to run Load() on the root container
+                containerBuilder.RegisterModule((Autofac.Module)moduleInstance);
+                
+                // Register the instance so it can be resolved during InitializeModules
+                containerBuilder.RegisterInstance(moduleInstance).AsSelf().As<IModule>().SingleInstance();
             }
         });
     }

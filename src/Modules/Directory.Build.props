@@ -1,0 +1,13 @@
+<Project>
+  <PropertyGroup>
+    <!-- Get the relative path from the Modules folder to the project folder -->
+    <RelativeProjectPath>$([MSBuild]::MakeRelative($(MSBuildThisFileDirectory), $(MSBuildProjectDirectory)))</RelativeProjectPath>
+    
+    <!-- Clean up path separators and convert to dots for namespace -->
+    <ModuleDotPath>$(RelativeProjectPath.Replace('\', '.').Replace('/', '.'))</ModuleDotPath>
+    
+    <!-- Automatically set AssemblyName and RootNamespace -->
+    <AssemblyName>AlphaZero.Modules.$(ModuleDotPath)</AssemblyName>
+    <RootNamespace>$(AssemblyName)</RootNamespace>
+  </PropertyGroup>
+</Project>
