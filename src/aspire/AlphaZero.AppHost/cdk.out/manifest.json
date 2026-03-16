@@ -18,7 +18,7 @@
         "validateOnSynth": false,
         "assumeRoleArn": "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/cdk-hnb659fds-deploy-role-${AWS::AccountId}-${AWS::Region}",
         "cloudFormationExecutionRoleArn": "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/cdk-hnb659fds-cfn-exec-role-${AWS::AccountId}-${AWS::Region}",
-        "stackTemplateAssetObjectUrl": "s3://cdk-hnb659fds-assets-${AWS::AccountId}-${AWS::Region}/52ff44e12363da124ccf2468eac7310eca893680241c03a9bdf9ce292941a8c2.json",
+        "stackTemplateAssetObjectUrl": "s3://cdk-hnb659fds-assets-${AWS::AccountId}-${AWS::Region}/3af8b1538072f3bb4802e6df5f4e49e15d35340d7738a7aa6e0a91a89f70a92c.json",
         "requiresBootstrapStackVersion": 6,
         "bootstrapStackVersionSsmParameter": "/cdk-bootstrap/hnb659fds/version",
         "additionalDependencies": [
@@ -34,10 +34,52 @@
         "AlphaZero-Aspire.assets"
       ],
       "metadata": {
+        "/AlphaZero-Aspire/VideoUploadedQueue/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "VideoUploadedQueueB8BA2A18"
+          }
+        ],
+        "/AlphaZero-Aspire/VideoUploadedQueue/Policy/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "VideoUploadedQueuePolicy217159B7"
+          }
+        ],
         "/AlphaZero-Aspire/s3/Resource": [
           {
             "type": "aws:cdk:logicalId",
             "data": "s3100BEDFB"
+          }
+        ],
+        "/AlphaZero-Aspire/s3/Notifications/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "s3NotificationsEE96A7AB"
+          }
+        ],
+        "/AlphaZero-Aspire/BucketNotificationsHandler050a0587b7544547bf325f094a3db834/Role/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "BucketNotificationsHandler050a0587b7544547bf325f094a3db834RoleB6FB88EC"
+          }
+        ],
+        "/AlphaZero-Aspire/BucketNotificationsHandler050a0587b7544547bf325f094a3db834/Role/DefaultPolicy/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "BucketNotificationsHandler050a0587b7544547bf325f094a3db834RoleDefaultPolicy2CF63D36"
+          }
+        ],
+        "/AlphaZero-Aspire/BucketNotificationsHandler050a0587b7544547bf325f094a3db834/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "BucketNotificationsHandler050a0587b7544547bf325f094a3db8347ECC3691"
+          }
+        ],
+        "/AlphaZero-Aspire/VideoUploadedQueue22816915QueueUrl": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "VideoUploadedQueue22816915QueueUrl"
           }
         ],
         "/AlphaZero-Aspire/s3634A090EBucketName": [
