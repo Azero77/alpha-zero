@@ -1,16 +1,16 @@
 {
   "version": "48.0.0",
   "files": {
-    "3af8b1538072f3bb4802e6df5f4e49e15d35340d7738a7aa6e0a91a89f70a92c": {
+    "1f35ca44282894edd0f710c992fc676de9714b9a0d3f6df68894579c5d658ba3": {
       "displayName": "AlphaZero-Aspire Template",
       "source": {
         "path": "AlphaZero-Aspire.template.json",
         "packaging": "file"
       },
       "destinations": {
-        "current_account-current_region-f5ab78e0": {
+        "current_account-current_region-8268950a": {
           "bucketName": "cdk-hnb659fds-assets-${AWS::AccountId}-${AWS::Region}",
-          "objectKey": "3af8b1538072f3bb4802e6df5f4e49e15d35340d7738a7aa6e0a91a89f70a92c.json",
+          "objectKey": "1f35ca44282894edd0f710c992fc676de9714b9a0d3f6df68894579c5d658ba3.json",
           "assumeRoleArn": "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/cdk-hnb659fds-file-publishing-role-${AWS::AccountId}-${AWS::Region}"
         }
       }

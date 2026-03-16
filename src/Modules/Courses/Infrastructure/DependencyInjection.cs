@@ -1,8 +1,12 @@
-﻿using AlphaZero.Modules.Courses.Infrastructure.Consumers;
+using AlphaZero.Modules.Courses.Infrastructure.Consumers;
+using AlphaZero.Modules.Courses.Infrastructure.Workers;
 using Amazon.Extensions.NETCore.Setup;
 using Amazon.S3;
+using Amazon.S3.Util;
+using Amazon.SQS;
 using Application;
 using Aspire.Shared;
+using Autofac.Core;
 using MassTransit;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -12,31 +16,22 @@ namespace Infrastructure;
 
 public static class DependencyInjection
 {
-    public static void AddCoursesInfrastructure(this IServiceCollection services,IConfiguration configuration)
+    public static void AddCoursesGlobalInfrastructure(this IServiceCollection services,IConfiguration configuration)
     {
-
-        var awsOptions = configuration.GetAWSOptions(); 
-        services.AddMediatR(opts => opts.RegisterServicesFromAssembly(typeof(ICoursesApplicationMarker).Assembly));
-        services.AddSingleton<IAmazonS3>(sp => awsOptions.CreateServiceClient<IAmazonS3>());
         AWSResources awsResources = configuration.GetSection(AWSResources.Section).Get<AWSResources>() ?? throw new ArgumentException("AWS Resources are not configured in Courses module");
-        services.AddSingleton<S3Settings>(awsResources.s3 ?? throw new ArgumentException("S3 is not configured in Courses module"));
-        services.AddSingleton<IUploadService, S3UploadService>();
-        services.AddMassTransit(x =>
-        {
-            x.AddConsumers(typeof(DependencyInjection).Assembly);
-            x.UsingAmazonSqs((context,cfg) =>
-            {
-                if (awsOptions.Region != null)
-                {
-                    cfg.Host(awsOptions.Region.SystemName, s => { });
-                }
-                cfg.ConfigureEndpoints(context);
-                cfg.ReceiveEndpoint(awsResources.VideoUploadedQueue?.QueueUrl ?? "",e =>
-                {
-                    e.ConfigureConsumer<VideoUploadedConsumer>(context);
-                });
-            });
-        });
+        services.AddHostedService<S3VideoUploadedSQSPoller>();
+        services.AddAWSService<IAmazonSQS>();
 
     }
+
+    public static void AddCoursesPrivateInfrastructure(this IServiceCollection moduleServices,IConfiguration configuration)
+    {
+        AWSResources awsResources = configuration.GetSection(AWSResources.Section).Get<AWSResources>() ?? throw new ArgumentException("AWS Resources are not configured in Courses module");
+        var awsOptions = configuration.GetAWSOptions();
+        moduleServices.AddMediatR(opts => opts.RegisterServicesFromAssembly(typeof(ICoursesApplicationMarker).Assembly));
+        moduleServices.AddSingleton<IAmazonS3>(sp => awsOptions.CreateServiceClient<IAmazonS3>());
+        moduleServices.AddSingleton<S3Settings>(awsResources.s3 ?? throw new ArgumentException("S3 is not configured in Courses module"));
+        moduleServices.AddSingleton<IUploadService, S3UploadService>();
+    }
+
 }

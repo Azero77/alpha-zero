@@ -8,9 +8,16 @@ namespace Presentation;
 
 public class CoursesModule : AppModule
 {
-    public override void Register(IServiceCollection moduleServices, ContainerBuilder builder)
+    public override void RegisterGlobal(IServiceCollection globalServices)
     {
-        moduleServices.AddCoursesInfrastructure(Configuration ?? 
+        globalServices.AddCoursesGlobalInfrastructure(Configuration ?? 
+        throw new ArgumentException("Configuration in Courses are not found")
+            );
+    }
+
+    public override void RegisterPrivate(IServiceCollection moduleServices, ContainerBuilder builder)
+    {
+        moduleServices.AddCoursesPrivateInfrastructure(Configuration ??
         throw new ArgumentException("Configuration in Courses are not found")
             );
     }

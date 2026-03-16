@@ -18,7 +18,7 @@
         "validateOnSynth": false,
         "assumeRoleArn": "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/cdk-hnb659fds-deploy-role-${AWS::AccountId}-${AWS::Region}",
         "cloudFormationExecutionRoleArn": "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/cdk-hnb659fds-cfn-exec-role-${AWS::AccountId}-${AWS::Region}",
-        "stackTemplateAssetObjectUrl": "s3://cdk-hnb659fds-assets-${AWS::AccountId}-${AWS::Region}/3af8b1538072f3bb4802e6df5f4e49e15d35340d7738a7aa6e0a91a89f70a92c.json",
+        "stackTemplateAssetObjectUrl": "s3://cdk-hnb659fds-assets-${AWS::AccountId}-${AWS::Region}/1f35ca44282894edd0f710c992fc676de9714b9a0d3f6df68894579c5d658ba3.json",
         "requiresBootstrapStackVersion": 6,
         "bootstrapStackVersionSsmParameter": "/cdk-bootstrap/hnb659fds/version",
         "additionalDependencies": [
@@ -34,6 +34,18 @@
         "AlphaZero-Aspire.assets"
       ],
       "metadata": {
+        "/AlphaZero-Aspire/s3/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "s3100BEDFB"
+          }
+        ],
+        "/AlphaZero-Aspire/s3/Notifications/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "s3NotificationsEE96A7AB"
+          }
+        ],
         "/AlphaZero-Aspire/VideoUploadedQueue/Resource": [
           {
             "type": "aws:cdk:logicalId",
@@ -46,16 +58,22 @@
             "data": "VideoUploadedQueuePolicy217159B7"
           }
         ],
-        "/AlphaZero-Aspire/s3/Resource": [
+        "/AlphaZero-Aspire/VideoUploadedQueue/AlphaZeroAspireVideoUploadedEvent9B869654/Resource": [
           {
             "type": "aws:cdk:logicalId",
-            "data": "s3100BEDFB"
+            "data": "VideoUploadedQueueAlphaZeroAspireVideoUploadedEvent9B8696541CD7B9B2"
           }
         ],
-        "/AlphaZero-Aspire/s3/Notifications/Resource": [
+        "/AlphaZero-Aspire/VideoUploadedEvent/Resource": [
           {
             "type": "aws:cdk:logicalId",
-            "data": "s3NotificationsEE96A7AB"
+            "data": "VideoUploadedEvent74AA2431"
+          }
+        ],
+        "/AlphaZero-Aspire/VideoUploadedEvent/Policy/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "VideoUploadedEventPolicyA8EBB2E4"
           }
         ],
         "/AlphaZero-Aspire/BucketNotificationsHandler050a0587b7544547bf325f094a3db834/Role/Resource": [
@@ -76,16 +94,16 @@
             "data": "BucketNotificationsHandler050a0587b7544547bf325f094a3db8347ECC3691"
           }
         ],
-        "/AlphaZero-Aspire/VideoUploadedQueue22816915QueueUrl": [
-          {
-            "type": "aws:cdk:logicalId",
-            "data": "VideoUploadedQueue22816915QueueUrl"
-          }
-        ],
         "/AlphaZero-Aspire/s3634A090EBucketName": [
           {
             "type": "aws:cdk:logicalId",
             "data": "s3634A090EBucketName"
+          }
+        ],
+        "/AlphaZero-Aspire/VideoUploadedQueue22816915QueueUrl": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "VideoUploadedQueue22816915QueueUrl"
           }
         ],
         "/AlphaZero-Aspire/BootstrapVersion": [

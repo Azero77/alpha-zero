@@ -1,6 +1,6 @@
 <mxfile host="Electron" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/29.6.1 Chrome/142.0.7444.265 Electron/39.8.0 Safari/537.36" version="29.6.1">
   <diagram name="Page-1" id="2YBvvXClWsGukQMizWep">
-    <mxGraphModel dx="3877" dy="1529" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+    <mxGraphModel dx="2131" dy="647" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
@@ -125,7 +125,7 @@
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
         <mxCell id="fEhu-Im4XUsm7cLr4Col-58" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="&lt;br&gt;&lt;span style=&quot;text-wrap-mode: nowrap; font-size: 11px; background-color: rgb(18, 18, 18); float: none; display: inline !important; color: rgb(255, 255, 255);&quot;&gt;Transcoder&lt;/span&gt;&lt;div style=&quot;text-wrap-mode: nowrap; font-size: 11px; color: rgb(255, 255, 255);&quot;&gt;By media converter&amp;nbsp;&lt;/div&gt;&lt;div style=&quot;text-wrap-mode: nowrap; font-size: 11px; color: rgb(255, 255, 255);&quot;&gt;or lambda&lt;/div&gt;" vertex="1">
-          <mxGeometry height="60" width="120" x="1150" y="440" as="geometry" />
+          <mxGeometry height="60" width="120" x="1120" y="590" as="geometry" />
         </mxCell>
         <mxCell id="DL8JMz-Yp9jN-7elxGjb-24" edge="1" parent="1" source="DL8JMz-Yp9jN-7elxGjb-12" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="DL8JMz-Yp9jN-7elxGjb-23" value="">
           <mxGeometry relative="1" as="geometry" />
@@ -217,14 +217,14 @@
             <mxPoint as="offset" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="fEhu-Im4XUsm7cLr4Col-41" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="Raise&amp;nbsp;&lt;div&gt;VideoUploaded Event(CourseId,UserId,...)&lt;/div&gt;" vertex="1">
+        <mxCell id="fEhu-Im4XUsm7cLr4Col-41" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="SQS" vertex="1">
           <mxGeometry height="70" width="160" x="870" y="275" as="geometry" />
         </mxCell>
         <mxCell id="fEhu-Im4XUsm7cLr4Col-43" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="Emailing" vertex="1">
-          <mxGeometry height="70" width="160" x="770" y="410" as="geometry" />
+          <mxGeometry height="70" width="160" x="740" y="560" as="geometry" />
         </mxCell>
         <mxCell id="fEhu-Im4XUsm7cLr4Col-48" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="Courses Module to&amp;nbsp;&lt;div&gt;store new videos to the db&lt;/div&gt;" vertex="1">
-          <mxGeometry height="70" width="160" x="950" y="410" as="geometry" />
+          <mxGeometry height="70" width="160" x="920" y="560" as="geometry" />
         </mxCell>
         <mxCell id="fEhu-Im4XUsm7cLr4Col-50" edge="1" parent="1" source="fEhu-Im4XUsm7cLr4Col-41" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.572;entryY=0.012;entryDx=0;entryDy=0;entryPerimeter=0;" target="fEhu-Im4XUsm7cLr4Col-48">
           <mxGeometry relative="1" as="geometry" />
@@ -237,6 +237,12 @@
               <mxPoint x="1209" y="426" />
             </Array>
           </mxGeometry>
+        </mxCell>
+        <mxCell id="Qif_PH_zsFAE67eRkpof-1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="SQS Poller" vertex="1">
+          <mxGeometry height="70" width="490" x="800" y="380" as="geometry" />
+        </mxCell>
+        <mxCell id="Qif_PH_zsFAE67eRkpof-2" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="Raise Videouploaded Event" vertex="1">
+          <mxGeometry height="70" width="410" x="800" y="470" as="geometry" />
         </mxCell>
       </root>
     </mxGraphModel>

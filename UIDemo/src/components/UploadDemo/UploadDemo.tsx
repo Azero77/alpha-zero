@@ -32,7 +32,7 @@ const UploadDemo: React.FC = () => {
       const { key, preSignedUrl } = await getPresignedUrl(file.name, file.type);
       
       // Step 2: Upload directly to S3
-      await uploadToS3(preSignedUrl, file, (p) => setProgress(p));
+      await uploadToS3(preSignedUrl, file, file.name, (p) => setProgress(p));
 
       setStatus('success');
       setUploadedKey(key);

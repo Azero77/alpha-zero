@@ -13,7 +13,12 @@ namespace Presentation;
 
 public class VideoStreamingModule : AppModule
 {
-    public override void Register(IServiceCollection moduleServices, ContainerBuilder builder)
+    public override void RegisterGlobal(IServiceCollection globalServices)
+    {
+        // Add any global infrastructure if needed
+    }
+
+    public override void RegisterPrivate(IServiceCollection moduleServices, ContainerBuilder builder)
     {
         if (Configuration == null) throw new ArgumentException("Configuration in VideoStreaming are not found");
         moduleServices.AddVideoStreamingInfrastructure(Configuration);

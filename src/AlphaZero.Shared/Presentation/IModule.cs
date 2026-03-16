@@ -8,7 +8,8 @@ public interface IModule
 {
     Task<TResponse> Send<TRequest,TResponse>(IRequest<TResponse> request)
         where TRequest : IRequest<TResponse>;
-    void Register(IServiceCollection services, ContainerBuilder builder);
+    void RegisterPrivate(IServiceCollection services, ContainerBuilder builder);
+    void RegisterGlobal(IServiceCollection services);
 
     void Initialize(ILifetimeScope scope);
 
@@ -27,13 +28,14 @@ public abstract class AppModule : Module, IModule
     {
         Scope = root.BeginLifetimeScope(builder =>
         {
-
             ServiceCollection services = new();
-            Register(services, builder);
+            RegisterPrivate(services, builder);
             builder.Populate(services);
         });
     }
-
-    public abstract void Register(IServiceCollection moduleServices,ContainerBuilder builder);
     public abstract Task<TResponse> Send<TRequest, TResponse>(IRequest<TResponse> request) where TRequest : IRequest<TResponse>;
+
+    public abstract void RegisterPrivate(IServiceCollection services, ContainerBuilder builder);
+
+    public abstract void RegisterGlobal(IServiceCollection services);
 }
