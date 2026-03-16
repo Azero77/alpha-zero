@@ -1,4 +1,5 @@
-﻿using Amazon.S3;
+﻿using AlphaZero.API.Shared;
+using Amazon.S3;
 using Application;
 using Autofac;
 using Infrastructure;
@@ -16,6 +17,12 @@ public class VideoStreamingModule : AppModule
     {
         if (Configuration == null) throw new ArgumentException("Configuration in VideoStreaming are not found");
         moduleServices.AddVideoStreamingInfrastructure(Configuration);
+
+        // Register all IEndpoint implementations in this assembly
+        builder.RegisterAssemblyTypes(this.GetType().Assembly)
+               .Where(t => typeof(IEndpoint).IsAssignableFrom(t))
+               .AsSelf()
+               .InstancePerLifetimeScope();
     }
 
     public override Task<TResponse> Send<TRequest, TResponse>(IRequest<TResponse> request)

@@ -1,6 +1,7 @@
 ﻿using AlphaZero.API.Shared;
 using AlphaZero.Shared.Presentation.Extensions;
 using Application.Commands.Upload;
+using ErrorOr;
 using MediatR;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -21,10 +22,10 @@ public static class Upload
             app.MapPost("api/courses/upload",Handler);
         }
 
-        private async Task<IResult> Handler(Request request, IMediator mediatr)
+        private async Task<IResult> Handler(Request request, CoursesModule module)
         {
             var command = new UploadCommand(request.fileName,request.contentType);
-            var response = await mediatr.Send(command);
+            var response = await module.Send<UploadCommand, ErrorOr<UploadCommandResponse>>(command);
             return response.Match(Results.Ok, errors => errors.ToMinimalResult());
 
         }

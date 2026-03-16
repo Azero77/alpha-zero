@@ -25,16 +25,15 @@ public abstract class AppModule : Module, IModule
 
     public virtual void Initialize(ILifetimeScope root)
     {
-        Scope = root;
+        Scope = root.BeginLifetimeScope(builder =>
+        {
+
+            ServiceCollection services = new();
+            Register(services, builder);
+            builder.Populate(services);
+        });
     }
 
     public abstract void Register(IServiceCollection moduleServices,ContainerBuilder builder);
     public abstract Task<TResponse> Send<TRequest, TResponse>(IRequest<TResponse> request) where TRequest : IRequest<TResponse>;
-    protected override void Load(ContainerBuilder builder)
-    {
-        ServiceCollection services = new();
-        Register(services,builder);
-        builder.Populate(services);
-    }
-
 }

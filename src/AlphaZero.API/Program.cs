@@ -20,6 +20,7 @@ public class Program
         // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
         builder.Services.AddEndpointsApiExplorer();
         builder.Services.AddSwaggerGen();
+        builder.Services.AddCors();
 
         string[] assembliesPath = Directory.GetFiles(AppDomain.CurrentDomain.BaseDirectory, "*.dll");
         foreach (var path in assembliesPath)
@@ -47,6 +48,12 @@ public class Program
 
             app.UseSwagger();
             app.UseSwaggerUI();
+            app.UseCors(builder =>
+            {
+                builder.AllowAnyHeader()
+                .AllowAnyOrigin()
+                .AllowAnyMethod();
+            });
         }
 
         app.UseHttpsRedirection();
