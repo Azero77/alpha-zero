@@ -30,6 +30,21 @@ public class Program
             }
         }
 
+        // Configure MassTransit with in-memory bus and automatic consumer discovery
+        var assemblies = AppDomain.CurrentDomain.GetAssemblies()
+            .Where(a => a.FullName!.StartsWith("AlphaZero"))
+            .ToArray();
+
+        builder.Services.AddMassTransit(x =>
+        {
+            x.SetKebabCaseEndpointNameFormatter();
+            x.AddConsumers(assemblies);
+            x.UsingInMemory((context, cfg) =>
+            {
+                cfg.ConfigureEndpoints(context);
+            });
+        });
+
         List<Type> moduleTypes = AppDomain.CurrentDomain.GetAssemblies()
             .SelectMany(c => c.GetTypes().Where(t => t.IsClass && !t.IsAbstract && typeof(AppModule).IsAssignableFrom(t)))
             .ToList();

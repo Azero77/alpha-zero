@@ -1,24 +1,15 @@
-using AWS.Messaging;
 using Amazon.S3.Util;
+using MassTransit;
+using Microsoft.EntityFrameworkCore.Metadata.Internal;
 
 namespace AlphaZero.Modules.Courses.Infrastructure.Consumers;
 
-public class VideoUploadedEventHandler : IMessageHandler<S3EventNotification>
+public record VideoUploadedEvent(string Key, string Bucket);
+public class VideoUploadedEventHandler : IConsumer<VideoUploadedEvent>
 {
-
-    public Task<MessageProcessStatus> HandleAsync(MessageEnvelope<S3EventNotification> messageEnvelope, CancellationToken token = default)
+    public Task Consume(ConsumeContext<VideoUploadedEvent> context)
     {
-        var s3Event = messageEnvelope.Message;
-
-        foreach (var record in s3Event.Records)
-        {
-            var bucket = record.S3.Bucket.Name;
-            var key = record.S3.Object.Key;
-
-            // TODO: Process the uploaded video
-            Console.WriteLine($"Received video upload: {key} in bucket {bucket}");
-        }
-
-        return Task.FromResult(MessageProcessStatus.Success());
+        Console.WriteLine($"[MassTransit] Received video upload: {context.Message.Key} in bucket {context.Message.Key}");
+        return Task.CompletedTask;
     }
 }
