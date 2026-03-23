@@ -7,7 +7,8 @@
         public S3Settings? OutputS3 { get; set; }
         public VideoUploadedSQSQueueSettings? VideoUploadedQueue { get; set; }
         public VideoUploadedSQSQueueSettings? VideoUploadedEvent { get; set; }
-        
+        public string MediaConvertRoleArn { get; set; } = string.Empty;
+        public string MediaConvertKeyKMSArn { get; set; } = string.Empty;
     }
     public class S3Settings
     {

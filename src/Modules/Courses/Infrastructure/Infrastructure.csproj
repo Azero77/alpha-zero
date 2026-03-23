@@ -9,6 +9,7 @@
   <ItemGroup>
     <PackageReference Include="AWS.Messaging" />
     <PackageReference Include="AWS.Messaging.Telemetry.OpenTelemetry" />
+    <PackageReference Include="AWSSDK.MediaConvert" />
     <PackageReference Include="AWSSDK.SQS" />
     <PackageReference Include="MassTransit" />
     <PackageReference Include="MassTransit.AmazonSQS" />

@@ -11,6 +11,7 @@
     <PackageVersion Include="AWSSDK.CloudFront" Version="4.0.12.3" />
     <PackageVersion Include="AWSSDK.Core" Version="4.0.3.18" />
     <PackageVersion Include="AWSSDK.Extensions.NETCore.Setup" Version="4.0.3.25" />
+    <PackageVersion Include="AWSSDK.MediaConvert" Version="4.0.0" />
     <PackageVersion Include="AWSSDK.S3" Version="4.0.19" />
     <PackageVersion Include="AWSSDK.SQS" Version="4.0.2.17" />
     <PackageVersion Include="ErrorOr" Version="2.0.1" />
