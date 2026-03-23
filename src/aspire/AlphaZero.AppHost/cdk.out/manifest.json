@@ -18,7 +18,7 @@
         "validateOnSynth": false,
         "assumeRoleArn": "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/cdk-hnb659fds-deploy-role-${AWS::AccountId}-${AWS::Region}",
         "cloudFormationExecutionRoleArn": "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/cdk-hnb659fds-cfn-exec-role-${AWS::AccountId}-${AWS::Region}",
-        "stackTemplateAssetObjectUrl": "s3://cdk-hnb659fds-assets-${AWS::AccountId}-${AWS::Region}/1f35ca44282894edd0f710c992fc676de9714b9a0d3f6df68894579c5d658ba3.json",
+        "stackTemplateAssetObjectUrl": "s3://cdk-hnb659fds-assets-${AWS::AccountId}-${AWS::Region}/8ea831dff7727b0dc72afa361c8f82fba6185505c7778feecc6b2e18b818e6c2.json",
         "requiresBootstrapStackVersion": 6,
         "bootstrapStackVersionSsmParameter": "/cdk-bootstrap/hnb659fds/version",
         "additionalDependencies": [
@@ -34,16 +34,16 @@
         "AlphaZero-Aspire.assets"
       ],
       "metadata": {
-        "/AlphaZero-Aspire/s3/Resource": [
+        "/AlphaZero-Aspire/InputS3/Resource": [
           {
             "type": "aws:cdk:logicalId",
-            "data": "s3100BEDFB"
+            "data": "InputS3A6082993"
           }
         ],
-        "/AlphaZero-Aspire/s3/Notifications/Resource": [
+        "/AlphaZero-Aspire/InputS3/Notifications/Resource": [
           {
             "type": "aws:cdk:logicalId",
-            "data": "s3NotificationsEE96A7AB"
+            "data": "InputS3Notifications5444BCE1"
           }
         ],
         "/AlphaZero-Aspire/VideoUploadedQueue/Resource": [
@@ -94,16 +94,28 @@
             "data": "BucketNotificationsHandler050a0587b7544547bf325f094a3db8347ECC3691"
           }
         ],
-        "/AlphaZero-Aspire/s3634A090EBucketName": [
+        "/AlphaZero-Aspire/OutputS3/Resource": [
           {
             "type": "aws:cdk:logicalId",
-            "data": "s3634A090EBucketName"
+            "data": "OutputS348BD8914"
+          }
+        ],
+        "/AlphaZero-Aspire/InputS3522DD7D7BucketName": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "InputS3522DD7D7BucketName"
           }
         ],
         "/AlphaZero-Aspire/VideoUploadedQueue22816915QueueUrl": [
           {
             "type": "aws:cdk:logicalId",
             "data": "VideoUploadedQueue22816915QueueUrl"
+          }
+        ],
+        "/AlphaZero-Aspire/OutputS3EE2AC607BucketName": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "OutputS3EE2AC607BucketName"
           }
         ],
         "/AlphaZero-Aspire/BootstrapVersion": [

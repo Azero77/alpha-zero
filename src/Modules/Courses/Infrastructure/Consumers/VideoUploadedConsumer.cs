@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Internal;
 namespace AlphaZero.Modules.Courses.Infrastructure.Consumers;
 
 public record VideoUploadedEvent(string Key, string Bucket);
-public class VideoUploadedEventHandler : IConsumer<VideoUploadedEvent>
+public class MediaConverterVideoUploadedEventHandler : IConsumer<VideoUploadedEvent>
 {
     public Task Consume(ConsumeContext<VideoUploadedEvent> context)
     {
@@ -13,3 +13,4 @@ public class VideoUploadedEventHandler : IConsumer<VideoUploadedEvent>
         return Task.CompletedTask;
     }
 }
+

@@ -30,7 +30,7 @@ public static class DependencyInjection
         var awsOptions = configuration.GetAWSOptions();
         moduleServices.AddMediatR(opts => opts.RegisterServicesFromAssembly(typeof(ICoursesApplicationMarker).Assembly));
         moduleServices.AddSingleton<IAmazonS3>(sp => awsOptions.CreateServiceClient<IAmazonS3>());
-        moduleServices.AddSingleton<S3Settings>(awsResources.s3 ?? throw new ArgumentException("S3 is not configured in Courses module"));
+        moduleServices.AddSingleton<S3Settings>(awsResources.InputS3 ?? throw new ArgumentException("S3 is not configured in Courses module"));
         moduleServices.AddSingleton<IUploadService, S3UploadService>();
     }
 

@@ -15,13 +15,13 @@ var awsSdkConfig = builder.AddAWSSDKConfig().WithRegion(Amazon.RegionEndpoint.EU
 var awscdkStack = builder.AddAWSCDKStack("AlphaZero-Aspire")
     .WithReference(awsSdkConfig);
 
-var s3 = awscdkStack.AddS3Bucket("s3", new BucketProps
+var input_s3 = awscdkStack.AddS3Bucket("InputS3", new BucketProps
 {
     Cors = new[]
     {
         new CorsRule
         {
-            AllowedMethods = new[] { HttpMethods.GET, HttpMethods.PUT, HttpMethods.POST, HttpMethods.DELETE, HttpMethods.HEAD },
+            AllowedMethods = new[] { HttpMethods.GET},
             AllowedOrigins = new[] { "http://localhost:5173", "*" },
             AllowedHeaders = new[] { "content-type", "x-amz-meta-file-name", "*" },
             ExposedHeaders = new[] { "ETag", "x-amz-meta-file-name" },
@@ -29,17 +29,22 @@ var s3 = awscdkStack.AddS3Bucket("s3", new BucketProps
         }
     }
 });
+
 var videoUploadedSQSQueue = awscdkStack.AddSQSQueue("VideoUploadedQueue");
 var sns = awscdkStack.AddSNSTopic("VideoUploadedEvent")
     .AddSubscription(videoUploadedSQSQueue, new SqsSubscriptionProps()
     {
         RawMessageDelivery = true
     });
-s3.AddObjectCreatedNotification(sns);
+input_s3.AddObjectCreatedNotification(sns);
+
+
+var output_s3 = awscdkStack.AddS3Bucket("OutputS3");
 
 var api = builder.AddProject<Projects.AlphaZero_API>("alphazero-api")
     .WithReference(awsSdkConfig)
-    .WithReference(s3)
+    .WithReference(input_s3)
+    .WithReference(output_s3)
     .WithReference(videoUploadedSQSQueue);
 
 

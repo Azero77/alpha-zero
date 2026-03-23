@@ -3,7 +3,8 @@
     public class AWSResources
     {
         public const string Section = "AWS:Resources";
-        public S3Settings? s3 { get; set; }
+        public S3Settings? InputS3 { get; set; }
+        public S3Settings? OutputS3 { get; set; }
         public VideoUploadedSQSQueueSettings? VideoUploadedQueue { get; set; }
         public VideoUploadedSQSQueueSettings? VideoUploadedEvent { get; set; }
         
