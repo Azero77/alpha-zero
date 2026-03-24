@@ -7,6 +7,7 @@ using Aspire.Shared;
 using MassTransit;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
 using System.Text.Json;
 
 namespace AlphaZero.Modules.Courses.Infrastructure.Consumers;
@@ -46,10 +47,8 @@ public class MediaConverterVideoUploadedEventHandler : IConsumer<VideoUploadedEv
         try
         {
 
-            // 4. Load and Prepare Job Settings
             var jobRequest = CreateJobRequestFromTemplate(sourceS3, outputPath, assetId);
 
-            // 5. Submit Job
             var response = await _mediaConvertClient.CreateJobAsync(jobRequest);
 
             _logger.LogInformation("[MediaConvert] Job Created: {response} for Asset: {assetId}",response.Job.Id,assetId);
@@ -65,20 +64,19 @@ public class MediaConverterVideoUploadedEventHandler : IConsumer<VideoUploadedEv
     private CreateJobRequest CreateJobRequestFromTemplate(string inputS3, string outputPath, string assetId)
     {
         // Load your JSON file
-        var jsonTemplate = File.ReadAllText("job.json");
+        var assembly = typeof(MediaConverterVideoUploadedEventHandler).Assembly;
+        var file = $"AlphaZero.Modules.Courses.Infrastructure.Consumers.job.json";
 
-        // Replace placeholders (Simple string replacement or deserialization)
+        using var stream = assembly.GetManifestResourceStream(file) ?? throw new ArgumentException(" job.json File not found");
+        using var reader = new StreamReader(stream);
+        string jsonTemplate = reader.ReadToEnd();
         jsonTemplate = jsonTemplate
             .Replace("##INPUT_FILE##", inputS3)
             .Replace("##OUTPUT_PATH##", outputPath)
             .Replace("##KMS_KEY_ARN##", _aWSResources.MediaConvertKeyKMSArn)
             .Replace("##MediaConvertRole##",_aWSResources.MediaConvertRoleArn);
 
-        // Deserialize the JSON into the SDK's Request object
-        var jobSettings = JsonSerializer.Deserialize<CreateJobRequest>(jsonTemplate, new JsonSerializerOptions
-        {
-            PropertyNameCaseInsensitive = true
-        });
+        var jobSettings = JsonConvert.DeserializeObject<CreateJobRequest>(jsonTemplate);
 
         if (jobSettings == null) throw new Exception("Failed to deserialize job.json");
 

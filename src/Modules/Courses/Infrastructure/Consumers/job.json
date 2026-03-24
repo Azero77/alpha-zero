@@ -1,50 +1,70 @@
 {
+  "Queue": "arn:aws:mediaconvert:eu-north-1:555106000478:queues/Default",
   "Role": "##MediaConvertRole##",
   "Settings": {
-    "TimecodeConfig": { "Source": "ZEROBASED" },
-    "Inputs": [
-      {
-        "AudioSelectors": {
-          "Audio Selector 1": { "DefaultSelection": "DEFAULT" }
-        },
-        "VideoSelector": {},
-        "TimecodeSource": "ZEROBASED",
-        "FileInput": "##INPUT_FILE##"
-      }
-    ],
+    "TimecodeConfig": {
+      "Source": "ZEROBASED"
+    },
     "OutputGroups": [
       {
+        "CustomName": "Apple HLS",
         "Name": "Apple HLS",
-        "CustomName": "hls_abr",
-        "OutputGroupSettings": {
-          "Type": "HLS_GROUP",
-          "HlsGroupSettings": {
-            "SegmentLength": 10,
-            "MinFinalSegmentLength": 0,
-            "Destination": "##OUTPUT_PATH##/hls/",
-            "DirectoryStructure": "SINGLE_DIRECTORY",
-            "ManifestCompression": "NONE",
-            "S3EncryptionSettings": {
-              "EncryptionStrategy": "SERVER_SIDE_ENCRYPTION_KMS",
-              "KmsKeyArn": "##KMS_KEY_ARN##"
-            }
-          }
-        },
-        "AutomatedAbrSettings": {
-          "MaxAbrBitrate": 8000000,
-          "MaxRenditions": 8,
-          "MinAbrBitrate": 600000
-        },
         "Outputs": [
           {
-            "ContainerSettings": { "Container": "M3U8" },
+            "ContainerSettings": {
+              "Container": "M3U8",
+              "M3u8Settings": {}
+            },
             "VideoDescription": {
+              "Width": 1920,
+              "Height": 1080,
               "CodecSettings": {
                 "Codec": "H_264",
                 "H264Settings": {
+                  "MaxBitrate": 6000000,
                   "RateControlMode": "QVBR",
-                  "SceneChangeDetect": "ENABLED",
-                  "QualityTuningLevel": "MULTI_PASS_HQ"
+                  "QvbrSettings": {
+                    "QvbrQualityLevel": 8
+                  },
+                  "SceneChangeDetect": "TRANSITION_DETECTION"
+                }
+              }
+            },
+            "AudioDescriptions": [
+              {
+                "AudioSourceName": "Audio Selector 1",
+                "CodecSettings": {
+                  "Codec": "AAC",
+                  "AacSettings": {
+                    "Bitrate": 96000,
+                    "CodingMode": "CODING_MODE_2_0",
+                    "SampleRate": 48000
+                  }
+                }
+              }
+            ],
+            "OutputSettings": {
+              "HlsSettings": {}
+            },
+            "NameModifier": "_1080p"
+          },
+          {
+            "ContainerSettings": {
+              "Container": "M3U8",
+              "M3u8Settings": {}
+            },
+            "VideoDescription": {
+              "Width": 1280,
+              "Height": 720,
+              "CodecSettings": {
+                "Codec": "H_264",
+                "H264Settings": {
+                  "MaxBitrate": 3000000,
+                  "RateControlMode": "QVBR",
+                  "QvbrSettings": {
+                    "QvbrQualityLevel": 7
+                  },
+                  "SceneChangeDetect": "TRANSITION_DETECTION"
                 }
               }
             },
@@ -54,47 +74,221 @@
                   "Codec": "AAC",
                   "AacSettings": {
                     "Bitrate": 96000,
+                    "CodingMode": "CODING_MODE_2_0",
                     "SampleRate": 48000
                   }
                 }
               }
-            ]
-          }
-        ]
-      },
-      {
-        "Name": "DASH ISO",
-        "CustomName": "dash_abr",
-        "OutputGroupSettings": {
-          "Type": "DASH_ISO_GROUP",
-          "DashIsoGroupSettings": {
-            "SegmentLength": 30,
-            "Destination": "##OUTPUT_PATH##/dash/",
-            "S3EncryptionSettings": {
-              "EncryptionStrategy": "SERVER_SIDE_ENCRYPTION_KMS",
-              "KmsKeyArn": "##KMS_KEY_ARN##"
-            }
-          }
-        },
-        "AutomatedAbrSettings": {
-          "MaxAbrBitrate": 8000000,
-          "MaxRenditions": 8
-        },
-        "Outputs": [
+            ],
+            "OutputSettings": {
+              "HlsSettings": {}
+            },
+            "NameModifier": "_720p"
+          },
           {
-            "ContainerSettings": { "Container": "MPD" },
+            "ContainerSettings": {
+              "Container": "M3U8",
+              "M3u8Settings": {}
+            },
             "VideoDescription": {
+              "Width": 640,
+              "Height": 360,
               "CodecSettings": {
                 "Codec": "H_264",
-                "H264Settings": { "RateControlMode": "QVBR" }
+                "H264Settings": {
+                  "MaxBitrate": 800000,
+                  "RateControlMode": "QVBR",
+                  "QvbrSettings": {
+                    "QvbrQualityLevel": 7
+                  },
+                  "SceneChangeDetect": "TRANSITION_DETECTION"
+                }
               }
             },
             "AudioDescriptions": [
-              { "CodecSettings": { "Codec": "AAC" } }
-            ]
+              {
+                "CodecSettings": {
+                  "Codec": "AAC",
+                  "AacSettings": {
+                    "Bitrate": 96000,
+                    "CodingMode": "CODING_MODE_2_0",
+                    "SampleRate": 48000
+                  }
+                }
+              }
+            ],
+            "OutputSettings": {
+              "HlsSettings": {}
+            },
+            "NameModifier": "_360p"
           }
-        ]
+        ],
+        "OutputGroupSettings": {
+          "Type": "HLS_GROUP_SETTINGS",
+          "HlsGroupSettings": {
+            "SegmentLength": 10,
+            "Destination": "##OUTPUT_PATH##/hls/",
+            "DestinationSettings": {
+              "S3Settings": {
+                "AccessControl": {
+                  "CannedAcl": "BUCKET_OWNER_FULL_CONTROL"
+                },
+                "Encryption": {
+                  "EncryptionType": "SERVER_SIDE_ENCRYPTION_KMS",
+                  "KmsKeyArn": "##KMS_KEY_ARN##"
+                }
+              }
+            },
+            "MinSegmentLength": 0
+          }
+        }
+      },
+      {
+        "CustomName": "dash_abr",
+        "Name": "DASH ISO",
+        "Outputs": [
+          {
+            "ContainerSettings": {
+              "Container": "MPD"
+            },
+            "VideoDescription": {
+              "Width": 1280,
+              "Height": 720,
+              "CodecSettings": {
+                "Codec": "H_264",
+                "H264Settings": {
+                  "MaxBitrate": 3000000,
+                  "RateControlMode": "QVBR",
+                  "QvbrSettings": {
+                    "QvbrQualityLevel": 7
+                  },
+                  "SceneChangeDetect": "TRANSITION_DETECTION"
+                }
+              }
+            },
+            "AudioDescriptions": [
+              {
+                "AudioSourceName": "Audio Selector 1",
+                "CodecSettings": {
+                  "Codec": "AAC",
+                  "AacSettings": {
+                    "Bitrate": 96000,
+                    "CodingMode": "CODING_MODE_2_0",
+                    "SampleRate": 48000
+                  }
+                }
+              }
+            ],
+            "NameModifier": "_720p"
+          },
+          {
+            "ContainerSettings": {
+              "Container": "MPD"
+            },
+            "VideoDescription": {
+              "Width": 1920,
+              "Height": 1080,
+              "CodecSettings": {
+                "Codec": "H_264",
+                "H264Settings": {
+                  "MaxBitrate": 6000000,
+                  "RateControlMode": "QVBR",
+                  "QvbrSettings": {
+                    "QvbrQualityLevel": 8
+                  },
+                  "SceneChangeDetect": "TRANSITION_DETECTION"
+                }
+              }
+            },
+            "AudioDescriptions": [
+              {
+                "AudioSourceName": "Audio Selector 1",
+                "CodecSettings": {
+                  "Codec": "AAC",
+                  "AacSettings": {
+                    "Bitrate": 96000,
+                    "CodingMode": "CODING_MODE_2_0",
+                    "SampleRate": 48000
+                  }
+                }
+              }
+            ],
+            "NameModifier": "_1080p"
+          },
+          {
+            "ContainerSettings": {
+              "Container": "MPD"
+            },
+            "VideoDescription": {
+              "Width": 640,
+              "Height": 360,
+              "CodecSettings": {
+                "Codec": "H_264",
+                "H264Settings": {
+                  "MaxBitrate": 800000,
+                  "RateControlMode": "QVBR",
+                  "QvbrSettings": {
+                    "QvbrQualityLevel": 7
+                  },
+                  "SceneChangeDetect": "TRANSITION_DETECTION"
+                }
+              }
+            },
+            "AudioDescriptions": [
+              {
+                "AudioSourceName": "Audio Selector 1",
+                "CodecSettings": {
+                  "Codec": "AAC",
+                  "AacSettings": {
+                    "Bitrate": 96000,
+                    "CodingMode": "CODING_MODE_2_0",
+                    "SampleRate": 48000
+                  }
+                }
+              }
+            ],
+            "NameModifier": "_360p"
+          }
+        ],
+        "OutputGroupSettings": {
+          "Type": "DASH_ISO_GROUP_SETTINGS",
+          "DashIsoGroupSettings": {
+            "SegmentLength": 30,
+            "Destination": "##OUTPUT_PATH##/dash/",
+            "DestinationSettings": {
+              "S3Settings": {
+                "AccessControl": {
+                  "CannedAcl": "BUCKET_OWNER_FULL_CONTROL"
+                },
+                "Encryption": {
+                  "EncryptionType": "SERVER_SIDE_ENCRYPTION_KMS",
+                  "KmsKeyArn": "##KMS_KEY_ARN##"
+                }
+              }
+            },
+            "FragmentLength": 2
+          }
+        }
+      }
+    ],
+    "FollowSource": 1,
+    "Inputs": [
+      {
+        "AudioSelectors": {
+          "Audio Selector 1": {
+            "DefaultSelection": "DEFAULT"
+          }
+        },
+        "VideoSelector": {},
+        "TimecodeSource": "ZEROBASED",
+        "FileInput": "##INPUT_FILE##"
       }
     ]
-  }
+  },
+  "BillingTagsSource": "JOB",
+  "AccelerationSettings": {
+    "Mode": "DISABLED"
+  },
+  "StatusUpdateInterval": "SECONDS_60",
+  "Priority": 0
 }

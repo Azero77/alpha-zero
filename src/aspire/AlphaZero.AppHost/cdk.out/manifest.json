@@ -18,7 +18,7 @@
         "validateOnSynth": false,
         "assumeRoleArn": "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/cdk-hnb659fds-deploy-role-${AWS::AccountId}-${AWS::Region}",
         "cloudFormationExecutionRoleArn": "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/cdk-hnb659fds-cfn-exec-role-${AWS::AccountId}-${AWS::Region}",
-        "stackTemplateAssetObjectUrl": "s3://cdk-hnb659fds-assets-${AWS::AccountId}-${AWS::Region}/8ea831dff7727b0dc72afa361c8f82fba6185505c7778feecc6b2e18b818e6c2.json",
+        "stackTemplateAssetObjectUrl": "s3://cdk-hnb659fds-assets-${AWS::AccountId}-${AWS::Region}/d5b52ce1cf5a917c7067f92098438d579be394c4f339c6b42d88c138569e8858.json",
         "requiresBootstrapStackVersion": 6,
         "bootstrapStackVersionSsmParameter": "/cdk-bootstrap/hnb659fds/version",
         "additionalDependencies": [
@@ -34,6 +34,18 @@
         "AlphaZero-Aspire.assets"
       ],
       "metadata": {
+        "/AlphaZero-Aspire/AspireMediaConvertServiceRole/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "AspireMediaConvertServiceRole3A30D3A7"
+          }
+        ],
+        "/AlphaZero-Aspire/AspireMediaConvertServiceRole/DefaultPolicy/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "AspireMediaConvertServiceRoleDefaultPolicy8D3CB3EC"
+          }
+        ],
         "/AlphaZero-Aspire/InputS3/Resource": [
           {
             "type": "aws:cdk:logicalId",
@@ -98,6 +110,12 @@
           {
             "type": "aws:cdk:logicalId",
             "data": "OutputS348BD8914"
+          }
+        ],
+        "/AlphaZero-Aspire/MediaConvertRoleArnOutput": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "MediaConvertRoleArnOutput"
           }
         ],
         "/AlphaZero-Aspire/InputS3522DD7D7BucketName": [

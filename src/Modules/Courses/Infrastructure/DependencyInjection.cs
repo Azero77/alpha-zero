@@ -1,6 +1,7 @@
 using AlphaZero.Modules.Courses.Infrastructure.Consumers;
 using AlphaZero.Modules.Courses.Infrastructure.Workers;
 using Amazon.Extensions.NETCore.Setup;
+using Amazon.MediaConvert;
 using Amazon.S3;
 using Amazon.S3.Util;
 using Amazon.SQS;
@@ -21,6 +22,7 @@ public static class DependencyInjection
         AWSResources awsResources = configuration.GetSection(AWSResources.Section).Get<AWSResources>() ?? throw new ArgumentException("AWS Resources are not configured in Courses module");
         services.AddHostedService<S3VideoUploadedSQSPoller>();
         services.AddAWSService<IAmazonSQS>();
+        services.AddAWSService<IAmazonMediaConvert>();
 
     }
 
