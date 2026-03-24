@@ -20,7 +20,7 @@ public static class DependencyInjection
     public static void AddCoursesGlobalInfrastructure(this IServiceCollection services,IConfiguration configuration)
     {
         AWSResources awsResources = configuration.GetSection(AWSResources.Section).Get<AWSResources>() ?? throw new ArgumentException("AWS Resources are not configured in Courses module");
-        services.AddHostedService<S3VideoUploadedSQSPoller>();
+        //services.AddHostedService<S3VideoUploadedSQSPoller>();
         services.AddAWSService<IAmazonSQS>();
         services.AddAWSService<IAmazonMediaConvert>();
 

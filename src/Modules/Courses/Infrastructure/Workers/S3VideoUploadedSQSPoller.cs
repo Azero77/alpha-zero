@@ -48,7 +48,7 @@ public class S3VideoUploadedSQSPoller : BackgroundService
                 foreach (var record in s3Event.Records)
                 {
                     _logger.LogInformation("Video uploaded: {record}", record.S3.Object.Key);
-                    await _publisher.Publish<VideoUploadedEvent>(new VideoUploadedEvent(record.S3.Object.Key, record.S3.Bucket.Name));
+                    //await _publisher.Publish<VideoUploadedEvent>(new VideoUploadedEvent(record.S3.Object.Key, record.S3.Bucket.Name));
                 }
 
                 await _sqs.DeleteMessageAsync(sqsSettings.QueueUrl, msg.ReceiptHandle);

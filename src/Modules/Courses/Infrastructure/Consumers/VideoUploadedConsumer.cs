@@ -3,6 +3,8 @@ using Amazon.MediaConvert;
 using Amazon.MediaConvert.Model;
 using Amazon.Runtime;
 using Amazon.Runtime.Internal.Util;
+using Amazon.S3.Model;
+using Amazon.S3.Util;
 using Aspire.Shared;
 using MassTransit;
 using Microsoft.Extensions.Configuration;
@@ -14,7 +16,7 @@ namespace AlphaZero.Modules.Courses.Infrastructure.Consumers;
 
 public record VideoUploadedEvent(string Key, string Bucket);
 
-public class MediaConverterVideoUploadedEventHandler : IConsumer<VideoUploadedEvent>
+public class MediaConverterVideoUploadedEventHandler : IConsumer<S3EventNotification>
 {
     private readonly IConfiguration _configuration;
     private readonly IAmazonMediaConvert _mediaConvertClient;
@@ -32,32 +34,42 @@ public class MediaConverterVideoUploadedEventHandler : IConsumer<VideoUploadedEv
         _logger = logger;
     }
 
-    public async Task Consume(ConsumeContext<VideoUploadedEvent> context)
+    public async Task Consume(ConsumeContext<S3EventNotification> context)
     {
-        
-        var message = context.Message;
-        var assetId = Guid.NewGuid().ToString();
 
-        // 1. Setup paths
-        string sourceS3 = $"s3://{message.Bucket}/{message.Key}";
-        string fileNameWithoutExt = Path.GetFileNameWithoutExtension(message.Key);
-        string destinationBucket = _aWSResources.OutputS3?.BucketName ?? throw new ArgumentException();
-        string outputPath = $"s3://{destinationBucket}/streaming/{assetId}";
-
-        try
+        foreach (var record in context.Message.Records)
         {
+            if (!record.EventName.Value.StartsWith("ObjectCreated:"))
+            {
+                _logger.LogInformation("Skipping event {EventName} for key {Key}", record.EventName, record.S3.Object.Key);
+                continue;
+            }
 
-            var jobRequest = CreateJobRequestFromTemplate(sourceS3, outputPath, assetId);
+            var key = record.S3.Object.Key;
+            var bucket = record.S3.Bucket.Name;
+            var assetId = Guid.NewGuid().ToString();
 
-            var response = await _mediaConvertClient.CreateJobAsync(jobRequest);
+            // 1. Setup paths
+            string sourceS3 = $"s3://{bucket}/{key}";
+            string fileNameWithoutExt = Path.GetFileNameWithoutExtension(key);
+            string destinationBucket = _aWSResources.OutputS3?.BucketName ?? throw new ArgumentException();
+            string outputPath = $"s3://{destinationBucket}/streaming/{assetId}";
 
-            _logger.LogInformation("[MediaConvert] Job Created: {response} for Asset: {assetId}",response.Job.Id,assetId);
-            
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "[Error] MediaConvert Job failed for message: {VideoEvent}", message);
-            throw; // Let MassTransit handle retries
+            try
+            {
+
+                var jobRequest = CreateJobRequestFromTemplate(sourceS3, outputPath, assetId);
+
+                var response = await _mediaConvertClient.CreateJobAsync(jobRequest);
+
+                _logger.LogInformation("[MediaConvert] Job Created: {response} for Asset: {assetId}", response.Job.Id, assetId);
+
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "[Error] MediaConvert Job failed for file: {key}", key);
+                throw; // Let MassTransit handle retries
+            }
         }
     }
 

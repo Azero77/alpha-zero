@@ -6,6 +6,7 @@ using Amazon.CDK.AWS.S3;
 using Amazon.CDK.AWS.S3.Notifications;
 using Amazon.CDK.AWS.SNS;
 using Amazon.CDK.AWS.SNS.Subscriptions;
+using Amazon.CDK.AWS.SQS;
 using Aspire.Hosting;
 using Constructs;
 
@@ -15,7 +16,7 @@ var builder = DistributedApplication.CreateBuilder(args);
 var awsSdkConfig = builder.AddAWSSDKConfig().WithRegion(Amazon.RegionEndpoint.EUNorth1);
 
 
-var awscdkStack = builder.AddAWSCDKStack("AlphaZero-Aspire")
+var awscdkStack = builder.AddAWSCDKStack("AlphaZero")
     .WithReference(awsSdkConfig);
 
 
@@ -40,7 +41,10 @@ var input_s3 = awscdkStack.AddS3Bucket("InputS3", new BucketProps
         }
     }
 });
-var videoUploadedSQSQueue = awscdkStack.AddSQSQueue("VideoUploadedQueue");
+var videoUploadedSQSQueue = awscdkStack.AddSQSQueue("VideoUploadedQueue",new QueueProps()
+{
+    QueueName = "VideoUploadedQueue"
+});
 var sns = awscdkStack.AddSNSTopic("VideoUploadedEvent")
     .AddSubscription(videoUploadedSQSQueue, new SqsSubscriptionProps()
     {

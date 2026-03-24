@@ -172,6 +172,9 @@
   },
   "VideoUploadedQueueB8BA2A18": {
    "Type": "AWS::SQS::Queue",
+   "Properties": {
+    "QueueName": "VideoUploadedQueue"
+   },
    "UpdateReplacePolicy": "Delete",
    "DeletionPolicy": "Delete"
   },
@@ -210,7 +213,7 @@
     ]
    }
   },
-  "VideoUploadedQueueAlphaZeroAspireVideoUploadedEvent9B8696541CD7B9B2": {
+  "VideoUploadedQueueAlphaZeroVideoUploadedEventEC44F1DA4011DED2": {
    "Type": "AWS::SNS::Subscription",
    "Properties": {
     "Endpoint": {
@@ -362,17 +365,17 @@
     ]
    }
   },
-  "InputS3522DD7D7BucketName": {
+  "InputS3E497B209BucketName": {
    "Value": {
     "Ref": "InputS3A6082993"
    }
   },
-  "VideoUploadedQueue22816915QueueUrl": {
+  "VideoUploadedQueue6445BDBBQueueUrl": {
    "Value": {
     "Ref": "VideoUploadedQueueB8BA2A18"
    }
   },
-  "OutputS3EE2AC607BucketName": {
+  "OutputS3ECBD476ABucketName": {
    "Value": {
     "Ref": "OutputS348BD8914"
    }

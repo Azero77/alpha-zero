@@ -1,4 +1,5 @@
 using AlphaZero.API.Shared;
+using AlphaZero.Modules.Courses.Infrastructure.Consumers;
 using Amazon.Extensions.NETCore.Setup;
 using Aspire.Shared;
 using Autofac;
@@ -15,7 +16,7 @@ public class Program
         var builder = WebApplication.CreateBuilder(args);
         builder.AddServiceDefaults();
         builder.Services.AddAuthorization();
-        ConfigureAWSResources(builder);
+        var awsResources = ConfigureAWSResources(builder);
         // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
         builder.Services.AddEndpointsApiExplorer();
         builder.Services.AddSwaggerGen();
@@ -39,9 +40,22 @@ public class Program
         {
             x.SetKebabCaseEndpointNameFormatter();
             x.AddConsumers(assemblies);
-            x.UsingInMemory((context, cfg) =>
+
+            //x.AddMediator(M => M.AddConsumers(assemblies));
+            x.UsingAmazonSqs((context, cfg) =>
             {
+                string region = context.GetRequiredService<IConfiguration>().GetAWSOptions()
+                .Region.SystemName;
+                cfg.Host(region, h => { });
+                cfg.ReceiveEndpoint("VideoUploadedQueue", e =>
+                {
+                    e.ConfigureConsumeTopology = false;
+                    e.ClearSerialization();
+                    e.UseNewtonsoftRawJsonSerializer(RawSerializerOptions.AnyMessageType);
+                    e.ConfigureConsumer<MediaConverterVideoUploadedEventHandler>(context);
+                });
                 cfg.ConfigureEndpoints(context);
+
             });
         });
 
@@ -106,13 +120,15 @@ public class Program
         }
     }
 
-    private static void ConfigureAWSResources(WebApplicationBuilder builder)
+    private static AWSResources ConfigureAWSResources(WebApplicationBuilder builder)
     {
         AWSResources awsResources = new();
         AWSOptions options = builder.Configuration.GetAWSOptions();
         builder.Configuration.Bind(AWSResources.Section, awsResources);
         builder.Services.AddSingleton<AWSResources>(awsResources);
         builder.Services.AddDefaultAWSOptions(options);
+
+        return awsResources;
     }
 
     private static void InitializeModules(WebApplication app, IEnumerable<IModule> modules)
