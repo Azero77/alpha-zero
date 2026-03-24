@@ -1,5 +1,6 @@
 {
   "Queue": "arn:aws:mediaconvert:eu-north-1:555106000478:queues/Default",
+  "UserMetadata": {},
   "Role": "##MediaConvertRole##",
   "Settings": {
     "TimecodeConfig": {
@@ -10,6 +11,28 @@
         "CustomName": "cmaf_abr",
         "Name": "CMAF",
         "Outputs": [
+          {
+            "ContainerSettings": {
+              "Container": "CMFC",
+              "CmfcSettings": {}
+            },
+            "VideoDescription": {
+              "Width": 1280,
+              "Height": 720,
+              "CodecSettings": {
+                "Codec": "H_264",
+                "H264Settings": {
+                  "MaxBitrate": 2200000,
+                  "RateControlMode": "QVBR",
+                  "QvbrSettings": {
+                    "QvbrQualityLevel": 7
+                  },
+                  "SceneChangeDetect": "TRANSITION_DETECTION"
+                }
+              }
+            },
+            "NameModifier": "_720p"
+          },
           {
             "ContainerSettings": {
               "Container": "CMFC"
@@ -29,88 +52,7 @@
                 }
               }
             },
-            "AudioDescriptions": [
-              {
-                "AudioSourceName": "Audio Selector 1",
-                "CodecSettings": {
-                  "Codec": "AAC",
-                  "AacSettings": {
-                    "Bitrate": 96000,
-                    "CodingMode": "CODING_MODE_2_0",
-                    "SampleRate": 48000
-                  }
-                }
-              }
-            ],
             "NameModifier": "_1080p"
-          },
-          {
-            "ContainerSettings": {
-              "Container": "CMFC"
-            },
-            "VideoDescription": {
-              "Width": 1280,
-              "Height": 720,
-              "CodecSettings": {
-                "Codec": "H_264",
-                "H264Settings": {
-                  "MaxBitrate": 2200000,
-                  "RateControlMode": "QVBR",
-                  "QvbrSettings": {
-                    "QvbrQualityLevel": 7
-                  },
-                  "SceneChangeDetect": "TRANSITION_DETECTION"
-                }
-              }
-            },
-            "AudioDescriptions": [
-              {
-                "AudioSourceName": "Audio Selector 1",
-                "CodecSettings": {
-                  "Codec": "AAC",
-                  "AacSettings": {
-                    "Bitrate": 96000,
-                    "CodingMode": "CODING_MODE_2_0",
-                    "SampleRate": 48000
-                  }
-                }
-              }
-            ],
-            "NameModifier": "_720p"
-          },
-          {
-            "ContainerSettings": {
-              "Container": "CMFC"
-            },
-            "VideoDescription": {
-              "Width": 640,
-              "Height": 360,
-              "CodecSettings": {
-                "Codec": "H_264",
-                "H264Settings": {
-                  "MaxBitrate": 800000,
-                  "RateControlMode": "QVBR",
-                  "QvbrSettings": {
-                    "QvbrQualityLevel": 7
-                  },
-                  "SceneChangeDetect": "TRANSITION_DETECTION"
-                }
-              }
-            },
-            "AudioDescriptions": [
-              {
-                "AudioSourceName": "Audio Selector 1",
-                "CodecSettings": {
-                  "Codec": "AAC",
-                  "AacSettings": {
-                    "Bitrate": 96000,
-                    "CodingMode": "CODING_MODE_2_0",
-                    "SampleRate": 48000
-                  }
-                }
-              }
-            ],
-            "NameModifier": "_360p"
           },
           {
             "ContainerSettings": {
@@ -131,6 +73,33 @@
                 }
               }
             },
+            "NameModifier": "_480p"
+          },
+          {
+            "ContainerSettings": {
+              "Container": "CMFC"
+            },
+            "VideoDescription": {
+              "Width": 640,
+              "Height": 360,
+              "CodecSettings": {
+                "Codec": "H_264",
+                "H264Settings": {
+                  "MaxBitrate": 800000,
+                  "RateControlMode": "QVBR",
+                  "QvbrSettings": {
+                    "QvbrQualityLevel": 6
+                  },
+                  "SceneChangeDetect": "TRANSITION_DETECTION"
+                }
+              }
+            },
+            "NameModifier": "_360p"
+          },
+          {
+            "ContainerSettings": {
+              "Container": "CMFC"
+            },
             "AudioDescriptions": [
               {
                 "AudioSourceName": "Audio Selector 1",
@@ -144,27 +113,26 @@
                 }
               }
             ],
-            "NameModifier": "_480p"
+            "NameModifier": "audio"
           }
         ],
         "OutputGroupSettings": {
           "Type": "CMAF_GROUP_SETTINGS",
           "CmafGroupSettings": {
             "SegmentLength": 6,
-            "FragmentLength": 2,
-            "MinSegmentLength": 0,
-            "Destination": "##OUTPUT_PATH##/streaming/",
+            "Destination": "##OUTPUT_PATH##",
             "DestinationSettings": {
               "S3Settings": {
-                "AccessControl": {
-                  "CannedAcl": "BUCKET_OWNER_FULL_CONTROL"
-                },
                 "Encryption": {
                   "EncryptionType": "SERVER_SIDE_ENCRYPTION_KMS",
                   "KmsKeyArn": "##KMS_KEY_ARN##"
+                },
+                "AccessControl": {
+                  "CannedAcl": "BUCKET_OWNER_FULL_CONTROL"
                 }
               }
-            }
+            },
+            "FragmentLength": 2
           }
         }
       }

@@ -42,7 +42,7 @@ public class MediaConverterVideoUploadedEventHandler : IConsumer<VideoUploadedEv
         string sourceS3 = $"s3://{message.Bucket}/{message.Key}";
         string fileNameWithoutExt = Path.GetFileNameWithoutExtension(message.Key);
         string destinationBucket = _aWSResources.OutputS3?.BucketName ?? throw new ArgumentException();
-        string outputPath = $"s3://{destinationBucket}/assets/{assetId}";
+        string outputPath = $"s3://{destinationBucket}/streaming/{assetId}";
 
         try
         {
@@ -56,7 +56,7 @@ public class MediaConverterVideoUploadedEventHandler : IConsumer<VideoUploadedEv
         }
         catch (Exception ex)
         {
-            _logger.LogWarning($"[Error] MediaConvert Job failed: {message}", ex.Message);
+            _logger.LogWarning(ex, "[Error] MediaConvert Job failed for message: {VideoEvent}", message);
             throw; // Let MassTransit handle retries
         }
     }
