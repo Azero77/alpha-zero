@@ -7,13 +7,12 @@
     },
     "OutputGroups": [
       {
-        "CustomName": "Apple HLS",
-        "Name": "Apple HLS",
+        "CustomName": "cmaf_abr",
+        "Name": "CMAF",
         "Outputs": [
           {
             "ContainerSettings": {
-              "Container": "M3U8",
-              "M3u8Settings": {}
+              "Container": "CMFC"
             },
             "VideoDescription": {
               "Width": 1920,
@@ -21,177 +20,7 @@
               "CodecSettings": {
                 "Codec": "H_264",
                 "H264Settings": {
-                  "MaxBitrate": 6000000,
-                  "RateControlMode": "QVBR",
-                  "QvbrSettings": {
-                    "QvbrQualityLevel": 8
-                  },
-                  "SceneChangeDetect": "TRANSITION_DETECTION"
-                }
-              }
-            },
-            "AudioDescriptions": [
-              {
-                "AudioSourceName": "Audio Selector 1",
-                "CodecSettings": {
-                  "Codec": "AAC",
-                  "AacSettings": {
-                    "Bitrate": 96000,
-                    "CodingMode": "CODING_MODE_2_0",
-                    "SampleRate": 48000
-                  }
-                }
-              }
-            ],
-            "OutputSettings": {
-              "HlsSettings": {}
-            },
-            "NameModifier": "_1080p"
-          },
-          {
-            "ContainerSettings": {
-              "Container": "M3U8",
-              "M3u8Settings": {}
-            },
-            "VideoDescription": {
-              "Width": 1280,
-              "Height": 720,
-              "CodecSettings": {
-                "Codec": "H_264",
-                "H264Settings": {
-                  "MaxBitrate": 3000000,
-                  "RateControlMode": "QVBR",
-                  "QvbrSettings": {
-                    "QvbrQualityLevel": 7
-                  },
-                  "SceneChangeDetect": "TRANSITION_DETECTION"
-                }
-              }
-            },
-            "AudioDescriptions": [
-              {
-                "CodecSettings": {
-                  "Codec": "AAC",
-                  "AacSettings": {
-                    "Bitrate": 96000,
-                    "CodingMode": "CODING_MODE_2_0",
-                    "SampleRate": 48000
-                  }
-                }
-              }
-            ],
-            "OutputSettings": {
-              "HlsSettings": {}
-            },
-            "NameModifier": "_720p"
-          },
-          {
-            "ContainerSettings": {
-              "Container": "M3U8",
-              "M3u8Settings": {}
-            },
-            "VideoDescription": {
-              "Width": 640,
-              "Height": 360,
-              "CodecSettings": {
-                "Codec": "H_264",
-                "H264Settings": {
-                  "MaxBitrate": 800000,
-                  "RateControlMode": "QVBR",
-                  "QvbrSettings": {
-                    "QvbrQualityLevel": 7
-                  },
-                  "SceneChangeDetect": "TRANSITION_DETECTION"
-                }
-              }
-            },
-            "AudioDescriptions": [
-              {
-                "CodecSettings": {
-                  "Codec": "AAC",
-                  "AacSettings": {
-                    "Bitrate": 96000,
-                    "CodingMode": "CODING_MODE_2_0",
-                    "SampleRate": 48000
-                  }
-                }
-              }
-            ],
-            "OutputSettings": {
-              "HlsSettings": {}
-            },
-            "NameModifier": "_360p"
-          }
-        ],
-        "OutputGroupSettings": {
-          "Type": "HLS_GROUP_SETTINGS",
-          "HlsGroupSettings": {
-            "SegmentLength": 10,
-            "Destination": "##OUTPUT_PATH##/hls/",
-            "DestinationSettings": {
-              "S3Settings": {
-                "AccessControl": {
-                  "CannedAcl": "BUCKET_OWNER_FULL_CONTROL"
-                },
-                "Encryption": {
-                  "EncryptionType": "SERVER_SIDE_ENCRYPTION_KMS",
-                  "KmsKeyArn": "##KMS_KEY_ARN##"
-                }
-              }
-            },
-            "MinSegmentLength": 0
-          }
-        }
-      },
-      {
-        "CustomName": "dash_abr",
-        "Name": "DASH ISO",
-        "Outputs": [
-          {
-            "ContainerSettings": {
-              "Container": "MPD"
-            },
-            "VideoDescription": {
-              "Width": 1280,
-              "Height": 720,
-              "CodecSettings": {
-                "Codec": "H_264",
-                "H264Settings": {
-                  "MaxBitrate": 3000000,
-                  "RateControlMode": "QVBR",
-                  "QvbrSettings": {
-                    "QvbrQualityLevel": 7
-                  },
-                  "SceneChangeDetect": "TRANSITION_DETECTION"
-                }
-              }
-            },
-            "AudioDescriptions": [
-              {
-                "AudioSourceName": "Audio Selector 1",
-                "CodecSettings": {
-                  "Codec": "AAC",
-                  "AacSettings": {
-                    "Bitrate": 96000,
-                    "CodingMode": "CODING_MODE_2_0",
-                    "SampleRate": 48000
-                  }
-                }
-              }
-            ],
-            "NameModifier": "_720p"
-          },
-          {
-            "ContainerSettings": {
-              "Container": "MPD"
-            },
-            "VideoDescription": {
-              "Width": 1920,
-              "Height": 1080,
-              "CodecSettings": {
-                "Codec": "H_264",
-                "H264Settings": {
-                  "MaxBitrate": 6000000,
+                  "MaxBitrate": 4500000,
                   "RateControlMode": "QVBR",
                   "QvbrSettings": {
                     "QvbrQualityLevel": 8
@@ -217,7 +46,41 @@
           },
           {
             "ContainerSettings": {
-              "Container": "MPD"
+              "Container": "CMFC"
+            },
+            "VideoDescription": {
+              "Width": 1280,
+              "Height": 720,
+              "CodecSettings": {
+                "Codec": "H_264",
+                "H264Settings": {
+                  "MaxBitrate": 2200000,
+                  "RateControlMode": "QVBR",
+                  "QvbrSettings": {
+                    "QvbrQualityLevel": 7
+                  },
+                  "SceneChangeDetect": "TRANSITION_DETECTION"
+                }
+              }
+            },
+            "AudioDescriptions": [
+              {
+                "AudioSourceName": "Audio Selector 1",
+                "CodecSettings": {
+                  "Codec": "AAC",
+                  "AacSettings": {
+                    "Bitrate": 96000,
+                    "CodingMode": "CODING_MODE_2_0",
+                    "SampleRate": 48000
+                  }
+                }
+              }
+            ],
+            "NameModifier": "_720p"
+          },
+          {
+            "ContainerSettings": {
+              "Container": "CMFC"
             },
             "VideoDescription": {
               "Width": 640,
@@ -248,13 +111,49 @@
               }
             ],
             "NameModifier": "_360p"
+          },
+          {
+            "ContainerSettings": {
+              "Container": "CMFC"
+            },
+            "VideoDescription": {
+              "Width": 854,
+              "Height": 480,
+              "CodecSettings": {
+                "Codec": "H_264",
+                "H264Settings": {
+                  "MaxBitrate": 1100000,
+                  "RateControlMode": "QVBR",
+                  "QvbrSettings": {
+                    "QvbrQualityLevel": 6
+                  },
+                  "SceneChangeDetect": "TRANSITION_DETECTION"
+                }
+              }
+            },
+            "AudioDescriptions": [
+              {
+                "AudioSourceName": "Audio Selector 1",
+                "CodecSettings": {
+                  "Codec": "AAC",
+                  "AacSettings": {
+                    "Bitrate": 96000,
+                    "CodingMode": "CODING_MODE_2_0",
+                    "SampleRate": 48000
+                  }
+                }
+              }
+            ],
+            "NameModifier": "_480p"
           }
         ],
         "OutputGroupSettings": {
-          "Type": "DASH_ISO_GROUP_SETTINGS",
-          "DashIsoGroupSettings": {
-            "SegmentLength": 30,
-            "Destination": "##OUTPUT_PATH##/dash/",
+          "Type": "CMAF_GROUP_SETTINGS",
+          "CmafGroupSettings": {
+            "SegmentLength": 6,
+            "FragmentLength": 2,
+            "MinSegmentLength": 0,
+            "Destination": "##OUTPUT_PATH##/streaming/",
             "DestinationSettings": {
               "S3Settings": {
                 "AccessControl": {
@@ -265,8 +164,7 @@
                   "KmsKeyArn": "##KMS_KEY_ARN##"
                 }
               }
-            },
-            "FragmentLength": 2
+            }
           }
         }
       }
