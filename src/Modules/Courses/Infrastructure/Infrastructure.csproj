@@ -7,6 +7,17 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="Consumers\job.json" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="AWS.Messaging" />
+    <PackageReference Include="AWS.Messaging.Telemetry.OpenTelemetry" />
+    <PackageReference Include="AWSSDK.MediaConvert" />
+    <PackageReference Include="AWSSDK.SQS" />
+    <PackageReference Include="MassTransit" />
+    <PackageReference Include="MassTransit.AmazonSQS" />
+    <PackageReference Include="MassTransit.Extensions.DependencyInjection" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
   </ItemGroup>
 
@@ -18,11 +29,17 @@
 		<PackageReference Include="Microsoft.EntityFrameworkCore" />
 		<PackageReference Include="AWSSDK.Core" />
 		<PackageReference Include="AWSSDK.Extensions.NETCore.Setup" />
+		<PackageReference Include="Newtonsoft.Json" />
 	</ItemGroup>
 	<ItemGroup>
 		<ProjectReference Include="..\..\..\AlphaZero.Shared\AlphaZero.Shared.csproj" />
 		<ProjectReference Include="..\..\..\aspire\Aspire.Shared\Aspire.Shared.csproj" />
 		<ProjectReference Include="..\Application\Application.csproj" />
+	</ItemGroup>
+	<ItemGroup>
+	  <EmbeddedResource Include="Consumers\job.json">
+	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+	  </EmbeddedResource>
 	</ItemGroup>
 
 </Project>

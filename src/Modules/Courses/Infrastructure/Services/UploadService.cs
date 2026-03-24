@@ -1,8 +1,7 @@
 ﻿using Amazon.S3;
 using Amazon.S3.Model;
+using Aspire.Shared;
 using ErrorOr;
-using Microsoft.Extensions.Options;
-using static Aspire.Shared.AWSResources;
 
 public class S3UploadService : IUploadService
 {
@@ -13,10 +12,10 @@ public class S3UploadService : IUploadService
     private const string SegmentedFilesFolder = "dash";
 
 
-    public S3UploadService(IAmazonS3 client, IOptions<S3Settings> s3Settings)
+    public S3UploadService(IAmazonS3 client, S3Settings s3Settings)
     {
         _client = client;
-        _s3Settings = s3Settings.Value;
+        _s3Settings = s3Settings;
     }
 
     public async Task<ErrorOr<GetPresignedUrlResponse>> GetFile(string key)

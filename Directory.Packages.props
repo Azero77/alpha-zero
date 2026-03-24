@@ -6,12 +6,20 @@
     <PackageVersion Include="Aspire.Hosting.AWS" Version="13.0.0" />
     <PackageVersion Include="Autofac" Version="9.1.0" />
     <PackageVersion Include="Autofac.Extensions.DependencyInjection" Version="9.0.0" />
+    <PackageVersion Include="AWS.Messaging" Version="1.1.2" />
+    <PackageVersion Include="AWS.Messaging.Telemetry.OpenTelemetry" Version="1.0.0" />
     <PackageVersion Include="AWSSDK.CloudFront" Version="4.0.12.3" />
     <PackageVersion Include="AWSSDK.Core" Version="4.0.3.18" />
     <PackageVersion Include="AWSSDK.Extensions.NETCore.Setup" Version="4.0.3.25" />
+    <PackageVersion Include="AWSSDK.MediaConvert" Version="4.0.0" />
     <PackageVersion Include="AWSSDK.S3" Version="4.0.19" />
+    <PackageVersion Include="AWSSDK.SQS" Version="4.0.2.17" />
     <PackageVersion Include="ErrorOr" Version="2.0.1" />
     <PackageVersion Include="FluentValidation.DependencyInjectionExtensions" Version="12.1.1" />
+    <PackageVersion Include="MassTransit" Version="9.0.1" />
+    <PackageVersion Include="MassTransit.AmazonSQS" Version="9.0.1" />
+    <PackageVersion Include="MassTransit.Extensions.DependencyInjection" Version="7.3.1" />
+    <PackageVersion Include="MassTransit.Newtonsoft" Version="9.0.1" />
     <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="9.0.14" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore" Version="9.0.9" />
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="10.0.0" />
@@ -19,6 +27,7 @@
     <PackageVersion Include="MediatR" Version="14.1.0" />
     <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="9.4.0" />
     <PackageVersion Include="Microsoft.Extensions.ServiceDiscovery" Version="9.3.1" />
+    <PackageVersion Include="Newtonsoft.Json" Version="13.0.4" />
     <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.12.0" />
     <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.12.0" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.12.0" />
@@ -26,6 +35,6 @@
     <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="1.12.0" />
     <PackageVersion Include="Aspire.Hosting.AppHost" Version="13.1.2" />
     <PackageVersion Include="Swashbuckle.AspNetCore.Swagger" Version="10.1.5" />
-	  <PackageVersion Include="Swashbuckle.AspNetCore" Version="6.7.0" />
+    <PackageVersion Include="Swashbuckle.AspNetCore" Version="6.7.0" />
   </ItemGroup>
 </Project>

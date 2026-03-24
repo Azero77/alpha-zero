@@ -1,0 +1,24 @@
+import axios from 'axios';
+import { config } from '../config';
+
+const apiClient = axios.create({
+  baseURL: config.apiBaseUrl,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+
+export interface UploadResponse {
+  key: string;
+  preSignedUrl: string;
+}
+
+export const getPresignedUrl = async (fileName: string, contentType: string): Promise<UploadResponse> => {
+  // Matches the endpoint: POST api/courses/upload
+  // and request: { fileName, contentType }
+  const response = await apiClient.post<UploadResponse>('/courses/upload', {
+    fileName,
+    contentType,
+  });
+  return response.data;
+};

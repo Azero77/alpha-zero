@@ -1,8 +1,10 @@
 using AlphaZero.API.Shared;
+using AlphaZero.Modules.Courses.Infrastructure.Consumers;
 using Amazon.Extensions.NETCore.Setup;
 using Aspire.Shared;
 using Autofac;
 using Autofac.Extensions.DependencyInjection;
+using MassTransit;
 using System.Reflection;
 
 namespace AlphaZero.API;
@@ -13,14 +15,12 @@ public class Program
     {
         var builder = WebApplication.CreateBuilder(args);
         builder.AddServiceDefaults();
-
-        // Add services to the container.
         builder.Services.AddAuthorization();
-        ConfigureAWSResources(builder);
+        var awsResources = ConfigureAWSResources(builder);
         // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
         builder.Services.AddEndpointsApiExplorer();
         builder.Services.AddSwaggerGen();
-
+        builder.Services.AddCors();
         string[] assembliesPath = Directory.GetFiles(AppDomain.CurrentDomain.BaseDirectory, "*.dll");
         foreach (var path in assembliesPath)
         {
@@ -31,15 +31,53 @@ public class Program
             }
         }
 
-        List<Type> modules = AppDomain.CurrentDomain.GetAssemblies()
+        // Configure MassTransit with in-memory bus and automatic consumer discovery
+        var assemblies = AppDomain.CurrentDomain.GetAssemblies()
+            .Where(a => a.FullName!.StartsWith("AlphaZero"))
+            .ToArray();
+
+        builder.Services.AddMassTransit(x =>
+        {
+            x.SetKebabCaseEndpointNameFormatter();
+            x.AddConsumers(assemblies);
+
+            //x.AddMediator(M => M.AddConsumers(assemblies));
+            x.UsingAmazonSqs((context, cfg) =>
+            {
+                string region = context.GetRequiredService<IConfiguration>().GetAWSOptions()
+                .Region.SystemName;
+                cfg.Host(region, h => { });
+                cfg.ReceiveEndpoint("VideoUploadedQueue", e =>
+                {
+                    e.ConfigureConsumeTopology = false;
+                    e.ClearSerialization();
+                    e.UseNewtonsoftRawJsonSerializer(RawSerializerOptions.AnyMessageType);
+                    e.ConfigureConsumer<MediaConverterVideoUploadedEventHandler>(context);
+                });
+                cfg.ConfigureEndpoints(context);
+
+            });
+        });
+
+        List<Type> moduleTypes = AppDomain.CurrentDomain.GetAssemblies()
             .SelectMany(c => c.GetTypes().Where(t => t.IsClass && !t.IsAbstract && typeof(AppModule).IsAssignableFrom(t)))
             .ToList();
-        ConfigureModules(builder, modules);
+
+        List<IModule> moduleInstances = new();
+        foreach (var type in moduleTypes)
+        {
+            var instance = (IModule)Activator.CreateInstance(type)!;
+            instance.Configuration = builder.Configuration;
+            instance.RegisterGlobal(builder.Services);
+            moduleInstances.Add(instance);
+        }
+
+        ConfigureModules(builder, moduleInstances);
         var app = builder.Build();
 
-        InitializeModules(app, modules);
+        InitializeModules(app, moduleInstances);
         app.MapDefaultEndpoints();
-        MapModulesEndpoint(app,modules);
+        MapModulesEndpoint(app, moduleTypes);
 
         // Configure the HTTP request pipeline.
         if (app.Environment.IsDevelopment())
@@ -47,6 +85,12 @@ public class Program
 
             app.UseSwagger();
             app.UseSwaggerUI();
+            app.UseCors(builder =>
+            {
+                builder.AllowAnyHeader()
+                .AllowAnyOrigin()
+                .AllowAnyMethod();
+            });
         }
 
         app.UseHttpsRedirection();
@@ -76,35 +120,33 @@ public class Program
         }
     }
 
-    private static void ConfigureAWSResources(WebApplicationBuilder builder)
+    private static AWSResources ConfigureAWSResources(WebApplicationBuilder builder)
     {
         AWSResources awsResources = new();
         AWSOptions options = builder.Configuration.GetAWSOptions();
         builder.Configuration.Bind(AWSResources.Section, awsResources);
         builder.Services.AddSingleton<AWSResources>(awsResources);
         builder.Services.AddDefaultAWSOptions(options);
+
+        return awsResources;
     }
 
-    private static void InitializeModules(WebApplication app,IEnumerable<Type> modules)
+    private static void InitializeModules(WebApplication app, IEnumerable<IModule> modules)
     {
         var root = app.Services.GetAutofacRoot();
         foreach (var module in modules)
         {
-            var executingModule = (IModule)root.Resolve(module);
-            executingModule.Initialize(root);
+            module.Initialize(root);
         }
     }
 
-    private static void ConfigureModules(WebApplicationBuilder builder, IEnumerable<Type> modules)
+    private static void ConfigureModules(WebApplicationBuilder builder, IEnumerable<IModule> modules)
     {
         builder.Host.UseServiceProviderFactory(new AutofacServiceProviderFactory());
         builder.Host.ConfigureContainer<ContainerBuilder>(containerBuilder =>
         {
-            foreach (var module in modules)
+            foreach (var moduleInstance in modules)
             {
-                var moduleInstance = (IModule)Activator.CreateInstance(module)!;
-                moduleInstance.Configuration = builder.Configuration;
-                
                 // Register as a native Autofac module to run Load() on the root container
                 containerBuilder.RegisterModule((Autofac.Module)moduleInstance);
                 

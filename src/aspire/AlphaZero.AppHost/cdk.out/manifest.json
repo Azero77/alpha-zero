@@ -1,28 +1,28 @@
 {
   "version": "48.0.0",
   "artifacts": {
-    "AlphaZero-Aspire.assets": {
+    "AlphaZero.assets": {
       "type": "cdk:asset-manifest",
       "properties": {
-        "file": "AlphaZero-Aspire.assets.json",
+        "file": "AlphaZero.assets.json",
         "requiresBootstrapStackVersion": 6,
         "bootstrapStackVersionSsmParameter": "/cdk-bootstrap/hnb659fds/version"
       }
     },
-    "AlphaZero-Aspire": {
+    "AlphaZero": {
       "type": "aws:cloudformation:stack",
       "environment": "aws://unknown-account/unknown-region",
       "properties": {
-        "templateFile": "AlphaZero-Aspire.template.json",
+        "templateFile": "AlphaZero.template.json",
         "terminationProtection": false,
         "validateOnSynth": false,
         "assumeRoleArn": "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/cdk-hnb659fds-deploy-role-${AWS::AccountId}-${AWS::Region}",
         "cloudFormationExecutionRoleArn": "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/cdk-hnb659fds-cfn-exec-role-${AWS::AccountId}-${AWS::Region}",
-        "stackTemplateAssetObjectUrl": "s3://cdk-hnb659fds-assets-${AWS::AccountId}-${AWS::Region}/52ff44e12363da124ccf2468eac7310eca893680241c03a9bdf9ce292941a8c2.json",
+        "stackTemplateAssetObjectUrl": "s3://cdk-hnb659fds-assets-${AWS::AccountId}-${AWS::Region}/ccf5397466c7f3318bf3d381d2abfaa8197c9c3e83074dfd8ebe8a5f0313ca2f.json",
         "requiresBootstrapStackVersion": 6,
         "bootstrapStackVersionSsmParameter": "/cdk-bootstrap/hnb659fds/version",
         "additionalDependencies": [
-          "AlphaZero-Aspire.assets"
+          "AlphaZero.assets"
         ],
         "lookupRole": {
           "arn": "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/cdk-hnb659fds-lookup-role-${AWS::AccountId}-${AWS::Region}",
@@ -31,35 +31,125 @@
         }
       },
       "dependencies": [
-        "AlphaZero-Aspire.assets"
+        "AlphaZero.assets"
       ],
       "metadata": {
-        "/AlphaZero-Aspire/s3/Resource": [
+        "/AlphaZero/AspireMediaConvertServiceRole/Resource": [
           {
             "type": "aws:cdk:logicalId",
-            "data": "s3100BEDFB"
+            "data": "AspireMediaConvertServiceRole3A30D3A7"
           }
         ],
-        "/AlphaZero-Aspire/s3634A090EBucketName": [
+        "/AlphaZero/AspireMediaConvertServiceRole/DefaultPolicy/Resource": [
           {
             "type": "aws:cdk:logicalId",
-            "data": "s3634A090EBucketName"
+            "data": "AspireMediaConvertServiceRoleDefaultPolicy8D3CB3EC"
           }
         ],
-        "/AlphaZero-Aspire/BootstrapVersion": [
+        "/AlphaZero/InputS3/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "InputS3A6082993"
+          }
+        ],
+        "/AlphaZero/InputS3/Notifications/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "InputS3Notifications5444BCE1"
+          }
+        ],
+        "/AlphaZero/VideoUploadedQueue/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "VideoUploadedQueueB8BA2A18"
+          }
+        ],
+        "/AlphaZero/VideoUploadedQueue/Policy/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "VideoUploadedQueuePolicy217159B7"
+          }
+        ],
+        "/AlphaZero/VideoUploadedQueue/AlphaZeroVideoUploadedEventEC44F1DA/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "VideoUploadedQueueAlphaZeroVideoUploadedEventEC44F1DA4011DED2"
+          }
+        ],
+        "/AlphaZero/VideoUploadedEvent/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "VideoUploadedEvent74AA2431"
+          }
+        ],
+        "/AlphaZero/VideoUploadedEvent/Policy/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "VideoUploadedEventPolicyA8EBB2E4"
+          }
+        ],
+        "/AlphaZero/BucketNotificationsHandler050a0587b7544547bf325f094a3db834/Role/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "BucketNotificationsHandler050a0587b7544547bf325f094a3db834RoleB6FB88EC"
+          }
+        ],
+        "/AlphaZero/BucketNotificationsHandler050a0587b7544547bf325f094a3db834/Role/DefaultPolicy/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "BucketNotificationsHandler050a0587b7544547bf325f094a3db834RoleDefaultPolicy2CF63D36"
+          }
+        ],
+        "/AlphaZero/BucketNotificationsHandler050a0587b7544547bf325f094a3db834/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "BucketNotificationsHandler050a0587b7544547bf325f094a3db8347ECC3691"
+          }
+        ],
+        "/AlphaZero/OutputS3/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "OutputS348BD8914"
+          }
+        ],
+        "/AlphaZero/MediaConvertRoleArnOutput": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "MediaConvertRoleArnOutput"
+          }
+        ],
+        "/AlphaZero/InputS3E497B209BucketName": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "InputS3E497B209BucketName"
+          }
+        ],
+        "/AlphaZero/VideoUploadedQueue6445BDBBQueueUrl": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "VideoUploadedQueue6445BDBBQueueUrl"
+          }
+        ],
+        "/AlphaZero/OutputS3ECBD476ABucketName": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "OutputS3ECBD476ABucketName"
+          }
+        ],
+        "/AlphaZero/BootstrapVersion": [
           {
             "type": "aws:cdk:logicalId",
             "data": "BootstrapVersion"
           }
         ],
-        "/AlphaZero-Aspire/CheckBootstrapVersion": [
+        "/AlphaZero/CheckBootstrapVersion": [
           {
             "type": "aws:cdk:logicalId",
             "data": "CheckBootstrapVersion"
           }
         ]
       },
-      "displayName": "AlphaZero-Aspire"
+      "displayName": "AlphaZero"
     },
     "Tree": {
       "type": "cdk:tree",
