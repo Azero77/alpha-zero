@@ -12,8 +12,8 @@ public class S3UploadService : IUploadService
 
     private readonly IAmazonS3 _client;
     private readonly S3Settings _s3Settings;
-    private const string UnSegmentedFilesFolder = "files";
-    private const string SegmentedFilesFolder = "dash";
+    private const string FilesFolder = "files";
+    public const string VideoIdMetaDataHeader = "VideoId";
 
 
     public S3UploadService(IAmazonS3 client, S3Settings s3Settings)
@@ -29,7 +29,7 @@ public class S3UploadService : IUploadService
             var request = new GetPreSignedUrlRequest()
             {
                 BucketName = _s3Settings.BucketName,
-                Key = $"{UnSegmentedFilesFolder}/{key}",
+                Key = $"{FilesFolder}/{key}",
                 Verb = HttpVerb.GET,
                 Expires = DateTime.UtcNow.AddMinutes(15),
             };
@@ -53,7 +53,7 @@ public class S3UploadService : IUploadService
         return tasks.Select(r => r.IsCompletedSuccessfully ? r.Result : null).ToList();
     }
 
-    public async Task<ErrorOr<GetPresignedUrlResponse>> UploadFile(string fileName, string contentType)
+    public async Task<ErrorOr<GetPresignedUrlResponse>> UploadFile(string fileName, string contentType, Dictionary<string,string>? metadata = null)
     {
         try
         {
@@ -67,8 +67,16 @@ public class S3UploadService : IUploadService
                     },
                 Verb = HttpVerb.PUT,
                 Expires = DateTime.UtcNow.AddMinutes(15),
-                Key = $"{UnSegmentedFilesFolder}/{key}"
+                Key = $"{FilesFolder}/{key}",
+                
             };
+            if (metadata is not null)
+            {
+                foreach (var pair in metadata)
+                {
+                    request.Metadata.Add(pair.Key,pair.Value);
+                }
+            }
 
             string url = await _client.GetPreSignedURLAsync(request);
 

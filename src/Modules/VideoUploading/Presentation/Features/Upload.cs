@@ -26,7 +26,7 @@ public static class Upload
             var command = new UploadCommand(request.fileName, request.contentType);
             var response = await module.Send<UploadCommand, ErrorOr<UploadCommandResponse>>(command);
             return response.Match(
-                res => Results.Ok(new Response(res.key, res.preSignedUrl)), 
+                res => Results.Ok(new Response(res.Key, res.PreSignedUrl)), 
                 errors => errors.ToMinimalResult());
         }
     }

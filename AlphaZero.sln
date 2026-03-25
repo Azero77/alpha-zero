@@ -53,6 +53,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Domain", "src\Modules\Cours
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Presentation", "src\Modules\Courses\Presentation\Presentation.csproj", "{5A6E0526-28ED-4CEE-BAB0-AFC737AE467F}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IntegrationEvents", "src\Modules\VideoUploading\IntegrationEvents\IntegrationEvents.csproj", "{23594DFB-A847-417C-B547-A90D79199A0A}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -127,6 +129,10 @@ Global
 		{5A6E0526-28ED-4CEE-BAB0-AFC737AE467F}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{5A6E0526-28ED-4CEE-BAB0-AFC737AE467F}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{5A6E0526-28ED-4CEE-BAB0-AFC737AE467F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{23594DFB-A847-417C-B547-A90D79199A0A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{23594DFB-A847-417C-B547-A90D79199A0A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{23594DFB-A847-417C-B547-A90D79199A0A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{23594DFB-A847-417C-B547-A90D79199A0A}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -150,6 +156,7 @@ Global
 		{276E9C4B-9DDC-4A39-9706-FB964DAE71C2} = {13104521-1933-4E18-91FA-9D61373512FB}
 		{96650D9A-1796-42A7-8038-92297078812D} = {13104521-1933-4E18-91FA-9D61373512FB}
 		{5A6E0526-28ED-4CEE-BAB0-AFC737AE467F} = {13104521-1933-4E18-91FA-9D61373512FB}
+		{23594DFB-A847-417C-B547-A90D79199A0A} = {E80F57F8-2B2D-4E6A-8970-A6763942AEA6}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {A4D73EED-30AF-4218-9197-D39806BE2055}

@@ -6,8 +6,8 @@ public interface IUploadService
 {
     Task<ErrorOr<GetPresignedUrlResponse>> GetFile(string key);
     Task<List<GetPresignedUrlResponse?>> GetFiles(List<string> keysAsList);
-    Task<ErrorOr<GetPresignedUrlResponse>> UploadFile(string fileName, string contentType);
     Task<ErrorOr<Success>> DeleteFile(string key);
+    Task<ErrorOr<GetPresignedUrlResponse>> UploadFile(string fileName, string contentType, Dictionary<string, string>? metadata = null);
 }
 
 

@@ -1,4 +1,5 @@
 using AlphaZero.API.Shared;
+using AlphaZero.Shared.Application;
 using Amazon.Extensions.NETCore.Setup;
 using Aspire.Shared;
 using Autofac;
@@ -20,6 +21,8 @@ public class Program
         builder.Services.AddEndpointsApiExplorer();
         builder.Services.AddSwaggerGen();
         builder.Services.AddCors();
+        builder.Services.AddScoped<IModuleBus, ModuleBus>();
+
         string[] assembliesPath = Directory.GetFiles(AppDomain.CurrentDomain.BaseDirectory, "*.dll");
         foreach (var path in assembliesPath)
         {
