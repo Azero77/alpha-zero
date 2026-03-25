@@ -16,17 +16,17 @@ namespace AlphaZero.Modules.Courses.Infrastructure.Consumers;
 
 public record VideoUploadedEvent(string Key, string Bucket);
 
-public class MediaConverterVideoUploadedEventHandler : IConsumer<S3EventNotification>
+public class MediaConverterSQSVideoUploadedEventHandler : IConsumer<S3EventNotification>
 {
     private readonly IConfiguration _configuration;
     private readonly IAmazonMediaConvert _mediaConvertClient;
     private readonly AWSResources _aWSResources;
-    private readonly ILogger<MediaConverterVideoUploadedEventHandler> _logger;
+    private readonly ILogger<MediaConverterSQSVideoUploadedEventHandler> _logger;
 
-    public MediaConverterVideoUploadedEventHandler(IConfiguration configuration,
+    public MediaConverterSQSVideoUploadedEventHandler(IConfiguration configuration,
         IAmazonMediaConvert mediaConvertClient,
         AWSResources aWSResources,
-        ILogger<MediaConverterVideoUploadedEventHandler> logger)
+        ILogger<MediaConverterSQSVideoUploadedEventHandler> logger)
     {
         _configuration = configuration;
         _mediaConvertClient = mediaConvertClient;
@@ -76,7 +76,7 @@ public class MediaConverterVideoUploadedEventHandler : IConsumer<S3EventNotifica
     private CreateJobRequest CreateJobRequestFromTemplate(string inputS3, string outputPath, string assetId)
     {
         // Load your JSON file
-        var assembly = typeof(MediaConverterVideoUploadedEventHandler).Assembly;
+        var assembly = typeof(MediaConverterSQSVideoUploadedEventHandler).Assembly;
         var file = $"AlphaZero.Modules.Courses.Infrastructure.Consumers.job.json";
 
         using var stream = assembly.GetManifestResourceStream(file) ?? throw new ArgumentException(" job.json File not found");
@@ -99,5 +99,21 @@ public class MediaConverterVideoUploadedEventHandler : IConsumer<S3EventNotifica
         };
 
         return jobSettings;
+    }
+}
+
+public class MediaConverterSQSVideoUploadedEventHandlerDefinition
+    : ConsumerDefinition<MediaConverterSQSVideoUploadedEventHandler>
+{
+    public MediaConverterSQSVideoUploadedEventHandlerDefinition()
+    {
+        EndpointName = "VideoUploadedQueue";
+    }
+
+    protected override void ConfigureConsumer(IReceiveEndpointConfigurator endpointConfigurator, IConsumerConfigurator<MediaConverterSQSVideoUploadedEventHandler> consumerConfigurator, IRegistrationContext context)
+    {
+        endpointConfigurator.ConfigureConsumeTopology = false;
+        endpointConfigurator.ClearSerialization();
+        endpointConfigurator.UseNewtonsoftRawJsonSerializer(RawSerializerOptions.AnyMessageType);
     }
 }

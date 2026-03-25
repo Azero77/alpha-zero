@@ -36,28 +36,28 @@ public class Program
             .Where(a => a.FullName!.StartsWith("AlphaZero"))
             .ToArray();
 
-        builder.Services.AddMassTransit(x =>
+
+        //Configure In-Memory Messagin
+        builder.Services.AddMediator(x =>
         {
             x.SetKebabCaseEndpointNameFormatter();
-            x.AddConsumers(assemblies);
+            x.AddConsumers(filter => !filter.Name.Contains("sqs", StringComparison.InvariantCultureIgnoreCase), assemblies);
+        });
 
-            //x.AddMediator(M => M.AddConsumers(assemblies));
+        //Configure SQS messaging
+        builder.Services.AddMassTransit(x =>
+        {
+            x.AddConsumers(filter => filter.Name.Contains("sqs", StringComparison.InvariantCultureIgnoreCase),assemblies);
             x.UsingAmazonSqs((context, cfg) =>
             {
                 string region = context.GetRequiredService<IConfiguration>().GetAWSOptions()
                 .Region.SystemName;
                 cfg.Host(region, h => { });
-                cfg.ReceiveEndpoint("VideoUploadedQueue", e =>
-                {
-                    e.ConfigureConsumeTopology = false;
-                    e.ClearSerialization();
-                    e.UseNewtonsoftRawJsonSerializer(RawSerializerOptions.AnyMessageType);
-                    e.ConfigureConsumer<MediaConverterVideoUploadedEventHandler>(context);
-                });
                 cfg.ConfigureEndpoints(context);
-
             });
+
         });
+
 
         List<Type> moduleTypes = AppDomain.CurrentDomain.GetAssemblies()
             .SelectMany(c => c.GetTypes().Where(t => t.IsClass && !t.IsAbstract && typeof(AppModule).IsAssignableFrom(t)))
