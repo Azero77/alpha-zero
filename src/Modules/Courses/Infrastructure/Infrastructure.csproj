@@ -31,16 +31,12 @@
 		<PackageReference Include="AWSSDK.Extensions.NETCore.Setup" />
 		<PackageReference Include="MassTransit.Newtonsoft" />
 		<PackageReference Include="Newtonsoft.Json" />
+		<PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
 	</ItemGroup>
 	<ItemGroup>
 		<ProjectReference Include="..\..\..\AlphaZero.Shared\AlphaZero.Shared.csproj" />
 		<ProjectReference Include="..\..\..\aspire\Aspire.Shared\Aspire.Shared.csproj" />
 		<ProjectReference Include="..\Application\Application.csproj" />
-	</ItemGroup>
-	<ItemGroup>
-	  <EmbeddedResource Include="Consumers\job.json">
-	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-	  </EmbeddedResource>
 	</ItemGroup>
 
 </Project>

@@ -16,7 +16,7 @@ export interface UploadResponse {
 export const getPresignedUrl = async (fileName: string, contentType: string): Promise<UploadResponse> => {
   // Matches the endpoint: POST api/courses/upload
   // and request: { fileName, contentType }
-  const response = await apiClient.post<UploadResponse>('/courses/upload', {
+  const response = await apiClient.post<UploadResponse>('/video-uploading/upload', {
     fileName,
     contentType,
   });

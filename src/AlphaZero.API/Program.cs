@@ -1,5 +1,4 @@
 using AlphaZero.API.Shared;
-using AlphaZero.Modules.Courses.Infrastructure.Consumers;
 using Amazon.Extensions.NETCore.Setup;
 using Aspire.Shared;
 using Autofac;
