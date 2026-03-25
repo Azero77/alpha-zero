@@ -14,8 +14,6 @@ using System.Text.Json;
 
 namespace AlphaZero.Modules.Courses.Infrastructure.Consumers;
 
-public record VideoUploadedEvent(string Key, string Bucket);
-
 public class MediaConverterSQSVideoUploadedEventHandler : IConsumer<S3EventNotification>
 {
     private readonly IConfiguration _configuration;
@@ -36,7 +34,7 @@ public class MediaConverterSQSVideoUploadedEventHandler : IConsumer<S3EventNotif
 
     public async Task Consume(ConsumeContext<S3EventNotification> context)
     {
-
+            
         foreach (var record in context.Message.Records)
         {
             if (!record.EventName.Value.StartsWith("ObjectCreated:"))
