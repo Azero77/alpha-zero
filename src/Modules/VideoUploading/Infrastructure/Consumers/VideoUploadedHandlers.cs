@@ -1,6 +1,7 @@
 using AlphaZero.Modules.VideoUploading.Infrastructure.Services;
 using AlphaZero.Modules.VideoUploading.IntegrationEvents;
 using AlphaZero.Shared.Application;
+using AlphaZero.Shared.Domain;
 using Amazon.MediaConvert;
 using Amazon.MediaConvert.Model;
 using Amazon.S3;
@@ -51,7 +52,6 @@ public class SQSS3EventHandler : IConsumer<S3EventNotification>
                 if (metadataResponse is null || videoId is null || !Guid.TryParse(videoId,out Guid videoGuid))
                 {
                     _logger.LogError("Video with no metadata has been found, Key : {key}", key);
-                    await _moduleBus.Publish(new VideoUploadFailedEvent(null,key));
                     continue;
                 }
 
@@ -71,17 +71,20 @@ public class VideoUploadedEventHandler : IConsumer<VideoUploadedToInputEvent>
     private readonly AWSResources _aWSResources;
     private readonly ILogger<VideoUploadedEventHandler> _logger;
     private readonly IModuleBus _moduleBus;
+    private readonly IClock _clock;
 
     public VideoUploadedEventHandler(
         IAmazonMediaConvert mediaConvertClient,
         AWSResources aWSResources,
         ILogger<VideoUploadedEventHandler> logger,
-        IModuleBus moduleBus)
+        IModuleBus moduleBus,
+        IClock clock)
     {
         _mediaConvertClient = mediaConvertClient;
         _aWSResources = aWSResources;
         _logger = logger;
         _moduleBus = moduleBus;
+        _clock = clock;
     }
 
     public async Task Consume(ConsumeContext<VideoUploadedToInputEvent> context)
@@ -104,7 +107,6 @@ public class VideoUploadedEventHandler : IConsumer<VideoUploadedToInputEvent>
 
             _logger.LogInformation("[MediaConvert] Job Created: {JobId} for Asset: {AssetId}", 
                 response.Job.Id, assetId);
-            await _moduleBus.Publish(new VideoProcessingStartedEvent(key,bucket,context.Message.VideoId,response.Job.Id));
         }
         catch (Exception ex)
         {
@@ -134,7 +136,8 @@ public class VideoUploadedEventHandler : IConsumer<VideoUploadedToInputEvent>
         jobSettings.UserMetadata = new Dictionary<string, string>
         {
             { S3UploadService.VideoIdMetaDataHeader, assetId },
-            { "sourceFile", inputS3 }
+            { "sourceFile", inputS3 },
+            { "outputPath" , outputPath},
         };
 
         return jobSettings;

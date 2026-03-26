@@ -94,7 +94,7 @@ var mediaConvertRule = new Rule((Construct)awscdkStack.Resource.Construct,"JobCo
         DetailType = ["MediaConvert Job State Change"],
         Detail = new Dictionary<string, object>()
         {
-            {"status" , new string[] {"COMPLETE" } }
+            {"status" , new string[] {"COMPLETE", "PROGRESSING", "ERROR" } }
         }
     }
 });

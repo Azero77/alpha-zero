@@ -41,7 +41,7 @@ public sealed class UploadCommandHandler(IUploadService uploadService, IModuleBu
             { "VideoId" , videoId.ToString()}
         });
         if (response.IsError) return response.Errors;
-        await moduleBus.Publish(new UploadVideoRequested(videoId,clock.Now));
+        await moduleBus.Publish(new UploadVideoRequestedEvent(videoId,clock.Now));
 
         return new UploadCommandResponse(videoId,response.Value.key,response.Value.presignedUrl);
     }

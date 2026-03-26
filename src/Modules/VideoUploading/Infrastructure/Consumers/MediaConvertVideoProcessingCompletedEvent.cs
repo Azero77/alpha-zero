@@ -4,6 +4,7 @@ using AlphaZero.Shared.Application;
 using MassTransit;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
+using System.Text.RegularExpressions;
 
 namespace AlphaZero.Modules.VideoUploading.Infrastructure.Consumers;
 
@@ -47,22 +48,54 @@ public class SQSMediaConverterJobCompletedEventHandler :
     {
         var detail = context.Message.Detail;
         
-        if (detail.Status != "COMPLETE")
-        {
-            _logger.LogWarning("Received MediaConvert event with status {Status} for Job {JobId}", detail.Status, detail.JobId);
-            return;
-        }
-
-        if (detail.UserMetadata.TryGetValue(S3UploadService.VideoIdMetaDataHeader, out var videoIdStr) && 
+        if (detail.Status == "COMPLETE" && detail.UserMetadata.TryGetValue(S3UploadService.VideoIdMetaDataHeader, out var videoIdStr) &&
             Guid.TryParse(videoIdStr, out var videoId))
         {
             _logger.LogInformation("MediaConvert Job {JobId} completed for Video {VideoId}", detail.JobId, videoId);
             await _moduleBus.Publish(new VideoProcessingCompletedEvent(videoId));
+            return;
         }
-        else
+        else if (detail.Status == "PROGRESSING")
         {
-            _logger.LogError("MediaConvert Job {JobId} completed but VideoId not found in metadata", detail.JobId);
+            videoIdStr = detail.UserMetadata.GetValueOrDefault(S3UploadService.VideoIdMetaDataHeader);
+            if (videoIdStr is null || Guid.TryParse(videoIdStr, out videoId))
+            {
+                _logger.LogCritical("MediaConvert Job {JobId} Started for Video with no Id", detail.JobId);
+                return;
+            }
+            if (
+                !detail.UserMetadata.TryGetValue("sourceFile", out var inputPath) ||
+                TryGetParamsForInputPath(inputPath,out string key,out string bucket)
+                )
+            {
+                _logger.LogCritical("MediaConvert Job {JobId} Started for Video with no InputPath", detail.JobId);
+                await _moduleBus.Publish(new VideoUploadFailedEvent(videoId, string.Empty));
+                return;
+
+            }
+            _logger.LogInformation("MediaConvert Job {JobId} Started for Video {VideoId}", detail.JobId, videoId);
+            
+            await _moduleBus.Publish(new VideoProcessingStartedEvent(key,bucket,videoId,detail.JobId));
+
+
         }
+    }
+
+    private bool TryGetParamsForInputPath(string? inputPath, out string key,out string bucket)
+    {
+        key = string.Empty;
+        bucket = string.Empty;
+        if (inputPath is null)
+            return false;
+        var regex = new Regex("^s3://([^/]+)/(.+)$");
+
+        var match = regex.Match(inputPath);
+
+        if (!match.Success) return false;
+         key = match.Groups[2].Value;
+        bucket= match.Groups[1].Value;
+
+        return true ;
     }
 }
 
