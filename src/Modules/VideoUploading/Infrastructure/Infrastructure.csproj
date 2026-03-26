@@ -18,6 +18,7 @@
 	  <PackageReference Include="AWSSDK.Core" />
 	  <PackageReference Include="AWSSDK.Extensions.NETCore.Setup" />
 
+
 	  <PackageReference Include="Newtonsoft.Json" />
   </ItemGroup>
 

@@ -1,4 +1,5 @@
 
+using Amazon.CDK.AWS.Events;
 using Amazon.CDK.AWS.Events.Targets;
 using Amazon.CDK.AWS.IAM;
 using Amazon.CDK.AWS.Lambda.Destinations;
@@ -83,11 +84,30 @@ new Amazon.CDK.CfnOutput((Construct)awscdkStack.Resource.Construct, "MediaConver
 {
     Value = mediaConvertRole.RoleArn
 });
+
+
+var mediaConvertRule = new Rule((Construct)awscdkStack.Resource.Construct,"JobCompletedRule",new RuleProps()
+{
+    EventPattern = new EventPattern()
+    {
+        Source = ["aws.mediaconvert"],
+        DetailType = ["MediaConvert Job State Change"],
+        Detail = new Dictionary<string, object>()
+        {
+            {"status" , new string[] {"COMPLETE" } }
+        }
+    }
+});
+
+var videoProcessedQueue = awscdkStack.AddSQSQueue("mediaconverter-video-processed");
+videoProcessedQueue.Resource.Construct.GrantSendMessages(new ServicePrincipal("events.amazonaws.com"));
+mediaConvertRule.AddTarget(new SqsQueue(videoProcessedQueue.Resource.Construct));
 var api = builder.AddProject<Projects.AlphaZero_API>("alphazero-api")
     .WithReference(awsSdkConfig)
     .WithReference(input_s3)
     .WithReference(output_s3)
     .WithReference(videoUploadedSQSQueue)
+    .WithReference(videoProcessedQueue)
     .WithEnvironment("AWS__Resources__MediaConvertRoleArn", awscdkStack.GetOutput("MediaConvertRoleArnOutput"))
     .WithEnvironment("AWS__Resources__MediaConvertKeyKMSArn", kmsArn); 
 

@@ -70,22 +70,25 @@ public class VideoUploadedEventHandler : IConsumer<VideoUploadedToInputEvent>
     private readonly IAmazonMediaConvert _mediaConvertClient;
     private readonly AWSResources _aWSResources;
     private readonly ILogger<VideoUploadedEventHandler> _logger;
+    private readonly IModuleBus _moduleBus;
 
     public VideoUploadedEventHandler(
         IAmazonMediaConvert mediaConvertClient,
         AWSResources aWSResources,
-        ILogger<VideoUploadedEventHandler> logger)
+        ILogger<VideoUploadedEventHandler> logger,
+        IModuleBus moduleBus)
     {
         _mediaConvertClient = mediaConvertClient;
         _aWSResources = aWSResources;
         _logger = logger;
+        _moduleBus = moduleBus;
     }
 
     public async Task Consume(ConsumeContext<VideoUploadedToInputEvent> context)
     {
         var key = context.Message.Key;
         var bucket = context.Message.BucketName;
-        var assetId = context.Message.videoGuid.ToString();
+        var assetId = context.Message.VideoId.ToString();
 
         _logger.LogInformation("[Transcoding] Starting job for Asset: {AssetId}", assetId);
 
@@ -101,6 +104,7 @@ public class VideoUploadedEventHandler : IConsumer<VideoUploadedToInputEvent>
 
             _logger.LogInformation("[MediaConvert] Job Created: {JobId} for Asset: {AssetId}", 
                 response.Job.Id, assetId);
+            await _moduleBus.Publish(new VideoProcessingStartedEvent(key,bucket,context.Message.VideoId,response.Job.Id));
         }
         catch (Exception ex)
         {
@@ -127,10 +131,9 @@ public class VideoUploadedEventHandler : IConsumer<VideoUploadedToInputEvent>
 
         var jobSettings = JsonConvert.DeserializeObject<CreateJobRequest>(jsonTemplate);
         if (jobSettings == null) throw new Exception("Failed to deserialize job.json");
-
         jobSettings.UserMetadata = new Dictionary<string, string>
         {
-            { "assetID", assetId },
+            { S3UploadService.VideoIdMetaDataHeader, assetId },
             { "sourceFile", inputS3 }
         };
 
