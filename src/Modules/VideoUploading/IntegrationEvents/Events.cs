@@ -8,7 +8,7 @@ public record UploadVideoRequestedEvent(Guid VideoId, DateTime OnTime);
 /// <summary>
 /// Internal event representing a confirmed video upload
 /// </summary>
-public record VideoUploadedToInputEvent(string Key, string BucketName, Guid VideoId);
+public record VideoDeliveredToInputEvent(string Key, string BucketName, Guid VideoId);
 public record VideoProcessingStartedEvent(string Key,string BucketName,Guid VideoId,string JobId);
 public record VideoProcessingCompletedEvent(Guid VideoId);
 public record VideoPublishedEvent(Guid VideoId);

@@ -44,6 +44,7 @@ public class Program
         {
             x.SetKebabCaseEndpointNameFormatter();
             x.AddConsumers(filter => !filter.Name.Contains("sqs", StringComparison.InvariantCultureIgnoreCase), assemblies);
+            x.AddSagas(assemblies);
         });
 
         //Configure SQS messaging

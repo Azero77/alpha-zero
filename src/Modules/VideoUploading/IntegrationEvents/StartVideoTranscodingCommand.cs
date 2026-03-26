@@ -1,3 +1,3 @@
 namespace AlphaZero.Modules.VideoUploading.IntegrationEvents;
 
-public record StartVideoTranscodingCommand(string Key, string BucketName, Guid VideoId);
+public record StartVideoProcessingCommand(string Key, string BucketName, Guid VideoId);
