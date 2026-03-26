@@ -1,5 +1,6 @@
 using Autofac;
 using Autofac.Extensions.DependencyInjection;
+using MassTransit;
 using MediatR;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -12,7 +13,7 @@ public interface IModule
     void RegisterGlobal(IServiceCollection services);
 
     void Initialize(ILifetimeScope scope);
-
+    void ConfigureModuleBus(IMediatorRegistrationConfigurator configuration);
     IConfiguration? Configuration { get; set; }
 }
 
@@ -38,4 +39,8 @@ public abstract class AppModule : Module, IModule
     public abstract void RegisterPrivate(IServiceCollection services, ContainerBuilder builder);
 
     public abstract void RegisterGlobal(IServiceCollection services);
+    public virtual void ConfigureModuleBus(IMediatorRegistrationConfigurator configuration)
+    {
+        return;
+    }
 }

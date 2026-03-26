@@ -1,5 +1,8 @@
 using AlphaZero.Modules.VideoUploading.Infrastructure;
+using AlphaZero.Modules.VideoUploading.Infrastructure.Persistance;
+using AlphaZero.Modules.VideoUploading.Infrastructure.Sagas;
 using Autofac;
+using MassTransit;
 using MediatR;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -25,5 +28,15 @@ public class VideoUploadingModule : AppModule
         if (Scope is null) throw new NotImplementedException("Module not initialized");
         var mediatr = Scope.Resolve<IMediator>();
         return mediatr.Send((IRequest<TResponse>)request);
+    }
+    public override void ConfigureModuleBus(IMediatorRegistrationConfigurator configuration)
+    {
+        configuration.AddSagaStateMachine<VideoUploadingSaga, VideoState>()
+        .EntityFrameworkRepository(r =>
+        {
+            r.ExistingDbContext<AppDbContext>();
+            r.UsePostgres();
+            r.ConcurrencyMode = ConcurrencyMode.Optimistic;
+        });
     }
 }

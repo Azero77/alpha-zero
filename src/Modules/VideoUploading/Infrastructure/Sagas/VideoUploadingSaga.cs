@@ -4,7 +4,7 @@ using static MassTransit.Logging.OperationName;
 
 namespace AlphaZero.Modules.VideoUploading.Infrastructure.Sagas;
 
-internal class VideoUploadingSaga: MassTransitStateMachine<VideoState>
+public class VideoUploadingSaga: MassTransitStateMachine<VideoState>
 {
     public State Pending { get; private set; } = null!;
     public State Staged { get; private set; } = null!;
@@ -35,7 +35,7 @@ internal class VideoUploadingSaga: MassTransitStateMachine<VideoState>
         During(Pending,
          When(VideoUploadedToInputEvent)
             .If(context => !context.Saga.ProcessingStarted, x => StartProcessing(x))
-);
+            .Then(context => context.Saga.Key = context.Message.Key));
         During(Staged,
             When(VideoProcessingStartedEvent)
             .Then(context => context.Saga.ProcessingStarted = true)
@@ -75,4 +75,5 @@ public class VideoState : SagaStateMachineInstance
     public string? Key { get; set; }
     public bool ProcessingStarted { get; set; } = false;
     public bool IsFailed { get; set; } = false;
+    public int Version { get; set; }
 }

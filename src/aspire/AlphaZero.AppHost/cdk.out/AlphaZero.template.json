@@ -354,6 +354,102 @@
    "Type": "AWS::S3::Bucket",
    "UpdateReplacePolicy": "Retain",
    "DeletionPolicy": "Retain"
+  },
+  "JobCompletedRule7540F26B": {
+   "Type": "AWS::Events::Rule",
+   "Properties": {
+    "EventPattern": {
+     "detail": {
+      "status": [
+       "COMPLETE",
+       "PROGRESSING",
+       "ERROR"
+      ]
+     },
+     "detail-type": [
+      "MediaConvert Job State Change"
+     ],
+     "source": [
+      "aws.mediaconvert"
+     ]
+    },
+    "State": "ENABLED",
+    "Targets": [
+     {
+      "Arn": {
+       "Fn::GetAtt": [
+        "mediaconvertervideoprocessed66B811A4",
+        "Arn"
+       ]
+      },
+      "Id": "Target0"
+     }
+    ]
+   }
+  },
+  "mediaconvertervideoprocessed66B811A4": {
+   "Type": "AWS::SQS::Queue",
+   "UpdateReplacePolicy": "Delete",
+   "DeletionPolicy": "Delete"
+  },
+  "mediaconvertervideoprocessedPolicy4F5D9846": {
+   "Type": "AWS::SQS::QueuePolicy",
+   "Properties": {
+    "PolicyDocument": {
+     "Statement": [
+      {
+       "Action": [
+        "sqs:SendMessage",
+        "sqs:GetQueueAttributes",
+        "sqs:GetQueueUrl"
+       ],
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "events.amazonaws.com"
+       },
+       "Resource": {
+        "Fn::GetAtt": [
+         "mediaconvertervideoprocessed66B811A4",
+         "Arn"
+        ]
+       }
+      },
+      {
+       "Action": [
+        "sqs:SendMessage",
+        "sqs:GetQueueAttributes",
+        "sqs:GetQueueUrl"
+       ],
+       "Condition": {
+        "ArnEquals": {
+         "aws:SourceArn": {
+          "Fn::GetAtt": [
+           "JobCompletedRule7540F26B",
+           "Arn"
+          ]
+         }
+        }
+       },
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "events.amazonaws.com"
+       },
+       "Resource": {
+        "Fn::GetAtt": [
+         "mediaconvertervideoprocessed66B811A4",
+         "Arn"
+        ]
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "Queues": [
+     {
+      "Ref": "mediaconvertervideoprocessed66B811A4"
+     }
+    ]
+   }
   }
  },
  "Outputs": {
@@ -378,6 +474,11 @@
   "OutputS3ECBD476ABucketName": {
    "Value": {
     "Ref": "OutputS348BD8914"
+   }
+  },
+  "mediaconvertervideoprocessed73CDABA6QueueUrl": {
+   "Value": {
+    "Ref": "mediaconvertervideoprocessed66B811A4"
    }
   }
  },

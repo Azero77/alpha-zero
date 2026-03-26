@@ -2,9 +2,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AlphaZero.Modules.VideoUploading.Infrastructure.Persistance;
 
-public class VideoUploadingDbContext : DbContext
+public class AppDbContext : DbContext
 {
-    public VideoUploadingDbContext(DbContextOptions<VideoUploadingDbContext> options) : base(options)
+    public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
     {
     }
 
@@ -12,5 +12,7 @@ public class VideoUploadingDbContext : DbContext
     {
         base.OnModelCreating(modelBuilder);
         modelBuilder.HasDefaultSchema("video_uploading");
+        modelBuilder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
     }
+
 }

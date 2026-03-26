@@ -18,7 +18,7 @@
         "validateOnSynth": false,
         "assumeRoleArn": "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/cdk-hnb659fds-deploy-role-${AWS::AccountId}-${AWS::Region}",
         "cloudFormationExecutionRoleArn": "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/cdk-hnb659fds-cfn-exec-role-${AWS::AccountId}-${AWS::Region}",
-        "stackTemplateAssetObjectUrl": "s3://cdk-hnb659fds-assets-${AWS::AccountId}-${AWS::Region}/ccf5397466c7f3318bf3d381d2abfaa8197c9c3e83074dfd8ebe8a5f0313ca2f.json",
+        "stackTemplateAssetObjectUrl": "s3://cdk-hnb659fds-assets-${AWS::AccountId}-${AWS::Region}/177cbb474f6fe6dd4da58445f09342276e1c1a31a23889104843c2380cbeed6f.json",
         "requiresBootstrapStackVersion": 6,
         "bootstrapStackVersionSsmParameter": "/cdk-bootstrap/hnb659fds/version",
         "additionalDependencies": [
@@ -118,6 +118,24 @@
             "data": "MediaConvertRoleArnOutput"
           }
         ],
+        "/AlphaZero/JobCompletedRule/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "JobCompletedRule7540F26B"
+          }
+        ],
+        "/AlphaZero/mediaconverter-video-processed/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "mediaconvertervideoprocessed66B811A4"
+          }
+        ],
+        "/AlphaZero/mediaconverter-video-processed/Policy/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "mediaconvertervideoprocessedPolicy4F5D9846"
+          }
+        ],
         "/AlphaZero/InputS3E497B209BucketName": [
           {
             "type": "aws:cdk:logicalId",
@@ -134,6 +152,12 @@
           {
             "type": "aws:cdk:logicalId",
             "data": "OutputS3ECBD476ABucketName"
+          }
+        ],
+        "/AlphaZero/mediaconvertervideoprocessed73CDABA6QueueUrl": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "mediaconvertervideoprocessed73CDABA6QueueUrl"
           }
         ],
         "/AlphaZero/BootstrapVersion": [
