@@ -19,15 +19,24 @@
             "VideoDescription": {
               "Width": 1280,
               "Height": 720,
+              "VideoPreprocessors": {
+                "NoiseReducer": {
+                  "Filter": "TEMPORAL",
+                  "Settings": {
+                    "Strength": 1
+                  }
+                }
+              },
               "CodecSettings": {
                 "Codec": "H_264",
                 "H264Settings": {
-                  "MaxBitrate": 2200000,
+                  "MaxBitrate": 1800000,
                   "RateControlMode": "QVBR",
                   "QvbrSettings": {
                     "QvbrQualityLevel": 7
                   },
-                  "SceneChangeDetect": "TRANSITION_DETECTION"
+                  "SceneChangeDetect": "TRANSITION_DETECTION",
+                  "AdaptiveQuantization": "HIGH"
                 }
               }
             },
@@ -40,15 +49,24 @@
             "VideoDescription": {
               "Width": 1920,
               "Height": 1080,
+              "VideoPreprocessors": {
+                "NoiseReducer": {
+                  "Filter": "TEMPORAL",
+                  "Settings": {
+                    "Strength": 1
+                  }
+                }
+              },
               "CodecSettings": {
                 "Codec": "H_264",
                 "H264Settings": {
-                  "MaxBitrate": 4500000,
+                  "MaxBitrate": 3000000,
                   "RateControlMode": "QVBR",
                   "QvbrSettings": {
                     "QvbrQualityLevel": 8
                   },
-                  "SceneChangeDetect": "TRANSITION_DETECTION"
+                  "SceneChangeDetect": "TRANSITION_DETECTION",
+                  "AdaptiveQuantization": "HIGH"
                 }
               }
             },
@@ -61,15 +79,24 @@
             "VideoDescription": {
               "Width": 854,
               "Height": 480,
+              "VideoPreprocessors": {
+                "NoiseReducer": {
+                  "Filter": "TEMPORAL",
+                  "Settings": {
+                    "Strength": 1
+                  }
+                }
+              },
               "CodecSettings": {
                 "Codec": "H_264",
                 "H264Settings": {
-                  "MaxBitrate": 1100000,
+                  "MaxBitrate": 800000,
                   "RateControlMode": "QVBR",
                   "QvbrSettings": {
                     "QvbrQualityLevel": 6
                   },
-                  "SceneChangeDetect": "TRANSITION_DETECTION"
+                  "SceneChangeDetect": "TRANSITION_DETECTION",
+                  "AdaptiveQuantization": "HIGH"
                 }
               }
             },
@@ -82,15 +109,24 @@
             "VideoDescription": {
               "Width": 640,
               "Height": 360,
+              "VideoPreprocessors": {
+                "NoiseReducer": {
+                  "Filter": "TEMPORAL",
+                  "Settings": {
+                    "Strength": 1
+                  }
+                }
+              },
               "CodecSettings": {
                 "Codec": "H_264",
                 "H264Settings": {
-                  "MaxBitrate": 800000,
+                  "MaxBitrate": 500000,
                   "RateControlMode": "QVBR",
                   "QvbrSettings": {
                     "QvbrQualityLevel": 6
                   },
-                  "SceneChangeDetect": "TRANSITION_DETECTION"
+                  "SceneChangeDetect": "TRANSITION_DETECTION",
+                  "AdaptiveQuantization": "HIGH"
                 }
               }
             },
@@ -106,10 +142,15 @@
                 "CodecSettings": {
                   "Codec": "AAC",
                   "AacSettings": {
-                    "Bitrate": 96000,
+                    "Bitrate": 64000,
                     "CodingMode": "CODING_MODE_2_0",
-                    "SampleRate": 48000
+                    "SampleRate": 44100
                   }
+                },
+                "AudioNormalizationSettings": {
+                  "Algorithm": "ITU_BS_1770_2",
+                  "AlgorithmControl": "CORRECT_AUDIO",
+                  "TargetLkfs": -24
                 }
               }
             ],
@@ -121,6 +162,7 @@
           "CmafGroupSettings": {
             "SegmentLength": 6,
             "Destination": "##OUTPUT_PATH##",
+            "IframeOnlyManifests": "INCLUDE",
             "DestinationSettings": {
               "S3Settings": {
                 "Encryption": {
