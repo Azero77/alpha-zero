@@ -1,9 +1,12 @@
 using Autofac;
+using Autofac.Core;
 using Autofac.Extensions.DependencyInjection;
 using MassTransit;
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using System.Threading.Tasks;
 
 public interface IModule
 {
@@ -42,5 +45,38 @@ public abstract class AppModule : Module, IModule
     public virtual void ConfigureModuleBus(IMediatorRegistrationConfigurator configuration)
     {
         return;
+    }
+
+    public async Task RunMigrations()
+    {
+        if (Scope is null) return;
+
+        // Find the module's base namespace (e.g., AlphaZero.Modules.VideoUploading)
+        var moduleNamespace = this.GetType().Namespace;
+        if (string.IsNullOrEmpty(moduleNamespace)) return;
+
+        var parts = moduleNamespace.Split('.');
+        if (parts.Length < 3) return;
+        var baseNamespace = string.Join(".", parts.Take(3));
+
+        // Search for a type named 'AppDbContext' in assemblies starting with the base namespace
+        var dbContextType = AppDomain.CurrentDomain.GetAssemblies()
+            .Where(a => a.FullName != null && a.FullName.StartsWith(baseNamespace))
+            .SelectMany(a => a.GetTypes())
+            .FirstOrDefault(t => t.Name == "AppDbContext" && typeof(DbContext).IsAssignableFrom(t));
+
+        if (dbContextType is null) return;
+
+        // Resolve the found DbContext type from the scope
+        using var migrationScope = Scope.BeginLifetimeScope();
+        if (migrationScope.Resolve(dbContextType) is DbContext db)
+        {
+            /*var pendingMigrations = await db.Database.GetPendingMigrationsAsync();
+            if (pendingMigrations.Any())
+            {
+                await db.Database.MigrateAsync();
+            }*/
+            await db.Database.MigrateAsync();
+        }
     }
 }

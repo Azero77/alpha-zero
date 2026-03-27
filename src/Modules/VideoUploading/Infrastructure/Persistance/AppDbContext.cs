@@ -4,6 +4,7 @@ namespace AlphaZero.Modules.VideoUploading.Infrastructure.Persistance;
 
 public class AppDbContext : DbContext
 {
+    public const string Schema = "video_uploading";
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
     {
     }
@@ -11,7 +12,7 @@ public class AppDbContext : DbContext
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
-        modelBuilder.HasDefaultSchema("video_uploading");
+        modelBuilder.HasDefaultSchema(Schema);
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
     }
 

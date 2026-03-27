@@ -41,6 +41,13 @@ public class VideoUploadingSaga: MassTransitStateMachine<VideoState>
             .Then(context => context.Saga.ProcessingStarted = true)
             .TransitionTo(Processing));
 
+
+        //sometimes the VideoProcessingStartedEvent is skipped and Complete comes , so we accept it
+        During(Staged,
+            When(VideoProcessingCompletedEvent)
+            .Then(context => context.Saga.ProcessingStarted = true)
+            .TransitionTo(Processing));
+
         During(Processing,
             When(VideoProcessingCompletedEvent)
             .TransitionTo(Publishing));
@@ -58,11 +65,9 @@ public class VideoUploadingSaga: MassTransitStateMachine<VideoState>
     {
         return binder
             .Then(context => context.Saga.ProcessingStarted = true)
-            .Publish(context => context.Init<StartVideoProcessingCommand>(
-                new StartVideoProcessingCommand(
-                    context.Message.Key,
+            .Publish(context =>  new StartVideoProcessingCommand(context.Message.Key,
                     context.Message.BucketName,
-                    context.Message.VideoId)))
+                    context.Message.VideoId))
             .TransitionTo(Staged);
     }
 

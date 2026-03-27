@@ -9,6 +9,7 @@ const apiClient = axios.create({
 });
 
 export interface UploadResponse {
+  videoId: string;
   key: string;
   preSignedUrl: string;
 }

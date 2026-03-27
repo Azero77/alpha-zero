@@ -9,6 +9,8 @@ public class VideoStateEntityConfiguration : IEntityTypeConfiguration<VideoState
 {
     public void Configure(EntityTypeBuilder<VideoState> builder)
     {
+        builder.HasKey(x => x.CorrelationId);
+        builder.HasIndex(x => x.CorrelationId).IsUnique();
         builder.Property(x => x.Version)
             .IsConcurrencyToken();
     }

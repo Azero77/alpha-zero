@@ -41,14 +41,27 @@ public class SQSS3EventHandler : IConsumer<S3EventNotification>
                 };
 
                 var metadataResponse = await _s3.GetObjectMetadataAsync(metadataRequest);
+                if (metadataResponse is null || metadataResponse.Metadata is null)
+                {
+                    await _moduleBus.Publish(new VideoUploadFailedEvent(Guid.Empty,key));
+                    _logger.LogCritical("Video Uploaded with no videoId , key : {key}" , key);
+                    continue;
+                }
                 string? videoId = metadataResponse.Metadata?[S3UploadService.VideoIdMetaDataHeader];
+
+                /*var metadata = metadataResponse.Metadata!.Keys
+                    .Select(m => new KeyValuePair<string,object> (m,metadataResponse.Metadata[m]))
+                    .ToDictionary();
+
+                metadata.Remove(S3UploadService.VideoIdMetaDataHeader); //no need to store it in the metadata anymore, it is a part of the dictionary
+*/
                 if (metadataResponse is null || videoId is null || !Guid.TryParse(videoId,out Guid videoGuid))
                 {
                     _logger.LogError("Video with no metadata has been found, Key : {key}", key);
                     continue;
                 }
 
-                await context.Publish(new VideoDeliveredToInputEvent(key, bucketName,videoGuid));
+                await _moduleBus.Publish(new VideoDeliveredToInputEvent(key, bucketName,videoGuid));
                 continue;
             }
         }

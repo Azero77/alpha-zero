@@ -58,14 +58,14 @@ public class SQSMediaConverterJobCompletedEventHandler :
         else if (detail.Status == "PROGRESSING")
         {
             videoIdStr = detail.UserMetadata.GetValueOrDefault(S3UploadService.VideoIdMetaDataHeader);
-            if (videoIdStr is null || Guid.TryParse(videoIdStr, out videoId))
+            if (videoIdStr is null || !Guid.TryParse(videoIdStr, out videoId))
             {
                 _logger.LogCritical("MediaConvert Job {JobId} Started for Video with no Id", detail.JobId);
                 return;
             }
             if (
                 !detail.UserMetadata.TryGetValue("sourceFile", out var inputPath) ||
-                TryGetParamsForInputPath(inputPath,out string key,out string bucket)
+                !TryGetParamsForInputPath(inputPath,out string key,out string bucket)
                 )
             {
                 _logger.LogCritical("MediaConvert Job {JobId} Started for Video with no InputPath", detail.JobId);

@@ -117,6 +117,7 @@
        "AllowedHeaders": [
         "content-type",
         "x-amz-meta-file-name",
+        "x-amz-meta-videoid",
         "*"
        ],
        "AllowedMethods": [
@@ -128,7 +129,8 @@
        ],
        "ExposedHeaders": [
         "ETag",
-        "x-amz-meta-file-name"
+        "x-amz-meta-file-name",
+        "x-amz-meta-videoid"
        ],
        "MaxAge": 3600
       }
@@ -389,6 +391,9 @@
   },
   "mediaconvertervideoprocessed66B811A4": {
    "Type": "AWS::SQS::Queue",
+   "Properties": {
+    "QueueName": "mediaconverter-video-processed"
+   },
    "UpdateReplacePolicy": "Delete",
    "DeletionPolicy": "Delete"
   },

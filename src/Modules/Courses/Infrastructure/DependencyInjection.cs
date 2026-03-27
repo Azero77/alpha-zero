@@ -17,14 +17,12 @@ public static class DependencyInjection
 
     public static void AddCoursesPrivateInfrastructure(this IServiceCollection moduleServices, IConfiguration configuration)
     {
-        DatabaseSettings dbSettings = configuration.GetSection(DatabaseSettings.SectionName).Get<DatabaseSettings>() 
-            ?? throw new ArgumentException("Database settings are not configured in Courses module");
-
+        DatabaseSettings dbSettings = DatabaseSettings.GetDatabaseSettings(configuration);
         moduleServices.AddMediatR(opts => opts.RegisterServicesFromAssembly(typeof(ICoursesApplicationMarker).Assembly));
 
-        moduleServices.AddDbContext<AppDbContext>(opts =>
+       /* moduleServices.AddDbContext<AppDbContext>(opts =>
         {
             opts.UseNpgsql(dbSettings.ConnectionString);
-        });
+        });*/
     }
 }

@@ -4,3 +4,7 @@ public interface IClock
 {
     public DateTime Now => DateTime.UtcNow;
 }
+public class Clock : IClock
+{
+
+}

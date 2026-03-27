@@ -1,6 +1,7 @@
 using AlphaZero.API.Shared;
 using AlphaZero.Modules.VideoUploading.Infrastructure.Sagas;
 using AlphaZero.Shared.Application;
+using AlphaZero.Shared.Infrastructure;
 using Amazon.Extensions.NETCore.Setup;
 using Aspire.Shared;
 using Autofac;
@@ -105,6 +106,8 @@ public class Program
         app.UseHttpsRedirection();
 
         app.UseAuthorization();
+
+        app.RunMigrations(moduleInstances).Wait();
 
         app.Run();
     }

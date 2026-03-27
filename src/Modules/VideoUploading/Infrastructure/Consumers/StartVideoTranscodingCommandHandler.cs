@@ -47,7 +47,7 @@ public class StartVideoProcessingCommandHandler : IConsumer<StartVideoProcessing
         string sourceS3 = $"s3://{bucket}/{key}";
         string destinationBucket = _aWSResources.OutputS3?.BucketName 
             ?? throw new ArgumentException("Output S3 bucket is not configured");
-        string outputPath = $"s3://{destinationBucket}/streaming/{assetId}";
+        string outputPath = $"s3://{destinationBucket}/streaming/{assetId}/";
 
         try
         {
