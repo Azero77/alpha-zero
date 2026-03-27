@@ -1,6 +1,6 @@
 ﻿namespace AlphaZero.Shared.Domain;
 
-internal class AggregateRoot : Entity
+public class AggregateRoot : Entity
 {
     private List<IDomainEvent> _domainEvents = new();
 
