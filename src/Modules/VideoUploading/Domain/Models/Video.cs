@@ -11,6 +11,7 @@ public class Video : AggregateRoot, IDomainTenantOwned
     public string? Description { get; private set; }
     public VideoStatus Status { get; private set; }
     public VideoMetadata Metadata { get; private set; }
+    public VideoSpecifications Specifications { get; private set; }
     public string SourceKey { get; private set; }
     public string? OutputFolder { get; private set; }
     public DateTime CreatedOn { get; private set; }
@@ -32,6 +33,7 @@ public class Video : AggregateRoot, IDomainTenantOwned
         Description = description;
         SourceKey = sourceKey;
         Metadata = metadata;
+        Specifications = new VideoSpecifications();
         Status = VideoStatus.Processing;
         CreatedOn = createdOn;
     }
@@ -51,14 +53,14 @@ public class Video : AggregateRoot, IDomainTenantOwned
         return new Video(id, tenantId, title, description, sourceKey, metadata, clock.Now);
     }
 
-    public ErrorOr<Success> MarkAsPublished(string outputFolder, TimeSpan duration, string resolution, IClock clock)
+    public ErrorOr<Success> MarkAsPublished(string outputFolder, VideoSpecifications specifications, IClock clock)
     {
         if (Status != VideoStatus.Processing)
             return VideoErrors.InvalidStatus;
 
         Status = VideoStatus.Published;
         OutputFolder = outputFolder;
-        Metadata = Metadata with { Duration = duration, Resolution = resolution };
+        Specifications = specifications;
         PublishedOn = clock.Now;
 
         AddDomainEvent(new VideoPublishedDomainEvent(Id, PublishedOn.Value));
@@ -71,9 +73,19 @@ public class Video : AggregateRoot, IDomainTenantOwned
         Status = VideoStatus.Failed;
     }
 
+    public void MarkAsDeleted()
+    {
+        Status = VideoStatus.Deleted;
+    }
+
     public void UpdateMetadata(VideoMetadata metadata)
     {
         Metadata = metadata;
+    }
+
+    public void UpdateSpecifications(VideoSpecifications specifications)
+    {
+        Specifications = specifications;
     }
 
     public ErrorOr<Success> SetTitle(string title)

@@ -49,12 +49,6 @@ public class SQSS3EventHandler : IConsumer<S3EventNotification>
                 }
                 string? videoId = metadataResponse.Metadata?[S3UploadService.VideoIdMetaDataHeader];
 
-                /*var metadata = metadataResponse.Metadata!.Keys
-                    .Select(m => new KeyValuePair<string,object> (m,metadataResponse.Metadata[m]))
-                    .ToDictionary();
-
-                metadata.Remove(S3UploadService.VideoIdMetaDataHeader); //no need to store it in the metadata anymore, it is a part of the dictionary
-*/
                 if (metadataResponse is null || videoId is null || !Guid.TryParse(videoId,out Guid videoGuid))
                 {
                     _logger.LogError("Video with no metadata has been found, Key : {key}", key);
@@ -62,7 +56,12 @@ public class SQSS3EventHandler : IConsumer<S3EventNotification>
                 }
 
                 await _moduleBus.Publish(new VideoDeliveredToInputEvent(key, bucketName,videoGuid));
-                continue;
+            }
+            else if (record.EventName.Value.StartsWith("ObjectRemoved:"))
+            {
+                string key = record.S3.Object.Key;
+                _logger.LogInformation("Video file removed from S3: {key}", key);
+                await _moduleBus.Publish(new VideoDeletedFromS3Event(key));
             }
         }
     }

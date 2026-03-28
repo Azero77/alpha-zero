@@ -31,6 +31,7 @@ public class VideoUploadingSaga: MassTransitStateMachine<VideoState>
 
         Initially(
             When(UploadVideoRequestedEvent)
+            .Then(context => context.Saga.TenantId = context.Message.TenantId)
             .TransitionTo(Pending));
         During(Pending,
          When(VideoUploadedToInputEvent)
@@ -75,6 +76,7 @@ public class VideoUploadingSaga: MassTransitStateMachine<VideoState>
 public class VideoState : SagaStateMachineInstance
 {
     public Guid CorrelationId { get; set; }
+    public Guid TenantId { get; set; }
     public string CurrentState { get; set; } = null!;
     public string? MediaConverterJobId { get; set; }
     public string? Key { get; set; }

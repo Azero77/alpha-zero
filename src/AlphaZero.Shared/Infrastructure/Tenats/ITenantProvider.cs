@@ -21,7 +21,7 @@ public class HttpTenantProvider : ITenantProvider
     {
 
         Claim? claim = _httpContextAccessor?.HttpContext?.User?.FindFirst(TenantClaim);
-        if (claim is null || Guid.TryParse(claim.Value,out Guid tenantId))
+        if (claim is null || !Guid.TryParse(claim.Value,out Guid tenantId))
             return null;
         return tenantId;
     }

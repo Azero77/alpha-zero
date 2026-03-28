@@ -1,7 +1,11 @@
+using AlphaZero.Modules.VideoUploading.Application.Commands.Complete;
+using AlphaZero.Modules.VideoUploading.Infrastructure.Persistance;
 using AlphaZero.Modules.VideoUploading.Infrastructure.Services;
 using AlphaZero.Modules.VideoUploading.IntegrationEvents;
 using AlphaZero.Shared.Application;
 using MassTransit;
+using MediatR;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using System.Text.RegularExpressions;
@@ -121,16 +125,36 @@ public class VideoProcessingCompletedEventHandler :
     IConsumer<VideoProcessingCompletedEvent>
 {
     private readonly ILogger<VideoProcessingCompletedEventHandler> _logger;
+    private readonly IMediator _mediator;
+    private readonly AppDbContext _dbContext;
 
-    public VideoProcessingCompletedEventHandler(ILogger<VideoProcessingCompletedEventHandler> logger)
+    public VideoProcessingCompletedEventHandler(
+        ILogger<VideoProcessingCompletedEventHandler> logger,
+        IMediator mediator,
+        AppDbContext dbContext)
     {
         _logger = logger;
+        _mediator = mediator;
+        _dbContext = dbContext;
     }
 
-    public Task Consume(ConsumeContext<VideoProcessingCompletedEvent> context)
+    public async Task Consume(ConsumeContext<VideoProcessingCompletedEvent> context)
     {
-        _logger.LogInformation("Processing completion for Video {VideoId}", context.Message.VideoId);
-        // This can be used for additional logic outside the saga if needed
-        return Task.CompletedTask;
+        var videoId = context.Message.VideoId;
+        _logger.LogInformation("Infrastructure consumer triggered for Video {VideoId}", videoId);
+
+        var videoState = await _dbContext.VideoState.FirstOrDefaultAsync(s => s.CorrelationId == videoId);
+        if (videoState == null || videoState.Key == null)
+        {
+            _logger.LogError("VideoState not found for Video {VideoId}", videoId);
+            return;
+        }
+
+        var result = await _mediator.Send(new CompleteVideoProcessingCommand(videoId, videoState.Key, videoState.TenantId));
+
+        if (result.IsError)
+        {
+            _logger.LogError("Application command failed for Video {VideoId}: {Error}", videoId, result.FirstError.Description);
+        }
     }
 }

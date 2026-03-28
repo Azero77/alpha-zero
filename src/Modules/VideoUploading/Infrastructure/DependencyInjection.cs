@@ -1,6 +1,9 @@
 using AlphaZero.Modules.VideoUploading.Application;
+using AlphaZero.Modules.VideoUploading.Application.Repositories;
 using AlphaZero.Modules.VideoUploading.Application.Services;
+using AlphaZero.Modules.VideoUploading.Domain.Services;
 using AlphaZero.Modules.VideoUploading.Infrastructure.Persistance;
+using AlphaZero.Modules.VideoUploading.Infrastructure.Repositories;
 using AlphaZero.Modules.VideoUploading.Infrastructure.Services;
 using AlphaZero.Shared.Application;
 using AlphaZero.Shared.Domain;
@@ -58,7 +61,10 @@ public static class DependencyInjection
         // Infrastructure Services
         moduleServices.AddSingleton<S3Settings>(awsResources.InputS3 ?? throw new ArgumentException("S3 Input is not configured"));
         moduleServices.AddScoped<IUploadService, S3UploadService>();
-
+        moduleServices.AddScoped<IVideoSpecificationExtractorService, S3VideoSpecificationExtractor>();
+        moduleServices.AddScoped<IVideoTranscodingService, MediaConvertTranscodingService>();
+        moduleServices.AddScoped<IVideoRepository, VideoRepository>();
+        moduleServices.AddScoped<IUnitOfWork, UnitOfWork<AppDbContext>>();
         
     }
 }

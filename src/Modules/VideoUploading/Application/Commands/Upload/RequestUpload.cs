@@ -6,6 +6,7 @@ using MassTransit.Mediator;
 using AlphaZero.Modules.VideoUploading.IntegrationEvents;
 using AlphaZero.Shared.Application;
 using AlphaZero.Shared.Domain;
+using AlphaZero.Shared.Infrastructure.Tenats;
 using FluentValidation;
 
 namespace AlphaZero.Modules.VideoUploading.Application.Commands.Upload;
@@ -30,18 +31,22 @@ public class UploadCommandValidator : AbstractValidator<UploadCommand>
 
 public record UploadCommandResponse(Guid VideoId, string Key,string PreSignedUrl);
 
-public sealed class UploadCommandHandler(IUploadService uploadService, IModuleBus moduleBus, IClock clock) : IRequestHandler<UploadCommand, ErrorOr<UploadCommandResponse>>
+public sealed class UploadCommandHandler(IUploadService uploadService, IModuleBus moduleBus, IClock clock, ITenantProvider tenantProvider) : IRequestHandler<UploadCommand, ErrorOr<UploadCommandResponse>>
 {
     public async Task<ErrorOr<UploadCommandResponse>> Handle(UploadCommand request, CancellationToken cancellationToken)
     {
+        Guid? tenantId = tenantProvider.GetTenant();
+        if (tenantId is null) return Error.Failure("Tenant.NotFound", "Tenant not found in context.");
+
         Guid videoId = Guid.NewGuid();
         //request policis , implemented later ......
         var response = await uploadService.UploadFile(request.fileName, request.contentType, new Dictionary<string, string>()
         {
-            { "VideoId" , videoId.ToString()}
+            { "VideoId" , videoId.ToString()},
+            { "TenantId", tenantId.Value.ToString() }
         });
         if (response.IsError) return response.Errors;
-        await moduleBus.Publish(new UploadVideoRequestedEvent(videoId,clock.Now));
+        await moduleBus.Publish(new UploadVideoRequestedEvent(videoId, tenantId.Value, clock.Now));
 
         return new UploadCommandResponse(videoId,response.Value.key,response.Value.presignedUrl);
     }

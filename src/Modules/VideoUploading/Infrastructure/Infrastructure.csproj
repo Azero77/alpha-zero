@@ -21,6 +21,7 @@
 
 
 	  <PackageReference Include="Newtonsoft.Json" />
+	  <PackageReference Include="FFMpegCore"/>
   </ItemGroup>
 
   <ItemGroup>

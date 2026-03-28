@@ -1,5 +1,6 @@
 using AlphaZero.Modules.VideoUploading.Application.Services;
 using AlphaZero.Modules.VideoUploading.Infrastructure.Persistance;
+using AlphaZero.Modules.VideoUploading.IntegrationEvents;
 using Amazon.S3;
 using Amazon.S3.Model;
 using Aspire.Shared;
@@ -39,6 +40,35 @@ public class S3UploadService : IUploadService
         catch (AmazonS3Exception exception)
         {
             return Error.Failure("Resources.Failure", exception.Message);
+        }
+    }
+    public async Task<ErrorOr<Dictionary<string, object>>> GetMetadata(string key)
+    {
+        try
+        {
+            var metadataRequest = new GetObjectMetadataRequest()
+            {
+                BucketName = _s3Settings.BucketName,
+                Key = key,
+            };
+
+            var metadataResponse = await _client.GetObjectMetadataAsync(metadataRequest);
+
+            var metadata = metadataResponse.Metadata!.Keys
+                       .ToDictionary(m => m, m => (object)metadataResponse.Metadata[m]);
+
+            metadata["Content-Length"] = metadataResponse.ContentLength;
+            metadata["Content-Type"] = metadataResponse.Headers.ContentType;
+
+            return metadata;
+        }
+        catch (AmazonS3Exception ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
+        {
+            return Error.NotFound();
+        }
+        catch (Exception ex)
+        {
+            return Error.Failure("S3.MetadataError", ex.Message);
         }
     }
 

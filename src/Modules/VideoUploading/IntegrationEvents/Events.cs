@@ -2,7 +2,7 @@
 
 
 //Events
-public record UploadVideoRequestedEvent(Guid VideoId, DateTime OnTime);
+public record UploadVideoRequestedEvent(Guid VideoId, Guid TenantId, DateTime OnTime);
 
 
 /// <summary>
@@ -13,3 +13,5 @@ public record VideoProcessingStartedEvent(string Key,string BucketName,Guid Vide
 public record VideoProcessingCompletedEvent(Guid VideoId);
 public record VideoPublishedEvent(Guid VideoId);
 public record VideoUploadFailedEvent(Guid VideoId , string Key); //videoId maybe null to no upload // missing metadata problems
+public record VideoDeletedFromS3Event(string Key);
+public record VideoMetadataUpdatedEvent(string Key);
