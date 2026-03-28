@@ -163,6 +163,14 @@
             "SegmentLength": 6,
             "Destination": "##OUTPUT_PATH##",
             "IframeOnlyManifests": "INCLUDE",
+            "Encryption": {
+              "StaticKeyProvider": {
+                "StaticKeyValue": "##DRM_KEY##",
+                "KeyId": "##DRM_KEY_ID##",
+                "Url": "##DRM_KEY_URL##"
+              },
+              "Type": "STATIC_KEY"
+            },
             "DestinationSettings": {
               "S3Settings": {
                 "Encryption": {

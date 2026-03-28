@@ -30,6 +30,15 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ manifestUrl, clearKey }) => {
 
       player = new shaka.Player(videoRef.current);
 
+      // Add a request filter to handle relative paths in the manifest when using the API Proxy
+      player.getNetworkingEngine()?.registerRequestFilter((_type, request) => {
+        // If the URL is just a filename (no http/https), it's a relative segment request
+        if (!request.uris[0].startsWith('http') && manifestUrl.includes('/dev/proxy/')) {
+          const proxyBase = manifestUrl.substring(0, manifestUrl.lastIndexOf('/') + 1);
+          request.uris[0] = proxyBase + request.uris[0];
+        }
+      });
+
       // Listen for errors
       player.addEventListener('error', (event: any) => {
         const error = event.detail;

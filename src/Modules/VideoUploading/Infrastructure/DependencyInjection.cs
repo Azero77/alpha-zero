@@ -64,6 +64,7 @@ public static class DependencyInjection
         moduleServices.AddScoped<IVideoSpecificationExtractorService, S3VideoSpecificationExtractor>();
         moduleServices.AddScoped<IVideoTranscodingService, MediaConvertTranscodingService>();
         moduleServices.AddScoped<IVideoRepository, VideoRepository>();
+        moduleServices.AddScoped<IVideoStateRepository, VideoStateRepository>();
         moduleServices.AddScoped<IUnitOfWork, UnitOfWork<AppDbContext>>();
         
     }

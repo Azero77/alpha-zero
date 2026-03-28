@@ -58,11 +58,20 @@ public class MediaConvertTranscodingService : IVideoTranscodingService
         using var reader = new StreamReader(stream);
         
         string jsonTemplate = reader.ReadToEnd();
+
+        // For testing ClearKey, we use a deterministic key based on the VideoId
+        // MediaConvert expects a 32-character hex string for StaticKeyValue
+        string drmKey = assetId.Replace("-", ""); 
+        string drmKeyId = assetId.Replace("-", "");
+
         jsonTemplate = jsonTemplate
             .Replace("##INPUT_FILE##", inputS3)
             .Replace("##OUTPUT_PATH##", outputPath)
             .Replace("##KMS_KEY_ARN##", _aWSResources.MediaConvertKeyKMSArn)
-            .Replace("##MediaConvertRole##", _aWSResources.MediaConvertRoleArn);
+            .Replace("##MediaConvertRole##", _aWSResources.MediaConvertRoleArn)
+            .Replace("##DRM_KEY##", drmKey)
+            .Replace("##DRM_KEY_ID##", drmKeyId)
+            .Replace("##DRM_KEY_URL##", "https://alphazero.api/clearkey");
 
         var jobSettings = JsonConvert.DeserializeObject<CreateJobRequest>(jsonTemplate);
         if (jobSettings == null) throw new Exception("Failed to deserialize job.json");

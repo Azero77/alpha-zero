@@ -25,6 +25,14 @@ export class VideoService implements IVideoService {
 
   async getStreamingInfo(id: string): Promise<StreamingInfo> {
     const response = await apiClient.get<StreamingInfo>(`/video-uploading/debug/videos/${id}/streaming`);
+    
+    // If manifestUrl is a relative path (API Proxy), prepend the baseURL
+    if (response.data.manifestUrl.startsWith('/')) {
+      // Remove '/api' from baseURL if manifest already includes it
+      const baseUrl = config.apiBaseUrl.replace(/\/api$/, '');
+      response.data.manifestUrl = `${baseUrl}${response.data.manifestUrl}`;
+    }
+    
     return response.data;
   }
 
