@@ -18,9 +18,14 @@
     <PackageReference Include="AWSSDK.S3" />
     <PackageReference Include="MassTransit" />
     <PackageReference Include="MassTransit.AmazonSQS" />
+    <PackageReference Include="MassTransit.EntityFrameworkCore" />
     <PackageReference Include="MassTransit.Extensions.DependencyInjection" />
     <PackageReference Include="MassTransit.Newtonsoft" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
     <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" />
 
 	  <PackageReference Include="Swashbuckle.AspNetCore" />
@@ -31,6 +36,7 @@
     <ProjectReference Include="..\aspire\AlphaZero.ServiceDefaults\AlphaZero.ServiceDefaults.csproj" />
     <ProjectReference Include="..\aspire\Aspire.Shared\Aspire.Shared.csproj" />
     <ProjectReference Include="..\Modules\VideoStreaming\Presentation\Presentation.csproj" />
+    <ProjectReference Include="..\Modules\VideoUploading\Presentation\Presentation.csproj" />
     <ProjectReference Include="..\Modules\Courses\Presentation\Presentation.csproj" />
   </ItemGroup>
 

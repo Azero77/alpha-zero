@@ -1,4 +1,5 @@
 
+using Amazon.CDK.AWS.Events;
 using Amazon.CDK.AWS.Events.Targets;
 using Amazon.CDK.AWS.IAM;
 using Amazon.CDK.AWS.Lambda.Destinations;
@@ -35,8 +36,8 @@ var input_s3 = awscdkStack.AddS3Bucket("InputS3", new BucketProps
         {
             AllowedMethods = new[] { HttpMethods.GET,HttpMethods.PUT},
             AllowedOrigins = new[] { "*" },
-            AllowedHeaders = new[] { "content-type", "x-amz-meta-file-name", "*" },
-            ExposedHeaders = new[] { "ETag", "x-amz-meta-file-name" },
+            AllowedHeaders = new[] { "content-type", "x-amz-meta-file-name", "x-amz-meta-videoid", "*" },
+            ExposedHeaders = new[] { "ETag", "x-amz-meta-file-name", "x-amz-meta-videoid" },
             MaxAge = 3600
         }
     }
@@ -83,13 +84,43 @@ new Amazon.CDK.CfnOutput((Construct)awscdkStack.Resource.Construct, "MediaConver
 {
     Value = mediaConvertRole.RoleArn
 });
+
+
+var mediaConvertRule = new Rule((Construct)awscdkStack.Resource.Construct,"JobCompletedRule",new RuleProps()
+{
+    EventPattern = new EventPattern()
+    {
+        Source = ["aws.mediaconvert"],
+        DetailType = ["MediaConvert Job State Change"],
+        Detail = new Dictionary<string, object>()
+        {
+            {"status" , new string[] {"COMPLETE", "PROGRESSING", "ERROR" } }
+        }
+    }
+});
+
+var videoProcessedQueue = awscdkStack.AddSQSQueue("mediaconverter-video-processed", new QueueProps
+{
+    QueueName = "mediaconverter-video-processed"
+});
+videoProcessedQueue.Resource.Construct.GrantSendMessages(new ServicePrincipal("events.amazonaws.com"));
+mediaConvertRule.AddTarget(new SqsQueue(videoProcessedQueue.Resource.Construct));
+
+var postgres = builder.AddPostgres("postgres")
+    .WithImage("postgis/postgis:16-3.5-alpine")
+    .WithPgAdmin(cfg => cfg.WithImage("dpage/pgadmin4:snapshot"))
+    .WithDataVolume(isReadOnly: false);
+
+var db = postgres.AddDatabase("alphazerodb");
 var api = builder.AddProject<Projects.AlphaZero_API>("alphazero-api")
     .WithReference(awsSdkConfig)
     .WithReference(input_s3)
     .WithReference(output_s3)
     .WithReference(videoUploadedSQSQueue)
+    .WithReference(db)
+    .WaitFor(db)
+    .WithReference(videoProcessedQueue)
     .WithEnvironment("AWS__Resources__MediaConvertRoleArn", awscdkStack.GetOutput("MediaConvertRoleArnOutput"))
-    .WithEnvironment("AWS__Resources__MediaConvertKeyKMSArn", kmsArn); 
-
+    .WithEnvironment("AWS__Resources__MediaConvertKeyKMSArn", kmsArn);
 
 builder.Build().Run();

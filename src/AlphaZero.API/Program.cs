@@ -1,5 +1,8 @@
 using AlphaZero.API.Shared;
-using AlphaZero.Modules.Courses.Infrastructure.Consumers;
+using AlphaZero.Modules.VideoUploading.Infrastructure.Sagas;
+using AlphaZero.Shared.Application;
+using AlphaZero.Shared.Infrastructure;
+using AlphaZero.Shared.Infrastructure.Tenats;
 using Amazon.Extensions.NETCore.Setup;
 using Aspire.Shared;
 using Autofac;
@@ -21,6 +24,17 @@ public class Program
         builder.Services.AddEndpointsApiExplorer();
         builder.Services.AddSwaggerGen();
         builder.Services.AddCors();
+        builder.Services.AddHttpContextAccessor();
+        if (builder.Environment.IsDevelopment())
+        {
+            builder.Services.AddScoped<ITenantProvider, FakeTenantProvider>();
+        }
+        else
+        {
+            builder.Services.AddScoped<ITenantProvider, HttpTenantProvider>();
+        }
+        builder.Services.AddScoped<IModuleBus, ModuleBus>();
+
         string[] assembliesPath = Directory.GetFiles(AppDomain.CurrentDomain.BaseDirectory, "*.dll");
         foreach (var path in assembliesPath)
         {
@@ -37,11 +51,30 @@ public class Program
             .ToArray();
 
 
+
+        List<Type> moduleTypes = AppDomain.CurrentDomain.GetAssemblies()
+            .SelectMany(c => c.GetTypes().Where(t => t.IsClass && !t.IsAbstract && typeof(AppModule).IsAssignableFrom(t)))
+            .ToList();
+
+        List<IModule> moduleInstances = new();
+        foreach (var type in moduleTypes)
+        {
+            var instance = (IModule)Activator.CreateInstance(type)!;
+            instance.Configuration = builder.Configuration;
+            instance.RegisterGlobal(builder.Services);
+            moduleInstances.Add(instance);
+        }
+
+
         //Configure In-Memory Messagin
         builder.Services.AddMediator(x =>
         {
             x.SetKebabCaseEndpointNameFormatter();
             x.AddConsumers(filter => !filter.Name.Contains("sqs", StringComparison.InvariantCultureIgnoreCase), assemblies);
+            foreach (var module in moduleInstances)
+            {
+                module.ConfigureModuleBus(x);
+            }
         });
 
         //Configure SQS messaging
@@ -58,19 +91,6 @@ public class Program
 
         });
 
-
-        List<Type> moduleTypes = AppDomain.CurrentDomain.GetAssemblies()
-            .SelectMany(c => c.GetTypes().Where(t => t.IsClass && !t.IsAbstract && typeof(AppModule).IsAssignableFrom(t)))
-            .ToList();
-
-        List<IModule> moduleInstances = new();
-        foreach (var type in moduleTypes)
-        {
-            var instance = (IModule)Activator.CreateInstance(type)!;
-            instance.Configuration = builder.Configuration;
-            instance.RegisterGlobal(builder.Services);
-            moduleInstances.Add(instance);
-        }
 
         ConfigureModules(builder, moduleInstances);
         var app = builder.Build();
@@ -96,6 +116,8 @@ public class Program
         app.UseHttpsRedirection();
 
         app.UseAuthorization();
+
+        app.RunMigrations(moduleInstances).Wait();
 
         app.Run();
     }

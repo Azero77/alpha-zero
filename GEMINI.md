@@ -24,6 +24,18 @@
    - Use `IPublishEndpoint` (SQS) for external/serverless background tasks (like video encoding).
 4. **Validation:** All logic changes require corresponding unit or integration tests in the `tests/` directory.
 
+## 🧩 Modular Infrastructure & DI
+- **Module Lifecycle:** Every module MUST inherit from `AppModule` (implementing `IModule`).
+  - `RegisterGlobal(IServiceCollection)`: For services shared across modules (e.g., global AWS clients, shared middleware).
+  - `RegisterPrivate(IServiceCollection, ContainerBuilder)`: For internal module logic (Application/Infrastructure). Uses `Autofac.Populate(IServiceCollection)` to bridge MSDI and Autofac.
+  - `Initialize(ILifetimeScope)`: Sets up the module's isolated scope after the application is built.
+- **Service Discovery:** `Program.cs` dynamically scans for `AppModule` and `IEndpoint` implementations.
+- **MassTransit & Messaging:** 
+  - `AddMediator`: Used for in-memory messaging (Internal MediatR/MassTransit).
+  - `AddMassTransit`: Used for external SQS-backed messaging.
+  - **Convention:** Consumers with "sqs" in their name are registered for SQS; others are registered for the In-Memory Mediator.
+- **Endpoints:** Feature endpoints must implement `IEndpoint` and are automatically mapped during startup.
+
 ## 📂 Key Source of Truth
 - **Requirements:** `docs/PRD.md`
 - **Features:** `docs/MVP-Score.md`
