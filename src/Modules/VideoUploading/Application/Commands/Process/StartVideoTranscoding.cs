@@ -1,4 +1,6 @@
 using AlphaZero.Modules.VideoUploading.Application.Services;
+using AlphaZero.Modules.VideoUploading.IntegrationEvents;
+using AlphaZero.Shared.Application;
 using Aspire.Shared;
 using ErrorOr;
 using MediatR;
@@ -13,15 +15,17 @@ public sealed class StartVideoTranscodingCommandHandler : IRequestHandler<StartV
     private readonly IVideoTranscodingService _transcodingService;
     private readonly AWSResources _aWSResources;
     private readonly ILogger<StartVideoTranscodingCommandHandler> _logger;
-
+    private readonly IModuleBus _moduleBus;
     public StartVideoTranscodingCommandHandler(
-        IVideoTranscodingService transcodingService, 
-        AWSResources aWSResources, 
-        ILogger<StartVideoTranscodingCommandHandler> logger)
+        IVideoTranscodingService transcodingService,
+        AWSResources aWSResources,
+        ILogger<StartVideoTranscodingCommandHandler> logger,
+        IModuleBus moduleBus)
     {
         _transcodingService = transcodingService;
         _aWSResources = aWSResources;
         _logger = logger;
+        _moduleBus = moduleBus;
     }
 
     public async Task<ErrorOr<string>> Handle(StartVideoTranscodingCommand request, CancellationToken cancellationToken)
@@ -33,6 +37,14 @@ public sealed class StartVideoTranscodingCommandHandler : IRequestHandler<StartV
             ?? throw new ArgumentException("Output S3 bucket is not configured");
         string outputPath = $"s3://{destinationBucket}/streaming/{request.VideoId}/";
 
-        return await _transcodingService.StartTranscodingJobAsync(request.VideoId, sourceS3, outputPath, cancellationToken);
+        try
+        {
+            return await _transcodingService.StartTranscodingJobAsync(request.VideoId, sourceS3, outputPath, cancellationToken);
+        }
+        catch (Exception)
+        {
+            await _moduleBus.Publish(new VideoUploadFailedEvent(request.VideoId,request.Key));
+            return Error.Failure("VideoUploading.Application.Failure","Video Transcoding Failed");
+        }
     }
 }
