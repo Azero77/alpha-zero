@@ -43,15 +43,16 @@ public class VideoUploadingSaga: MassTransitStateMachine<VideoState>
             .TransitionTo(Processing));
 
 
-        //sometimes the VideoProcessingStartedEvent is skipped and Complete comes , so we accept it
-        During(Staged,
-            When(VideoProcessingCompletedEvent)
-            .Then(context => context.Saga.ProcessingStarted = true)
-            .TransitionTo(Processing));
-
-        During(Processing,
+        // Handle completion from either Staged (if started event skipped) or Processing
+        During([Staged, Processing],
             When(VideoProcessingCompletedEvent)
             .TransitionTo(Publishing));
+
+        // Ignore redeliveries of completion event if we are already further in the process
+        During([Publishing, Published],
+            Ignore(VideoProcessingCompletedEvent)
+            )
+            ;
 
         During(Publishing,
             When(VideoPublishedEvent)

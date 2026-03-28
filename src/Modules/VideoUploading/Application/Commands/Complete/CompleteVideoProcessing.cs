@@ -45,6 +45,16 @@ public sealed class CompleteVideoProcessingCommandHandler : IRequestHandler<Comp
     {
         _logger.LogInformation("Completing video processing for Video {VideoId}", request.VideoId);
 
+        // Idempotency check: if video already exists, we might have already processed this completion
+        var existingVideo = await _videoRepository.GetByIdAsync(request.VideoId, cancellationToken);
+        if (existingVideo != null)
+        {
+            _logger.LogInformation("Video {VideoId} already exists in database. Skipping creation.", request.VideoId);
+            // Ensure the integration event is published if it was missed
+            await _moduleBus.Publish(new VideoPublishedEvent(request.VideoId), cancellationToken);
+            return Result.Success;
+        }
+
         var metadataResponse = await _uploadService.GetMetadata(request.Key);
         if (metadataResponse.IsError)
         {

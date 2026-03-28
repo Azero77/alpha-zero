@@ -22,7 +22,9 @@ public class VideoRepository : IVideoRepository
 
     public async Task<Video?> GetBySourceKeyAsync(string sourceKey, CancellationToken cancellationToken = default)
     {
-        return await _context.Videos.FirstOrDefaultAsync(v => v.SourceKey == sourceKey, cancellationToken);
+        return await _context.Videos
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(v => v.SourceKey == sourceKey, cancellationToken);
     }
 
     public async Task<PagedResult<Video>> ListAsync(int page, int perPage, CancellationToken cancellationToken = default)
