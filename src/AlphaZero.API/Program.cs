@@ -2,6 +2,7 @@ using AlphaZero.API.Shared;
 using AlphaZero.Modules.VideoUploading.Infrastructure.Sagas;
 using AlphaZero.Shared.Application;
 using AlphaZero.Shared.Infrastructure;
+using AlphaZero.Shared.Infrastructure.Tenats;
 using Amazon.Extensions.NETCore.Setup;
 using Aspire.Shared;
 using Autofac;
@@ -23,6 +24,15 @@ public class Program
         builder.Services.AddEndpointsApiExplorer();
         builder.Services.AddSwaggerGen();
         builder.Services.AddCors();
+        builder.Services.AddHttpContextAccessor();
+        if (builder.Environment.IsDevelopment())
+        {
+            builder.Services.AddScoped<ITenantProvider, FakeTenantProvider>();
+        }
+        else
+        {
+            builder.Services.AddScoped<ITenantProvider, HttpTenantProvider>();
+        }
         builder.Services.AddScoped<IModuleBus, ModuleBus>();
 
         string[] assembliesPath = Directory.GetFiles(AppDomain.CurrentDomain.BaseDirectory, "*.dll");

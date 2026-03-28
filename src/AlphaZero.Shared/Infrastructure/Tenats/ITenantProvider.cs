@@ -7,6 +7,12 @@ public interface ITenantProvider
 {
     Guid? GetTenant();
 }
+public class FakeTenantProvider : ITenantProvider
+{
+    public static readonly Guid DefaultTenantId = Guid.Parse("00000000-0000-0000-0000-000000000001");
+    public Guid? GetTenant() => DefaultTenantId;
+}
+
 public class HttpTenantProvider : ITenantProvider
 {
     private readonly IHttpContextAccessor _httpContextAccessor;

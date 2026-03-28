@@ -18,8 +18,9 @@ public class VideoDeliveredEventHandler : IConsumer<VideoDeliveredToInputEvent>
         _logger = logger;
     }
 
-    public async Task Consume(ConsumeContext<VideoDeliveredToInputEvent> context)
+    public Task Consume(ConsumeContext<VideoDeliveredToInputEvent> context)
     {
         _logger.LogInformation("[Event] Received VideoUploadedToInputEvent for Asset: {AssetId}. Sending transcoding command.", context.Message.VideoId);
+        return Task.CompletedTask;
     }
 }

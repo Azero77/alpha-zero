@@ -10,6 +10,8 @@ public class VideoConfiguration : IEntityTypeConfiguration<Video>
     {
         builder.ToTable("Videos");
         builder.HasKey(x => x.Id);
+        builder.Property(x => x.Id)
+            .ValueGeneratedNever();
         
         builder.Property(x => x.Title).HasMaxLength(255).IsRequired();
         builder.Property(x => x.Description).HasMaxLength(1000);

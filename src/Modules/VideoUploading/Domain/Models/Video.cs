@@ -33,7 +33,7 @@ public class Video : AggregateRoot, IDomainTenantOwned
         Description = description;
         SourceKey = sourceKey;
         Metadata = metadata;
-        Specifications = new VideoSpecifications();
+        Specifications = VideoSpecifications.Empty;
         Status = VideoStatus.Processing;
         CreatedOn = createdOn;
     }
