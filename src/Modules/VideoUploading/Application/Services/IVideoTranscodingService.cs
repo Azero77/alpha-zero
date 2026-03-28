@@ -8,5 +8,7 @@ public interface IVideoTranscodingService
         Guid videoId, 
         string inputS3Uri, 
         string outputPathS3Uri, 
+        int sourceWidth,
+        int sourceHeight,
         CancellationToken cancellationToken = default);
 }

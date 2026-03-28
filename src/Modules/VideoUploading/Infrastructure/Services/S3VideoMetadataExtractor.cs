@@ -1,4 +1,4 @@
-﻿using AlphaZero.Modules.VideoUploading.Application.Services;
+using AlphaZero.Modules.VideoUploading.Application.Services;
 using AlphaZero.Modules.VideoUploading.Domain.Models;
 using AlphaZero.Modules.VideoUploading.Domain.Services;
 using Amazon.S3;
@@ -11,26 +11,26 @@ public class S3VideoSpecificationExtractor(IUploadService service) : IVideoSpeci
 {
     public async Task<ErrorOr<VideoSpecifications>> ExtractAsync(Video video, CancellationToken token = default)
     {
-        //return new VideoSpecifications(TimeSpan.FromHours(1),new Resolution(1920,1080));
-        var request = await service.GetFile(video.SourceKey);
+        return await ExtractAsync(video.SourceKey, token);
+    }
+
+    public async Task<ErrorOr<VideoSpecifications>> ExtractAsync(string sourceKey, CancellationToken token = default)
+    {
+        var request = await service.GetFile(sourceKey);
         if (request.IsError)
             return request.Errors;
+            
         var url = request.Value.presignedUrl;
-        
-        // Ensure URL is quoted for shell if needed, but FFMpegCore usually handles strings.
-        // Let's also add an explicit check to see if FFProbe can see the URL.
         
         var mediaInfo = await FFProbe.AnalyseAsync(new Uri(url), cancellationToken: token);
 
         var videoStream = mediaInfo.PrimaryVideoStream;
         if (videoStream is null)
-            return Error.Failure("VideoUploading.Infrastructure.Media","No Primary VideoStream for video" , new Dictionary<string, object>()
-            {
-                { "VideoId" ,video.Id}
-            });
+        {
+            return Error.Failure("VideoUploading.Infrastructure.Media", "No Primary VideoStream for video at " + sourceKey);
+        }
 
         return new VideoSpecifications(mediaInfo.Duration,
-            new Resolution(videoStream.Width,videoStream.Height));
+            new Resolution(videoStream.Width, videoStream.Height));
     }
 }
-

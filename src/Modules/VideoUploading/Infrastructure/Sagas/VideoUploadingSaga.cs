@@ -1,79 +1,107 @@
-﻿using AlphaZero.Modules.VideoUploading.IntegrationEvents;
+using AlphaZero.Modules.VideoUploading.IntegrationEvents;
 using MassTransit;
-using static MassTransit.Logging.OperationName;
 
 namespace AlphaZero.Modules.VideoUploading.Infrastructure.Sagas;
 
-public class VideoUploadingSaga: MassTransitStateMachine<VideoState>
+public class VideoUploadingSaga : MassTransitStateMachine<VideoState>
 {
-    public State Pending { get; private set; } = null!;
-    public State Staged { get; private set; } = null!;
-    public State Processing { get; private set; } = null!;
-    public State Publishing { get; private set; } = null!;
-    public State Published { get; private set; } = null!;
+    // States
+    public State Pending { get; private set; } = null!;           // Waiting for Upload
+    public State Analyzing { get; private set; } = null!;         // FFProbe inspecting raw file
+    public State Transcoding { get; private set; } = null!;       // MediaConvert optimizing the video
+    public State Distributing { get; private set; } = null!;      // Moving S3 -> R2
+    public State Published { get; private set; } = null!;         // Final state
     public State Failed { get; private set; } = null!;
 
+    // Events
     public Event<UploadVideoRequestedEvent> UploadVideoRequestedEvent { get; private set; } = null!;
-    public Event<VideoDeliveredToInputEvent> VideoUploadedToInputEvent { get; private set; } = null!;
-    public Event<VideoProcessingStartedEvent> VideoProcessingStartedEvent { get; private set; } = null!;
-    public Event<VideoProcessingCompletedEvent> VideoProcessingCompletedEvent { get; private set; } = null!;
+    public Event<VideoDeliveredToInputEvent> VideoDeliveredToInputEvent { get; private set; } = null!;
+    public Event<VideoMetadataProcessedEvent> VideoMetadataProcessedEvent { get; private set; } = null!;
+    public Event<VideoTranscodingStartedEvent> VideoTranscodingStartedEvent { get; private set; } = null!;
+    public Event<VideoTranscodingFinishedEvent> VideoTranscodingFinishedEvent { get; private set; } = null!;
+    public Event<VideoCdnSyncCompletedEvent> VideoCdnSyncCompletedEvent { get; private set; } = null!;
     public Event<VideoPublishedEvent> VideoPublishedEvent { get; private set; } = null!;
-    public Event<VideoUploadFailedEvent> VideoUploadFailedEvent { get; private set; } = null!;
+    public Event<VideoProcessingFailedEvent> VideoProcessingFailedEvent { get; private set; } = null!;
+
     public VideoUploadingSaga()
     {
-        Event(() => UploadVideoRequestedEvent , e => e.CorrelateById(x => x.Message.VideoId));
-        Event(() => VideoUploadedToInputEvent, e => e.CorrelateById(x => x.Message.VideoId));
-        Event(() => VideoProcessingStartedEvent, e => e.CorrelateById(x => x.Message.VideoId));
-        Event(() => VideoProcessingCompletedEvent, e => e.CorrelateById(x => x.Message.VideoId));
+        Event(() => UploadVideoRequestedEvent, e => e.CorrelateById(x => x.Message.VideoId));
+        Event(() => VideoDeliveredToInputEvent, e => e.CorrelateById(x => x.Message.VideoId));
+        Event(() => VideoMetadataProcessedEvent, e => e.CorrelateById(x => x.Message.VideoId));
+        Event(() => VideoTranscodingStartedEvent, e => e.CorrelateById(x => x.Message.VideoId));
+        Event(() => VideoTranscodingFinishedEvent, e => e.CorrelateById(x => x.Message.VideoId));
+        Event(() => VideoCdnSyncCompletedEvent, e => e.CorrelateById(x => x.Message.VideoId));
         Event(() => VideoPublishedEvent, e => e.CorrelateById(x => x.Message.VideoId));
-        Event(() => VideoUploadFailedEvent, e => e.CorrelateById(x => x.Message.VideoId));
+        Event(() => VideoProcessingFailedEvent, e => e.CorrelateById(x => x.Message.VideoId));
+
         InstanceState(x => x.CurrentState);
 
         Initially(
             When(UploadVideoRequestedEvent)
-            .Then(context => context.Saga.TenantId = context.Message.TenantId)
-            .TransitionTo(Pending));
+                .Then(context => context.Saga.TenantId = context.Message.TenantId)
+                .TransitionTo(Pending));
+
         During(Pending,
-         When(VideoUploadedToInputEvent)
-            .If(context => !context.Saga.ProcessingStarted, x => StartProcessing(x))
-            .Then(context => context.Saga.Key = context.Message.Key));
-        During(Staged,
-            When(VideoProcessingStartedEvent)
-            .Then(context => context.Saga.ProcessingStarted = true)
-            .TransitionTo(Processing));
+            When(VideoDeliveredToInputEvent)
+                .Then(context => {
+                    context.Saga.Key = context.Message.Key;
+                    context.Saga.BucketName = context.Message.BucketName;
+                    context.Saga.TenantId = context.Message.TenantId;
+                })
+                // COMMAND: "Analyze this file dimensions."
+                .Send(context => new AnalyzeVideoCommand(
+                    context.Message.VideoId, 
+                    context.Message.Key, 
+                    context.Message.BucketName))
+                .TransitionTo(Analyzing));
 
+        During(Analyzing,
+            When(VideoMetadataProcessedEvent)
+                .Then(context => {
+                    context.Saga.SourceWidth = context.Message.Width;
+                    context.Saga.SourceHeight = context.Message.Height;
+                    context.Saga.Duration = context.Message.Duration;
+                })
+                // COMMAND: "Transcode with these source limits."
+                .Send(context => new TranscodeVideoCommand(
+                    context.Saga.CorrelationId,
+                    context.Saga.Key!, 
+                    context.Saga.BucketName!, 
+                    context.Message.Width,
+                    context.Message.Height))
+                .TransitionTo(Transcoding));
 
-        // Handle completion from either Staged (if started event skipped) or Processing
-        During([Staged, Processing],
-            When(VideoProcessingCompletedEvent)
-            .TransitionTo(Publishing));
+        During(Transcoding,
+            When(VideoTranscodingStartedEvent)
+                .Then(context => context.Saga.MediaConverterJobId = context.Message.JobId),
+            
+            When(VideoTranscodingFinishedEvent)
+                .Then(context => {
+                    context.Saga.S3OutputPrefix = context.Message.OutputKeyPrefix;
+                })
+                // COMMAND: "Distribute to Cloudflare R2."
+                .Send(context => new SyncVideoToCdnCommand(
+                    context.Saga.CorrelationId, 
+                    context.Saga.S3OutputPrefix!, 
+                    context.Saga.BucketName!))
+                .TransitionTo(Distributing));
 
-        // Ignore redeliveries of completion event if we are already further in the process
-        During([Publishing, Published],
-            Ignore(VideoProcessingCompletedEvent)
-            )
-            ;
+        During(Distributing,
+            When(VideoCdnSyncCompletedEvent)
+                .Then(context => context.Saga.FinalUrl = context.Message.R2PublicUrl)
+                .TransitionTo(Published));
 
-        During(Publishing,
+        During(Published,
             When(VideoPublishedEvent)
-            .TransitionTo(Published)
-            .Finalize());
-        During([Pending,Staged,Processing,Publishing] , When(VideoUploadFailedEvent)
-            .Then(x => x.Saga.IsFailed = true)
-            .TransitionTo(Failed));
-    }
-    private EventActivityBinder<VideoState, VideoDeliveredToInputEvent> StartProcessing(
-    EventActivityBinder<VideoState, VideoDeliveredToInputEvent> binder)
-    {
-        return binder
-            .Then(context => context.Saga.ProcessingStarted = true)
-            .Publish(context =>  new StartVideoProcessingCommand(context.Message.Key,
-                    context.Message.BucketName,
-                    context.Message.VideoId))
-            .TransitionTo(Staged);
-    }
+                .Finalize());
 
+        DuringAny(
+            When(VideoProcessingFailedEvent)
+                .Then(x => x.Saga.IsFailed = true)
+                .TransitionTo(Failed));
+    }
 }
+
 public class VideoState : SagaStateMachineInstance
 {
     public Guid CorrelationId { get; set; }
@@ -81,7 +109,12 @@ public class VideoState : SagaStateMachineInstance
     public string CurrentState { get; set; } = null!;
     public string? MediaConverterJobId { get; set; }
     public string? Key { get; set; }
-    public bool ProcessingStarted { get; set; } = false;
+    public string? BucketName { get; set; }
+    public int? SourceWidth { get; set; }
+    public int? SourceHeight { get; set; }
+    public TimeSpan? Duration { get; set; }
+    public string? S3OutputPrefix { get; set; }
+    public string? FinalUrl { get; set; }
     public bool IsFailed { get; set; } = false;
     public int Version { get; set; }
 }

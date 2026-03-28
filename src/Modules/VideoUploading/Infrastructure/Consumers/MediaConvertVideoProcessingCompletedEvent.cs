@@ -1,12 +1,10 @@
 using AlphaZero.Modules.VideoUploading.Application;
-using AlphaZero.Modules.VideoUploading.Application.Commands.Complete;
 using AlphaZero.Modules.VideoUploading.Infrastructure.Persistance;
 using AlphaZero.Modules.VideoUploading.Infrastructure.Services;
 using AlphaZero.Modules.VideoUploading.IntegrationEvents;
 using AlphaZero.Shared.Application;
 using ErrorOr;
 using MassTransit;
-using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
@@ -36,15 +34,16 @@ public class MediaConvertJobDetail
 }
 
 /// <summary>
-/// Separate class for listening to jobs and fire the events
+/// Separate class for listening to jobs and fire the internal events.
+/// This handles the raw EventBridge events from SQS.
 /// </summary>
-public class SQSMediaConverterJobCompletedEventHandler : 
+public class SQSMediaConverterJobStatusEventHandler : 
     IConsumer<MediaConvertJobEvent>
 {
     private readonly IModuleBus _moduleBus;
-    private readonly ILogger<SQSMediaConverterJobCompletedEventHandler> _logger;
+    private readonly ILogger<SQSMediaConverterJobStatusEventHandler> _logger;
 
-    public SQSMediaConverterJobCompletedEventHandler(IModuleBus moduleBus, ILogger<SQSMediaConverterJobCompletedEventHandler> logger)
+    public SQSMediaConverterJobStatusEventHandler(IModuleBus moduleBus, ILogger<SQSMediaConverterJobStatusEventHandler> logger)
     {
         _moduleBus = moduleBus;
         _logger = logger;
@@ -54,109 +53,78 @@ public class SQSMediaConverterJobCompletedEventHandler :
     {
         var detail = context.Message.Detail;
         
-        if (detail.Status == "COMPLETE" && detail.UserMetadata.TryGetValue(S3UploadService.VideoIdMetaDataHeader, out var videoIdStr) &&
-            Guid.TryParse(videoIdStr, out var videoId))
+        if (!detail.UserMetadata.TryGetValue(S3UploadService.VideoIdMetaDataHeader, out var videoIdStr) ||
+            !Guid.TryParse(videoIdStr, out var videoId))
         {
-            _logger.LogInformation("MediaConvert Job {JobId} completed for Video {VideoId}", detail.JobId, videoId);
-            await _moduleBus.Publish(new VideoProcessingCompletedEvent(videoId));
+            _logger.LogCritical("MediaConvert Job {JobId} Status {Status} for Video with no Id", detail.JobId, detail.Status);
             return;
         }
-        else if (detail.Status == "PROGRESSING")
+
+        switch (detail.Status)
         {
-            videoIdStr = detail.UserMetadata.GetValueOrDefault(S3UploadService.VideoIdMetaDataHeader);
-            if (videoIdStr is null || !Guid.TryParse(videoIdStr, out videoId))
-            {
-                _logger.LogCritical("MediaConvert Job {JobId} Started for Video with no Id", detail.JobId);
-                return;
-            }
-            if (
-                !detail.UserMetadata.TryGetValue("sourceFile", out var inputPath) ||
-                !TryGetParamsForInputPath(inputPath,out string key,out string bucket)
-                )
-            {
-                _logger.LogCritical("MediaConvert Job {JobId} Started for Video with no InputPath", detail.JobId);
-                await _moduleBus.Publish(new VideoUploadFailedEvent(videoId, string.Empty));
-                return;
+            case "PROGRESSING":
+                _logger.LogInformation("MediaConvert Job {JobId} Started for Video {VideoId}", detail.JobId, videoId);
+                await _moduleBus.Publish(new VideoTranscodingStartedEvent(videoId, detail.JobId));
+                break;
 
-            }
-            _logger.LogInformation("MediaConvert Job {JobId} Started for Video {VideoId}", detail.JobId, videoId);
-            
-            await _moduleBus.Publish(new VideoProcessingStartedEvent(key,bucket,videoId,detail.JobId));
+            case "COMPLETE":
+                _logger.LogInformation("MediaConvert Job {JobId} completed for Video {VideoId}", detail.JobId, videoId);
+                
+                if (detail.UserMetadata.TryGetValue("outputPath", out var outputPath) &&
+                    TryGetParamsForInputPath(outputPath, out string key, out string bucket))
+                {
+                    // MediaConvert outputPath includes s3://bucket/streaming/videoId/
+                    // Our event needs the key prefix (streaming/videoId/)
+                    await _moduleBus.Publish(new VideoTranscodingFinishedEvent(videoId, key, bucket));
+                }
+                else
+                {
+                    _logger.LogCritical("MediaConvert Job {JobId} completed but outputPath missing in metadata for Video {VideoId}", detail.JobId, videoId);
+                    await _moduleBus.Publish(new VideoProcessingFailedEvent(videoId, "Output path missing after transcoding", null));
+                }
+                break;
 
-
+            case "ERROR":
+                _logger.LogError("MediaConvert Job {JobId} failed for Video {VideoId}", detail.JobId, videoId);
+                await _moduleBus.Publish(new VideoProcessingFailedEvent(videoId, "MediaConvert job failed", null));
+                break;
         }
     }
 
-    private bool TryGetParamsForInputPath(string? inputPath, out string key,out string bucket)
+    private bool TryGetParamsForInputPath(string? inputPath, out string key, out string bucket)
     {
         key = string.Empty;
         bucket = string.Empty;
         if (inputPath is null)
             return false;
+        
+        // Match s3://bucketname/key/prefix/
         var regex = new Regex("^s3://([^/]+)/(.+)$");
-
         var match = regex.Match(inputPath);
 
         if (!match.Success) return false;
-         key = match.Groups[2].Value;
-        bucket= match.Groups[1].Value;
+        
+        bucket = match.Groups[1].Value;
+        key = match.Groups[2].Value;
 
-        return true ;
+        return true;
     }
 }
 
-public class SQSMediaConverterJobCompletedEventHandlerDefinition :
-    ConsumerDefinition<SQSMediaConverterJobCompletedEventHandler>
+public class SQSMediaConverterJobStatusEventHandlerDefinition :
+    ConsumerDefinition<SQSMediaConverterJobStatusEventHandler>
 {
-    public SQSMediaConverterJobCompletedEventHandlerDefinition()
+    public SQSMediaConverterJobStatusEventHandlerDefinition()
     {
         EndpointName = "mediaconverter-video-processed";
     }
 
     protected override void ConfigureConsumer(IReceiveEndpointConfigurator endpointConfigurator, 
-        IConsumerConfigurator<SQSMediaConverterJobCompletedEventHandler> consumerConfigurator, 
+        IConsumerConfigurator<SQSMediaConverterJobStatusEventHandler> consumerConfigurator, 
         IRegistrationContext context)
     {
         endpointConfigurator.ConfigureConsumeTopology = false;
         endpointConfigurator.ClearSerialization();
         endpointConfigurator.UseNewtonsoftRawJsonSerializer(RawSerializerOptions.AnyMessageType);
-    }
-}
-
-public class VideoProcessingCompletedEventHandler :
-    IConsumer<VideoProcessingCompletedEvent>
-{
-    private readonly ILogger<VideoProcessingCompletedEventHandler> _logger;
-    private readonly IVideoUploadingModule _module;
-    private readonly AppDbContext _dbContext;
-
-    public VideoProcessingCompletedEventHandler(
-        ILogger<VideoProcessingCompletedEventHandler> logger,
-        IVideoUploadingModule module,
-        AppDbContext dbContext)
-    {
-        _logger = logger;
-        _module = module;
-        _dbContext = dbContext;
-    }
-
-    public async Task Consume(ConsumeContext<VideoProcessingCompletedEvent> context)
-    {
-        var videoId = context.Message.VideoId;
-        _logger.LogInformation("Infrastructure consumer triggered for Video {VideoId}", videoId);
-
-        var videoState = await _dbContext.VideoState.FirstOrDefaultAsync(s => s.CorrelationId == videoId);
-        if (videoState == null || videoState.Key == null)
-        {
-            _logger.LogError("VideoState not found for Video {VideoId}", videoId);
-            return;
-        }
-
-        var result = await _module.Send<CompleteVideoProcessingCommand,ErrorOr<Success>>(new CompleteVideoProcessingCommand(videoId, videoState.Key, videoState.TenantId));
-
-        if (result.IsError)
-        {
-            _logger.LogError("Application command failed for Video {VideoId}: {Error}", videoId, result.FirstError.Description);
-        }
     }
 }

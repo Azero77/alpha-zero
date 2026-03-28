@@ -43,19 +43,22 @@ public class SQSS3EventHandler : IConsumer<S3EventNotification>
                 var metadataResponse = await _s3.GetObjectMetadataAsync(metadataRequest);
                 if (metadataResponse is null || metadataResponse.Metadata is null)
                 {
-                    await _moduleBus.Publish(new VideoUploadFailedEvent(Guid.Empty,key));
+                    await _moduleBus.Publish(new VideoProcessingFailedEvent(Guid.Empty,"Invalid Metadata",key));
                     _logger.LogCritical("Video Uploaded with no videoId , key : {key}" , key);
                     continue;
                 }
                 string? videoId = metadataResponse.Metadata?[S3UploadService.VideoIdMetaDataHeader];
+                string? tenantIdStr = metadataResponse.Metadata?["TenantId"];
 
-                if (metadataResponse is null || videoId is null || !Guid.TryParse(videoId,out Guid videoGuid))
+                if (videoId is null || !Guid.TryParse(videoId, out Guid videoGuid) ||
+                    tenantIdStr is null || !Guid.TryParse(tenantIdStr, out Guid tenantGuid))
                 {
-                    _logger.LogError("Video with no metadata has been found, Key : {key}", key);
+                    _logger.LogError("Video with missing or invalid metadata has been found, Key : {key}. VideoId: {VideoId}, TenantId: {TenantId}", 
+                        key, videoId, tenantIdStr);
                     continue;
                 }
 
-                await _moduleBus.Publish(new VideoDeliveredToInputEvent(key, bucketName,videoGuid));
+                await _moduleBus.Publish(new VideoDeliveredToInputEvent(videoGuid, key, bucketName, tenantGuid));
             }
             else if (record.EventName.Value.StartsWith("ObjectRemoved:"))
             {

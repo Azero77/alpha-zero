@@ -18,22 +18,24 @@ public class MediaConvertTranscodingService : IVideoTranscodingService
     public MediaConvertTranscodingService(
         IAmazonMediaConvert mediaConvertClient,
         AWSResources aWSResources,
-        ILogger<MediaConvertTranscodingService> _logger)
+        ILogger<MediaConvertTranscodingService> logger)
     {
         _mediaConvertClient = mediaConvertClient;
         _aWSResources = aWSResources;
-        this._logger = _logger;
+        _logger = logger;
     }
 
     public async Task<ErrorOr<string>> StartTranscodingJobAsync(
         Guid videoId, 
         string inputS3Uri, 
         string outputPathS3Uri, 
+        int sourceWidth,
+        int sourceHeight,
         CancellationToken cancellationToken = default)
     {
         try
         {
-            var jobRequest = CreateJobRequestFromTemplate(inputS3Uri, outputPathS3Uri, videoId.ToString());
+            var jobRequest = CreateJobRequestFromTemplate(inputS3Uri, outputPathS3Uri, videoId.ToString(), sourceWidth, sourceHeight);
             var response = await _mediaConvertClient.CreateJobAsync(jobRequest, cancellationToken);
 
             _logger.LogInformation("[MediaConvert] Job Created: {JobId} for Video: {VideoId}", 
@@ -48,7 +50,7 @@ public class MediaConvertTranscodingService : IVideoTranscodingService
         }
     }
 
-    private CreateJobRequest CreateJobRequestFromTemplate(string inputS3, string outputPath, string assetId)
+    private CreateJobRequest CreateJobRequestFromTemplate(string inputS3, string outputPath, string assetId, int sourceWidth, int sourceHeight)
     {
         var assembly = typeof(MediaConvertTranscodingService).Assembly;
         var file = "AlphaZero.Modules.VideoUploading.Infrastructure.Consumers.job.json";
@@ -59,8 +61,6 @@ public class MediaConvertTranscodingService : IVideoTranscodingService
         
         string jsonTemplate = reader.ReadToEnd();
 
-        // For testing ClearKey, we use a deterministic key based on the VideoId
-        // MediaConvert expects a 32-character hex string for StaticKeyValue
         string drmKey = assetId.Replace("-", ""); 
         string drmKeyId = assetId.Replace("-", "");
 
@@ -75,6 +75,23 @@ public class MediaConvertTranscodingService : IVideoTranscodingService
 
         var jobSettings = JsonConvert.DeserializeObject<CreateJobRequest>(jsonTemplate);
         if (jobSettings == null) throw new Exception("Failed to deserialize job.json");
+
+        // Filter renditions to prevent upscaling
+        var cmafGroup = jobSettings.Settings.OutputGroups.FirstOrDefault(g => g.Name == "CMAF");
+        if (cmafGroup != null)
+        {
+            // Keep renditions where width <= sourceWidth OR they are audio-only
+            cmafGroup.Outputs = cmafGroup.Outputs.Where(o => 
+                o.VideoDescription == null || o.VideoDescription.Width <= sourceWidth
+            ).ToList();
+
+            // Safety check: if all video outputs were filtered out (unlikely but possible), 
+            // at least keep the lowest one.
+            if (!cmafGroup.Outputs.Any(o => o.VideoDescription != null))
+            {
+                _logger.LogWarning("All video renditions were larger than source resolution {Width}x{Height}. Keeping audio only or check logic.", sourceWidth, sourceHeight);
+            }
+        }
         
         jobSettings.UserMetadata = new Dictionary<string, string>
         {
