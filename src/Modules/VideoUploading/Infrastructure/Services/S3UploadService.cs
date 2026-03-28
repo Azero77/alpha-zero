@@ -30,9 +30,9 @@ public class S3UploadService : IUploadService
             var request = new GetPreSignedUrlRequest()
             {
                 BucketName = _s3Settings.BucketName,
-                Key = $"{FilesFolder}/{key}",
+                Key = key,
                 Verb = HttpVerb.GET,
-                Expires = DateTime.UtcNow.AddMinutes(15),
+                Expires = DateTime.UtcNow.AddHours(1),
             };
             var result = await _client.GetPreSignedURLAsync(request);
             return new GetPresignedUrlResponse(key, result);
@@ -87,7 +87,8 @@ public class S3UploadService : IUploadService
     {
         try
         {
-            Guid key = Guid.NewGuid();
+            Guid guid = Guid.NewGuid();
+            string key = $"{FilesFolder}/{guid}";
             var request = new GetPreSignedUrlRequest()
             {
                 BucketName = _s3Settings.BucketName,
@@ -97,7 +98,7 @@ public class S3UploadService : IUploadService
                     },
                 Verb = HttpVerb.PUT,
                 Expires = DateTime.UtcNow.AddMinutes(15),
-                Key = $"{FilesFolder}/{key}",
+                Key = key,
                 
             };
             if (metadata is not null)
@@ -110,7 +111,7 @@ public class S3UploadService : IUploadService
 
             string url = await _client.GetPreSignedURLAsync(request);
 
-            return new GetPresignedUrlResponse(key.ToString(), url);
+            return new GetPresignedUrlResponse(key, url);
         }
         catch (AmazonS3Exception exception)
         {

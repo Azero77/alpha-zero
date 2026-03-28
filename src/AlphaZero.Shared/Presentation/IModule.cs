@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 
 public interface IModule
 {
-    Task<TResponse> Send<TRequest,TResponse>(IRequest<TResponse> request)
+    Task<TResponse> Send<TRequest,TResponse>(IRequest<TResponse> request, CancellationToken cancellationToken = default)
         where TRequest : IRequest<TResponse>;
     void RegisterPrivate(IServiceCollection services, ContainerBuilder builder);
     void RegisterGlobal(IServiceCollection services);
@@ -37,7 +37,7 @@ public abstract class AppModule : Module, IModule
             builder.Populate(services);
         });
     }
-    public abstract Task<TResponse> Send<TRequest, TResponse>(IRequest<TResponse> request) where TRequest : IRequest<TResponse>;
+    public abstract Task<TResponse> Send<TRequest, TResponse>(IRequest<TResponse> request, CancellationToken cancellationToken = default) where TRequest : IRequest<TResponse>;
 
     public abstract void RegisterPrivate(IServiceCollection services, ContainerBuilder builder);
 

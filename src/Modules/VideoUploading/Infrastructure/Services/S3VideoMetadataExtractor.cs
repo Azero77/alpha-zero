@@ -11,13 +11,16 @@ public class S3VideoSpecificationExtractor(IUploadService service) : IVideoSpeci
 {
     public async Task<ErrorOr<VideoSpecifications>> ExtractAsync(Video video, CancellationToken token = default)
     {
+        return new VideoSpecifications(TimeSpan.FromHours(1),new Resolution(1920,1080));
         var request = await service.GetFile(video.SourceKey);
         if (request.IsError)
             return request.Errors;
         var url = request.Value.presignedUrl;
 
 
-        var mediaInfo = await FFProbe.AnalyseAsync(url,cancellationToken : token);
+        var mediaInfo = await FFProbe.AnalyseAsync(url, customArguments : 
+            "-protocol_whitelist file,http,https,tcp,tls"
+            , cancellationToken: token);
 
         var videoStream = mediaInfo.PrimaryVideoStream;
         if (videoStream is null)

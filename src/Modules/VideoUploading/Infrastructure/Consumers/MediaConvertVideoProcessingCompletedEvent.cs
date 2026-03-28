@@ -1,8 +1,10 @@
+using AlphaZero.Modules.VideoUploading.Application;
 using AlphaZero.Modules.VideoUploading.Application.Commands.Complete;
 using AlphaZero.Modules.VideoUploading.Infrastructure.Persistance;
 using AlphaZero.Modules.VideoUploading.Infrastructure.Services;
 using AlphaZero.Modules.VideoUploading.IntegrationEvents;
 using AlphaZero.Shared.Application;
+using ErrorOr;
 using MassTransit;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -125,16 +127,16 @@ public class VideoProcessingCompletedEventHandler :
     IConsumer<VideoProcessingCompletedEvent>
 {
     private readonly ILogger<VideoProcessingCompletedEventHandler> _logger;
-    private readonly IMediator _mediator;
+    private readonly IVideoUploadingModule _module;
     private readonly AppDbContext _dbContext;
 
     public VideoProcessingCompletedEventHandler(
         ILogger<VideoProcessingCompletedEventHandler> logger,
-        IMediator mediator,
+        IVideoUploadingModule module,
         AppDbContext dbContext)
     {
         _logger = logger;
-        _mediator = mediator;
+        _module = module;
         _dbContext = dbContext;
     }
 
@@ -150,7 +152,7 @@ public class VideoProcessingCompletedEventHandler :
             return;
         }
 
-        var result = await _mediator.Send(new CompleteVideoProcessingCommand(videoId, videoState.Key, videoState.TenantId));
+        var result = await _module.Send<CompleteVideoProcessingCommand,ErrorOr<Success>>(new CompleteVideoProcessingCommand(videoId, videoState.Key, videoState.TenantId));
 
         if (result.IsError)
         {

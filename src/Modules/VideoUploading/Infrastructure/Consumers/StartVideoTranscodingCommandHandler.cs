@@ -1,24 +1,25 @@
+using AlphaZero.Modules.VideoUploading.Application;
 using AlphaZero.Modules.VideoUploading.IntegrationEvents;
+using ErrorOr;
 using MassTransit;
-using MediatR;
 using Microsoft.Extensions.Logging;
 
 namespace AlphaZero.Modules.VideoUploading.Infrastructure.Consumers;
 
 /// <summary>
 /// Infrastructure consumer that acts as an entry point for the StartVideoProcessingCommand.
-/// Orchestration logic is handled by the Application layer.
+/// Orchestration logic is handled by the Application layer via the Module Bridge.
 /// </summary>
 public class StartVideoProcessingCommandHandler : IConsumer<StartVideoProcessingCommand>
 {
-    private readonly IMediator _mediator;
+    private readonly IVideoUploadingModule _module;
     private readonly ILogger<StartVideoProcessingCommandHandler> _logger;
 
     public StartVideoProcessingCommandHandler(
-        IMediator mediator,
+        IVideoUploadingModule module,
         ILogger<StartVideoProcessingCommandHandler> logger)
     {
-        _mediator = mediator;
+        _module = module;
         _logger = logger;
     }
 
@@ -26,10 +27,11 @@ public class StartVideoProcessingCommandHandler : IConsumer<StartVideoProcessing
     {
         _logger.LogInformation("Infrastructure: Received StartVideoProcessingCommand for Video {VideoId}", context.Message.VideoId);
         
-        var result = await _mediator.Send(new Application.Commands.Process.StartVideoTranscodingCommand(
-            context.Message.VideoId, 
-            context.Message.Key, 
-            context.Message.BucketName));
+        var result = await _module.Send<Application.Commands.Process.StartVideoTranscodingCommand, ErrorOr<string>>(
+            new Application.Commands.Process.StartVideoTranscodingCommand(
+                context.Message.VideoId, 
+                context.Message.Key, 
+                context.Message.BucketName), context.CancellationToken);
 
         if (result.IsError)
         {

@@ -22,11 +22,11 @@ public class CoursesModule : AppModule
             );
     }
 
-    public override Task<TResponse> Send<TRequest, TResponse>(IRequest<TResponse> request)
+    public override Task<TResponse> Send<TRequest, TResponse>(IRequest<TResponse> request, CancellationToken token = default)
     {
 
         if (Scope is null) throw new NotImplementedException("Container not implemented");
         var mediatr = Scope.Resolve<IMediator>();
-        return mediatr.Send(request);
+        return mediatr.Send(request,token);
     }
 }
