@@ -89,7 +89,6 @@ public sealed class PersistVideoCommandHandler : IRequestHandler<PersistVideoCom
 
         // 6. Persist
         await _videoRepository.AddAsync(video, cancellationToken);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         return Result.Success;
     }

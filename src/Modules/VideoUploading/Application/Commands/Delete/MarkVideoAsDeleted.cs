@@ -35,9 +35,7 @@ public sealed class MarkVideoAsDeletedCommandHandler : IRequestHandler<MarkVideo
 
         _logger.LogInformation("Marking video {VideoId} as deleted in database.", video.Id);
         video.MarkAsDeleted();
-        
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
-        
+
         return Result.Success;
     }
 }

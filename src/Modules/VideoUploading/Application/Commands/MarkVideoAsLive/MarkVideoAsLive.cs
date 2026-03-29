@@ -43,7 +43,6 @@ public sealed class MarkVideoAsLiveCommandHandler : IRequestHandler<MarkVideoAsL
         if (result.IsError) return result.Errors;
 
         _videoRepository.Update(video);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         return Result.Success;
     }

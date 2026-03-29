@@ -39,7 +39,6 @@ public sealed class MarkVideoAsOptimizedCommandHandler : IRequestHandler<MarkVid
         if (result.IsError) return result.Errors;
 
         _videoRepository.Update(video);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         return Result.Success;
     }

@@ -56,6 +56,7 @@ public static class DependencyInjection
         moduleServices.AddMediatR(opts => { 
             opts.RegisterServicesFromAssembly(typeof(IVideoUploadingApplicationMarker).Assembly);
             opts.AddOpenBehavior(typeof(ValidationBehavior<,>));
+            opts.AddOpenBehavior(typeof(UnitOfWorkDecoratorCommandHandler<,>));
         });
 
         // Infrastructure Services

@@ -34,9 +34,7 @@ public sealed class DeleteVideoCommandHandler : IRequestHandler<DeleteVideoComma
 
         _logger.LogInformation("Deleting video {VideoId} from database.", video.Id);
         _videoRepository.Delete(video);
-        
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
-        
+
         return Result.Deleted;
     }
 }
