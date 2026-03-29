@@ -11,7 +11,7 @@ using FluentValidation;
 
 namespace AlphaZero.Modules.VideoUploading.Application.Commands.Upload;
 
-public record UploadCommand(string fileName, string contentType): IRequest<ErrorOr<UploadCommandResponse>>;
+public record UploadCommand(string fileName, string contentType): ICommand<UploadCommandResponse>;
 
 public class UploadCommandValidator : AbstractValidator<UploadCommand>
 {

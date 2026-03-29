@@ -6,7 +6,7 @@ using Microsoft.Extensions.Logging;
 
 namespace AlphaZero.Modules.VideoUploading.Application.Commands.Delete;
 
-public record DeleteVideoCommand(Guid VideoId) : IRequest<ErrorOr<Deleted>>;
+public record DeleteVideoCommand(Guid VideoId) : ICommand<Deleted>;
 
 public sealed class DeleteVideoCommandHandler : IRequestHandler<DeleteVideoCommand, ErrorOr<Deleted>>
 {

@@ -13,7 +13,7 @@ public record StartVideoTranscodingCommand(
     string Key, 
     string BucketName, 
     int SourceWidth, 
-    int SourceHeight) : IRequest<ErrorOr<string>>;
+    int SourceHeight) : ICommand<string>;
 
 public sealed class StartVideoTranscodingCommandHandler : IRequestHandler<StartVideoTranscodingCommand, ErrorOr<string>>
 {
@@ -34,7 +34,7 @@ public sealed class StartVideoTranscodingCommandHandler : IRequestHandler<StartV
         _moduleBus = moduleBus;
     }
 
-    public async Task Handle(StartVideoTranscodingCommand request, CancellationToken cancellationToken)
+    public async Task<ErrorOr<string>> Handle(StartVideoTranscodingCommand request, CancellationToken cancellationToken)
     {
         _logger.LogInformation("[Application] Starting transcoding for Video: {VideoId} with Source Dimensions: {Width}x{Height}", 
             request.VideoId, request.SourceWidth, request.SourceHeight);

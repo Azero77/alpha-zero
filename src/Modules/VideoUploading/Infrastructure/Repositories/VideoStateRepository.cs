@@ -27,7 +27,6 @@ public class VideoStateRepository : IVideoStateRepository
             state.CurrentState,
             state.MediaConverterJobId,
             state.Key,
-            state.ProcessingStarted,
             state.IsFailed,
             state.Version);
     }

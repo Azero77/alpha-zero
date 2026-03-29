@@ -65,7 +65,7 @@ public static class Debug
                 res => Results.Ok(res),
                 errors => errors.ToMinimalResult());
         }
-    }
+    }/*
 
     public class GetStreamingInfoEndpoint : IEndpoint
     {
@@ -83,7 +83,7 @@ public static class Debug
                 res => Results.Ok(res),
                 errors => errors.ToMinimalResult());
         }
-    }
+    }*/
 
     public class DeleteVideoEndpoint : IEndpoint
     {

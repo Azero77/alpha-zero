@@ -13,7 +13,7 @@ public record PersistVideoCommand(
     Guid VideoId, 
     TimeSpan Duration, 
     int Width, 
-    int Height) : IRequest<ErrorOr<Success>>;
+    int Height) : ICommand<Success>;
 
 public sealed class PersistVideoCommandHandler : IRequestHandler<PersistVideoCommand, ErrorOr<Success>>
 {

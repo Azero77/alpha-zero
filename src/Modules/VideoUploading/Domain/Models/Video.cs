@@ -17,7 +17,6 @@ public class Video : AggregateRoot, IDomainTenantOwned
     public DateTime CreatedOn { get; private set; }
     public DateTime? PublishedOn { get; private set; }
 
-    private Video() { } // EF Core
 
     private Video(
         Guid id,
