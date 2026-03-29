@@ -53,6 +53,28 @@ public class Video : AggregateRoot, IDomainTenantOwned
         return new Video(id, tenantId, title, description, sourceKey, metadata, clock.Now);
     }
 
+    public ErrorOr<Success> MarkAsOptimized(string outputFolder)
+    {
+        if (Status != VideoStatus.Processing)
+            return VideoErrors.InvalidStatus;
+
+        OutputFolder = outputFolder;
+        return Result.Success;
+    }
+
+    public ErrorOr<Success> MarkAsLive(string finalUrl, IClock clock)
+    {
+        if (Status != VideoStatus.Processing && Status != VideoStatus.Published) // Published here means "Optimized" in the old logic
+            Status = VideoStatus.Published; // We'll keep VideoStatus.Published as the "Live" state
+
+        OutputFolder = finalUrl; // We store the CDN URL here now
+        PublishedOn = clock.Now;
+
+        AddDomainEvent(new VideoPublishedDomainEvent(Id, PublishedOn.Value));
+
+        return Result.Success;
+    }
+
     public ErrorOr<Success> MarkAsPublished(string outputFolder, VideoSpecifications specifications, IClock clock)
     {
         if (Status != VideoStatus.Processing)
