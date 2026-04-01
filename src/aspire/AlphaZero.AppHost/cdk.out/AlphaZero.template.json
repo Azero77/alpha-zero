@@ -360,6 +360,7 @@
   "CdnS308975579": {
    "Type": "AWS::S3::Bucket",
    "Properties": {
+    "BucketName": "cdn.dalilhamachamber.com",
     "CorsConfiguration": {
      "CorsRules": [
       {
@@ -415,19 +416,6 @@
           },
           "/*"
          ]
-        ]
-       }
-      },
-      {
-       "Action": "s3:GetObject",
-       "Effect": "Allow",
-       "Principal": {
-        "AWS": "*"
-       },
-       "Resource": {
-        "Fn::GetAtt": [
-         "CdnS308975579",
-         "Arn"
         ]
        }
       }

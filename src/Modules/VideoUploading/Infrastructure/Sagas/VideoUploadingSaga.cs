@@ -1,4 +1,4 @@
-using AlphaZero.Modules.VideoUploading.IntegrationEvents;
+﻿using AlphaZero.Modules.VideoUploading.IntegrationEvents;
 using MassTransit;
 
 namespace AlphaZero.Modules.VideoUploading.Infrastructure.Sagas;

@@ -55,6 +55,7 @@ input_s3.AddObjectCreatedNotification(sns);
 var output_s3 = awscdkStack.AddS3Bucket("OutputS3");
 var cdn_s3 = awscdkStack.AddS3Bucket("CdnS3", new BucketProps()
 {
+    BucketName = "cdn.dalilhamachamber.com",
     PublicReadAccess = true,
     BlockPublicAccess = new BlockPublicAccess(new BlockPublicAccessOptions
     {
@@ -81,7 +82,7 @@ cdn_s3.Resource.Construct
     .AddToResourcePolicy(new PolicyStatement(new PolicyStatementProps()
     {
         Actions = new[] { "s3:GetObject" },
-        Resources = new[] { cdn_s3.Resource.Construct.BucketArn },
+        Resources = new[] { $"{cdn_s3.Resource.Construct.BucketArn}/*" },
         Principals = new[] { new AnyPrincipal() }
     }));
 

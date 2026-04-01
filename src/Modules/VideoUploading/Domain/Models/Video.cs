@@ -112,6 +112,16 @@ public class Video : AggregateRoot, IDomainTenantOwned
         Specifications = specifications;
     }
 
+    public ErrorOr<Success> UpdateInformation(string title, string? description)
+    {
+        if (string.IsNullOrWhiteSpace(title))
+            return VideoErrors.EmptyTitle;
+
+        Title = title;
+        Description = description;
+        return Result.Success;
+    }
+
     public ErrorOr<Success> SetTitle(string title)
     {
         if (string.IsNullOrWhiteSpace(title))
