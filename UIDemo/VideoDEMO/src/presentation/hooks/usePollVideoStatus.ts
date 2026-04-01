@@ -1,18 +1,16 @@
 import { useEffect, useRef } from 'react';
 import { useVideoStore } from '../store/video-store';
+import { isFinalState } from '../../shared/utils/status-utils';
 
 export const usePollVideoStatus = (intervalMs: number = 3000) => {
   const { videos, refreshVideoState } = useVideoStore();
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    // Find videos that are NOT in a final state (case-insensitive check)
+    // Find videos that are NOT in a final state
     const processingVideos = videos.filter((v) => {
-      const status = v.status?.toString().toLowerCase();
-      const saga = v.sagaState?.toString().toLowerCase();
-      
-      const isFinal = status === 'published' || status === 'failed' || saga === 'published' || saga === 'failed';
-      return !isFinal || status === 'processing';
+      const isFinished = isFinalState(v);
+      return !isFinished;
     });
 
     if (processingVideos.length > 0) {

@@ -1,8 +1,9 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import type { Video } from '../../domain/models/video';
+import type { Video, VideoStatus } from '../../domain/models/video';
 import { Play, Trash2, Clock, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
 import { clsx } from 'clsx';
+import { normalizeVideoStatus } from '../../shared/utils/status-utils';
 
 interface VideoCardProps {
   video: Video;
@@ -18,16 +19,13 @@ const statusConfig = {
 };
 
 export const VideoCard: React.FC<VideoCardProps> = ({ video, onPlay, onDelete }) => {
-  // Normalize status string to handle case-insensitivity from API
-  const normalizedStatus = typeof video.status === 'string' 
-    ? (video.status.charAt(0).toUpperCase() + video.status.slice(1).toLowerCase()) as VideoStatus
-    : video.status;
-
-  const status = statusConfig[normalizedStatus as keyof typeof statusConfig] || statusConfig.Processing;
+  const normalizedStatus = normalizeVideoStatus(video);
+  const status = statusConfig[normalizedStatus] || statusConfig.Processing;
   const StatusIcon = status.icon;
   
-  // Use sagaState for granular label, fallback to status label
-  const displayLabel = video.sagaState || status.label;
+  const displayLabel = status.label;
+
+  const isPlayable = normalizedStatus === 'Published';
 
   return (
     <motion.div
@@ -41,7 +39,7 @@ export const VideoCard: React.FC<VideoCardProps> = ({ video, onPlay, onDelete })
       {/* Thumbnail Placeholder */}
       <div className="aspect-video w-full bg-slate-100 relative group-hover:bg-slate-200 transition-colors">
         <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-          {(normalizedStatus === 'Published' || video.status.toString() === '1') && (
+          {isPlayable && (
             <button
               onClick={() => onPlay(video)}
               className="bg-white p-3 rounded-full shadow-lg text-primary-600 hover:scale-110 transition-transform"

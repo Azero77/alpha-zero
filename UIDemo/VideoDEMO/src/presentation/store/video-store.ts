@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import type { Video } from '../../domain/models/video';
 import type { IVideoRepository } from '../../domain/repositories/video-repository';
 import { VideoRepositoryImpl } from '../../infrastructure/api/video-repository-impl';
+import { normalizeVideoStatus } from '../../shared/utils/status-utils';
 
 interface VideoState {
   videos: Video[];
@@ -51,26 +52,22 @@ export const useVideoStore = create<VideoState>((set, get) => ({
 
   refreshVideoState: async (id: string) => {
     try {
-      const state = await videoRepository.getVideoState(id);
-      const isPublished = state.currentState.toLowerCase() === 'published';
-      const isFailed = state.isFailed || state.currentState.toLowerCase() === 'failed';
+      const updatedVideo = await videoRepository.getVideoById(id);
+      const normalizedStatus = normalizeVideoStatus(updatedVideo);
+      const isPublished = normalizedStatus === 'Published';
 
       set((s) => ({
-        videos: s.videos.map((v) =>
-          v.id === id ? { 
-            ...v, 
-            sagaState: state.currentState, 
-            status: isPublished ? 'Published' : (isFailed ? 'Failed' : v.status) 
-          } : v
-        ),
+        videos: s.videos.map((v) => {
+          const vId = v.id || (v as any).Id;
+          return vId === id ? updatedVideo : v;
+        }),
       }));
-      
-      // If it just finished, full refresh to get final URLs
+
       if (isPublished) {
         await get().fetchVideos(get().currentPage);
       }
     } catch (err) {
-      console.error('Failed to refresh state for', id, err);
+      console.error('Failed to refresh video:', id, err);
     }
   },
 }));
