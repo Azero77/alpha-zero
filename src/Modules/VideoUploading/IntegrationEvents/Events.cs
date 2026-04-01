@@ -5,11 +5,11 @@ namespace AlphaZero.Modules.VideoUploading.IntegrationEvents;
  * These are sent to specific consumers to perform a task.
  */
 
-public record AnalyzeVideoCommand(Guid VideoId, string Key, string BucketName);
+public record AnalyzeVideoCommand(Guid VideoId, string Key);
 
-public record TranscodeVideoCommand(Guid VideoId, string Key, string BucketName, int Width, int Height);
+public record TranscodeVideoCommand(Guid VideoId, string Key, int Width, int Height);
 
-public record SyncVideoToCdnCommand(Guid VideoId, string S3KeyPrefix, string S3Bucket);
+public record SyncVideoToCdnCommand(Guid VideoId, string S3KeyPrefix);
 
 
 /* 
@@ -26,13 +26,13 @@ public record VideoMetadataProcessedEvent(Guid VideoId, TimeSpan Duration, int W
 
 // PHASE 3: TRANSCODING
 public record VideoTranscodingStartedEvent(Guid VideoId, string JobId);
-public record VideoTranscodingFinishedEvent(Guid VideoId, string OutputKeyPrefix, string BucketName);
+public record VideoTranscodingFinishedEvent(Guid VideoId, string OutputKeyPrefix);
 
 // PHASE 4: DISTRIBUTION
-public record VideoCdnSyncCompletedEvent(Guid VideoId, string R2PublicUrl);
+public record VideoCdnSyncCompletedEvent(Guid VideoId, string RelativeUrl);
 
 // PHASE 5: FINALIZATION
-public record VideoPublishedEvent(Guid VideoId, string FinalUrl);
+public record VideoPublishedEvent(Guid VideoId, string RelativeUrl);
 public record VideoProcessingFailedEvent(Guid VideoId, string Reason, string? Key);
 
 // LIFECYCLE

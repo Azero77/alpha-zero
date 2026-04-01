@@ -4,6 +4,7 @@ using AlphaZero.Shared.Application;
 using Aspire.Shared;
 using ErrorOr;
 using MediatR;
+using MassTransit;
 using Microsoft.Extensions.Logging;
 
 namespace AlphaZero.Modules.VideoUploading.Application.Commands.Process;
@@ -11,7 +12,6 @@ namespace AlphaZero.Modules.VideoUploading.Application.Commands.Process;
 public record StartVideoTranscodingCommand(
     Guid VideoId, 
     string Key, 
-    string BucketName, 
     int SourceWidth, 
     int SourceHeight) : ICommand<string>;
 
@@ -39,7 +39,10 @@ public sealed class StartVideoTranscodingCommandHandler : IRequestHandler<StartV
         _logger.LogInformation("[Application] Starting transcoding for Video: {VideoId} with Source Dimensions: {Width}x{Height}", 
             request.VideoId, request.SourceWidth, request.SourceHeight);
 
-        string sourceS3 = $"s3://{request.BucketName}/{request.Key}";
+        string sourceBucket = _aWSResources.InputS3?.BucketName 
+            ?? throw new ArgumentException("Input S3 bucket is not configured");
+
+        string sourceS3 = $"s3://{sourceBucket}/{request.Key}";
         string destinationBucket = _aWSResources.OutputS3?.BucketName 
             ?? throw new ArgumentException("Output S3 bucket is not configured");
         string outputPath = $"s3://{destinationBucket}/streaming/{request.VideoId}/master";

@@ -32,7 +32,6 @@ public class TranscodeVideoCommandHandler : IConsumer<TranscodeVideoCommand>
             new Application.Commands.Process.StartVideoTranscodingCommand(
                 context.Message.VideoId, 
                 context.Message.Key, 
-                context.Message.BucketName,
                 context.Message.Width,
                 context.Message.Height), context.CancellationToken);
 

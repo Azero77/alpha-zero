@@ -33,7 +33,6 @@ public class Program
         {
             builder.Services.AddScoped<ITenantProvider, HttpTenantProvider>();
         }
-        builder.Services.AddScoped<IModuleBus, ModuleBus>();
 
         string[] assembliesPath = Directory.GetFiles(AppDomain.CurrentDomain.BaseDirectory, "*.dll");
         foreach (var path in assembliesPath)
@@ -75,6 +74,10 @@ public class Program
             {
                 module.ConfigureModuleBus(x);
             }
+            x.UsingInMemory((context, cfg) =>
+            {
+                cfg.ConfigureEndpoints(context);
+            });
         });
 
         //Configure SQS messaging

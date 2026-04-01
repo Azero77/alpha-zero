@@ -53,7 +53,29 @@ var sns = awscdkStack.AddSNSTopic("VideoUploadedEvent")
     });
 input_s3.AddObjectCreatedNotification(sns);
 var output_s3 = awscdkStack.AddS3Bucket("OutputS3");
-var cdn_s3 = awscdkStack.AddS3Bucket("CdnS3");
+var cdn_s3 = awscdkStack.AddS3Bucket("CdnS3", new BucketProps()
+{
+    PublicReadAccess = true,
+    BlockPublicAccess = new BlockPublicAccess(new BlockPublicAccessOptions
+    {
+        BlockPublicAcls = false,
+        IgnorePublicAcls = false,
+        BlockPublicPolicy = false,
+        RestrictPublicBuckets = false
+    }),
+
+    Cors = new[]
+    {
+        new CorsRule
+        {
+            AllowedMethods = [HttpMethods.GET],
+            AllowedOrigins = ["*"], // OK for now (S3 is your CDN)
+            AllowedHeaders = ["*"],
+            ExposedHeaders = ["ETag"],
+            MaxAge = 3000
+        }
+    }
+});
 
 mediaConvertRole.AddToPolicy(new PolicyStatement(new PolicyStatementProps()
 {
@@ -123,6 +145,6 @@ var api = builder.AddProject<Projects.AlphaZero_API>("alphazero-api")
     .WaitFor(db)
     .WithReference(videoProcessedQueue)
     .WithEnvironment("AWS__Resources__MediaConvertRoleArn", awscdkStack.GetOutput("MediaConvertRoleArnOutput"))
-    .WithEnvironment("AWS__Resources__MediaConvertKeyKMSArn", kmsArn);
-
+    .WithEnvironment("AWS__Resources__MediaConvertKeyKMSArn", kmsArn)
+    ;
 builder.Build().Run();

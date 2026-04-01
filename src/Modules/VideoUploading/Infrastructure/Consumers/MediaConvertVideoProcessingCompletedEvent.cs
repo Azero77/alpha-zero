@@ -75,7 +75,7 @@ public class SQSMediaConverterJobStatusEventHandler :
                 {
                     // MediaConvert outputPath includes s3://bucket/streaming/videoId/
                     // Our event needs the key prefix (streaming/videoId/)
-                    await _moduleBus.Publish(new VideoTranscodingFinishedEvent(videoId, key, bucket));
+                    await _moduleBus.Publish(new VideoTranscodingFinishedEvent(videoId, key));
                 }
                 else
                 {

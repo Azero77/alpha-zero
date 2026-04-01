@@ -7,12 +7,12 @@ namespace AlphaZero.Modules.VideoUploading.Domain.Models;
 public class Video : AggregateRoot, IDomainTenantOwned
 {
     public Guid TenantId { get; private set; }
-    public string Title { get; private set; }
+    public string Title { get; private set; } = null!;
     public string? Description { get; private set; }
     public VideoStatus Status { get; private set; }
-    public VideoMetadata Metadata { get; private set; }
-    public VideoSpecifications Specifications { get; private set; }
-    public string SourceKey { get; private set; }
+    public VideoMetadata Metadata { get; private set; } = null!;
+    public VideoSpecifications Specifications { get; private set; } = null!;
+    public string SourceKey { get; private set; } = null!;
     public string? OutputFolder { get; private set; }
     public DateTime CreatedOn { get; private set; }
     public DateTime? PublishedOn { get; private set; }

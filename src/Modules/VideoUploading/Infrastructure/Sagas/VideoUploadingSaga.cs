@@ -44,26 +44,22 @@ public class VideoUploadingSaga : MassTransitStateMachine<VideoState>
             When(VideoDeliveredToInputEvent)
                 .Then(context => {
                     context.Saga.Key = context.Message.Key;
-                    context.Saga.BucketName = context.Message.BucketName;
                     context.Saga.TenantId = context.Message.TenantId;
                 })
                 .Publish(context => new AnalyzeVideoCommand(
                     context.Message.VideoId, 
-                    context.Message.Key, 
-                    context.Message.BucketName))
+                    context.Message.Key))
                 .TransitionTo(Analyzing));
 
         During(Pending,
             When(VideoDeliveredToInputEvent)
                 .Then(context => {
                     context.Saga.Key = context.Message.Key;
-                    context.Saga.BucketName = context.Message.BucketName;
                     context.Saga.TenantId = context.Message.TenantId;
                 })
                 .Publish(context => new AnalyzeVideoCommand(
                     context.Message.VideoId, 
-                    context.Message.Key, 
-                    context.Message.BucketName))
+                    context.Message.Key))
                 .TransitionTo(Analyzing),
                 
             When(VideoMetadataProcessedEvent)
@@ -75,7 +71,6 @@ public class VideoUploadingSaga : MassTransitStateMachine<VideoState>
                 .Publish(context => new TranscodeVideoCommand(
                     context.Saga.CorrelationId,
                     context.Saga.Key!, 
-                    context.Saga.BucketName!, 
                     context.Message.Width,
                     context.Message.Height))
                 .TransitionTo(Transcoding));
@@ -90,7 +85,6 @@ public class VideoUploadingSaga : MassTransitStateMachine<VideoState>
                 .Publish(context => new TranscodeVideoCommand(
                     context.Saga.CorrelationId,
                     context.Saga.Key!, 
-                    context.Saga.BucketName!, 
                     context.Message.Width,
                     context.Message.Height))
                 .TransitionTo(Transcoding));
@@ -105,19 +99,14 @@ public class VideoUploadingSaga : MassTransitStateMachine<VideoState>
                 })
                 .Publish(context => new SyncVideoToCdnCommand(
                     context.Saga.CorrelationId, 
-                    context.Saga.S3OutputPrefix!, 
-                    context.Saga.BucketName!))
+                    context.Saga.S3OutputPrefix!))
                 .TransitionTo(Distributing));
 
         During(Distributing,
             When(VideoCdnSyncCompletedEvent)
-                .Then(context => context.Saga.FinalUrl = context.Message.R2PublicUrl)
-                .TransitionTo(Published));
-
-        During(Published,
-            When(VideoPublishedEvent)
+                .Then(context => context.Saga.FinalUrl = context.Message.RelativeUrl)
+                .TransitionTo(Published)
                 .Finalize());
-
         DuringAny(
             When(VideoProcessingFailedEvent)
                 .Then(x => x.Saga.IsFailed = true)
@@ -132,7 +121,6 @@ public class VideoState : SagaStateMachineInstance
     public string CurrentState { get; set; } = null!;
     public string? MediaConverterJobId { get; set; }
     public string? Key { get; set; }
-    public string? BucketName { get; set; }
     public int? SourceWidth { get; set; }
     public int? SourceHeight { get; set; }
     public TimeSpan? Duration { get; set; }
