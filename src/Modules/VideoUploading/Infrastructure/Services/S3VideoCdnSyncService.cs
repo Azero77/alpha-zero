@@ -87,8 +87,12 @@ public class S3VideoCdnSyncService : IVideoCdnSyncService
 
             await _s3Client.DeleteObjectsAsync(deleteRequest, cancellationToken);
 
-            // 4. Return Direct S3 URL (No CloudFront)
-            return $"https://{destinationBucket}.s3.amazonaws.com/{s3KeyPrefix}/master.m3u8";
+            // 4. Return CDN URL (Prefer Cloudflare domain if configured)
+            var baseUrl = !string.IsNullOrEmpty(_awsResources.CdnDomain) 
+                ? $"https://{_awsResources.CdnDomain}" 
+                : $"https://{destinationBucket}.s3.amazonaws.com";
+
+            return $"{baseUrl}/{s3KeyPrefix}/master.m3u8";
         }
         catch (Exception ex)
         {
