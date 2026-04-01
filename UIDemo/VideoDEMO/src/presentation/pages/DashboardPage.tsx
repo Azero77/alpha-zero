@@ -7,6 +7,7 @@ import type { Video } from '../../domain/models/video';
 import { Plus, Video as VideoIcon, LayoutDashboard, Settings, LogOut, ChevronRight } from 'lucide-react';
 import { VideoRepositoryImpl } from '../../infrastructure/api/video-repository-impl';
 import type { StreamingInfo } from '../../domain/repositories/video-repository';
+import { usePollVideoStatus } from '../hooks/usePollVideoStatus';
 
 const videoRepo = new VideoRepositoryImpl();
 
@@ -15,6 +16,9 @@ export const DashboardPage: React.FC = () => {
   const [isUploadOpen, setIsUploadOpen] = useState(false);
   const [selectedVideo, setSelectedVideo] = useState<Video | null>(null);
   const [streamingInfo, setStreamingInfo] = useState<StreamingInfo | null>(null);
+
+  // Use polling hook
+  usePollVideoStatus();
 
   useEffect(() => {
     fetchVideos();

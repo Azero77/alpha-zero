@@ -12,6 +12,7 @@ interface VideoState {
   
   fetchVideos: (page?: number, perPage?: number) => Promise<void>;
   deleteVideo: (id: string) => Promise<void>;
+  refreshVideoState: (id: string) => Promise<void>;
 }
 
 const videoRepository: IVideoRepository = new VideoRepositoryImpl();
@@ -45,6 +46,31 @@ export const useVideoStore = create<VideoState>((set, get) => ({
       await get().fetchVideos(currentPage);
     } catch (err: any) {
       set({ error: err.message || 'Failed to delete video' });
+    }
+  },
+
+  refreshVideoState: async (id: string) => {
+    try {
+      const state = await videoRepository.getVideoState(id);
+      const isPublished = state.currentState.toLowerCase() === 'published';
+      const isFailed = state.isFailed || state.currentState.toLowerCase() === 'failed';
+
+      set((s) => ({
+        videos: s.videos.map((v) =>
+          v.id === id ? { 
+            ...v, 
+            sagaState: state.currentState, 
+            status: isPublished ? 'Published' : (isFailed ? 'Failed' : v.status) 
+          } : v
+        ),
+      }));
+      
+      // If it just finished, full refresh to get final URLs
+      if (isPublished) {
+        await get().fetchVideos(get().currentPage);
+      }
+    } catch (err) {
+      console.error('Failed to refresh state for', id, err);
     }
   },
 }));

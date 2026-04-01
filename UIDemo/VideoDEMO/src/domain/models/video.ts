@@ -1,4 +1,4 @@
-export type VideoStatus = 'Pending' | 'Analyzing' | 'Transcoding' | 'Distributing' | 'Published' | 'Failed';
+export type VideoStatus = 'Processing' | 'Published' | 'Failed' | 'Deleted';
 
 export interface Resolution {
   width: number;
@@ -22,6 +22,7 @@ export interface Video {
   title: string;
   description?: string;
   status: VideoStatus;
+  sagaState?: string;
   metadata: VideoMetadata;
   specifications: VideoSpecifications;
   sourceKey: string;

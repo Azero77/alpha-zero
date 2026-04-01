@@ -11,17 +11,23 @@ interface VideoCardProps {
 }
 
 const statusConfig = {
-  Pending: { icon: Clock, color: 'text-slate-400', bg: 'bg-slate-100', label: 'Pending', spin: false },
-  Analyzing: { icon: Loader2, color: 'text-blue-500', bg: 'bg-blue-50', label: 'Analyzing', spin: true },
-  Transcoding: { icon: Loader2, color: 'text-primary-500', bg: 'bg-primary-50', label: 'Processing', spin: true },
-  Distributing: { icon: Loader2, color: 'text-indigo-500', bg: 'bg-indigo-50', label: 'Distributing', spin: true },
+  Processing: { icon: Loader2, color: 'text-primary-500', bg: 'bg-primary-50', label: 'Processing', spin: true },
   Published: { icon: CheckCircle, color: 'text-green-500', bg: 'bg-green-50', label: 'Live', spin: false },
   Failed: { icon: AlertCircle, color: 'text-red-500', bg: 'bg-red-50', label: 'Failed', spin: false },
+  Deleted: { icon: Trash2, color: 'text-slate-400', bg: 'bg-slate-100', label: 'Deleted', spin: false },
 };
 
 export const VideoCard: React.FC<VideoCardProps> = ({ video, onPlay, onDelete }) => {
-  const status = statusConfig[video.status] || statusConfig.Pending;
+  // Normalize status string to handle case-insensitivity from API
+  const normalizedStatus = typeof video.status === 'string' 
+    ? (video.status.charAt(0).toUpperCase() + video.status.slice(1).toLowerCase()) as VideoStatus
+    : video.status;
+
+  const status = statusConfig[normalizedStatus as keyof typeof statusConfig] || statusConfig.Processing;
   const StatusIcon = status.icon;
+  
+  // Use sagaState for granular label, fallback to status label
+  const displayLabel = video.sagaState || status.label;
 
   return (
     <motion.div
@@ -35,7 +41,7 @@ export const VideoCard: React.FC<VideoCardProps> = ({ video, onPlay, onDelete })
       {/* Thumbnail Placeholder */}
       <div className="aspect-video w-full bg-slate-100 relative group-hover:bg-slate-200 transition-colors">
         <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-          {video.status === 'Published' && (
+          {(normalizedStatus === 'Published' || video.status.toString() === '1') && (
             <button
               onClick={() => onPlay(video)}
               className="bg-white p-3 rounded-full shadow-lg text-primary-600 hover:scale-110 transition-transform"
@@ -52,7 +58,7 @@ export const VideoCard: React.FC<VideoCardProps> = ({ video, onPlay, onDelete })
           status.color
         )}>
           <StatusIcon size={14} className={status.spin ? "animate-spin" : ""} />
-          {status.label}
+          {displayLabel}
         </div>
       </div>
 
