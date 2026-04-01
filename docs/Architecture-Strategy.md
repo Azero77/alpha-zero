@@ -31,7 +31,7 @@ As a solo developer and SaaS owner, the architecture priorities are:
 2. **Analysis (FFProbe):** A background worker inspects the file. If it's 720p, we tell the transcoder **not** to create a 1080p rendition (saving 40% on AWS costs).
 3. **Optimization (AWS MediaConvert):** Managed transcoding into encrypted HLS/CMAF segments. Output is sent to a **Transient S3 Bucket**.
 4. **Distribution (Cloudflare R2):** A MassTransit "Mover" worker streams the folder from S3 to R2 and then deletes the S3 copy.
-5. **Streaming (CDN):** Students stream via a custom domain connected directly to R2, secured by **ClearKey (AES-128) Encryption**.
+5. **Streaming (CDN):** Students stream via a custom domain connected directly to R2, secured by **ClearKey (AES-128) Encryption**. //DRM Will be implemented in Phase 2, but ClearKey provides a solid baseline for content protection without the complexity of full DRM.
 
 ---
 

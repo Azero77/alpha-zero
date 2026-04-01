@@ -53,6 +53,7 @@ var sns = awscdkStack.AddSNSTopic("VideoUploadedEvent")
     });
 input_s3.AddObjectCreatedNotification(sns);
 var output_s3 = awscdkStack.AddS3Bucket("OutputS3");
+var cdn_s3 = awscdkStack.AddS3Bucket("CdnS3");
 
 mediaConvertRole.AddToPolicy(new PolicyStatement(new PolicyStatementProps()
 {
@@ -116,6 +117,7 @@ var api = builder.AddProject<Projects.AlphaZero_API>("alphazero-api")
     .WithReference(awsSdkConfig)
     .WithReference(input_s3)
     .WithReference(output_s3)
+    .WithReference(cdn_s3)
     .WithReference(videoUploadedSQSQueue)
     .WithReference(db)
     .WaitFor(db)
