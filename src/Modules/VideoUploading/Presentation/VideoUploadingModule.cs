@@ -32,7 +32,7 @@ public class VideoUploadingModule : AppModule, IVideoUploadingModule
         var mediatr = Scope.Resolve<IMediator>();
         return mediatr.Send((IRequest<TResponse>)request, cancellationToken);
     }
-    public override void ConfigureModuleBus(IMediatorRegistrationConfigurator configuration)
+    public override void ConfigureModuleBus(IBusRegistrationConfigurator configuration)
     {
         configuration.AddSagaStateMachine<VideoUploadingSaga, VideoState>()
         .EntityFrameworkRepository(r =>
@@ -41,5 +41,8 @@ public class VideoUploadingModule : AppModule, IVideoUploadingModule
             r.UsePostgres();
             r.ConcurrencyMode = ConcurrencyMode.Optimistic;
         });
+
+        // Register local consumers that should run on the in-memory bus with their own scopes
+        configuration.AddConsumers(typeof(VideoUploadingModule).Assembly);
     }
 }

@@ -67,7 +67,7 @@ public class Program
 
 
         //Configure In-Memory Messagin
-        builder.Services.AddMediator(x =>
+        builder.Services.AddMassTransit<IModuleBus>(x =>
         {
             x.SetKebabCaseEndpointNameFormatter();
             x.AddConsumers(filter => !filter.Name.Contains("sqs", StringComparison.InvariantCultureIgnoreCase), assemblies);
@@ -78,7 +78,7 @@ public class Program
         });
 
         //Configure SQS messaging
-        builder.Services.AddMassTransit(x =>
+        builder.Services.AddMassTransit<IExternalBus>(x =>
         {
             x.AddConsumers(filter => filter.Name.Contains("sqs", StringComparison.InvariantCultureIgnoreCase),assemblies);
             x.UsingAmazonSqs((context, cfg) =>
