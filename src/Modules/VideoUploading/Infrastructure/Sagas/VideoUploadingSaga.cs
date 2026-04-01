@@ -39,7 +39,19 @@ public class VideoUploadingSaga : MassTransitStateMachine<VideoState>
         Initially(
             When(UploadVideoRequestedEvent)
                 .Then(context => context.Saga.TenantId = context.Message.TenantId)
-                .TransitionTo(Pending));
+                .TransitionTo(Pending),
+            
+            When(VideoDeliveredToInputEvent)
+                .Then(context => {
+                    context.Saga.Key = context.Message.Key;
+                    context.Saga.BucketName = context.Message.BucketName;
+                    context.Saga.TenantId = context.Message.TenantId;
+                })
+                .Publish(context => new AnalyzeVideoCommand(
+                    context.Message.VideoId, 
+                    context.Message.Key, 
+                    context.Message.BucketName))
+                .TransitionTo(Analyzing));
 
         During(Pending,
             When(VideoDeliveredToInputEvent)
@@ -48,12 +60,25 @@ public class VideoUploadingSaga : MassTransitStateMachine<VideoState>
                     context.Saga.BucketName = context.Message.BucketName;
                     context.Saga.TenantId = context.Message.TenantId;
                 })
-                // COMMAND: "Analyze this file dimensions."
-                .Send(context => new AnalyzeVideoCommand(
+                .Publish(context => new AnalyzeVideoCommand(
                     context.Message.VideoId, 
                     context.Message.Key, 
                     context.Message.BucketName))
-                .TransitionTo(Analyzing));
+                .TransitionTo(Analyzing),
+                
+            When(VideoMetadataProcessedEvent)
+                .Then(context => {
+                    context.Saga.SourceWidth = context.Message.Width;
+                    context.Saga.SourceHeight = context.Message.Height;
+                    context.Saga.Duration = context.Message.Duration;
+                })
+                .Publish(context => new TranscodeVideoCommand(
+                    context.Saga.CorrelationId,
+                    context.Saga.Key!, 
+                    context.Saga.BucketName!, 
+                    context.Message.Width,
+                    context.Message.Height))
+                .TransitionTo(Transcoding));
 
         During(Analyzing,
             When(VideoMetadataProcessedEvent)
@@ -62,8 +87,7 @@ public class VideoUploadingSaga : MassTransitStateMachine<VideoState>
                     context.Saga.SourceHeight = context.Message.Height;
                     context.Saga.Duration = context.Message.Duration;
                 })
-                // COMMAND: "Transcode with these source limits."
-                .Send(context => new TranscodeVideoCommand(
+                .Publish(context => new TranscodeVideoCommand(
                     context.Saga.CorrelationId,
                     context.Saga.Key!, 
                     context.Saga.BucketName!, 
@@ -79,8 +103,7 @@ public class VideoUploadingSaga : MassTransitStateMachine<VideoState>
                 .Then(context => {
                     context.Saga.S3OutputPrefix = context.Message.OutputKeyPrefix;
                 })
-                // COMMAND: "Distribute to Cloudflare R2."
-                .Send(context => new SyncVideoToCdnCommand(
+                .Publish(context => new SyncVideoToCdnCommand(
                     context.Saga.CorrelationId, 
                     context.Saga.S3OutputPrefix!, 
                     context.Saga.BucketName!))

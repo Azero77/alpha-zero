@@ -5,14 +5,14 @@ using Microsoft.Extensions.Logging;
 
 namespace AlphaZero.Modules.VideoUploading.Infrastructure.Consumers;
 
-public class AnalyzeVideoConsumer : IConsumer<AnalyzeVideoCommand>
+public class AnalyzeVideoCommandHandler : IConsumer<AnalyzeVideoCommand>
 {
     private readonly IVideoSpecificationExtractorService _specExtractor;
-    private readonly ILogger<AnalyzeVideoConsumer> _logger;
+    private readonly ILogger<AnalyzeVideoCommandHandler> _logger;
 
-    public AnalyzeVideoConsumer(
+    public AnalyzeVideoCommandHandler(
         IVideoSpecificationExtractorService specExtractor, 
-        ILogger<AnalyzeVideoConsumer> logger)
+        ILogger<AnalyzeVideoCommandHandler> logger)
     {
         _specExtractor = specExtractor;
         _logger = logger;

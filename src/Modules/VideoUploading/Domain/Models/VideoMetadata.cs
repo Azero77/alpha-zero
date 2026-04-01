@@ -31,5 +31,6 @@ public record Resolution
         this.width = width;
         this.height = height;
     }
+    private Resolution() { }
     public static Resolution Empty => new Resolution(0,0);
 }

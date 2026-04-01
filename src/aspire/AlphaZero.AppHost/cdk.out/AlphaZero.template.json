@@ -357,6 +357,11 @@
    "UpdateReplacePolicy": "Retain",
    "DeletionPolicy": "Retain"
   },
+  "CdnS308975579": {
+   "Type": "AWS::S3::Bucket",
+   "UpdateReplacePolicy": "Retain",
+   "DeletionPolicy": "Retain"
+  },
   "JobCompletedRule7540F26B": {
    "Type": "AWS::Events::Rule",
    "Properties": {
@@ -479,6 +484,11 @@
   "OutputS3ECBD476ABucketName": {
    "Value": {
     "Ref": "OutputS348BD8914"
+   }
+  },
+  "CdnS3A699AFD8BucketName": {
+   "Value": {
+    "Ref": "CdnS308975579"
    }
   },
   "mediaconvertervideoprocessed73CDABA6QueueUrl": {

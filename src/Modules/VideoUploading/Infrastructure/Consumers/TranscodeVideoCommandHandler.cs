@@ -10,14 +10,14 @@ namespace AlphaZero.Modules.VideoUploading.Infrastructure.Consumers;
 /// Infrastructure consumer that acts as an entry point for the TranscodeVideoCommand.
 /// Orchestration logic is handled by the Application layer via the Module Bridge.
 /// </summary>
-public class TranscodeVideoConsumer : IConsumer<TranscodeVideoCommand>
+public class TranscodeVideoCommandHandler : IConsumer<TranscodeVideoCommand>
 {
     private readonly IVideoUploadingModule _module;
-    private readonly ILogger<TranscodeVideoConsumer> _logger;
+    private readonly ILogger<TranscodeVideoCommandHandler> _logger;
 
-    public TranscodeVideoConsumer(
+    public TranscodeVideoCommandHandler(
         IVideoUploadingModule module,
-        ILogger<TranscodeVideoConsumer> logger)
+        ILogger<TranscodeVideoCommandHandler> logger)
     {
         _module = module;
         _logger = logger;
