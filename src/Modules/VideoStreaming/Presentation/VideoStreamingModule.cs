@@ -11,11 +11,13 @@ using System.Reflection;
 
 namespace Presentation;
 
+
 public class VideoStreamingModule : AppModule
 {
     public override void RegisterGlobal(IServiceCollection globalServices)
     {
         // Add any global infrastructure if needed
+        globalServices.AddSingleton<VideoStreamingModule>();
     }
 
     public override void RegisterPrivate(IServiceCollection moduleServices, ContainerBuilder builder)

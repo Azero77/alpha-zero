@@ -19,20 +19,15 @@ public class Program
         var builder = WebApplication.CreateBuilder(args);
         builder.AddServiceDefaults();
         builder.Services.AddAuthorization();
-        var awsResources = ConfigureAWSResources(builder);
+        
+        // Shared Infrastructure (AWS, TenantProvider, Clock, etc)
+        builder.Services.AddSharedInfrastructure(builder.Configuration, builder.Environment);
+        builder.Services.AddDatabaseSettings(builder.Configuration);
+
         // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
         builder.Services.AddEndpointsApiExplorer();
         builder.Services.AddSwaggerGen();
         builder.Services.AddCors();
-        builder.Services.AddHttpContextAccessor();
-        if (builder.Environment.IsDevelopment())
-        {
-            builder.Services.AddScoped<ITenantProvider, FakeTenantProvider>();
-        }
-        else
-        {
-            builder.Services.AddScoped<ITenantProvider, HttpTenantProvider>();
-        }
 
         string[] assembliesPath = Directory.GetFiles(AppDomain.CurrentDomain.BaseDirectory, "*.dll");
         foreach (var path in assembliesPath)
@@ -143,17 +138,6 @@ public class Program
                 endpoint.MapEndpoint(app);
             }
         }
-    }
-
-    private static AWSResources ConfigureAWSResources(WebApplicationBuilder builder)
-    {
-        AWSResources awsResources = new();
-        AWSOptions options = builder.Configuration.GetAWSOptions();
-        builder.Configuration.Bind(AWSResources.Section, awsResources);
-        builder.Services.AddSingleton<AWSResources>(awsResources);
-        builder.Services.AddDefaultAWSOptions(options);
-
-        return awsResources;
     }
 
     private static void InitializeModules(WebApplication app, IEnumerable<IModule> modules)

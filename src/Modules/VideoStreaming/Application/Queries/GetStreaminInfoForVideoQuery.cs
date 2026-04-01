@@ -1,0 +1,21 @@
+﻿using ErrorOr;
+using MediatR;
+
+namespace AlphaZero.Modules.VideoStreaming.Application.Queries;
+
+public record StreamingInfoResponseDTO(string url, string key);
+public record GetStreaminInfoForVideoQuery(Guid VideoId) : IRequest<ErrorOr<StreamingInfoResponseDTO>>;
+
+public sealed class GetStreaminInfoForVideoQueryHandler(IStreamingService streamingService) : IRequestHandler<GetStreaminInfoForVideoQuery, ErrorOr<StreamingInfoResponseDTO>>
+{
+    public async Task<ErrorOr<StreamingInfoResponseDTO>> Handle(GetStreaminInfoForVideoQuery request, CancellationToken cancellationToken)
+    {
+        var result = await streamingService.GetStreamingInfo(request.VideoId);
+        return result;
+    }
+}
+
+public interface IStreamingService
+{
+    Task<ErrorOr<StreamingInfoResponseDTO>> GetStreamingInfo(Guid videoId);
+}

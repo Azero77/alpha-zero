@@ -1,4 +1,5 @@
-﻿using Amazon.S3;
+﻿using AlphaZero.Modules.VideoStreaming.Application.Queries;
+using Amazon.S3;
 using Application;
 using Aspire.Shared;
 using Microsoft.Extensions.Configuration;
@@ -11,13 +12,7 @@ public static class DependencyInjection
 {
     public static void AddVideoStreamingInfrastructure(this IServiceCollection services,IConfiguration configuration)
     {
-        //string connectionString = configuration.GetConnectionString();
-
-        var awsOptions = configuration.GetAWSOptions();
         services.AddMediatR(opts => opts.RegisterServicesFromAssembly(typeof(IVideoStreamingApplicationMarker).Assembly));
-        services.AddSingleton<IAmazonS3>(sp => awsOptions.CreateServiceClient<IAmazonS3>());
-        AWSResources awsResources = configuration.GetSection(AWSResources.Section).Get<AWSResources>() ?? throw new ArgumentException("AWS Resources are not configured in VideoStreaming module");
-        services.AddSingleton<S3Settings>(awsResources.InputS3 ?? throw new ArgumentException("S3 is not configured in video streaming"));
-
+        services.AddSingleton<IStreamingService, S3VideoStreamingService>();
     }
 }

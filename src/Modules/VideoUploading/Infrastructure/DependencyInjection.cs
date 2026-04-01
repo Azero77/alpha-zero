@@ -23,17 +23,11 @@ public static class DependencyInjection
 {
     public static void AddVideoUploadingGlobalInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
-        AWSResources awsResources = configuration.GetSection(AWSResources.Section).Get<AWSResources>() 
+        var dbSettings = DatabaseSettings.GetDatabaseSettings(configuration);
+        var awsResources = configuration.GetSection(AWSResources.Section).Get<AWSResources>() 
             ?? throw new ArgumentException("AWS Resources are not configured");
-        DatabaseSettings dbSettings = DatabaseSettings.GetDatabaseSettings(configuration);
-
-        // Global AWS services
-        services.AddAWSService<IAmazonSQS>();
-        services.AddAWSService<IAmazonS3>();
-        services.AddAWSService<IAmazonMediaConvert>();
 
         // Infrastructure Services that need to be global for consumers
-        services.AddSingleton<S3Settings>(awsResources.InputS3 ?? throw new ArgumentException("S3 Input is not configured"));
         services.AddScoped<IUploadService, S3UploadService>();
         services.AddScoped<IVideoSpecificationExtractorService, S3VideoSpecificationExtractor>();
         services.AddScoped<IVideoTranscodingService, MediaConvertTranscodingService>();
@@ -44,14 +38,14 @@ public static class DependencyInjection
         {
             opts.UseNpgsql(dbSettings.ConnectionString, h=>
             {
-
                 h.MigrationsAssembly(typeof(AppDbContext).Assembly.FullName);
                 h.MigrationsHistoryTable("__VideoUploadingMigrationHistory", AppDbContext.Schema);
             });
         });
-        services.AddSingleton<IClock, Clock>();
-    }
 
+        // Special singleton for S3Settings from global configuration
+        services.AddSingleton<S3Settings>(awsResources.InputS3 ?? throw new ArgumentException("S3 Input is not configured"));
+    }
     public static void AddVideoUploadingPrivateInfrastructure(this IServiceCollection moduleServices, IConfiguration configuration)
     {
         var awsOptions = configuration.GetAWSOptions();

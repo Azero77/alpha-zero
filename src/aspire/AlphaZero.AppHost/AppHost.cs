@@ -74,8 +74,16 @@ var cdn_s3 = awscdkStack.AddS3Bucket("CdnS3", new BucketProps()
             ExposedHeaders = ["ETag"],
             MaxAge = 3000
         }
-    }
+    },
 });
+
+cdn_s3.Resource.Construct
+    .AddToResourcePolicy(new PolicyStatement(new PolicyStatementProps()
+    {
+        Actions = new[] { "s3:GetObject" },
+        Resources = new[] { cdn_s3.Resource.Construct.BucketArn },
+        Principals = new[] { new AnyPrincipal() }
+    }));
 
 mediaConvertRole.AddToPolicy(new PolicyStatement(new PolicyStatementProps()
 {
