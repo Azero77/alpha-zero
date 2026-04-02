@@ -71,7 +71,7 @@ public class MediaConvertTranscodingService : IVideoTranscodingService
             .Replace("##MediaConvertRole##", _aWSResources.MediaConvertRoleArn)
             .Replace("##DRM_KEY##", drmKey)
             .Replace("##DRM_KEY_ID##", drmKeyId)
-            .Replace("##DRM_KEY_URL##", "https://alphazero.api/clearkey");
+            .Replace("##DRM_KEY_URL##", "http://clearkey.local");
 
         var jobSettings = JsonConvert.DeserializeObject<CreateJobRequest>(jsonTemplate);
         if (jobSettings == null) throw new Exception("Failed to deserialize job.json");

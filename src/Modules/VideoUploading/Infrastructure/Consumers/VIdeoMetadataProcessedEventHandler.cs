@@ -41,9 +41,5 @@ public class VideoMetadataProcessedEventHandler : IConsumer<VideoMetadataProcess
                 null));
             return;
         }
-
-        // Successfully persisted, now we let the Saga know so it can move to the next stage
-        // Wait, the Saga is ALREADY listening for VideoMetadataProcessedEvent! 
-        // So we don't need to publish anything else here.
     }
 }

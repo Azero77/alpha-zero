@@ -13,6 +13,33 @@ namespace AlphaZero.Modules.VideoUploading.Presentation.Features;
 
 public static class Debug
 {
+    public record VideoResponse(
+        Guid Id,
+        string Title,
+        string? Description,
+        string Status,
+        AlphaZero.Modules.VideoUploading.Domain.Models.VideoMetadata Metadata,
+        AlphaZero.Modules.VideoUploading.Domain.Models.VideoSpecifications Specifications,
+        string SourceKey,
+        string? OutputFolder,
+        DateTime CreatedOn,
+        DateTime? PublishedOn);
+
+    private static VideoResponse MapToResponse(AlphaZero.Modules.VideoUploading.Domain.Models.Video video)
+    {
+        return new VideoResponse(
+            video.Id,
+            video.Title,
+            video.Description,
+            video.Status.ToString(),
+            video.Metadata,
+            video.Specifications,
+            video.SourceKey,    
+            video.OutputFolder,
+            video.CreatedOn,
+            video.PublishedOn);
+    }
+
     public class GetVideosEndpoint : IEndpoint
     {
         public void MapEndpoint(IEndpointRouteBuilder app)
@@ -26,7 +53,11 @@ public static class Debug
             var query = new ListVideosQuery(page ?? 1, perPage ?? 10);
             var response = await module.Send<ListVideosQuery, ErrorOr<AlphaZero.Shared.Queries.PagedResult<AlphaZero.Modules.VideoUploading.Domain.Models.Video>>>(query);
             return response.Match(
-                res => Results.Ok(res),
+                res => Results.Ok(new AlphaZero.Shared.Queries.PagedResult<VideoResponse>(
+                    res.Items.Select(MapToResponse).ToList(),
+                    res.TotalCount,
+                    res.Page,
+                    res.PerPage)),
                 errors => errors.ToMinimalResult());
         }
     }
@@ -44,7 +75,7 @@ public static class Debug
             var query = new GetVideoQuery(id);
             var response = await module.Send<GetVideoQuery, ErrorOr<AlphaZero.Modules.VideoUploading.Domain.Models.Video>>(query);
             return response.Match(
-                res => Results.Ok(res),
+                res => Results.Ok(MapToResponse(res)),
                 errors => errors.ToMinimalResult());
         }
     }
@@ -65,7 +96,7 @@ public static class Debug
                 res => Results.Ok(res),
                 errors => errors.ToMinimalResult());
         }
-    }
+    }/*
 
     public class GetStreamingInfoEndpoint : IEndpoint
     {
@@ -83,7 +114,7 @@ public static class Debug
                 res => Results.Ok(res),
                 errors => errors.ToMinimalResult());
         }
-    }
+    }*/
 
     public class DeleteVideoEndpoint : IEndpoint
     {

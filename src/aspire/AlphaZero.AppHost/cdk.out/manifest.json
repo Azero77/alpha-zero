@@ -18,7 +18,7 @@
         "validateOnSynth": false,
         "assumeRoleArn": "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/cdk-hnb659fds-deploy-role-${AWS::AccountId}-${AWS::Region}",
         "cloudFormationExecutionRoleArn": "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/cdk-hnb659fds-cfn-exec-role-${AWS::AccountId}-${AWS::Region}",
-        "stackTemplateAssetObjectUrl": "s3://cdk-hnb659fds-assets-${AWS::AccountId}-${AWS::Region}/34a76f6fb939f3755e36883e055fe28e1bf106205dbe18bc73c0707c25ca6109.json",
+        "stackTemplateAssetObjectUrl": "s3://cdk-hnb659fds-assets-${AWS::AccountId}-${AWS::Region}/a05415e188be55d3389ecf064ff720c732f1163e77e96296dd968f4a26d098dd.json",
         "requiresBootstrapStackVersion": 6,
         "bootstrapStackVersionSsmParameter": "/cdk-bootstrap/hnb659fds/version",
         "additionalDependencies": [
@@ -112,6 +112,18 @@
             "data": "OutputS348BD8914"
           }
         ],
+        "/AlphaZero/CdnS3/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "CdnS308975579"
+          }
+        ],
+        "/AlphaZero/CdnS3/Policy/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "CdnS3Policy4F70FEEE"
+          }
+        ],
         "/AlphaZero/MediaConvertRoleArnOutput": [
           {
             "type": "aws:cdk:logicalId",
@@ -152,6 +164,12 @@
           {
             "type": "aws:cdk:logicalId",
             "data": "OutputS3ECBD476ABucketName"
+          }
+        ],
+        "/AlphaZero/CdnS3A699AFD8BucketName": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "CdnS3A699AFD8BucketName"
           }
         ],
         "/AlphaZero/mediaconvertervideoprocessed73CDABA6QueueUrl": [

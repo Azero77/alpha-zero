@@ -20,7 +20,20 @@
     <PackageReference Include="MediatR" />
     <PackageReference Include="MassTransit" />
     <PackageReference Include="Microsoft.EntityFrameworkCore" />
+
+		<PackageReference Include="AWSSDK.CloudFront" />
+		<PackageReference Include="AWSSDK.S3" />
+		<PackageReference Include="Microsoft.EntityFrameworkCore" />
+		<PackageReference Include="AWSSDK.Extensions.NETCore.Setup" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
-  </ItemGroup>
+		<PackageReference Include="MassTransit.AmazonSQS" />
+		<PackageReference Include="AWSSDK.MediaConvert" />
+		<PackageReference Include="AWSSDK.SQS" />
+
+	</ItemGroup>
+
+	<ItemGroup>
+	  <ProjectReference Include="..\aspire\Aspire.Shared\Aspire.Shared.csproj" />
+	</ItemGroup>
 
 </Project>

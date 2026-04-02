@@ -23,32 +23,31 @@ public static class DependencyInjection
 {
     public static void AddVideoUploadingGlobalInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
+        var dbSettings = DatabaseSettings.GetDatabaseSettings(configuration);
+        var awsResources = configuration.GetSection(AWSResources.Section).Get<AWSResources>() 
+            ?? throw new ArgumentException("AWS Resources are not configured");
 
-        DatabaseSettings dbSettings = DatabaseSettings.GetDatabaseSettings(configuration);
-        // Global AWS services
-        services.AddAWSService<IAmazonSQS>();
-        services.AddAWSService<IAmazonS3>();
+        // Infrastructure Services that need to be global for consumers
+        services.AddScoped<IUploadService, S3UploadService>();
+        services.AddScoped<IVideoSpecificationExtractorService, S3VideoSpecificationExtractor>();
+        services.AddScoped<IVideoTranscodingService, MediaConvertTranscodingService>();
+        services.AddScoped<IVideoCdnSyncService, S3VideoCdnSyncService>();
 
-        services.AddAWSService<IAmazonMediaConvert>();
         // Persistence
         services.AddDbContext<AppDbContext>(opts =>
         {
             opts.UseNpgsql(dbSettings.ConnectionString, h=>
             {
-
                 h.MigrationsAssembly(typeof(AppDbContext).Assembly.FullName);
                 h.MigrationsHistoryTable("__VideoUploadingMigrationHistory", AppDbContext.Schema);
             });
         });
-        services.AddSingleton<IClock, Clock>();
-    }
 
+        // Special singleton for S3Settings from global configuration
+        services.AddSingleton<S3Settings>(awsResources.InputS3 ?? throw new ArgumentException("S3 Input is not configured"));
+    }
     public static void AddVideoUploadingPrivateInfrastructure(this IServiceCollection moduleServices, IConfiguration configuration)
     {
-        AWSResources awsResources = configuration.GetSection(AWSResources.Section).Get<AWSResources>() 
-            ?? throw new ArgumentException("AWS Resources are not configured");
-        DatabaseSettings dbSettings = DatabaseSettings.GetDatabaseSettings(configuration);
-
         var awsOptions = configuration.GetAWSOptions();
         moduleServices.AddFluentValidation(typeof(IVideoUploadingApplicationMarker));
 
@@ -59,11 +58,7 @@ public static class DependencyInjection
             opts.AddOpenBehavior(typeof(UnitOfWorkDecoratorCommandHandler<,>));
         });
 
-        // Infrastructure Services
-        moduleServices.AddSingleton<S3Settings>(awsResources.InputS3 ?? throw new ArgumentException("S3 Input is not configured"));
-        moduleServices.AddScoped<IUploadService, S3UploadService>();
-        moduleServices.AddScoped<IVideoSpecificationExtractorService, S3VideoSpecificationExtractor>();
-        moduleServices.AddScoped<IVideoTranscodingService, MediaConvertTranscodingService>();
+        // Module Specific Infrastructure
         moduleServices.AddScoped<IVideoRepository, VideoRepository>();
         moduleServices.AddScoped<IVideoStateRepository, VideoStateRepository>();
         moduleServices.AddScoped<IUnitOfWork, UnitOfWork<AppDbContext>>();

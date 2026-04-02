@@ -55,6 +55,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Presentation", "src\Modules
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IntegrationEvents", "src\Modules\VideoUploading\IntegrationEvents\IntegrationEvents.csproj", "{23594DFB-A847-417C-B547-A90D79199A0A}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{AA01DED2-E727-405C-9550-E2C2B8A892D4}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ArchitectureTests", "tests\ArchitectureTests\ArchitectureTests.csproj", "{1CD1E6C3-6FBF-4836-8BF7-3A4D7D03B86D}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -133,6 +137,10 @@ Global
 		{23594DFB-A847-417C-B547-A90D79199A0A}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{23594DFB-A847-417C-B547-A90D79199A0A}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{23594DFB-A847-417C-B547-A90D79199A0A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1CD1E6C3-6FBF-4836-8BF7-3A4D7D03B86D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1CD1E6C3-6FBF-4836-8BF7-3A4D7D03B86D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1CD1E6C3-6FBF-4836-8BF7-3A4D7D03B86D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1CD1E6C3-6FBF-4836-8BF7-3A4D7D03B86D}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -157,6 +165,7 @@ Global
 		{96650D9A-1796-42A7-8038-92297078812D} = {13104521-1933-4E18-91FA-9D61373512FB}
 		{5A6E0526-28ED-4CEE-BAB0-AFC737AE467F} = {13104521-1933-4E18-91FA-9D61373512FB}
 		{23594DFB-A847-417C-B547-A90D79199A0A} = {E80F57F8-2B2D-4E6A-8970-A6763942AEA6}
+		{1CD1E6C3-6FBF-4836-8BF7-3A4D7D03B86D} = {AA01DED2-E727-405C-9550-E2C2B8A892D4}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {A4D73EED-30AF-4218-9197-D39806BE2055}

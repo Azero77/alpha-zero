@@ -21,12 +21,4 @@ public class CoursesModule : AppModule
         throw new ArgumentException("Configuration in Courses are not found")
             );
     }
-
-    public override Task<TResponse> Send<TRequest, TResponse>(IRequest<TResponse> request, CancellationToken token = default)
-    {
-
-        if (Scope is null) throw new NotImplementedException("Container not implemented");
-        var mediatr = Scope.Resolve<IMediator>();
-        return mediatr.Send(request,token);
-    }
 }

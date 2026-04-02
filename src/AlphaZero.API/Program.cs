@@ -19,21 +19,15 @@ public class Program
         var builder = WebApplication.CreateBuilder(args);
         builder.AddServiceDefaults();
         builder.Services.AddAuthorization();
-        var awsResources = ConfigureAWSResources(builder);
+        
+        // Shared Infrastructure (AWS, TenantProvider, Clock, etc)
+        builder.Services.AddSharedInfrastructure(builder.Configuration, builder.Environment);
+        builder.Services.AddDatabaseSettings(builder.Configuration);
+
         // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
         builder.Services.AddEndpointsApiExplorer();
         builder.Services.AddSwaggerGen();
         builder.Services.AddCors();
-        builder.Services.AddHttpContextAccessor();
-        if (builder.Environment.IsDevelopment())
-        {
-            builder.Services.AddScoped<ITenantProvider, FakeTenantProvider>();
-        }
-        else
-        {
-            builder.Services.AddScoped<ITenantProvider, HttpTenantProvider>();
-        }
-        builder.Services.AddScoped<IModuleBus, ModuleBus>();
 
         string[] assembliesPath = Directory.GetFiles(AppDomain.CurrentDomain.BaseDirectory, "*.dll");
         foreach (var path in assembliesPath)
@@ -67,7 +61,7 @@ public class Program
 
 
         //Configure In-Memory Messagin
-        builder.Services.AddMediator(x =>
+        builder.Services.AddMassTransit<IModuleBus>(x =>
         {
             x.SetKebabCaseEndpointNameFormatter();
             x.AddConsumers(filter => !filter.Name.Contains("sqs", StringComparison.InvariantCultureIgnoreCase), assemblies);
@@ -75,10 +69,14 @@ public class Program
             {
                 module.ConfigureModuleBus(x);
             }
+            x.UsingInMemory((context, cfg) =>
+            {
+                cfg.ConfigureEndpoints(context);
+            });
         });
 
         //Configure SQS messaging
-        builder.Services.AddMassTransit(x =>
+        builder.Services.AddMassTransit<IExternalBus>(x =>
         {
             x.AddConsumers(filter => filter.Name.Contains("sqs", StringComparison.InvariantCultureIgnoreCase),assemblies);
             x.UsingAmazonSqs((context, cfg) =>
@@ -140,17 +138,6 @@ public class Program
                 endpoint.MapEndpoint(app);
             }
         }
-    }
-
-    private static AWSResources ConfigureAWSResources(WebApplicationBuilder builder)
-    {
-        AWSResources awsResources = new();
-        AWSOptions options = builder.Configuration.GetAWSOptions();
-        builder.Configuration.Bind(AWSResources.Section, awsResources);
-        builder.Services.AddSingleton<AWSResources>(awsResources);
-        builder.Services.AddDefaultAWSOptions(options);
-
-        return awsResources;
     }
 
     private static void InitializeModules(WebApplication app, IEnumerable<IModule> modules)

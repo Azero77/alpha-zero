@@ -26,13 +26,7 @@ public class VideoUploadingModule : AppModule, IVideoUploadingModule
             throw new ArgumentException("Configuration not found"));
     }
 
-    public override Task<TResponse> Send<TRequest, TResponse>(IRequest<TResponse> request, CancellationToken cancellationToken = default)
-    {
-        if (Scope is null) throw new NotImplementedException("Module not initialized");
-        var mediatr = Scope.Resolve<IMediator>();
-        return mediatr.Send((IRequest<TResponse>)request, cancellationToken);
-    }
-    public override void ConfigureModuleBus(IMediatorRegistrationConfigurator configuration)
+    public override void ConfigureModuleBus(IBusRegistrationConfigurator configuration)
     {
         configuration.AddSagaStateMachine<VideoUploadingSaga, VideoState>()
         .EntityFrameworkRepository(r =>
@@ -41,5 +35,8 @@ public class VideoUploadingModule : AppModule, IVideoUploadingModule
             r.UsePostgres();
             r.ConcurrencyMode = ConcurrencyMode.Optimistic;
         });
+
+        // Register local consumers that should run on the in-memory bus with their own scopes
+        configuration.AddConsumers(typeof(VideoUploadingModule).Assembly);
     }
 }

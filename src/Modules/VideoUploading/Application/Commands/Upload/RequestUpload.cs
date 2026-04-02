@@ -11,7 +11,7 @@ using FluentValidation;
 
 namespace AlphaZero.Modules.VideoUploading.Application.Commands.Upload;
 
-public record UploadCommand(string fileName, string contentType): IRequest<ErrorOr<UploadCommandResponse>>;
+public record UploadCommand(string fileName, string contentType, string title, string? description): ICommand<UploadCommandResponse>;
 
 public class UploadCommandValidator : AbstractValidator<UploadCommand>
 {
@@ -26,6 +26,10 @@ public class UploadCommandValidator : AbstractValidator<UploadCommand>
             .NotEmpty()
             .Must(x => x.Equals("video/mp4", StringComparison.OrdinalIgnoreCase))
             .WithMessage("Only video/mp4 content type is allowed.");
+
+        RuleFor(x => x.title)
+            .NotEmpty()
+            .MaximumLength(255);
     }
 }
 
@@ -43,7 +47,9 @@ public sealed class UploadCommandHandler(IUploadService uploadService, IModuleBu
         var response = await uploadService.UploadFile(request.fileName, request.contentType, new Dictionary<string, string>()
         {
             { "VideoId" , videoId.ToString()},
-            { "TenantId", tenantId.Value.ToString() }
+            { "TenantId", tenantId.Value.ToString() },
+            { "Title", request.title },
+            { "Description", request.description ?? string.Empty }
         });
         if (response.IsError) return response.Errors;
         await moduleBus.Publish(new UploadVideoRequestedEvent(videoId, tenantId.Value, clock.Now));

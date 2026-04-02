@@ -11,11 +11,13 @@ using System.Reflection;
 
 namespace Presentation;
 
+
 public class VideoStreamingModule : AppModule
 {
     public override void RegisterGlobal(IServiceCollection globalServices)
     {
         // Add any global infrastructure if needed
+        globalServices.AddSingleton<VideoStreamingModule>();
     }
 
     public override void RegisterPrivate(IServiceCollection moduleServices, ContainerBuilder builder)
@@ -28,12 +30,5 @@ public class VideoStreamingModule : AppModule
                .Where(t => typeof(IEndpoint).IsAssignableFrom(t))
                .AsSelf()
                .InstancePerLifetimeScope();
-    }
-
-    public override Task<TResponse> Send<TRequest, TResponse>(IRequest<TResponse> request, CancellationToken token = default)
-    {
-        if (Scope is null) throw new NotImplementedException("Container not implemented");
-        var mediatr = Scope.Resolve<IMediator>();
-        return mediatr.Send(request,token);
     }
 }

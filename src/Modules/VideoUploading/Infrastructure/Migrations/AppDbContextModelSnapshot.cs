@@ -74,6 +74,12 @@ namespace AlphaZero.Modules.VideoUploading.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<TimeSpan?>("Duration")
+                        .HasColumnType("interval");
+
+                    b.Property<string>("FinalUrl")
+                        .HasColumnType("text");
+
                     b.Property<bool>("IsFailed")
                         .HasColumnType("boolean");
 
@@ -83,8 +89,14 @@ namespace AlphaZero.Modules.VideoUploading.Infrastructure.Migrations
                     b.Property<string>("MediaConverterJobId")
                         .HasColumnType("text");
 
-                    b.Property<bool>("ProcessingStarted")
-                        .HasColumnType("boolean");
+                    b.Property<string>("S3OutputPrefix")
+                        .HasColumnType("text");
+
+                    b.Property<int?>("SourceHeight")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("SourceWidth")
+                        .HasColumnType("integer");
 
                     b.Property<Guid>("TenantId")
                         .HasColumnType("uuid");

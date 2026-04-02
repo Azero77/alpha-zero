@@ -118,6 +118,9 @@
         "content-type",
         "x-amz-meta-file-name",
         "x-amz-meta-videoid",
+        "x-amz-meta-tenantid",
+        "x-amz-meta-title",
+        "x-amz-meta-description",
         "*"
        ],
        "AllowedMethods": [
@@ -130,7 +133,10 @@
        "ExposedHeaders": [
         "ETag",
         "x-amz-meta-file-name",
-        "x-amz-meta-videoid"
+        "x-amz-meta-videoid",
+        "x-amz-meta-tenantid",
+        "x-amz-meta-title",
+        "x-amz-meta-description"
        ],
        "MaxAge": 3600
       }
@@ -357,6 +363,73 @@
    "UpdateReplacePolicy": "Retain",
    "DeletionPolicy": "Retain"
   },
+  "CdnS308975579": {
+   "Type": "AWS::S3::Bucket",
+   "Properties": {
+    "BucketName": "cdn.dalilhamachamber.com",
+    "CorsConfiguration": {
+     "CorsRules": [
+      {
+       "AllowedHeaders": [
+        "*"
+       ],
+       "AllowedMethods": [
+        "GET"
+       ],
+       "AllowedOrigins": [
+        "*"
+       ],
+       "ExposedHeaders": [
+        "ETag"
+       ],
+       "MaxAge": 3000
+      }
+     ]
+    },
+    "PublicAccessBlockConfiguration": {
+     "BlockPublicAcls": false,
+     "BlockPublicPolicy": false,
+     "IgnorePublicAcls": false,
+     "RestrictPublicBuckets": false
+    }
+   },
+   "UpdateReplacePolicy": "Retain",
+   "DeletionPolicy": "Retain"
+  },
+  "CdnS3Policy4F70FEEE": {
+   "Type": "AWS::S3::BucketPolicy",
+   "Properties": {
+    "Bucket": {
+     "Ref": "CdnS308975579"
+    },
+    "PolicyDocument": {
+     "Statement": [
+      {
+       "Action": "s3:GetObject",
+       "Effect": "Allow",
+       "Principal": {
+        "AWS": "*"
+       },
+       "Resource": {
+        "Fn::Join": [
+         "",
+         [
+          {
+           "Fn::GetAtt": [
+            "CdnS308975579",
+            "Arn"
+           ]
+          },
+          "/*"
+         ]
+        ]
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    }
+   }
+  },
   "JobCompletedRule7540F26B": {
    "Type": "AWS::Events::Rule",
    "Properties": {
@@ -479,6 +552,11 @@
   "OutputS3ECBD476ABucketName": {
    "Value": {
     "Ref": "OutputS348BD8914"
+   }
+  },
+  "CdnS3A699AFD8BucketName": {
+   "Value": {
+    "Ref": "CdnS308975579"
    }
   },
   "mediaconvertervideoprocessed73CDABA6QueueUrl": {

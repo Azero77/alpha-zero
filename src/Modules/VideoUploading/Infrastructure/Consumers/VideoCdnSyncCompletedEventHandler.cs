@@ -25,7 +25,7 @@ public class VideoCdnSyncCompletedEventHandler : IConsumer<VideoCdnSyncCompleted
         _logger.LogInformation("Infrastructure: CDN Sync complete for Video {VideoId}. Publishing video.", context.Message.VideoId);
 
         var result = await _module.Send<MarkVideoAsLiveCommand, ErrorOr<Success>>(
-            new MarkVideoAsLiveCommand(context.Message.VideoId, context.Message.R2PublicUrl), 
+            new MarkVideoAsLiveCommand(context.Message.VideoId, context.Message.RelativeUrl), 
             context.CancellationToken);
 
         if (result.IsError)
@@ -39,8 +39,5 @@ public class VideoCdnSyncCompletedEventHandler : IConsumer<VideoCdnSyncCompleted
                 null));
             return;
         }
-
-        // Final event to finalize the Saga
-        await context.Publish(new VideoPublishedEvent(context.Message.VideoId, context.Message.R2PublicUrl));
     }
 }

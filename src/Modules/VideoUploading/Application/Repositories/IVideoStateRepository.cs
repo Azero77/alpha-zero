@@ -8,7 +8,6 @@ public record VideoStateDto(
     string CurrentState,
     string? MediaConverterJobId,
     string? Key,
-    bool ProcessingStarted,
     bool IsFailed,
     int Version);
 

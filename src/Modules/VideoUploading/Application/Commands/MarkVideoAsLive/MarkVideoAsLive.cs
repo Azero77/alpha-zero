@@ -7,7 +7,7 @@ using Microsoft.Extensions.Logging;
 
 namespace AlphaZero.Modules.VideoUploading.Application.Commands.MarkVideoAsLive;
 
-public record MarkVideoAsLiveCommand(Guid VideoId, string FinalUrl) : IRequest<ErrorOr<Success>>;
+public record MarkVideoAsLiveCommand(Guid VideoId, string FinalUrl) : ICommand<Success>;
 
 public sealed class MarkVideoAsLiveCommandHandler : IRequestHandler<MarkVideoAsLiveCommand, ErrorOr<Success>>
 {

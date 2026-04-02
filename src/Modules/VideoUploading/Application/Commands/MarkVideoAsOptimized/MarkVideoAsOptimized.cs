@@ -6,7 +6,7 @@ using Microsoft.Extensions.Logging;
 
 namespace AlphaZero.Modules.VideoUploading.Application.Commands.MarkVideoAsOptimized;
 
-public record MarkVideoAsOptimizedCommand(Guid VideoId, string S3OutputPrefix) : IRequest<ErrorOr<Success>>;
+public record MarkVideoAsOptimizedCommand(Guid VideoId, string S3OutputPrefix) : ICommand<Success>;
 
 public sealed class MarkVideoAsOptimizedCommandHandler : IRequestHandler<MarkVideoAsOptimizedCommand, ErrorOr<Success>>
 {

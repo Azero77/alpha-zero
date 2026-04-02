@@ -16,7 +16,7 @@ public interface IModule
     void RegisterGlobal(IServiceCollection services);
 
     void Initialize(ILifetimeScope scope);
-    void ConfigureModuleBus(IMediatorRegistrationConfigurator configuration);
+    void ConfigureModuleBus(IBusRegistrationConfigurator configuration);
     IConfiguration? Configuration { get; set; }
 }
 
@@ -37,12 +37,19 @@ public abstract class AppModule : Module, IModule
             builder.Populate(services);
         });
     }
-    public abstract Task<TResponse> Send<TRequest, TResponse>(IRequest<TResponse> request, CancellationToken cancellationToken = default) where TRequest : IRequest<TResponse>;
+    public virtual async Task<TResponse> Send<TRequest, TResponse>(IRequest<TResponse> request, CancellationToken cancellationToken = default) where TRequest : IRequest<TResponse>
+    {
+        if (Scope is null) throw new InvalidOperationException("Module not initialized. Did you forget to call Initialize()?");
+        
+        using var requestScope = Scope.BeginLifetimeScope();
+        var mediatr = requestScope.Resolve<IMediator>();
+        return await mediatr.Send(request, cancellationToken);
+    }
 
     public abstract void RegisterPrivate(IServiceCollection services, ContainerBuilder builder);
 
     public abstract void RegisterGlobal(IServiceCollection services);
-    public virtual void ConfigureModuleBus(IMediatorRegistrationConfigurator configuration)
+    public virtual void ConfigureModuleBus(IBusRegistrationConfigurator configuration)
     {
         return;
     }

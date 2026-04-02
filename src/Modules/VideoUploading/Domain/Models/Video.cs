@@ -7,17 +7,19 @@ namespace AlphaZero.Modules.VideoUploading.Domain.Models;
 public class Video : AggregateRoot, IDomainTenantOwned
 {
     public Guid TenantId { get; private set; }
-    public string Title { get; private set; }
+    public string Title { get; private set; } = null!;
     public string? Description { get; private set; }
     public VideoStatus Status { get; private set; }
-    public VideoMetadata Metadata { get; private set; }
-    public VideoSpecifications Specifications { get; private set; }
-    public string SourceKey { get; private set; }
+    public VideoMetadata Metadata { get; private set; } = null!;
+    public VideoSpecifications Specifications { get; private set; } = null!;
+    public string SourceKey { get; private set; } = null!;
     public string? OutputFolder { get; private set; }
     public DateTime CreatedOn { get; private set; }
     public DateTime? PublishedOn { get; private set; }
-
-    private Video() { } // EF Core
+    private Video()
+    {
+        //EF
+    }
 
     private Video(
         Guid id,
@@ -64,10 +66,8 @@ public class Video : AggregateRoot, IDomainTenantOwned
 
     public ErrorOr<Success> MarkAsLive(string finalUrl, IClock clock)
     {
-        if (Status != VideoStatus.Processing && Status != VideoStatus.Published) // Published here means "Optimized" in the old logic
-            Status = VideoStatus.Published; // We'll keep VideoStatus.Published as the "Live" state
-
-        OutputFolder = finalUrl; // We store the CDN URL here now
+        Status = VideoStatus.Published;
+        OutputFolder = finalUrl;
         PublishedOn = clock.Now;
 
         AddDomainEvent(new VideoPublishedDomainEvent(Id, PublishedOn.Value));
@@ -108,6 +108,16 @@ public class Video : AggregateRoot, IDomainTenantOwned
     public void UpdateSpecifications(VideoSpecifications specifications)
     {
         Specifications = specifications;
+    }
+
+    public ErrorOr<Success> UpdateInformation(string title, string? description)
+    {
+        if (string.IsNullOrWhiteSpace(title))
+            return VideoErrors.EmptyTitle;
+
+        Title = title;
+        Description = description;
+        return Result.Success;
     }
 
     public ErrorOr<Success> SetTitle(string title)

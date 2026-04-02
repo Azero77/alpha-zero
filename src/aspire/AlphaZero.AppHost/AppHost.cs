@@ -36,8 +36,8 @@ var input_s3 = awscdkStack.AddS3Bucket("InputS3", new BucketProps
         {
             AllowedMethods = new[] { HttpMethods.GET,HttpMethods.PUT},
             AllowedOrigins = new[] { "*" },
-            AllowedHeaders = new[] { "content-type", "x-amz-meta-file-name", "x-amz-meta-videoid", "*" },
-            ExposedHeaders = new[] { "ETag", "x-amz-meta-file-name", "x-amz-meta-videoid" },
+            AllowedHeaders = new[] { "content-type", "x-amz-meta-file-name", "x-amz-meta-videoid", "x-amz-meta-tenantid", "x-amz-meta-title", "x-amz-meta-description", "*" },
+            ExposedHeaders = new[] { "ETag", "x-amz-meta-file-name", "x-amz-meta-videoid", "x-amz-meta-tenantid", "x-amz-meta-title", "x-amz-meta-description" },
             MaxAge = 3600
         }
     }
@@ -53,6 +53,39 @@ var sns = awscdkStack.AddSNSTopic("VideoUploadedEvent")
     });
 input_s3.AddObjectCreatedNotification(sns);
 var output_s3 = awscdkStack.AddS3Bucket("OutputS3");
+string cdnDomain = builder.Configuration["CdnDomain"] ?? "";
+var cdn_s3 = awscdkStack.AddS3Bucket("CdnS3", new BucketProps()
+{
+    BucketName = cdnDomain,
+    PublicReadAccess = true,
+    BlockPublicAccess = new BlockPublicAccess(new BlockPublicAccessOptions
+    {
+        BlockPublicAcls = false,
+        IgnorePublicAcls = false,
+        BlockPublicPolicy = false,
+        RestrictPublicBuckets = false
+    }),
+
+    Cors = new[]
+    {
+        new CorsRule
+        {
+            AllowedMethods = [HttpMethods.GET],
+            AllowedOrigins = ["*"], // OK for now (S3 is your CDN)
+            AllowedHeaders = ["*"],
+            ExposedHeaders = ["ETag"],
+            MaxAge = 3000
+        }
+    },
+});
+
+cdn_s3.Resource.Construct
+    .AddToResourcePolicy(new PolicyStatement(new PolicyStatementProps()
+    {
+        Actions = new[] { "s3:GetObject" },
+        Resources = new[] { $"{cdn_s3.Resource.Construct.BucketArn}/*" },
+        Principals = new[] { new AnyPrincipal() }
+    }));
 
 mediaConvertRole.AddToPolicy(new PolicyStatement(new PolicyStatementProps()
 {
@@ -116,11 +149,13 @@ var api = builder.AddProject<Projects.AlphaZero_API>("alphazero-api")
     .WithReference(awsSdkConfig)
     .WithReference(input_s3)
     .WithReference(output_s3)
+    .WithReference(cdn_s3)
     .WithReference(videoUploadedSQSQueue)
     .WithReference(db)
     .WaitFor(db)
     .WithReference(videoProcessedQueue)
     .WithEnvironment("AWS__Resources__MediaConvertRoleArn", awscdkStack.GetOutput("MediaConvertRoleArnOutput"))
-    .WithEnvironment("AWS__Resources__MediaConvertKeyKMSArn", kmsArn);
-
+    .WithEnvironment("AWS__Resources__MediaConvertKeyKMSArn", kmsArn)
+    .WithEnvironment("AWS__Resources__CdnDomain" , cdnDomain)
+    ;
 builder.Build().Run();

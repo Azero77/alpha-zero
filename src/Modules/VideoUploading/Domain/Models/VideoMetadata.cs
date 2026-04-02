@@ -11,14 +11,14 @@ public record VideoSpecifications
     public TimeSpan Duration { get; init; }
     public Resolution Resolution { get; init; } = null!;
 
-    private VideoSpecifications() { } // EF Core
+    private VideoSpecifications() { }
 
     public VideoSpecifications(TimeSpan duration, Resolution resolution)
     {
         Duration = duration;
         Resolution = resolution;
     }
-    public static VideoSpecifications Empty => new VideoSpecifications();
+    public static VideoSpecifications Empty => new VideoSpecifications(TimeSpan.Zero,Resolution.Empty);
 }
 
 public record Resolution
@@ -26,11 +26,11 @@ public record Resolution
     public int width { get; init; }
     public int height { get; init; }
 
-    private Resolution() { } // EF Core
-
     public Resolution(int width, int height)
     {
         this.width = width;
         this.height = height;
     }
+    private Resolution() { }
+    public static Resolution Empty => new Resolution(0,0);
 }
