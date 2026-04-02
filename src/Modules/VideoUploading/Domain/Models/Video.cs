@@ -66,10 +66,8 @@ public class Video : AggregateRoot, IDomainTenantOwned
 
     public ErrorOr<Success> MarkAsLive(string finalUrl, IClock clock)
     {
-        if (Status != VideoStatus.Processing && Status != VideoStatus.Published) // Published here means "Optimized" in the old logic
-            Status = VideoStatus.Published; // We'll keep VideoStatus.Published as the "Live" state
-
-        OutputFolder = finalUrl; // We store the CDN URL here now
+        Status = VideoStatus.Published;
+        OutputFolder = finalUrl;
         PublishedOn = clock.Now;
 
         AddDomainEvent(new VideoPublishedDomainEvent(Id, PublishedOn.Value));
