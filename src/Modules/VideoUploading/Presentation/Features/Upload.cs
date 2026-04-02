@@ -10,7 +10,7 @@ namespace AlphaZero.Modules.VideoUploading.Presentation.Features;
 
 public static class Upload
 {
-    public record Request(string fileName, string contentType);
+    public record Request(string fileName, string contentType, string title, string? description);
     public record Response(Guid videoId, Guid tenantId, string key, string preSignedUrl);
 
     public class Endpoint : IEndpoint
@@ -23,7 +23,7 @@ public static class Upload
 
         private async Task<IResult> Handler(Request request, VideoUploadingModule module)
         {
-            var command = new UploadCommand(request.fileName, request.contentType);
+            var command = new UploadCommand(request.fileName, request.contentType, request.title, request.description);
             var response = await module.Send<UploadCommand, ErrorOr<UploadCommandResponse>>(command);
             return response.Match(
                 res => Results.Ok(new Response(res.VideoId, res.TenantId, res.Key, res.PreSignedUrl)),

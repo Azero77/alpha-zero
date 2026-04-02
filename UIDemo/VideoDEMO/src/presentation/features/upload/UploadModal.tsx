@@ -15,6 +15,8 @@ const uploadUseCase = new UploadVideoUseCase(new VideoRepositoryImpl());
 
 export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose }) => {
   const [file, setFile] = useState<File | null>(null);
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
   const [progress, setProgress] = useState(0);
   const [status, setStatus] = useState<'idle' | 'uploading' | 'success' | 'error'>('idle');
   const [errorMessage, setError] = useState('');
@@ -23,6 +25,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose }) => 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     if (acceptedFiles[0]) {
       setFile(acceptedFiles[0]);
+      setTitle(acceptedFiles[0].name.replace(/\.[^/.]+$/, ""));
       setStatus('idle');
     }
   }, []);
@@ -34,13 +37,13 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose }) => 
   });
 
   const handleUpload = async () => {
-    if (!file) return;
+    if (!file || !title.trim()) return;
 
     setStatus('uploading');
     setProgress(0);
 
     try {
-      await uploadUseCase.execute(file, (p) => setProgress(p));
+      await uploadUseCase.execute(file, title, description, (p) => setProgress(p));
       setStatus('success');
       setTimeout(() => {
         fetchVideos();
@@ -54,6 +57,8 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose }) => 
 
   const handleClose = () => {
     setFile(null);
+    setTitle('');
+    setDescription('');
     setProgress(0);
     setStatus('idle');
     onClose();
@@ -78,20 +83,47 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose }) => 
 
         <div className="p-8">
           {status === 'idle' && (
-            <div
-              {...getRootProps()}
-              className={`border-2 border-dashed rounded-xl p-12 flex flex-col items-center justify-center transition-all cursor-pointer ${
-                isDragActive ? 'border-primary-500 bg-primary-50' : 'border-slate-200 hover:border-primary-400 hover:bg-slate-50'
-              }`}
-            >
-              <input {...getInputProps()} />
-              <div className="bg-primary-100 p-4 rounded-full text-primary-600 mb-4">
-                <Upload size={32} />
+            <div className="space-y-6">
+              <div
+                {...getRootProps()}
+                className={`border-2 border-dashed rounded-xl p-8 flex flex-col items-center justify-center transition-all cursor-pointer ${
+                  isDragActive ? 'border-primary-500 bg-primary-50' : 'border-slate-200 hover:border-primary-400 hover:bg-slate-50'
+                }`}
+              >
+                <input {...getInputProps()} />
+                <div className="bg-primary-100 p-3 rounded-full text-primary-600 mb-3">
+                  <Upload size={24} />
+                </div>
+                <p className="text-sm font-semibold text-slate-700">
+                  {file ? file.name : 'Drag & drop video here'}
+                </p>
+                <p className="text-xs text-slate-500 mt-1">MP4 files only (max 500MB)</p>
               </div>
-              <p className="text-lg font-semibold text-slate-700">
-                {file ? file.name : 'Drag & drop video here'}
-              </p>
-              <p className="text-sm text-slate-500 mt-1">MP4 files only (max 500MB)</p>
+
+              {file && (
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Video Title</label>
+                    <input
+                      type="text"
+                      value={title}
+                      onChange={(e) => setTitle(e.target.value)}
+                      placeholder="Enter a descriptive title"
+                      className="w-full px-4 py-2 rounded-lg border border-slate-200 focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Description (Optional)</label>
+                    <textarea
+                      value={description}
+                      onChange={(e) => setDescription(e.target.value)}
+                      placeholder="What is this video about?"
+                      rows={3}
+                      className="w-full px-4 py-2 rounded-lg border border-slate-200 focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all outline-none resize-none"
+                    />
+                  </div>
+                </div>
+              )}
             </div>
           )}
 

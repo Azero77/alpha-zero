@@ -5,6 +5,7 @@ import { UploadModal } from '../features/upload/UploadModal';
 import { VideoPlayer } from '../components/VideoPlayer';
 import type { Video } from '../../domain/models/video';
 import { Plus, Video as VideoIcon, LayoutDashboard, Settings, LogOut, ChevronRight } from 'lucide-react';
+import { clsx } from 'clsx';
 import { VideoRepositoryImpl } from '../../infrastructure/api/video-repository-impl';
 import type { StreamingInfo } from '../../domain/repositories/video-repository';
 import { usePollVideoStatus } from '../hooks/usePollVideoStatus';
@@ -16,6 +17,7 @@ export const DashboardPage: React.FC = () => {
   const [isUploadOpen, setIsUploadOpen] = useState(false);
   const [selectedVideo, setSelectedVideo] = useState<Video | null>(null);
   const [streamingInfo, setStreamingInfo] = useState<StreamingInfo | null>(null);
+  const [activeTab, setActiveTab] = useState('dashboard');
 
   // Use polling hook
   usePollVideoStatus();
@@ -65,18 +67,36 @@ export const DashboardPage: React.FC = () => {
         </div>
 
         <nav className="flex-1 px-4 py-4 space-y-1">
-          <a href="#" className="flex items-center gap-3 px-4 py-3 bg-primary-50 text-primary-700 rounded-xl font-medium transition-colors">
+          <button 
+            onClick={() => setActiveTab('dashboard')}
+            className={clsx(
+              "flex items-center gap-3 px-4 py-3 w-full rounded-xl font-medium transition-all text-left outline-none",
+              activeTab === 'dashboard' ? "bg-primary-50 text-primary-700" : "text-slate-500 hover:bg-slate-50"
+            )}
+          >
             <LayoutDashboard size={20} />
             Dashboard
-          </a>
-          <a href="#" className="flex items-center gap-3 px-4 py-3 text-slate-500 hover:bg-slate-50 rounded-xl font-medium transition-colors">
+          </button>
+          <button 
+            onClick={() => setActiveTab('library')}
+            className={clsx(
+              "flex items-center gap-3 px-4 py-3 w-full rounded-xl font-medium transition-all text-left outline-none",
+              activeTab === 'library' ? "bg-primary-50 text-primary-700" : "text-slate-500 hover:bg-slate-50"
+            )}
+          >
             <VideoIcon size={20} />
             My Library
-          </a>
-          <a href="#" className="flex items-center gap-3 px-4 py-3 text-slate-500 hover:bg-slate-50 rounded-xl font-medium transition-colors">
+          </button>
+          <button 
+            onClick={() => setActiveTab('settings')}
+            className={clsx(
+              "flex items-center gap-3 px-4 py-3 w-full rounded-xl font-medium transition-all text-left outline-none",
+              activeTab === 'settings' ? "bg-primary-50 text-primary-700" : "text-slate-500 hover:bg-slate-50"
+            )}
+          >
             <Settings size={20} />
             Settings
-          </a>
+          </button>
         </nav>
 
         <div className="p-4 border-t border-slate-100">

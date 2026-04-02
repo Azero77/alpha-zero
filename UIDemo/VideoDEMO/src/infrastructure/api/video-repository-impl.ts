@@ -37,13 +37,15 @@ export class VideoRepositoryImpl implements IVideoRepository {
     return response.data;
   }
 
-  async uploadToS3(url: string, file: File, videoId: string, tenantId: string, onProgress?: (progress: number) => void): Promise<void> {
+  async uploadToS3(url: string, file: File, videoId: string, tenantId: string, title: string, description: string, onProgress?: (progress: number) => void): Promise<void> {
     await axios.put(url, file, {
       headers: {
-        'Content-Type': file.type,
-        'x-amz-meta-file-name': file.name,
+        'Content-Type': file.type || 'video/mp4',
+        'x-amz-meta-file-name': encodeURIComponent(file.name),
         'x-amz-meta-videoid': videoId,
         'x-amz-meta-tenantid': tenantId,
+        'x-amz-meta-title': encodeURIComponent(title),
+        'x-amz-meta-description': encodeURIComponent(description || ''),
       },
       onUploadProgress: (progressEvent) => {
         if (onProgress && progressEvent.total) {

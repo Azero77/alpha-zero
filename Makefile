@@ -36,3 +36,11 @@ migrations-migrate:
 # ------------------------
 migrations-clean:
 	dotnet ef migrations remove --project $(PROJECT) --startup-project $(API) --force
+
+
+#-------------------------
+# Run Aspire
+#-------------------------
+
+run:
+	dotnet run --project src/aspire/AlphaZero.AppHost/AlphaZero.AppHost.csproj

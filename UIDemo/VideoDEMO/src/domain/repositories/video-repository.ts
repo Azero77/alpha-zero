@@ -4,6 +4,8 @@ import type { VideoState } from '../models/video-state';
 export interface UploadRequest {
   fileName: string;
   contentType: string;
+  title: string;
+  description?: string;
 }
 
 export interface UploadResponse {
@@ -31,5 +33,5 @@ export interface IVideoRepository {
   deleteVideo(id: string): Promise<void>;
   requestUpload(request: UploadRequest): Promise<UploadResponse>;
   getStreamingInfo(id: string): Promise<StreamingInfo>;
-  uploadToS3(url: string, file: File, videoId: string, tenantId: string, onProgress?: (progress: number) => void): Promise<void>;
+  uploadToS3(url: string, file: File, videoId: string, tenantId: string, title: string, description: string, onProgress?: (progress: number) => void): Promise<void>;
 }

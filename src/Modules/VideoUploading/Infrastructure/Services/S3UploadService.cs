@@ -55,7 +55,8 @@ public class S3UploadService : IUploadService
             var metadataResponse = await _client.GetObjectMetadataAsync(metadataRequest);
 
             var metadata = metadataResponse.Metadata!.Keys
-                       .ToDictionary(m => m, m => (object)metadataResponse.Metadata[m]);
+                       .ToDictionary(m => m.StartsWith("x-amz-meta-",
+                       StringComparison.InvariantCultureIgnoreCase) ?  m.Substring("x-amz-meta-".Length): m, m => (object)metadataResponse.Metadata[m]);
 
             metadata["Content-Length"] = metadataResponse.ContentLength;
             metadata["Content-Type"] = metadataResponse.Headers.ContentType;
@@ -94,18 +95,18 @@ public class S3UploadService : IUploadService
                 BucketName = _s3Settings.BucketName,
                 ContentType = contentType,
                 Metadata = {
-                        ["file-name"] = fileName
+                        ["file-name"] = Uri.EscapeDataString(fileName)
                     },
                 Verb = HttpVerb.PUT,
                 Expires = DateTime.UtcNow.AddMinutes(15),
                 Key = key,
-                
+
             };
             if (metadata is not null)
             {
                 foreach (var pair in metadata)
                 {
-                    request.Metadata.Add(pair.Key,pair.Value);
+                    request.Metadata.Add(pair.Key.ToLowerInvariant(), Uri.EscapeDataString(pair.Value));
                 }
             }
 

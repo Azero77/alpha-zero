@@ -65,6 +65,8 @@ public sealed class PersistVideoCommandHandler : IRequestHandler<PersistVideoCom
 
         var s3Metadata = metadataResponse.Value;
         string fileName = s3Metadata.GetValueOrDefault("file-name")?.ToString() ?? "Unknown";
+        string title = s3Metadata.GetValueOrDefault("title")?.ToString() ?? fileName;
+        string? description = s3Metadata.GetValueOrDefault("description")?.ToString();
         string contentType = s3Metadata.GetValueOrDefault("Content-Type")?.ToString() ?? "video/mp4";
         long fileSize = s3Metadata.TryGetValue("Content-Length", out var len) && long.TryParse(len.ToString(), out var l) ? l : 0;
 
@@ -72,8 +74,8 @@ public sealed class PersistVideoCommandHandler : IRequestHandler<PersistVideoCom
         var videoResult = Video.Create(
             request.VideoId,
             videoState.TenantId,
-            fileName,
-            null,
+            title,
+            description,
             videoState.Key,
             new VideoMetadata(fileName, contentType, fileSize),
             _clock);

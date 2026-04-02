@@ -69,7 +69,7 @@ export const VideoCard: React.FC<VideoCardProps> = ({ video, onPlay, onDelete })
         </p>
         
         <div className="mt-auto pt-4 flex items-center justify-between text-xs text-slate-400">
-          <span>{new Date(video.createdOn).toLocaleDateString()}</span>
+          <span>{new Date(video.createdOn).toLocaleString()}</span>
           <button
             onClick={() => onDelete(video.id)}
             className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-md transition-all"

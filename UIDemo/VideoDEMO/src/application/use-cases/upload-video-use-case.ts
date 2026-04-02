@@ -7,11 +7,13 @@ export class UploadVideoUseCase {
     this.videoRepository = videoRepository;
   }
 
-  async execute(file: File, onProgress?: (progress: number) => void): Promise<UploadResponse> {
+  async execute(file: File, title: string, description?: string, onProgress?: (progress: number) => void): Promise<UploadResponse> {
     // 1. Request presigned URL from backend
     const uploadInfo = await this.videoRepository.requestUpload({
       fileName: file.name,
       contentType: file.type || 'video/mp4',
+      title,
+      description
     });
 
     // 2. Upload file directly to S3
@@ -20,6 +22,8 @@ export class UploadVideoUseCase {
       file, 
       uploadInfo.videoId, 
       uploadInfo.tenantId, 
+      title,
+      description || '',
       onProgress
     );
 

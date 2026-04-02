@@ -118,6 +118,9 @@
         "content-type",
         "x-amz-meta-file-name",
         "x-amz-meta-videoid",
+        "x-amz-meta-tenantid",
+        "x-amz-meta-title",
+        "x-amz-meta-description",
         "*"
        ],
        "AllowedMethods": [
@@ -130,7 +133,10 @@
        "ExposedHeaders": [
         "ETag",
         "x-amz-meta-file-name",
-        "x-amz-meta-videoid"
+        "x-amz-meta-videoid",
+        "x-amz-meta-tenantid",
+        "x-amz-meta-title",
+        "x-amz-meta-description"
        ],
        "MaxAge": 3600
       }
