@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useVideoStore } from '../store/video-store';
 import { VideoGrid } from '../features/dashboard/VideoGrid';
 import { UploadModal } from '../features/upload/UploadModal';
@@ -33,6 +33,17 @@ export const DashboardPage: React.FC = () => {
       alert('Failed to get streaming info');
     }
   };
+
+  const playerConfig = useMemo(() => {
+    if (!streamingInfo) return null;
+    return {
+      manifestUrl: streamingInfo.url,
+      clearKey: {
+        keyId: streamingInfo.key,
+        key: streamingInfo.key
+      }
+    };
+  }, [streamingInfo]);
 
   return (
     <div className="flex min-h-screen bg-slate-50">
@@ -104,10 +115,7 @@ export const DashboardPage: React.FC = () => {
                 </button>
               </div>
               <VideoPlayer 
-                config={{
-                  manifestUrl: streamingInfo.url,
-                  // In a real DRM scenario, use streamingInfo.key
-                }} 
+                config={playerConfig!} 
               />
             </div>
           )}
