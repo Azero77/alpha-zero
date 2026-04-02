@@ -4,7 +4,7 @@ import { isFinalState } from '../../shared/utils/status-utils';
 
 export const usePollVideoStatus = (intervalMs: number = 3000) => {
   const { videos, refreshVideoState } = useVideoStore();
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     // Find videos that are NOT in a final state

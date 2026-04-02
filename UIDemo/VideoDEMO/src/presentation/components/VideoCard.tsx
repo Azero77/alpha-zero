@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import type { Video, VideoStatus } from '../../domain/models/video';
-import { Play, Trash2, Clock, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
+import type { Video } from '../../domain/models/video';
+import { Play, Trash2, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { normalizeVideoStatus } from '../../shared/utils/status-utils';
 

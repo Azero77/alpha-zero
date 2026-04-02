@@ -36,12 +36,20 @@ export const DashboardPage: React.FC = () => {
 
   const playerConfig = useMemo(() => {
     if (!streamingInfo) return null;
+    
     return {
       manifestUrl: streamingInfo.url,
-      clearKey: {
+      // If the backend sends DRM details (Premium video)
+      drm: streamingInfo.drm ? {
+        widevineUrl: streamingInfo.drm.widevineUrl,
+        playReadyUrl: streamingInfo.drm.playReadyUrl,
+        token: streamingInfo.drm.token
+      } : undefined,
+      // If the backend sends a raw key (Free video)
+      clearKey: streamingInfo.key ? {
         keyId: streamingInfo.key,
         key: streamingInfo.key
-      }
+      } : undefined
     };
   }, [streamingInfo]);
 

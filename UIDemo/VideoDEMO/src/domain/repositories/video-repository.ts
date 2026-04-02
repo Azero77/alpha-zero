@@ -15,7 +15,13 @@ export interface UploadResponse {
 
 export interface StreamingInfo {
   url: string;
-  key: string;
+  isPremium?: boolean;
+  key?: string; // Legacy / clearKey
+  drm?: {
+    widevineUrl?: string;
+    playReadyUrl?: string;
+    token?: string;
+  };
 }
 
 export interface IVideoRepository {
