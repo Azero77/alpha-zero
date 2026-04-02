@@ -53,9 +53,10 @@ var sns = awscdkStack.AddSNSTopic("VideoUploadedEvent")
     });
 input_s3.AddObjectCreatedNotification(sns);
 var output_s3 = awscdkStack.AddS3Bucket("OutputS3");
+string cdnDomain = builder.Configuration["CdnDomain"] ?? "";
 var cdn_s3 = awscdkStack.AddS3Bucket("CdnS3", new BucketProps()
 {
-    BucketName = "cdn.dalilhamachamber.com",
+    BucketName = cdnDomain,
     PublicReadAccess = true,
     BlockPublicAccess = new BlockPublicAccess(new BlockPublicAccessOptions
     {
@@ -155,5 +156,6 @@ var api = builder.AddProject<Projects.AlphaZero_API>("alphazero-api")
     .WithReference(videoProcessedQueue)
     .WithEnvironment("AWS__Resources__MediaConvertRoleArn", awscdkStack.GetOutput("MediaConvertRoleArnOutput"))
     .WithEnvironment("AWS__Resources__MediaConvertKeyKMSArn", kmsArn)
+    .WithEnvironment("AWS__Resources__CdnDomain" , cdnDomain)
     ;
 builder.Build().Run();

@@ -1,4 +1,4 @@
-﻿using AlphaZero.Modules.VideoUploading.IntegrationEvents;
+using AlphaZero.Modules.VideoUploading.IntegrationEvents;
 using MassTransit;
 
 namespace AlphaZero.Modules.VideoUploading.Infrastructure.Sagas;
@@ -9,8 +9,8 @@ public class VideoUploadingSaga : MassTransitStateMachine<VideoState>
     public State Pending { get; private set; } = null!;           // Waiting for Upload
     public State Analyzing { get; private set; } = null!;         // FFProbe inspecting raw file
     public State Transcoding { get; private set; } = null!;       // MediaConvert optimizing the video
-    public State Distributing { get; private set; } = null!;      // Moving S3 -> R2
-    public State Published { get; private set; } = null!;         // Final state
+    public State Distributing { get; private set; } = null!;      // Moving S3 -> CDN
+    public State Published { get; private set; } = null!;         // Final business state
     public State Failed { get; private set; } = null!;
 
     // Events
@@ -20,7 +20,6 @@ public class VideoUploadingSaga : MassTransitStateMachine<VideoState>
     public Event<VideoTranscodingStartedEvent> VideoTranscodingStartedEvent { get; private set; } = null!;
     public Event<VideoTranscodingFinishedEvent> VideoTranscodingFinishedEvent { get; private set; } = null!;
     public Event<VideoCdnSyncCompletedEvent> VideoCdnSyncCompletedEvent { get; private set; } = null!;
-    public Event<VideoPublishedEvent> VideoPublishedEvent { get; private set; } = null!;
     public Event<VideoProcessingFailedEvent> VideoProcessingFailedEvent { get; private set; } = null!;
 
     public VideoUploadingSaga()
@@ -31,11 +30,10 @@ public class VideoUploadingSaga : MassTransitStateMachine<VideoState>
         Event(() => VideoTranscodingStartedEvent, e => e.CorrelateById(x => x.Message.VideoId));
         Event(() => VideoTranscodingFinishedEvent, e => e.CorrelateById(x => x.Message.VideoId));
         Event(() => VideoCdnSyncCompletedEvent, e => e.CorrelateById(x => x.Message.VideoId));
-        Event(() => VideoPublishedEvent, e => e.CorrelateById(x => x.Message.VideoId));
         Event(() => VideoProcessingFailedEvent, e => e.CorrelateById(x => x.Message.VideoId));
 
         InstanceState(x => x.CurrentState);
-
+        SetCompletedWhenFinalized();
         Initially(
             When(UploadVideoRequestedEvent)
                 .Then(context => context.Saga.TenantId = context.Message.TenantId)
@@ -105,8 +103,10 @@ public class VideoUploadingSaga : MassTransitStateMachine<VideoState>
         During(Distributing,
             When(VideoCdnSyncCompletedEvent)
                 .Then(context => context.Saga.FinalUrl = context.Message.RelativeUrl)
+                .Publish(context => new VideoPublishedEvent(context.Message.VideoId, context.Message.RelativeUrl))
                 .TransitionTo(Published)
                 .Finalize());
+
         DuringAny(
             When(VideoProcessingFailedEvent)
                 .Then(x => x.Saga.IsFailed = true)

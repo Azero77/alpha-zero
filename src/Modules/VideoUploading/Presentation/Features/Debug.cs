@@ -34,7 +34,7 @@ public static class Debug
             video.Status.ToString(),
             video.Metadata,
             video.Specifications,
-            video.SourceKey,
+            video.SourceKey,    
             video.OutputFolder,
             video.CreatedOn,
             video.PublishedOn);

@@ -23,6 +23,26 @@ export class ShakaPlayerManager {
 
     this.player = new shaka.Player(videoElement);
     
+    // Intercept license requests to placeholders to prevent resolution errors
+    this.player.getNetworkingEngine()!.registerRequestFilter((type, request) => {
+      if (type === shaka.net.NetworkingEngine.RequestType.LICENSE && 
+          request.uris.some(uri => uri.includes('alphazero.api') || uri.includes('clearkey.local'))) {
+        
+        // Tag this request so the response filter knows to mock it
+        (request as any).isMockedClearKey = true;
+      }
+    });
+
+    // Mock successful response for the placeholder URLs
+    this.player.getNetworkingEngine()!.registerResponseFilter((type, response) => {
+      if ((response as any).originalRequest?.isMockedClearKey) {
+        // Return a dummy successful status to satisfy Shaka's internal logic
+        response.data = new Uint8Array(0).buffer;
+        response.status = 200;
+        response.uri = 'data:application/json,{}';
+      }
+    });
+
     // Set up UI
     this.ui = new shaka.ui.Overlay(this.player, containerElement, videoElement);
     
@@ -33,6 +53,9 @@ export class ShakaPlayerManager {
           clearKeys: {
             [config.clearKey.keyId]: config.clearKey.key,
           },
+          // Tell Shaka to ignore the license servers in the manifest
+          // so it doesn't try to fetch from alphazero.api
+          ignoreManifestDrmInfo: true,
         },
       });
     }

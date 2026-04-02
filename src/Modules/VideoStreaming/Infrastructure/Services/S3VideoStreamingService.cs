@@ -13,16 +13,27 @@ using static Aspire.Shared.AWSResources;
 
 public class S3VideoStreamingService(AWSResources resources,IConfiguration configuration) : IStreamingService
 {
-
-    
     public Task<ErrorOr<StreamingInfoResponseDTO>> GetStreamingInfo(Guid videoId)
     {
         string bucket = resources!.CdnS3!.BucketName;
         string region = configuration.GetAWSOptions()
             .Region.SystemName;
         var result = new StreamingInfoResponseDTO(
-            $"https://{bucket}.s3.amazonaws.com/{videoId}/master.m3u8",
+            $"https://{bucket}.s3.amazonaws.com/streaming/{videoId}/master.m3u8",
             videoId.ToString().Replace("-", ""));
         return Task.FromResult(result.ToErrorOr());
+    }
+}
+
+public class CloudFlareCdnVideoStreamingService(AWSResources resources) : IStreamingService
+{
+    public Task<ErrorOr<StreamingInfoResponseDTO>> GetStreamingInfo(Guid videoId)
+    {
+        var domain = resources.CdnDomain;
+
+        var response = new StreamingInfoResponseDTO($"http://{domain}/streaming/{videoId}/master.m3u8",
+            videoId.ToString().Replace("-",""));
+
+        return Task.FromResult(response.ToErrorOr());
     }
 }

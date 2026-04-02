@@ -39,8 +39,5 @@ public class VideoCdnSyncCompletedEventHandler : IConsumer<VideoCdnSyncCompleted
                 null));
             return;
         }
-
-        // Final event to finalize the Saga
-        await context.Publish(new VideoPublishedEvent(context.Message.VideoId, context.Message.RelativeUrl));
     }
 }

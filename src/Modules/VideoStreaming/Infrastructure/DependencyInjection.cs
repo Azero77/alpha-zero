@@ -13,6 +13,6 @@ public static class DependencyInjection
     public static void AddVideoStreamingInfrastructure(this IServiceCollection services,IConfiguration configuration)
     {
         services.AddMediatR(opts => opts.RegisterServicesFromAssembly(typeof(IVideoStreamingApplicationMarker).Assembly));
-        services.AddSingleton<IStreamingService, S3VideoStreamingService>();
+        services.AddSingleton<IStreamingService, CloudFlareCdnVideoStreamingService>();
     }
 }
