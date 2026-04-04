@@ -77,6 +77,46 @@ public class Course : TenantOwnedAggregate
         Status = CourseStatus.UnderReview;
         return Result.Success;
     }
+
+    public ErrorOr<Success> RemoveItem(Guid sectionId, Guid itemId)
+    {
+        var section = _sections.FirstOrDefault(s => s.Id == sectionId);
+        if (section == null) return Error.NotFound("Course.Section", "Section not found.");
+
+        var item = section.Items.FirstOrDefault(i => i.Id == itemId);
+        if (item == null) return Error.NotFound("Course.Item", "Item not found.");
+
+        return item.Delete();
+    }
+
+    public ErrorOr<Success> RestoreItem(Guid sectionId, Guid itemId)
+    {
+        var section = _sections.FirstOrDefault(s => s.Id == sectionId);
+        if (section == null) return Error.NotFound("Course.Section", "Section not found.");
+
+        // We look in the private list to find even deleted ones
+        var item = section.Items.FirstOrDefault(i => i.Id == itemId);
+        if (item == null) return Error.NotFound("Course.Item", "Item not found.");
+
+        return item.Restore();
+    }
+
+    public ErrorOr<Success> LinkResourceToItem(Guid itemId, Guid resourceId)
+    {
+
+        var selectedItems = _sections.SelectMany(s => s.Items)
+            .Where(i => i.Id == itemId)
+            .Select(i =>
+            {
+                i.UpdateResource(resourceId);
+                return i;
+            });
+
+        if(!selectedItems.Any())
+            return Error.NotFound("Course.Item", "Item not found in this course.");
+
+        return Result.Success;
+    }
 }
 
 

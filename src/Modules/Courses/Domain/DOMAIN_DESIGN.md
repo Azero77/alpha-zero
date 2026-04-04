@@ -9,53 +9,62 @@ This document outlines the Domain-Driven Design (DDD) structure for the `Courses
 ### 1. `Course` (Aggregate Root)
 The primary unit of content delivery. It manages the structure and lifecycle of educational material.
 - **Entities:**
-    - `Section`: A logical grouping of lessons (e.g., "Chapter 1: Mechanics").
-    - `Lesson`: The atomic unit of learning (Video, PDF, or Quiz).
+    - `CourseSection`: A logical grouping of items (e.g., "Chapter 1").
+    - `CourseSectionItem`: Abstract base for `Lesson`, `Quiz`, and `Document`.
 - **Key Properties:**
-    - `TenantId`: Ensures strict multi-tenant isolation.
     - `Status`: Manages the QA workflow (`Draft`, `UnderReview`, `Approved`, `Published`).
-    - `SubjectId`: Link to the localized subject.
-    - `Price`: Encapsulated price (Value Object).
-- **Invariants:**
-    - A course cannot be `Published` unless its status is `Approved`.
-    - Lesson order must be sequential and unique within the course for bitmask tracking.
-    - A `Lesson` referencing a `VideoId` cannot be deleted if the video is currently in a "Live" state in the streaming module (enforced via cross-module integration events).
+    - `NextAvailableBitIndex`: A monotonic counter ensuring every item gets a permanent bit in the progress bitmask.
+- **Lifecycle & Domain Logic:**
+    - **Drafting:** Content workers can add/remove sections and items. Adding an item assigns a permanent `BitIndex`.
+    - **UI Reordering:** Changing the `Order` property is allowed at any time and does not affect the `BitIndex`.
+    - **Bit-Index Stability:** Once a course is `Published`, the `BitIndex` of existing items must **NEVER** change. New items can be added (taking the next available bit), but re-indexing is forbidden.
+    - **QA Guardrails:** A course cannot enter `UnderReview` if it has no sections or items.
 
 ### 2. `Subject` (Aggregate Root)
-Represents the educational category (e.g., Physics, Chemistry, Arabic).
-- **Responsibility:** Managed independently by each Tenant Admin to allow localized curriculum naming.
-- **Key Properties:**
-    - `TenantId`: Isolated per academy.
-    - `IsActive`: Soft-delete mechanism to prevent breaking existing courses.
-- **Note:** While we provide "static recommendations," every tenant defines their own subject mapping.
+Represents the educational category (e.g., Physics, Chemistry).
+- **Lifecycle:**
+    - **Creation:** Tenant Admins create subjects localized to their curriculum.
+    - **Deactivation:** Subjects can be deactivated (soft-deleted) to prevent new courses from using them while preserving existing links.
 
 ### 3. `Enrollment` (Aggregate Root)
 Tracks the relationship between a `Student` and a `Course`.
-- **Responsibility:** High-volume aggregate designed for fast progress lookups and updates.
-- **Key Properties:**
-    - `StudentId` & `CourseId`.
-    - `Progress`: A **Value Object** containing the `Bitmask` (VARBIT) logic.
-    - `Status`: (`Active`, `Expired`, `Suspended`).
-- **Invariants:**
-    - `ProgressBitmask` length MUST exactly match the `Course.LessonCount`.
-    - Progress can only be incremented for `Active` enrollments.
-    - One active enrollment per course per student.
+- **Lifecycle:**
+    - **Creation:** Triggered by payment or code redemption. The bitmask is initialized with a length equal to the `Course.TotalTrackedItems`.
+    - **Progress Tracking:** When a student finishes a video or passes a quiz, the bit at the item's specific `BitIndex` is flipped to `1`.
+    - **Completion:** A course is "Complete" when all tracked bits are `1`.
+
+---
+
+## 🛠️ Application Layer Use Cases
+
+### 🧑‍💻 Content Production (Workers & Teachers)
+- `CreateCourseCommand`: Initialize a new course in `Draft`.
+- `AddSectionCommand` / `AddLessonCommand`: Build the course structure.
+- `ReorderCourseStructureCommand`: Update UI `Order` properties.
+- `SubmitCourseForReviewCommand`: Signal that the teacher/manager needs to audit the content.
+- `ApproveCourseCommand`: Teacher/Manager validation.
+- `PublishCourseCommand`: Make the course visible to students and lock bit-indices.
+
+### 🧑‍🎓 Learning (Students)
+- `EnrollInCourseCommand`: Create a student enrollment and initialize the bitmask.
+- `CompleteLessonCommand`: Flips a bit in the `Enrollment` bitmask based on the lesson's `BitIndex`.
+- `GetCourseProgressQuery`: Calculates the percentage of completed bits.
+- `GetStudentDashboardQuery`: Returns a list of active enrollments and their bitmask-derived progress.
+
+### 🏛️ Management (Admins)
+- `CreateSubjectCommand`: Define a new educational category.
+- `DeactivateEnrollmentCommand`: Manually revoke a student's access.
 
 ---
 
 ## 💎 Value Objects
 
-### 1. `LessonProgress` (Bitmask)
-- **Logic:** Uses bitwise operations to track completion of individual lessons.
-- **Storage:** Persisted as `VARBIT` in PostgreSQL to minimize footprint.
-- **Methods:** `IsCompleted(index)`, `MarkAsComplete(index)`, `CalculatePercentage()`.
+### 1. `ProgressBitmask`
+- **Logic:** Encapsulates bitwise operations (`SetBit`, `IsBitSet`, `GetCompletionPercentage`).
+- **Invariant:** Must be initialized with the length provided by the `Course` at the moment of enrollment.
 
 ### 2. `CourseStatus`
-- **Logic:** A state machine ensuring a valid QA transition:
-    - `Draft` -> `UnderReview` (Worker -> Teacher)
-    - `UnderReview` -> `Approved` (Teacher -> Manager)
-    - `Approved` -> `Published` (Manager -> System/Admin)
-    - `Published` -> `Archived`.
+- **Logic:** State machine ensuring valid transitions: `Draft` -> `UnderReview` -> `Approved` -> `Published`.
 
 ---
 
@@ -63,38 +72,7 @@ Tracks the relationship between a `Student` and a `Course`.
 
 | Event | Purpose |
 | :--- | :--- |
-| `CourseApprovedEvent` | Signals that content is ready for student consumption. |
-| `LessonCompletedEvent` | Triggers bitmask updates and checks for overall Course completion. |
-| `EnrollmentCreatedEvent` | Triggers initial bitmask allocation (all zeros). |
-| `CourseStatusChangedEvent` | Used for audit logs and notifying the content production team. |
-
----
-
-## 🛡️ Cross-Module Integrity (Video Integration)
-- **Constraint:** A video in the `VideoStreaming` context cannot be deleted if it is linked to a `Lesson`.
-- **Implementation:** The `Courses` module will handle `VideoDeletionRequested` integration events and reply with a "Veto" if the `VideoId` is actively used in a `Published` course.
-
----
-
-## 🚀 Folder Structure Recommendation
-```text
-📂 Domain/
-├── 📂 Aggregates/
-│   ├── 📂 Course/
-│   │   ├── Course.cs (AR)
-│   │   ├── Section.cs (Entity)
-│   │   └── Lesson.cs (Entity)
-│   ├── 📂 Subject/
-│   │   └── Subject.cs (AR)
-│   └── 📂 Enrollment/
-│       └── Enrollment.cs (AR)
-├── 📂 ValueObjects/
-│   ├── LessonProgress.cs
-│   ├── CourseStatus.cs
-│   └── Money.cs
-├── 📂 Events/
-│   ├── CourseApprovedEvent.cs
-│   └── LessonCompletedEvent.cs
-└── 📂 Exceptions/
-    └── DomainException.cs
-```
+| `CoursePublishedDomainEvent` | Signals that the course is live. |
+| `ItemCompletedDomainEvent` | Fired when a student completes a lesson/quiz to update progress. |
+| `CourseCompletedDomainEvent` | Fired when the last bit in a bitmask is flipped to `1`. |
+| `EnrollmentCreatedDomainEvent` | Triggers initial bitmask allocation. |

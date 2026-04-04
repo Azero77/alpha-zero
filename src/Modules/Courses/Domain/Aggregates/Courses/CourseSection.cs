@@ -1,13 +1,16 @@
-﻿using AlphaZero.Shared.Infrastructure.Tenats;
+﻿using AlphaZero.Shared.Domain;
+using AlphaZero.Shared.Infrastructure.Tenats;
+using ErrorOr;
 
 namespace AlphaZero.Modules.Courses.Domain.Aggregates.Courses;
 
-public class CourseSection : TenantOwnedEntity
+public class CourseSection : TenantOwnedEntity, ISoftDeleteItem
 {
     public string Title { get; private set; }
     public int Order { get; private set; }
     public IReadOnlyCollection<CourseSectionItem> Items => _items.AsReadOnly();
     private readonly List<CourseSectionItem> _items = new();
+    public bool IsDeleted { get; private set; }
 
     private CourseSection(Guid id, Guid tenantId, string title, int order) : base(id, tenantId)
     {
@@ -30,8 +33,7 @@ public class CourseSection : TenantOwnedEntity
         var item = _items.FirstOrDefault(i => i.Id == itemId);
         if (item != null)
         {
-            _items.Remove(item);
-            ReorderInternal();
+            item.Delete();
         }
     }
 
@@ -48,6 +50,23 @@ public class CourseSection : TenantOwnedEntity
     {
         Title = title;
         Order = order;
+    }
+    internal ErrorOr<Success> Delete()
+    {
+        if (IsDeleted)
+            return Error.Failure("Section.Failure", "Section is already deleted.");
+        
+        IsDeleted = true;
+        return Result.Success;
+    }
+
+    internal ErrorOr<Success> Restore()
+    {
+        if (!IsDeleted)
+            return Error.Failure("Section.Failure", "Section is not deleted.");
+
+        IsDeleted = false;
+        return Result.Success;
     }
 }
 
