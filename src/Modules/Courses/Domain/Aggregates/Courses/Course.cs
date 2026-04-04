@@ -1,4 +1,5 @@
-﻿using AlphaZero.Shared.Infrastructure.Tenats;
+﻿using AlphaZero.Modules.Courses.Domain.Events;
+using AlphaZero.Shared.Infrastructure.Tenats;
 using ErrorOr;
 
 namespace AlphaZero.Modules.Courses.Domain.Aggregates.Courses;
@@ -69,12 +70,73 @@ public class Course : TenantOwnedAggregate
 
     public int TotalTrackedItems => NextAvailableBitIndex;
 
+    public void UpdateInformation(string title, string? description, Guid subjectId)
+    {
+        Title = title;
+        Description = description;
+        SubjectId = subjectId;
+    }
+
     public ErrorOr<Success> SubmitForReview()
     {
         if (Status != CourseStatus.Draft) return Error.Conflict("Course.Status", "Only draft courses can be reviewed.");
         if (_sections.Count == 0 || _sections.All(s => s.Items.Count == 0)) 
             return Error.Validation("Course.Empty", "Course must have content before review.");
         Status = CourseStatus.UnderReview;
+        return Result.Success;
+    }
+
+    public ErrorOr<Success> Approve()
+    {
+        if (Status != CourseStatus.UnderReview) 
+            return Error.Conflict("Course.Status", "Only courses under review can be approved.");
+        
+        Status = CourseStatus.Approved;
+        return Result.Success;
+    }
+
+    public ErrorOr<Success> Reject(string reason)
+    {
+        if (Status != CourseStatus.UnderReview) 
+            return Error.Conflict("Course.Status", "Only courses under review can be rejected.");
+        
+        // Moves back to Draft for fixes
+        Status = CourseStatus.Draft;
+        return Result.Success;
+    }
+
+    public ErrorOr<Success> Publish()
+    {
+        if (Status != CourseStatus.Approved) 
+            return Error.Conflict("Course.Status", "Only approved courses can be published.");
+        
+        Status = CourseStatus.Published;
+        AddDomainEvent(new CoursePublishedDomainEvent(Id));
+        return Result.Success;
+    }
+
+    public ErrorOr<Success> Archive()
+    {
+        if (Status == CourseStatus.Archived) 
+            return Error.Conflict("Course.Status", "Course is already archived.");
+        
+        Status = CourseStatus.Archived;
+        return Result.Success;
+    }
+
+    public ErrorOr<Success> ReorderSections(List<Guid> sectionIds)
+    {
+        if (Status == CourseStatus.Published)
+            return Error.Conflict("Course.Status", "Cannot reorder sections once published as it may confuse existing students.");
+
+        for (int i = 0; i < sectionIds.Count; i++)
+        {
+            var section = _sections.FirstOrDefault(s => s.Id == sectionIds[i]);
+            if (section != null)
+            {
+                section.Update(section.Title, i);
+            }
+        }
         return Result.Success;
     }
 
@@ -103,7 +165,6 @@ public class Course : TenantOwnedAggregate
 
     public ErrorOr<Success> LinkResourceToItem(Guid itemId, Guid resourceId)
     {
-
         var selectedItems = _sections.SelectMany(s => s.Items)
             .Where(i => i.Id == itemId)
             .Select(i =>
@@ -112,7 +173,7 @@ public class Course : TenantOwnedAggregate
                 return i;
             });
 
-        if(!selectedItems.Any())
+        if (!selectedItems.Any())
             return Error.NotFound("Course.Item", "Item not found in this course.");
 
         return Result.Success;
