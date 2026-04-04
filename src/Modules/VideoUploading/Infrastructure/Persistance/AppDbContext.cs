@@ -1,5 +1,6 @@
 using AlphaZero.Modules.VideoUploading.Domain.Models;
 using AlphaZero.Modules.VideoUploading.Infrastructure.Sagas;
+using AlphaZero.Shared.Infrastructure.Database;
 using AlphaZero.Shared.Infrastructure.Tenats;
 using Microsoft.EntityFrameworkCore;
 
@@ -24,7 +25,8 @@ public class AppDbContext : DbContext
         modelBuilder.HasDefaultSchema(Schema);
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
 
-        modelBuilder.Entity<Video>().HasQueryFilter(x => x.TenantId == _tenantProvider.GetTenant());
+        // Auto-apply Tenant and Soft Delete filters for all entities in this module
+        modelBuilder.ApplyAlphaZeroGlobalFilters(_tenantProvider);
     }
 
 }

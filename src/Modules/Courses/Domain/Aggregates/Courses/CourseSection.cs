@@ -8,19 +8,21 @@ public class CourseSection : TenantOwnedEntity, ISoftDeleteItem
 {
     public string Title { get; private set; }
     public int Order { get; private set; }
+    public Guid CourseId { get; private set; }
     public IReadOnlyCollection<CourseSectionItem> Items => _items.AsReadOnly();
     private readonly List<CourseSectionItem> _items = new();
     public bool IsDeleted { get; private set; }
 
-    private CourseSection(Guid id, Guid tenantId, string title, int order) : base(id, tenantId)
+    private CourseSection(Guid id, Guid tenantId, string title, int order, Guid courseId) : base(id, tenantId)
     {
         Title = title;
         Order = order;
+        CourseId = courseId;
     }
 
-    internal static CourseSection Create(Guid tenantId, string title, int order)
+    internal static CourseSection Create(Guid tenantId, string title, int order,Guid courseId)
     {
-        return new CourseSection(Guid.NewGuid(), tenantId, title, order);
+        return new CourseSection(Guid.NewGuid(), tenantId, title, order, courseId);
     }
 
     internal void AddItem(CourseSectionItem item)

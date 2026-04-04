@@ -4,7 +4,7 @@ using ErrorOr;
 
 namespace AlphaZero.Modules.VideoUploading.Domain.Models;
 
-public class Video : AggregateRoot, IDomainTenantOwned
+public class Video : AggregateRoot, IDomainTenantOwned, ISoftDeleteItem
 {
     public Guid TenantId { get; private set; }
     public string Title { get; private set; } = null!;
@@ -16,6 +16,8 @@ public class Video : AggregateRoot, IDomainTenantOwned
     public string? OutputFolder { get; private set; }
     public DateTime CreatedOn { get; private set; }
     public DateTime? PublishedOn { get; private set; }
+    public bool IsDeleted { get; private set; }
+
     private Video()
     {
         //EF
@@ -98,6 +100,7 @@ public class Video : AggregateRoot, IDomainTenantOwned
     public void MarkAsDeleted()
     {
         Status = VideoStatus.Deleted;
+        IsDeleted = true;
     }
 
     public void UpdateMetadata(VideoMetadata metadata)

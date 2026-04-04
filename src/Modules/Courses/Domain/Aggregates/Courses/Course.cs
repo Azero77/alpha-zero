@@ -32,7 +32,7 @@ public class Course : TenantOwnedAggregate
 
     public void AddSection(string title)
     {
-        var section = CourseSection.Create(TenantId, title, _sections.Count);
+        var section = CourseSection.Create(TenantId, title, _sections.Count,this.Id);
         _sections.Add(section);
     }
 
