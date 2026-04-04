@@ -8,6 +8,7 @@ using AlphaZero.Modules.VideoUploading.Infrastructure.Services;
 using AlphaZero.Shared.Application;
 using AlphaZero.Shared.Domain;
 using AlphaZero.Shared.Infrastructure;
+using AlphaZero.Shared.Infrastructure.SoftDelete;
 using Amazon.MediaConvert;
 using Amazon.S3;
 using Amazon.SQS;
@@ -24,8 +25,7 @@ public static class DependencyInjection
     public static void AddVideoUploadingGlobalInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
         var dbSettings = DatabaseSettings.GetDatabaseSettings(configuration);
-        var awsResources = configuration.GetSection(AWSResources.Section).Get<AWSResources>() 
-            ?? throw new ArgumentException("AWS Resources are not configured");
+        var awsResources = configuration.GetSection(AWSResources.Section).Get<AWSResources>();
 
         // Infrastructure Services that need to be global for consumers
         services.AddScoped<IUploadService, S3UploadService>();
@@ -34,17 +34,19 @@ public static class DependencyInjection
         services.AddScoped<IVideoCdnSyncService, S3VideoCdnSyncService>();
 
         // Persistence
-        services.AddDbContext<AppDbContext>(opts =>
+        services.AddDbContext<AppDbContext>((sp,opts) =>
         {
             opts.UseNpgsql(dbSettings.ConnectionString, h=>
             {
                 h.MigrationsAssembly(typeof(AppDbContext).Assembly.FullName);
                 h.MigrationsHistoryTable("__VideoUploadingMigrationHistory", AppDbContext.Schema);
             });
+
+
+            opts.AddInterceptors(sp.GetRequiredService<SoftDeleteInterceptor>());
         });
 
         // Special singleton for S3Settings from global configuration
-        services.AddSingleton<S3Settings>(awsResources.InputS3 ?? throw new ArgumentException("S3 Input is not configured"));
     }
     public static void AddVideoUploadingPrivateInfrastructure(this IServiceCollection moduleServices, IConfiguration configuration)
     {

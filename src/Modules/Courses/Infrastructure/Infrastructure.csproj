@@ -37,6 +37,7 @@
 		<ProjectReference Include="..\..\..\AlphaZero.Shared\AlphaZero.Shared.csproj" />
 		<ProjectReference Include="..\..\..\aspire\Aspire.Shared\Aspire.Shared.csproj" />
 		<ProjectReference Include="..\Application\Application.csproj" />
+		<ProjectReference Include="..\Domain\Domain.csproj" />
 	</ItemGroup>
 
 </Project>

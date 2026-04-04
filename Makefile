@@ -5,7 +5,7 @@ m ?= VideoUploading
 PROJECT = src/Modules/$(m)/Infrastructure/Infrastructure.csproj
 API = src/Alphazero.API/Alphazero.API.csproj
 o = Migrations
-DbContext = AppDbContext
+DbContext = AlphaZero.Modules.$(m).Infrastructure.Persistance.AppDbContext
 
 # ------------------------
 # Help
@@ -23,7 +23,7 @@ migrations-create:
 ifndef NAME
 	$(error "NAME variable is required. Usage: make migrations-create NAME=MigrationName [-m=ModuleName]")
 endif
-	dotnet ef migrations add $(NAME) --project $(PROJECT) --startup-project $(API) --output-dir $(o)
+	dotnet ef migrations add $(NAME) --project $(PROJECT) --startup-project $(API) --output-dir $(o) --context $(DbContext)
 
 # ------------------------
 # Apply migrations

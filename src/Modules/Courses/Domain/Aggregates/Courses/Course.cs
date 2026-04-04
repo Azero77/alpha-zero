@@ -139,29 +139,7 @@ public class Course : TenantOwnedAggregate
         }
         return Result.Success;
     }
-
-    public ErrorOr<Success> RemoveItem(Guid sectionId, Guid itemId)
-    {
-        var section = _sections.FirstOrDefault(s => s.Id == sectionId);
-        if (section == null) return Error.NotFound("Course.Section", "Section not found.");
-
-        var item = section.Items.FirstOrDefault(i => i.Id == itemId);
-        if (item == null) return Error.NotFound("Course.Item", "Item not found.");
-
-        return item.Delete();
-    }
-
-    public ErrorOr<Success> RestoreItem(Guid sectionId, Guid itemId)
-    {
-        var section = _sections.FirstOrDefault(s => s.Id == sectionId);
-        if (section == null) return Error.NotFound("Course.Section", "Section not found.");
-
-        // We look in the private list to find even deleted ones
-        var item = section.Items.FirstOrDefault(i => i.Id == itemId);
-        if (item == null) return Error.NotFound("Course.Item", "Item not found.");
-
-        return item.Restore();
-    }
+    
 
     public ErrorOr<Success> LinkResourceToItem(Guid itemId, Guid resourceId)
     {

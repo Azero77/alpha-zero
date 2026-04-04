@@ -6,6 +6,7 @@ using Infrastructure;
 using MediatR;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using System.ComponentModel.DataAnnotations;
 using System.Reflection;
 
@@ -22,8 +23,9 @@ public class VideoStreamingModule : AppModule
 
     public override void RegisterPrivate(IServiceCollection moduleServices, ContainerBuilder builder)
     {
-        if (Configuration == null) throw new ArgumentException("Configuration in VideoStreaming are not found");
-        moduleServices.AddVideoStreamingInfrastructure(Configuration);
+        if (Configuration == null) _logger.LogWarning("Configuration in VideoStreaming are not found");
+        else
+            moduleServices.AddVideoStreamingInfrastructure(Configuration);
 
         // Register all IEndpoint implementations in this assembly
         builder.RegisterAssemblyTypes(this.GetType().Assembly)

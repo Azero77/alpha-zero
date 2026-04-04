@@ -4,7 +4,7 @@ using ErrorOr;
 
 namespace AlphaZero.Modules.Courses.Domain.Aggregates.Courses;
 
-public class CourseSection : TenantOwnedEntity, ISoftDeleteItem
+public class CourseSection : TenantOwnedEntity, ISoftDeletable
 {
     public string Title { get; private set; }
     public int Order { get; private set; }
@@ -12,6 +12,8 @@ public class CourseSection : TenantOwnedEntity, ISoftDeleteItem
     public IReadOnlyCollection<CourseSectionItem> Items => _items.AsReadOnly();
     private readonly List<CourseSectionItem> _items = new();
     public bool IsDeleted { get; private set; }
+
+    public DateTime? OnDeleted { get; private set; } = null;
 
     private CourseSection(Guid id, Guid tenantId, string title, int order, Guid courseId) : base(id, tenantId)
     {
@@ -30,14 +32,6 @@ public class CourseSection : TenantOwnedEntity, ISoftDeleteItem
         _items.Add(item);
     }
 
-    internal void RemoveItem(Guid itemId)
-    {
-        var item = _items.FirstOrDefault(i => i.Id == itemId);
-        if (item != null)
-        {
-            item.Delete();
-        }
-    }
 
     internal void ReorderInternal()
     {

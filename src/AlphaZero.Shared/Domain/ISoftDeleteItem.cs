@@ -2,7 +2,8 @@
 
 namespace AlphaZero.Shared.Domain;
 
-public interface ISoftDeleteItem : IEntity
+public interface ISoftDeletable : IEntity
 {
     public bool IsDeleted { get; }
+    public DateTime? OnDeleted { get; }
 }

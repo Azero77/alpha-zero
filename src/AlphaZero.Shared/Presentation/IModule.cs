@@ -6,6 +6,7 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using System.Threading.Tasks;
 
 public interface IModule
@@ -27,6 +28,7 @@ public abstract class AppModule : Module, IModule
 {
     protected ILifetimeScope? Scope { get; private set; }
     public IConfiguration? Configuration { get; set; }
+    protected ILogger<AppModule> _logger { get; private set; }
 
     public virtual void Initialize(ILifetimeScope root)
     {
@@ -36,6 +38,8 @@ public abstract class AppModule : Module, IModule
             RegisterPrivate(services, builder);
             builder.Populate(services);
         });
+
+        _logger = Scope.Resolve<ILogger<AppModule>>();
     }
     public virtual async Task<TResponse> Send<TRequest, TResponse>(IRequest<TResponse> request, CancellationToken cancellationToken = default) where TRequest : IRequest<TResponse>
     {

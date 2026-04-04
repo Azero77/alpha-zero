@@ -11,7 +11,10 @@ public class Enrollement : TenantOwnedAggregate
     public EnrollementStatus Status { get; private set; }
     public Progress Progress { get; private set; }
     public DateTime EnrolledOn { get; private set; }
-
+    private Enrollement()
+    {
+        // EF
+    }
     private Enrollement(Guid id, Guid tenantId, Guid studentId, Guid courseId, int totalTrackedItems) : base(id, tenantId)
     {
         StudentId = studentId;

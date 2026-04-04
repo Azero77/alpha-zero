@@ -1,9 +1,9 @@
+
 using AlphaZero.Modules.Courses.Domain.Aggregates.Courses;
-using AlphaZero.Modules.Courses.Infrastructure.Persistance;
 using AlphaZero.Shared.Infrastructure.Repositores;
 
 namespace AlphaZero.Modules.Courses.Application.Repositories;
 
-public interface ICourseRepository : IRepository<AppDbContext, Course>
+public interface ICourseRepository : IRepository<Course>
 {
 }

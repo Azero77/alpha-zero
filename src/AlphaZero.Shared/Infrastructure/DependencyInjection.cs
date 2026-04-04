@@ -8,6 +8,7 @@ using Amazon.SQS;
 using Amazon.MediaConvert;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Hosting;
+using AlphaZero.Shared.Infrastructure.SoftDelete;
 
 namespace AlphaZero.Shared.Infrastructure;
 
@@ -22,8 +23,7 @@ public static class DependencyInjection
         
         var awsOptions = configuration.GetAWSOptions();
         // Infrastructure Services that need to be global for consumers
-        services.AddSingleton<S3Settings>(awsResources.InputS3 ?? throw new ArgumentException("S3 Input is not configured"));
-
+        services.AddSingleton<SoftDeleteInterceptor>();
         services.AddDefaultAWSOptions(awsOptions);
 
         // 2. Common AWS Service Clients (Global)
@@ -40,7 +40,6 @@ public static class DependencyInjection
         {
             services.AddScoped<ITenantProvider, HttpTenantProvider>();
         }
-
         // 4. Common Utilities
         services.AddSingleton<IClock, Clock>();
         services.AddHttpContextAccessor();

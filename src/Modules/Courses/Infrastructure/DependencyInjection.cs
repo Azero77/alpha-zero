@@ -3,6 +3,7 @@ using AlphaZero.Modules.Courses.Infrastructure.Persistance;
 using AlphaZero.Modules.Courses.Infrastructure.Repositories;
 using AlphaZero.Shared.Application;
 using AlphaZero.Shared.Infrastructure;
+using AlphaZero.Shared.Infrastructure.SoftDelete;
 using Application;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -14,22 +15,21 @@ public static class DependencyInjection
 {
     public static void AddCoursesGlobalInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
-        // Add global infrastructure needed specifically for Courses module here
-    }
-
-    public static void AddCoursesPrivateInfrastructure(this IServiceCollection moduleServices, IConfiguration configuration)
-    {
         DatabaseSettings dbSettings = DatabaseSettings.GetDatabaseSettings(configuration);
-        
-        moduleServices.AddDbContext<AppDbContext>(opts =>
+
+        services.AddDbContext<AppDbContext>((sp,opts) =>
         {
             opts.UseNpgsql(dbSettings.ConnectionString, h =>
             {
                 h.MigrationsAssembly(typeof(AppDbContext).Assembly.FullName);
                 h.MigrationsHistoryTable("__CoursesMigrationHistory", AppDbContext.Schema);
             });
+            opts.AddInterceptors(sp.GetRequiredService<SoftDeleteInterceptor>());
         });
+    }
 
+    public static void AddCoursesPrivateInfrastructure(this IServiceCollection moduleServices, IConfiguration configuration)
+    {
         moduleServices.AddScoped<ICourseRepository, CourseRepository>();
         moduleServices.AddScoped<ISubjectRepository, SubjectRepository>();
         moduleServices.AddScoped<IEnrollementRepository, EnrollementRepository>();
@@ -39,3 +39,4 @@ public static class DependencyInjection
         moduleServices.AddMediatR(opts => opts.RegisterServicesFromAssembly(typeof(ICoursesApplicationMarker).Assembly));
     }
 }
+

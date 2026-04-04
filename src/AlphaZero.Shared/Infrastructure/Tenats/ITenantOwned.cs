@@ -24,7 +24,7 @@ public class TenantOwnedEntity : Entity, IDomainTenantOwned
 public class TenantOwnedAggregate : AggregateRoot, IDomainTenantOwned
 {
     public Guid TenantId { get; private set; }
-
+    protected TenantOwnedAggregate() { }
     protected TenantOwnedAggregate(Guid id, Guid tenantId) : base(id)
     {
         TenantId = tenantId;

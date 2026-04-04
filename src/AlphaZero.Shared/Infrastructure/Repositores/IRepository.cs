@@ -4,8 +4,7 @@ using System.Linq.Expressions;
 
 namespace AlphaZero.Shared.Infrastructure.Repositores;
 
-public interface IRepository<TContext, TEntity>
-    where TContext : DbContext
+public interface IRepository<TEntity>
     where TEntity : class
 {
     void Add(TEntity entity);
@@ -33,7 +32,7 @@ public interface IRepository<TContext, TEntity>
         CancellationToken token = default);
 }
 
-public class BaseRepository<TContext, TEntity> : IRepository<TContext, TEntity>
+public class BaseRepository<TContext, TEntity> : IRepository<TEntity>
     where TContext : DbContext
     where TEntity : class
 {
