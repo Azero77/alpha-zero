@@ -1,13 +1,21 @@
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Reflection.Emit;
 using AlphaZero.Shared.Domain;
 using AlphaZero.Shared.Infrastructure.Tenats;
 using Microsoft.EntityFrameworkCore;
 
 namespace AlphaZero.Shared.Infrastructure.Database;
 
+public class DbContstants
+{
+    public const string SoftDeleteFilter = "SoftDelete";
+    public const string TenantFilter = "Tenant";
+}
+
 public static class ModelBuilderExtensions
 {
+
     /// <summary>
     /// Applies global query filters for Soft Delete (ISoftDeleteItem) and Multi-Tenancy (IDomainTenantOwned).
     /// </summary>
@@ -41,7 +49,9 @@ public static class ModelBuilderExtensions
                 // This makes the Global Query Filter extremely fast.
                 modelBuilder.Entity(entityClrType)
                     .HasIndex(nameof(ISoftDeletable.IsDeleted))
-                    .HasFilter("\"IsDeleted\" = FALSE"); 
+                    .HasFilter("\"IsDeleted\" = FALSE");
+                modelBuilder.Entity(entityClrType)
+                    .HasQueryFilter(DbContstants.SoftDeleteFilter, Expression.Lambda(combinedExpression));
             }
 
             // 2. Tenant Filter: e.TenantId == tenantProvider.GetTenant()
@@ -64,17 +74,13 @@ public static class ModelBuilderExtensions
                 // If soft-delete is also present, we make it a partial index for even better performance
                 var tenantIndex = modelBuilder.Entity(entityClrType)
                     .HasIndex(nameof(IDomainTenantOwned.TenantId));
+                modelBuilder.Entity(entityClrType)
+                    .HasQueryFilter(DbContstants.TenantFilter, Expression.Lambda(combinedExpression));
 
                 if (isSoftDelete)
                 {
                     tenantIndex.HasFilter("\"IsDeleted\" = FALSE");
                 }
-            }
-
-            if (combinedExpression != null)
-            {
-                var lambda = Expression.Lambda(combinedExpression, parameter);
-                modelBuilder.Entity(entityClrType).HasQueryFilter(lambda);
             }
         }
     }

@@ -5,6 +5,7 @@ using AlphaZero.Shared.Application;
 using AlphaZero.Shared.Infrastructure;
 using AlphaZero.Shared.Infrastructure.SoftDelete;
 using Application;
+using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -36,7 +37,14 @@ public static class DependencyInjection
 
         moduleServices.AddScoped<IUnitOfWork, UnitOfWork<AppDbContext>>();
 
-        moduleServices.AddMediatR(opts => opts.RegisterServicesFromAssembly(typeof(ICoursesApplicationMarker).Assembly));
+        moduleServices.AddValidatorsFromAssembly(typeof(ICoursesApplicationMarker).Assembly);
+
+        moduleServices.AddMediatR(opts =>
+        {
+            opts.RegisterServicesFromAssembly(typeof(ICoursesApplicationMarker).Assembly);
+            opts.AddOpenBehavior(typeof(ValidationBehavior<,>));
+            opts.AddOpenBehavior(typeof(UnitOfWorkDecoratorCommandHandler<,>));
+        });
     }
 }
 
