@@ -74,7 +74,7 @@ public class GetCourseEndpoint : Endpoint<GetCourseRequest, CourseResponse>
             course.Title,
             course.Description,
             course.SubjectId,
-            course.Status.ToString(),
+            course.Status,
             course.Sections.Select(s => new SectionResponse(
                 s.Id,
                 s.Title,
@@ -82,7 +82,7 @@ public class GetCourseEndpoint : Endpoint<GetCourseRequest, CourseResponse>
                 s.Items.Select(i => new ItemResponse(
                     i.Id,
                     i.Title,
-                    i.GetType().Name.Replace("CourseSection", ""),
+                    i.Type,
                     i.Order,
                     i.BitIndex,
                     i.ResourceId)).ToList())).ToList());

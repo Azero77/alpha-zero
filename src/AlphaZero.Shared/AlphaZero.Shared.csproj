@@ -16,6 +16,7 @@
     <PackageReference Include="Autofac.Extensions.DependencyInjection" />
     <PackageReference Include="AWSSDK.Core" />
     <PackageReference Include="ErrorOr" />
+    <PackageReference Include="FastEndpoints.Swagger" />
     <PackageReference Include="FluentValidation.DependencyInjectionExtensions" />
     <PackageReference Include="MediatR" />
     <PackageReference Include="MassTransit" />
@@ -31,6 +32,7 @@
 		
 	  <PackageReference Include="FastEndpoints" />
 		<PackageReference Include="AWSSDK.SQS" />
+		<PackageReference Include="Z.EntityFramework.Plus.EFCore" />
 
 	</ItemGroup>
 

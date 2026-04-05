@@ -56,8 +56,8 @@ public static class Debug
                 res => Results.Ok(new AlphaZero.Shared.Queries.PagedResult<VideoResponse>(
                     res.Items.Select(MapToResponse).ToList(),
                     res.TotalCount,
-                    res.Page,
-                    res.PerPage)),
+                    res.CurrentPage,
+                    res.PageSize)),
                 errors => errors.ToMinimalResult());
         }
     }

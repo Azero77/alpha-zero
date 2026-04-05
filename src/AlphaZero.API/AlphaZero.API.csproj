@@ -16,6 +16,7 @@
     <PackageReference Include="AWSSDK.Core" />
     <PackageReference Include="AWSSDK.Extensions.NETCore.Setup" />
     <PackageReference Include="AWSSDK.S3" />
+    <PackageReference Include="FastEndpoints.Swagger" />
     <PackageReference Include="MassTransit" />
     <PackageReference Include="MassTransit.AmazonSQS" />
     <PackageReference Include="MassTransit.EntityFrameworkCore" />

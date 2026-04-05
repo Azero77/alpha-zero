@@ -60,8 +60,8 @@ public class GetStudentDashboardEndpoint : Endpoint<GetStudentDashboardRequest, 
             g => g.Value.Select(e => new EnrollmentDto(
                 e.Id,
                 e.CourseId,
-                e.Status.ToString(),
-                e.Progress.CompletionPercentage,
+                e.Status,
+                e.CompletionPercentage,
                 e.EnrolledOn)).ToList());
 
         await Send.OkAsync(new DashboardResponse(academies), ct);

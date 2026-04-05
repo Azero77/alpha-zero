@@ -36,22 +36,21 @@ public static class ModelBuilderExtensions
             if (!isSoftDelete && !isTenantOwned) continue;
 
             var parameter = Expression.Parameter(entityClrType, "e");
-            Expression? combinedExpression = null;
 
             // 1. Soft Delete Filter: e.IsDeleted == false
             if (isSoftDelete)
             {
                 var isDeletedProperty = Expression.Property(parameter, nameof(ISoftDeletable.IsDeleted));
                 var falseConstant = Expression.Constant(false);
-                combinedExpression = Expression.Equal(isDeletedProperty, falseConstant);
-
+                var isDeletedExpression = Expression.Equal(isDeletedProperty, falseConstant);
+                var lambda = Expression.Lambda(isDeletedExpression,parameter);
                 // PERFORMANCE: Add a filtered (partial) index for non-deleted items
                 // This makes the Global Query Filter extremely fast.
                 modelBuilder.Entity(entityClrType)
                     .HasIndex(nameof(ISoftDeletable.IsDeleted))
                     .HasFilter("\"IsDeleted\" = FALSE");
                 modelBuilder.Entity(entityClrType)
-                    .HasQueryFilter(DbContstants.SoftDeleteFilter, Expression.Lambda(combinedExpression));
+                    .HasQueryFilter(DbContstants.SoftDeleteFilter, lambda);
             }
 
             // 2. Tenant Filter: e.TenantId == tenantProvider.GetTenant()
@@ -61,26 +60,26 @@ public static class ModelBuilderExtensions
                 
                 // PERFORMANCE: Ensure types match for the Equal operator (Guid vs Guid?)
                 var tenantIdPropertyConverted = Expression.Convert(tenantIdProperty, typeof(Guid?));
-                
-                // This creates: () => tenantProvider.GetTenant()
-                Expression<Func<Guid?>> tenantProviderExpression = () => tenantProvider.GetTenant();
-                var tenantIdComparison = Expression.Equal(tenantIdPropertyConverted, tenantProviderExpression.Body);
 
-                combinedExpression = combinedExpression == null 
-                    ? tenantIdComparison 
-                    : Expression.AndAlso(combinedExpression, tenantIdComparison);
+                // This creates: () => tenantProvider.GetTenant()
+                Guid? currentTenant = tenantProvider.GetTenant();
+                var tenantIdConstant = Expression.Constant(currentTenant,typeof(Guid?));
+                var tenantIdComparison = Expression.Equal(tenantIdPropertyConverted, tenantIdConstant);
+
+                var tenantEqualLambda = Expression.Lambda(tenantIdComparison, parameter);
 
                 // PERFORMANCE: Add an index for TenantId
                 // If soft-delete is also present, we make it a partial index for even better performance
                 var tenantIndex = modelBuilder.Entity(entityClrType)
                     .HasIndex(nameof(IDomainTenantOwned.TenantId));
-                modelBuilder.Entity(entityClrType)
-                    .HasQueryFilter(DbContstants.TenantFilter, Expression.Lambda(combinedExpression));
-
                 if (isSoftDelete)
                 {
                     tenantIndex.HasFilter("\"IsDeleted\" = FALSE");
                 }
+
+                modelBuilder.Entity(entityClrType)
+                    .HasQueryFilter(DbContstants.TenantFilter, tenantEqualLambda);
+
             }
         }
     }

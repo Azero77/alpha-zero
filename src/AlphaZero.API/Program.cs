@@ -8,7 +8,9 @@ using Aspire.Shared;
 using Autofac;
 using Autofac.Extensions.DependencyInjection;
 using FastEndpoints;
+using FastEndpoints.Swagger;
 using MassTransit;
+using Microsoft.OpenApi;
 using System.Reflection;
 
 namespace AlphaZero.API;
@@ -29,13 +31,12 @@ public class Program
         app.UseFastEndpoints(c =>
         {
             c.Errors.UseProblemDetails();
-        });
+        })
+            .UseSwaggerGen();
         MapModulesEndpoint(app, moduleTypes);
 
         if (app.Environment.IsDevelopment())
         {
-            app.UseSwagger();
-            app.UseSwaggerUI();
             app.UseCors(b => b.AllowAnyHeader().AllowAnyOrigin().AllowAnyMethod());
         }
 
@@ -63,16 +64,15 @@ public class Program
         builder.Services.AddDatabaseSettings(builder.Configuration);
 
         builder.Services.AddEndpointsApiExplorer();
-        builder.Services.AddSwaggerGen();
         builder.Services.AddCors();
-        
+
         builder.Services.AddFastEndpoints(o =>
         {
             o.SourceGeneratorDiscoveredTypes = new List<Type>(); // Disable SG to allow manual assembly scanning
             o.Assemblies = AppDomain.CurrentDomain.GetAssemblies()
                 .Where(a => a.FullName!.StartsWith("AlphaZero"))
                 .ToList();
-        });
+        }).SwaggerDocument();
 
         var moduleInstances = RegisterModules(builder);
 

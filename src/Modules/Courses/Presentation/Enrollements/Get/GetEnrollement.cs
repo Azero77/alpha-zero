@@ -49,8 +49,8 @@ public class GetEnrollementEndpoint : Endpoint<GetEnrollementRequest, Enrollemen
             enrollment.Id,
             enrollment.StudentId,
             enrollment.CourseId,
-            enrollment.Status.ToString(),
-            enrollment.Progress.CompletionPercentage,
+            enrollment.Status,
+            enrollment.CompletionPercentage,
             enrollment.EnrolledOn,
             enrollment.TenantId);
 
