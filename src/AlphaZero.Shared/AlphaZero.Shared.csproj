@@ -27,6 +27,9 @@
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
 		<PackageReference Include="MassTransit.AmazonSQS" />
 		<PackageReference Include="AWSSDK.MediaConvert" />
+		
+		
+	  <PackageReference Include="FastEndpoints" />
 		<PackageReference Include="AWSSDK.SQS" />
 
 	</ItemGroup>

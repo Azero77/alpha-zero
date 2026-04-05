@@ -5,7 +5,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
-namespace Presentation;
+namespace AlphaZero.Modules.Courses.Presentation;
 
 public class CoursesModule : AppModule
 {

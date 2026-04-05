@@ -1,9 +1,11 @@
-﻿using ErrorOr;
+using ErrorOr;
 using FluentValidation.Results;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
+using FastEndpoints;
 using System.Net;
+using ProblemDetails = Microsoft.AspNetCore.Mvc.ProblemDetails;
 
 namespace AlphaZero.Shared.Presentation.Extensions;
 
@@ -11,7 +13,6 @@ public static class ErrorExtension
 {
     public static ProblemDetails ToProblemDetails(this List<Error> errors)
     {
-
         return new ProblemDetails()
         {
             Status = errors.Count switch
@@ -31,56 +32,54 @@ public static class ErrorExtension
             },
             Extensions = new Dictionary<string, object?>
             {
-                {"Errors",errors}
+                {"Errors", errors}
             }
         };
     }
 
-    public static ProblemDetails ToProblemDetails(this List<ValidationFailure> errors)
+    public static async Task SendErrorResponseAsync(this FastEndpoints.IEndpoint endpoint, List<Error> errors, CancellationToken ct = default)
     {
-        return new ProblemDetails()
+        if (!errors.Any())
         {
-            Status = StatusCodes.Status422UnprocessableEntity,
-            Extensions = new Dictionary<string, object?>
-            {
-                {"Errors",errors}
-            }
-        };
-    }
-
-    public static IActionResult ToProblemResult(this ProblemDetails problemDetails, HttpContext httpContext)
-    {
-        if (problemDetails.Status is not null)
-        {
-            httpContext.Response.StatusCode = problemDetails.Status.Value;
+            await endpoint.HttpContext.Response.SendAsync(new { Title = "An unexpected error occurred.", Status = 500 }, 500, cancellation: ct);
+            return;
         }
 
-        IProblemDetailsService service = httpContext.RequestServices.GetRequiredService<IProblemDetailsService>();
-
-        service.WriteAsync(new ProblemDetailsContext()
+        if (errors.All(e => e.Type == ErrorType.Validation))
         {
-            HttpContext = httpContext,
-            ProblemDetails = problemDetails
-        });
+            var failures = errors.Select(e => new ValidationFailure(e.Code, e.Description)).ToList();
+            await endpoint.HttpContext.Response.SendErrorsAsync(failures, (int)HttpStatusCode.BadRequest, cancellation: ct);
+            return;
+        }
 
-        return new EmptyResult();
+        var firstError = errors[0];
+        var statusCode = firstError.Type switch
+        {
+            ErrorType.Conflict => (int)HttpStatusCode.Conflict,
+            ErrorType.Validation => (int)HttpStatusCode.BadRequest,
+            ErrorType.NotFound => (int)HttpStatusCode.NotFound,
+            ErrorType.Unauthorized => (int)HttpStatusCode.Unauthorized,
+            ErrorType.Forbidden => (int)HttpStatusCode.Forbidden,
+            _ => (int)HttpStatusCode.InternalServerError
+        };
+
+        await endpoint.HttpContext.Response.SendAsync(new
+        {
+            Title = firstError.Code,
+            Detail = firstError.Description,
+            Status = statusCode,
+            Errors = errors
+        }, statusCode, cancellation: ct);
     }
 
-    /// <summary>
-    /// For minimal apis
-    /// </summary>
-    /// <param name="errors"></param>
-    /// <returns></returns>
     public static IResult ToMinimalResult(this List<Error> errors)
     {
         if (!errors.Any())
         {
-            // This should not happen
             return Results.Problem(statusCode: (int)HttpStatusCode.InternalServerError, title: "An unexpected error occurred.");
         }
 
         var firstError = errors[0];
-
         var statusCode = firstError.Type switch
         {
             ErrorType.Conflict => (int)HttpStatusCode.Conflict,
@@ -92,8 +91,7 @@ public static class ErrorExtension
 
         return Results.Problem(statusCode: statusCode, title: firstError.Code, extensions: new Dictionary<string, object?>()
         {
-            {"errors",errors}
+            {"errors", errors}
         });
-
     }
 }

@@ -13,6 +13,9 @@ public interface IModule
 {
     Task<TResponse> Send<TRequest,TResponse>(IRequest<TResponse> request, CancellationToken cancellationToken = default)
         where TRequest : IRequest<TResponse>;
+
+    Task<TResponse> Send<TResponse>(IRequest<TResponse> request, CancellationToken cancellationToken = default);
+
     void RegisterPrivate(IServiceCollection services, ContainerBuilder builder);
     void RegisterGlobal(IServiceCollection services);
 
@@ -41,10 +44,20 @@ public abstract class AppModule : Module, IModule
 
         _logger = Scope.Resolve<ILogger<AppModule>>();
     }
+
     public virtual async Task<TResponse> Send<TRequest, TResponse>(IRequest<TResponse> request, CancellationToken cancellationToken = default) where TRequest : IRequest<TResponse>
     {
         if (Scope is null) throw new InvalidOperationException("Module not initialized. Did you forget to call Initialize()?");
         
+        using var requestScope = Scope.BeginLifetimeScope();
+        var mediatr = requestScope.Resolve<IMediator>();
+        return await mediatr.Send(request, cancellationToken);
+    }
+
+    public virtual async Task<TResponse> Send<TResponse>(IRequest<TResponse> request, CancellationToken cancellationToken = default)
+    {
+        if (Scope is null) throw new InvalidOperationException("Module not initialized. Did you forget to call Initialize()?");
+
         using var requestScope = Scope.BeginLifetimeScope();
         var mediatr = requestScope.Resolve<IMediator>();
         return await mediatr.Send(request, cancellationToken);

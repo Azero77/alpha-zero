@@ -7,6 +7,7 @@ using Amazon.Extensions.NETCore.Setup;
 using Aspire.Shared;
 using Autofac;
 using Autofac.Extensions.DependencyInjection;
+using FastEndpoints;
 using MassTransit;
 using System.Reflection;
 
@@ -25,6 +26,10 @@ public class Program
 
         InitializeModules(app, moduleInstances);
         app.MapDefaultEndpoints();
+        app.UseFastEndpoints(c =>
+        {
+            c.Errors.UseProblemDetails();
+        });
         MapModulesEndpoint(app, moduleTypes);
 
         if (app.Environment.IsDevelopment())
@@ -48,6 +53,9 @@ public class Program
     public static WebApplicationBuilder CreateWebApplicationBuilder(string[] args)
     {
         var builder = WebApplication.CreateBuilder(args);
+        
+        LoadModuleAssemblies();
+
         builder.AddServiceDefaults();
         builder.Services.AddAuthorization();
         
@@ -57,9 +65,15 @@ public class Program
         builder.Services.AddEndpointsApiExplorer();
         builder.Services.AddSwaggerGen();
         builder.Services.AddCors();
-
-        LoadModuleAssemblies();
         
+        builder.Services.AddFastEndpoints(o =>
+        {
+            o.SourceGeneratorDiscoveredTypes = new List<Type>(); // Disable SG to allow manual assembly scanning
+            o.Assemblies = AppDomain.CurrentDomain.GetAssemblies()
+                .Where(a => a.FullName!.StartsWith("AlphaZero"))
+                .ToList();
+        });
+
         var moduleInstances = RegisterModules(builder);
 
         ConfigureMassTransit(builder, moduleInstances);
@@ -113,6 +127,11 @@ public class Program
                 module.ConfigureModuleBus(x);
             }
             x.UsingInMemory((context, cfg) => cfg.ConfigureEndpoints(context));
+            
+            x.ConfigureHealthCheckOptions(options =>
+            {
+                options.Name = "module-bus";
+            });
         });
 
         builder.Services.AddMassTransit<IExternalBus>(x =>
@@ -125,6 +144,11 @@ public class Program
                     cfg.Host(region, h => { });
                 } catch { /* Suppress design-time failures */ }
                 cfg.ConfigureEndpoints(context);
+            });
+
+            x.ConfigureHealthCheckOptions(options =>
+            {
+                options.Name = "external-bus";
             });
         });
     }
@@ -148,10 +172,10 @@ public class Program
         {
             var endpointTypes = module.Assembly
                 .GetTypes()
-                .Where(t => !t.IsAbstract && t.IsClass && typeof(IEndpoint).IsAssignableFrom(t))
+                .Where(t => !t.IsAbstract && t.IsClass && typeof(Shared.IEndpoint).IsAssignableFrom(t))
                 .ToList();
 
-            var endpoints = endpointTypes.Select(s => (IEndpoint)Activator.CreateInstance(s)!);
+            var endpoints = endpointTypes.Select(s => (Shared.IEndpoint)Activator.CreateInstance(s)!);
             foreach (var endpoint in endpoints)
             {
                 endpoint.MapEndpoint(app);
