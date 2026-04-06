@@ -5,7 +5,7 @@ using MassTransit;
 
 namespace AlphaZero.Modules.Courses.Domain.Aggregates.Subject;
 
-public class Subject : TenantOwnedAggregate
+public class Subject : TenantOwnedAggregate, ISoftDeletable
 {
     private Subject(Guid id, Guid tenantId,string name, string? description) : base(id, tenantId)
     {
@@ -14,6 +14,8 @@ public class Subject : TenantOwnedAggregate
     }
     public string Name { get; private set; }
     public string? Description { get; private set; }
+    public bool IsDeleted { get; private set; }
+    public DateTime? OnDeleted { get; private set; }
     
 
     public static ErrorOr<Subject> Create(Guid id,Guid tenantId, string name, string? description)

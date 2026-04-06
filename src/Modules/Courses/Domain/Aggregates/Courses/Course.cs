@@ -1,10 +1,11 @@
 ﻿using AlphaZero.Modules.Courses.Domain.Events;
+using AlphaZero.Shared.Domain;
 using AlphaZero.Shared.Infrastructure.Tenats;
 using ErrorOr;
 
 namespace AlphaZero.Modules.Courses.Domain.Aggregates.Courses;
 
-public class Course : TenantOwnedAggregate
+public class Course : TenantOwnedAggregate, ISoftDeletable
 {
     public string Title { get; private set; }
     public string? Description { get; private set; }
@@ -14,6 +15,8 @@ public class Course : TenantOwnedAggregate
 
     public IReadOnlyCollection<CourseSection> Sections => _sections.AsReadOnly();
     private readonly List<CourseSection> _sections = new();
+    public bool IsDeleted { get; private set; }
+    public DateTime? OnDeleted { get; private set; }
 
     private Course(Guid id, Guid tenantId, string title, string? description, Guid subjectId) : base(id, tenantId)
     {
