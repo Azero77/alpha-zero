@@ -60,6 +60,6 @@ public class CreateCourseEndpoint : Endpoint<CreateCourseRequest, CreateCourseRe
             return;
         }
 
-        await Send.CreatedAtAsync($"courses/{result.Value}", ct);
+        await Send.CreatedAtAsync($"courses/{result.Value}", responseBody: new CreateCourseResponse(result.Value), cancellation : ct);
     }
 }

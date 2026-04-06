@@ -41,7 +41,7 @@ public sealed class CourseStateHandlers :
 
     public async Task<ErrorOr<Success>> Handle(ApproveCourseCommand request, CancellationToken cancellationToken)
     {
-        var course = await _courseRepository.GetFirst(c => c.Id == request.CourseId, cancellationToken);
+        var course = await _courseRepository.GetByIdWithSectionsAsync(request.CourseId, cancellationToken);
         if (course is null) return Error.NotFound("Course.NotFound", "Course not found.");
         var result = course.Approve();
         if (!result.IsError) _logger.LogInformation("Course {CourseId} approved.", request.CourseId);
@@ -50,7 +50,7 @@ public sealed class CourseStateHandlers :
 
     public async Task<ErrorOr<Success>> Handle(RejectCourseCommand request, CancellationToken cancellationToken)
     {
-        var course = await _courseRepository.GetFirst(c => c.Id == request.CourseId, cancellationToken);
+        var course = await _courseRepository.GetByIdWithSectionsAsync(request.CourseId, cancellationToken);
         if (course is null) return Error.NotFound("Course.NotFound", "Course not found.");
         var result = course.Reject(request.Reason);
         if (!result.IsError) _logger.LogInformation("Course {CourseId} rejected. Reason: {Reason}", request.CourseId, request.Reason);
@@ -59,7 +59,7 @@ public sealed class CourseStateHandlers :
 
     public async Task<ErrorOr<Success>> Handle(PublishCourseCommand request, CancellationToken cancellationToken)
     {
-        var course = await _courseRepository.GetFirst(c => c.Id == request.CourseId, cancellationToken);
+        var course = await _courseRepository.GetByIdWithSectionsAsync(request.CourseId, cancellationToken);
         if (course is null) return Error.NotFound("Course.NotFound", "Course not found.");
         var result = course.Publish();
         if (!result.IsError) _logger.LogInformation("Course {CourseId} published.", request.CourseId);
@@ -68,7 +68,7 @@ public sealed class CourseStateHandlers :
 
     public async Task<ErrorOr<Success>> Handle(ArchiveCourseCommand request, CancellationToken cancellationToken)
     {
-        var course = await _courseRepository.GetFirst(c => c.Id == request.CourseId, cancellationToken);
+        var course = await _courseRepository.GetByIdWithSectionsAsync(request.CourseId, cancellationToken);
         if (course is null) return Error.NotFound("Course.NotFound", "Course not found.");
         var result = course.Archive();
         if (!result.IsError) _logger.LogInformation("Course {CourseId} archived.", request.CourseId);

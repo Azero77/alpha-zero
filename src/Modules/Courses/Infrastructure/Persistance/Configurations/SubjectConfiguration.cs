@@ -8,6 +8,8 @@ public class SubjectConfiguration : IEntityTypeConfiguration<Subject>
 {
     public void Configure(EntityTypeBuilder<Subject> builder)
     {
+        builder.Property(s => s.Id)
+            .ValueGeneratedNever();
         builder.Property(s => s.Name)
             .IsRequired()
             .HasMaxLength(128);

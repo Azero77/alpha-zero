@@ -8,6 +8,9 @@ public class CourseSectionConfiguration : IEntityTypeConfiguration<CourseSection
 {
     public void Configure(EntityTypeBuilder<CourseSection> builder)
     {
+        builder.Property(s => s.Id)
+            .ValueGeneratedNever();
+
         builder.Property(s => s.Title)
             .IsRequired()
             .HasMaxLength(256);

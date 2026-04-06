@@ -7,7 +7,9 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Bogus" />
     <PackageReference Include="ErrorOr" />
+    <PackageReference Include="NSubstitute" />
   </ItemGroup>
 
 </Project>

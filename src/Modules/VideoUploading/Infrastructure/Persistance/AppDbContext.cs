@@ -6,13 +6,15 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AlphaZero.Modules.VideoUploading.Infrastructure.Persistance;
 
-public class AppDbContext : DbContext
+public class AppDbContext : DbContext, ITenantDbContext
 {
     private readonly ITenantProvider _tenantProvider;
     public const string Schema = "video_uploading";
 
     public DbSet<Video> Videos { get; set; } = null!;
     public DbSet<VideoState> VideoState { get; set; } = null!;
+
+    public Guid? TenantId => _tenantProvider.GetTenant();
 
     public AppDbContext(DbContextOptions<AppDbContext> options, ITenantProvider tenantProvider) : base(options)
     {
@@ -26,7 +28,7 @@ public class AppDbContext : DbContext
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
 
         // Auto-apply Tenant and Soft Delete filters for all entities in this module
-        modelBuilder.ApplyAlphaZeroGlobalFilters(_tenantProvider);
+        modelBuilder.ApplyAlphaZeroGlobalFilters(this);
     }
 
 }

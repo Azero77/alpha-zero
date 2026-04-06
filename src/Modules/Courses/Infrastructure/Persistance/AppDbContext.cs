@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AlphaZero.Modules.Courses.Infrastructure.Persistance;
 
-public class AppDbContext : DbContext
+public class AppDbContext : DbContext,ITenantDbContext
 {
     private readonly ITenantProvider _tenantProvider;
     public const string Schema = "Courses";
@@ -16,10 +16,11 @@ public class AppDbContext : DbContext
     {
         _tenantProvider = tenantProvider;
     }
-
     public DbSet<Course> Courses => Set<Course>();
     public DbSet<Subject> Subjects => Set<Subject>();
     public DbSet<Enrollement> Enrollements => Set<Enrollement>();
+
+    public Guid? TenantId => _tenantProvider.GetTenant();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -27,7 +28,7 @@ public class AppDbContext : DbContext
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
         
         // Auto-apply Tenant and Soft Delete filters for all entities in this module
-        modelBuilder.ApplyAlphaZeroGlobalFilters(_tenantProvider);
+        modelBuilder.ApplyAlphaZeroGlobalFilters(this);
 
         base.OnModelCreating(modelBuilder);
     }

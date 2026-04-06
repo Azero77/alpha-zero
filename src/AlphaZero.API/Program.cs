@@ -137,14 +137,21 @@ public class Program
         builder.Services.AddMassTransit<IExternalBus>(x =>
         {
             x.AddConsumers(filter => filter.Name.Contains("sqs", StringComparison.InvariantCultureIgnoreCase), assemblies);
-            x.UsingAmazonSqs((context, cfg) =>
+            
+            var region = builder.Configuration.GetAWSOptions().Region?.SystemName;
+            
+            if (string.IsNullOrEmpty(region))
             {
-                try {
-                    string region = context.GetRequiredService<IConfiguration>().GetAWSOptions().Region.SystemName;
+                x.UsingInMemory((context, cfg) => cfg.ConfigureEndpoints(context));
+            }
+            else
+            {
+                x.UsingAmazonSqs((context, cfg) =>
+                {
                     cfg.Host(region, h => { });
-                } catch { /* Suppress design-time failures */ }
-                cfg.ConfigureEndpoints(context);
-            });
+                    cfg.ConfigureEndpoints(context);
+                });
+            }
 
             x.ConfigureHealthCheckOptions(options =>
             {

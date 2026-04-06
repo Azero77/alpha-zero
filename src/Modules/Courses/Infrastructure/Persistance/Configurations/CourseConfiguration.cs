@@ -25,5 +25,7 @@ public class CourseConfiguration : IEntityTypeConfiguration<Course>
 
         builder.Navigation(c => c.Sections)
             .UsePropertyAccessMode(PropertyAccessMode.Field);
+        builder.Property(c => c.Id)
+            .ValueGeneratedNever();
     }
 }

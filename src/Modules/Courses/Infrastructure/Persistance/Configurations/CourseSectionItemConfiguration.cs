@@ -8,6 +8,8 @@ public class CourseSectionItemConfiguration : IEntityTypeConfiguration<CourseSec
 {
     public void Configure(EntityTypeBuilder<CourseSectionItem> builder)
     {
+        builder.Property(s => s.Id)
+            .ValueGeneratedNever();
         builder.Property(i => i.Title)
             .IsRequired()
             .HasMaxLength(256);

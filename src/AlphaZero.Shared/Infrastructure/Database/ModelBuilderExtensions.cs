@@ -20,8 +20,8 @@ public static class ModelBuilderExtensions
     /// Applies global query filters for Soft Delete (ISoftDeleteItem) and Multi-Tenancy (IDomainTenantOwned).
     /// </summary>
     /// <param name="modelBuilder">The model builder.</param>
-    /// <param name="tenantProvider">The tenant provider to retrieve the current tenant context.</param>
-    public static void ApplyAlphaZeroGlobalFilters(this ModelBuilder modelBuilder, ITenantProvider tenantProvider)
+    /// <param name="context">The tenant context to retrieve the current tenant context.</param>
+    public static void ApplyAlphaZeroGlobalFilters(this ModelBuilder modelBuilder, ITenantDbContext context)
     {
         foreach (var entityType in modelBuilder.Model.GetEntityTypes())
         {
@@ -44,8 +44,7 @@ public static class ModelBuilderExtensions
                 var falseConstant = Expression.Constant(false);
                 var isDeletedExpression = Expression.Equal(isDeletedProperty, falseConstant);
                 var lambda = Expression.Lambda(isDeletedExpression,parameter);
-                // PERFORMANCE: Add a filtered (partial) index for non-deleted items
-                // This makes the Global Query Filter extremely fast.
+                
                 modelBuilder.Entity(entityClrType)
                     .HasIndex(nameof(ISoftDeletable.IsDeleted))
                     .HasFilter("\"IsDeleted\" = FALSE");
@@ -53,33 +52,28 @@ public static class ModelBuilderExtensions
                     .HasQueryFilter(DbContstants.SoftDeleteFilter, lambda);
             }
 
-            // 2. Tenant Filter: e.TenantId == tenantProvider.GetTenant()
+            // 2. Tenant Filter: e.TenantId == context.TenantId
             if (isTenantOwned)
             {
-                var tenantIdProperty = Expression.Property(parameter, nameof(IDomainTenantOwned.TenantId));
-                
-                // PERFORMANCE: Ensure types match for the Equal operator (Guid vs Guid?)
-                var tenantIdPropertyConverted = Expression.Convert(tenantIdProperty, typeof(Guid?));
+                var tenantProp = Expression.Property(parameter, nameof(IDomainTenantOwned.TenantId));
+                var tenantPropNullable = Expression.Convert(tenantProp, typeof(Guid?));
 
-                // This creates: () => tenantProvider.GetTenant()
-                Guid? currentTenant = tenantProvider.GetTenant();
-                var tenantIdConstant = Expression.Constant(currentTenant,typeof(Guid?));
-                var tenantIdComparison = Expression.Equal(tenantIdPropertyConverted, tenantIdConstant);
+                // Correctly capture the ITenantDbContext instance. 
+                // EF Core will swap this constant with the current active DbContext at runtime.
+                var contextConstant = Expression.Constant(context);
+                var tenantIdFromContext = Expression.Property(contextConstant, nameof(ITenantDbContext.TenantId));
 
-                var tenantEqualLambda = Expression.Lambda(tenantIdComparison, parameter);
+                var tenantEqual = Expression.Equal(tenantPropNullable, tenantIdFromContext);
+                var lambda = Expression.Lambda(tenantEqual, parameter);
 
-                // PERFORMANCE: Add an index for TenantId
-                // If soft-delete is also present, we make it a partial index for even better performance
                 var tenantIndex = modelBuilder.Entity(entityClrType)
                     .HasIndex(nameof(IDomainTenantOwned.TenantId));
+
                 if (isSoftDelete)
-                {
                     tenantIndex.HasFilter("\"IsDeleted\" = FALSE");
-                }
 
                 modelBuilder.Entity(entityClrType)
-                    .HasQueryFilter(DbContstants.TenantFilter, tenantEqualLambda);
-
+                    .HasQueryFilter(DbContstants.TenantFilter, lambda);
             }
         }
     }

@@ -9,6 +9,8 @@ public class EnrollementConfiguration : IEntityTypeConfiguration<Enrollement>
 {
     public void Configure(EntityTypeBuilder<Enrollement> builder)
     {
+        builder.Property(e => e.Id)
+            .ValueGeneratedNever();
         builder.Property(e => e.Status)
             .HasConversion<string>();
 

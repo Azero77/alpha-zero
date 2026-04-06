@@ -1,0 +1,42 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+    <PreserveCompilationContext>true</PreserveCompilationContext>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="coverlet.collector" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+    <PackageReference Include="FluentAssertions" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
+    <PackageReference Include="Testcontainers.PostgreSql" />
+    <PackageReference Include="WireMock.Net" />
+    <PackageReference Include="Respawn" />
+    <PackageReference Include="Bogus" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\..\src\AlphaZero.API\AlphaZero.API.csproj" />
+    <ProjectReference Include="..\..\..\..\src\AlphaZero.Shared\AlphaZero.Shared.csproj" />
+    <ProjectReference Include="..\..\..\..\src\Modules\Courses\Application\Application.csproj" />
+    <ProjectReference Include="..\..\..\..\src\Modules\Courses\Domain\Domain.csproj" />
+    <ProjectReference Include="..\..\..\..\src\Modules\Courses\Infrastructure\Infrastructure.csproj" />
+    <ProjectReference Include="..\..\..\..\src\Modules\Courses\Presentation\Presentation.csproj" />
+  </ItemGroup>
+
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+</Project>
