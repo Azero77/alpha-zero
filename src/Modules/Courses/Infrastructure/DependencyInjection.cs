@@ -1,7 +1,11 @@
+using AlphaZero.Modules.Courses.Application.Repositories;
 using AlphaZero.Modules.Courses.Infrastructure.Persistance;
+using AlphaZero.Modules.Courses.Infrastructure.Repositories;
+using AlphaZero.Shared.Application;
 using AlphaZero.Shared.Infrastructure;
+using AlphaZero.Shared.Infrastructure.SoftDelete;
 using Application;
-using Aspire.Shared;
+using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -12,17 +16,35 @@ public static class DependencyInjection
 {
     public static void AddCoursesGlobalInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
-        // Add global infrastructure needed specifically for Courses module here
+        DatabaseSettings dbSettings = DatabaseSettings.GetDatabaseSettings(configuration);
+
+        services.AddDbContext<AppDbContext>((sp,opts) =>
+        {
+            opts.UseNpgsql(dbSettings.ConnectionString, h =>
+            {
+                h.MigrationsAssembly(typeof(AppDbContext).Assembly.FullName);
+                h.MigrationsHistoryTable("__CoursesMigrationHistory", AppDbContext.Schema);
+            });
+            opts.AddInterceptors(sp.GetRequiredService<SoftDeleteInterceptor>());
+        });
     }
 
     public static void AddCoursesPrivateInfrastructure(this IServiceCollection moduleServices, IConfiguration configuration)
     {
-        DatabaseSettings dbSettings = DatabaseSettings.GetDatabaseSettings(configuration);
-        moduleServices.AddMediatR(opts => opts.RegisterServicesFromAssembly(typeof(ICoursesApplicationMarker).Assembly));
+        moduleServices.AddScoped<ICourseRepository, CourseRepository>();
+        moduleServices.AddScoped<ISubjectRepository, SubjectRepository>();
+        moduleServices.AddScoped<IEnrollementRepository, EnrollementRepository>();
 
-       /* moduleServices.AddDbContext<AppDbContext>(opts =>
+        moduleServices.AddScoped<IUnitOfWork, UnitOfWork<AppDbContext>>();
+
+        moduleServices.AddValidatorsFromAssembly(typeof(ICoursesApplicationMarker).Assembly);
+
+        moduleServices.AddMediatR(opts =>
         {
-            opts.UseNpgsql(dbSettings.ConnectionString);
-        });*/
+            opts.RegisterServicesFromAssembly(typeof(ICoursesApplicationMarker).Assembly);
+            opts.AddOpenBehavior(typeof(ValidationBehavior<,>));
+            opts.AddOpenBehavior(typeof(UnitOfWorkDecoratorCommandHandler<,>));
+        });
     }
 }
+

@@ -9,9 +9,9 @@ public  class DatabaseSettings
 
     public static DatabaseSettings GetDatabaseSettings(IConfiguration configuration)
     {
-
-        DatabaseSettings dbSettings = configuration.GetSection(DatabaseSettings.SectionName).Get<DatabaseSettings>()
-            ?? throw new ArgumentException("Database settings are not configured");
+        
+        DatabaseSettings dbSettings = configuration.GetSection(DatabaseSettings.SectionName).Get<DatabaseSettings>() ?? 
+            new();
 
         var conn = configuration.GetConnectionString("alphazerodb");
         if (!string.IsNullOrEmpty(conn))

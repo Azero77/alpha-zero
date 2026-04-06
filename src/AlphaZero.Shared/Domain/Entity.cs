@@ -1,6 +1,6 @@
 ﻿namespace AlphaZero.Shared.Domain;
 
-public class Entity
+public class Entity : IEntity
 {
     public Guid Id { get; private set; }
     protected Entity(Guid id)
@@ -21,4 +21,9 @@ public class Entity
     {
         return Id.GetHashCode();
     }
+}
+
+public interface IEntity
+{
+    public Guid Id { get; }
 }

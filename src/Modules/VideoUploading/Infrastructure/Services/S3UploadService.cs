@@ -17,10 +17,10 @@ public class S3UploadService : IUploadService
     public const string VideoIdMetaDataHeader = "VideoId";
 
 
-    public S3UploadService(IAmazonS3 client, S3Settings s3Settings)
+    public S3UploadService(IAmazonS3 client, AWSResources aWSResources)
     {
         _client = client;
-        _s3Settings = s3Settings;
+        _s3Settings = aWSResources.InputS3 ?? throw new ArgumentException("S3 input is not configured");
     }
 
     public async Task<ErrorOr<GetPresignedUrlResponse>> GetFile(string key)

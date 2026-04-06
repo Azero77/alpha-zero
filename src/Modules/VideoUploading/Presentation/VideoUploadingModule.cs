@@ -7,6 +7,7 @@ using MassTransit;
 using MediatR;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace AlphaZero.Modules.VideoUploading.Presentation;
 
@@ -14,16 +15,19 @@ public class VideoUploadingModule : AppModule, IVideoUploadingModule
 {
     public override void RegisterGlobal(IServiceCollection globalServices)
     {
-        globalServices.AddVideoUploadingGlobalInfrastructure(Configuration ?? 
-            throw new ArgumentException("Configuration not found"));
-        
+        if (Configuration is not null)
+            globalServices.AddVideoUploadingGlobalInfrastructure(Configuration);
+        else
+            _logger.LogWarning("Configuration is null in VideoUploading Module");
         globalServices.AddSingleton<IVideoUploadingModule>(this);
     }
 
     public override void RegisterPrivate(IServiceCollection moduleServices, ContainerBuilder builder)
     {
-        moduleServices.AddVideoUploadingPrivateInfrastructure(Configuration ??
-            throw new ArgumentException("Configuration not found"));
+        if (Configuration is not null)
+            moduleServices.AddVideoUploadingPrivateInfrastructure(Configuration);
+        else
+            _logger?.LogWarning("Configuration is null in VideoUploading Module (Private)");
     }
 
     public override void ConfigureModuleBus(IBusRegistrationConfigurator configuration)

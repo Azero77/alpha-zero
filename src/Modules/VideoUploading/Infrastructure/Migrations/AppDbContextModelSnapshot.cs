@@ -35,6 +35,12 @@ namespace AlphaZero.Modules.VideoUploading.Infrastructure.Migrations
                         .HasMaxLength(1000)
                         .HasColumnType("character varying(1000)");
 
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime?>("OnDeleted")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<string>("OutputFolder")
                         .HasMaxLength(512)
                         .HasColumnType("character varying(512)");
@@ -60,6 +66,12 @@ namespace AlphaZero.Modules.VideoUploading.Infrastructure.Migrations
                         .HasColumnType("character varying(255)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("IsDeleted")
+                        .HasFilter("\"IsDeleted\" = FALSE");
+
+                    b.HasIndex("TenantId")
+                        .HasFilter("\"IsDeleted\" = FALSE");
 
                     b.ToTable("Videos", "video_uploading");
                 });

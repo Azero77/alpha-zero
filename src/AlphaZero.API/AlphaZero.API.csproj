@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
-    <TargetFramework>net9.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UserSecretsId>6592c761-fbd8-4706-b9a4-3635c0039eaf</UserSecretsId>
@@ -16,6 +16,7 @@
     <PackageReference Include="AWSSDK.Core" />
     <PackageReference Include="AWSSDK.Extensions.NETCore.Setup" />
     <PackageReference Include="AWSSDK.S3" />
+    <PackageReference Include="FastEndpoints.Swagger" />
     <PackageReference Include="MassTransit" />
     <PackageReference Include="MassTransit.AmazonSQS" />
     <PackageReference Include="MassTransit.EntityFrameworkCore" />

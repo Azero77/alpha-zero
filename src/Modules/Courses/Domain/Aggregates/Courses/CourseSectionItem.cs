@@ -1,13 +1,20 @@
-﻿using AlphaZero.Shared.Infrastructure.Tenats;
+using AlphaZero.Shared.Domain;
+using AlphaZero.Shared.Infrastructure.Tenats;
+using ErrorOr;
 
 namespace AlphaZero.Modules.Courses.Domain.Aggregates.Courses;
 
-public abstract class CourseSectionItem : TenantOwnedEntity
+public abstract class CourseSectionItem : TenantOwnedEntity, ISoftDeletable
 {
     public Guid ResourceId { get; private set; }
+    public Guid SectionId { get; private set; }
     public int Order { get; internal set; } // UI Display Order
     public int BitIndex { get; private set; } // Immutable Bitmask Pointer
     public string Title { get; private set; }
+
+    public bool IsDeleted { get; private set; }
+
+    public DateTime? OnDeleted { get; private set; } = null!;
 
     protected CourseSectionItem(Guid id, Guid tenantId, string title, Guid resourceId, int order, int bitIndex) : base(id, tenantId)
     {
@@ -18,12 +25,13 @@ public abstract class CourseSectionItem : TenantOwnedEntity
     }
 
     internal void UpdateOrder(int newOrder) => Order = newOrder;
+    internal void UpdateResource(Guid resourceId) => ResourceId = resourceId;
 }
 
 public class CourseSectionLesson : CourseSectionItem
 {
-    internal CourseSectionLesson(Guid id, Guid tenantId, string title, Guid videoId, int order, int bitIndex) 
-        : base(id, tenantId, title, videoId, order, bitIndex)
+    internal CourseSectionLesson(Guid id, Guid tenantId, string title, Guid resourceId, int order, int bitIndex) 
+        : base(id, tenantId, title, resourceId, order, bitIndex)
     {
     }
 
@@ -32,8 +40,8 @@ public class CourseSectionLesson : CourseSectionItem
 
 public class CourseSectionQuiz : CourseSectionItem
 {
-    internal CourseSectionQuiz(Guid id, Guid tenantId, string title, Guid quizId, int order, int bitIndex) 
-        : base(id, tenantId, title, quizId, order, bitIndex)
+    internal CourseSectionQuiz(Guid id, Guid tenantId, string title, Guid resourceId, int order, int bitIndex) 
+        : base(id, tenantId, title, resourceId, order, bitIndex)
     {
     }
 
@@ -42,12 +50,9 @@ public class CourseSectionQuiz : CourseSectionItem
 
 public class CourseSectionDocument : CourseSectionItem
 {
-    internal CourseSectionDocument(Guid id, Guid tenantId, string title, Guid documentId, int order, int bitIndex) 
-        : base(id, tenantId, title, documentId, order, bitIndex)
+    internal CourseSectionDocument(Guid id, Guid tenantId, string title, Guid resourceId, int order, int bitIndex) 
+        : base(id, tenantId, title, resourceId, order, bitIndex)
     {
     }
-
     public Guid DocumentId => ResourceId;
 }
-
-

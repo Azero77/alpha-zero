@@ -7,28 +7,83 @@ using Amazon.Extensions.NETCore.Setup;
 using Aspire.Shared;
 using Autofac;
 using Autofac.Extensions.DependencyInjection;
+using FastEndpoints;
+using FastEndpoints.Swagger;
 using MassTransit;
+using Microsoft.OpenApi;
 using System.Reflection;
 
 namespace AlphaZero.API;
 
 public class Program
 {
-    public static void Main(string[] args)
+    public static async Task Main(string[] args)
+    {
+        var builder = CreateWebApplicationBuilder(args);
+        var app = builder.Build();
+
+        // Initialize and Run
+        var moduleInstances = app.Services.GetServices<IModule>().ToList();
+        var moduleTypes = moduleInstances.Select(m => m.GetType()).ToList();
+
+        InitializeModules(app, moduleInstances);
+        app.MapDefaultEndpoints();
+        app.UseFastEndpoints(c =>
+        {
+            c.Errors.UseProblemDetails();
+        })
+            .UseSwaggerGen();
+        MapModulesEndpoint(app, moduleTypes);
+
+        if (app.Environment.IsDevelopment())
+        {
+            app.UseCors(b => b.AllowAnyHeader().AllowAnyOrigin().AllowAnyMethod());
+        }
+
+        app.UseHttpsRedirection();
+        app.UseAuthorization();
+
+        // Run migrations only when NOT in design-time (EF tools)
+        // EF tools don't call Main if they find CreateBuilder, but we ensure safety here too.
+        await app.RunMigrations(moduleInstances);
+
+        await app.RunAsync();
+    }
+
+    // EF Core tools (.NET 6+) look for a method that returns WebApplicationBuilder or IHost
+    public static WebApplicationBuilder CreateWebApplicationBuilder(string[] args)
     {
         var builder = WebApplication.CreateBuilder(args);
+        
+        LoadModuleAssemblies();
+
         builder.AddServiceDefaults();
         builder.Services.AddAuthorization();
         
-        // Shared Infrastructure (AWS, TenantProvider, Clock, etc)
         builder.Services.AddSharedInfrastructure(builder.Configuration, builder.Environment);
         builder.Services.AddDatabaseSettings(builder.Configuration);
 
-        // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
         builder.Services.AddEndpointsApiExplorer();
-        builder.Services.AddSwaggerGen();
         builder.Services.AddCors();
 
+        builder.Services.AddFastEndpoints(o =>
+        {
+            o.SourceGeneratorDiscoveredTypes = new List<Type>(); // Disable SG to allow manual assembly scanning
+            o.Assemblies = AppDomain.CurrentDomain.GetAssemblies()
+                .Where(a => a.FullName!.StartsWith("AlphaZero"))
+                .ToList();
+        }).SwaggerDocument();
+
+        var moduleInstances = RegisterModules(builder);
+
+        ConfigureMassTransit(builder, moduleInstances);
+        ConfigureAutofac(builder, moduleInstances);
+
+        return builder;
+    }
+
+    private static void LoadModuleAssemblies()
+    {
         string[] assembliesPath = Directory.GetFiles(AppDomain.CurrentDomain.BaseDirectory, "*.dll");
         foreach (var path in assembliesPath)
         {
@@ -38,15 +93,11 @@ public class Program
                 Assembly.Load(assemblyName);
             }
         }
+    }
 
-        // Configure MassTransit with in-memory bus and automatic consumer discovery
-        var assemblies = AppDomain.CurrentDomain.GetAssemblies()
-            .Where(a => a.FullName!.StartsWith("AlphaZero"))
-            .ToArray();
-
-
-
-        List<Type> moduleTypes = AppDomain.CurrentDomain.GetAssemblies()
+    private static List<IModule> RegisterModules(WebApplicationBuilder builder)
+    {
+        var moduleTypes = AppDomain.CurrentDomain.GetAssemblies()
             .SelectMany(c => c.GetTypes().Where(t => t.IsClass && !t.IsAbstract && typeof(AppModule).IsAssignableFrom(t)))
             .ToList();
 
@@ -58,9 +109,15 @@ public class Program
             instance.RegisterGlobal(builder.Services);
             moduleInstances.Add(instance);
         }
+        return moduleInstances;
+    }
 
+    private static void ConfigureMassTransit(WebApplicationBuilder builder, List<IModule> moduleInstances)
+    {
+        var assemblies = AppDomain.CurrentDomain.GetAssemblies()
+            .Where(a => a.FullName!.StartsWith("AlphaZero"))
+            .ToArray();
 
-        //Configure In-Memory Messagin
         builder.Services.AddMassTransit<IModuleBus>(x =>
         {
             x.SetKebabCaseEndpointNameFormatter();
@@ -69,70 +126,63 @@ public class Program
             {
                 module.ConfigureModuleBus(x);
             }
-            x.UsingInMemory((context, cfg) =>
+            x.UsingInMemory((context, cfg) => cfg.ConfigureEndpoints(context));
+            
+            x.ConfigureHealthCheckOptions(options =>
             {
-                cfg.ConfigureEndpoints(context);
+                options.Name = "module-bus";
             });
         });
 
-        //Configure SQS messaging
         builder.Services.AddMassTransit<IExternalBus>(x =>
         {
-            x.AddConsumers(filter => filter.Name.Contains("sqs", StringComparison.InvariantCultureIgnoreCase),assemblies);
-            x.UsingAmazonSqs((context, cfg) =>
+            x.AddConsumers(filter => filter.Name.Contains("sqs", StringComparison.InvariantCultureIgnoreCase), assemblies);
+            
+            var region = builder.Configuration.GetAWSOptions().Region?.SystemName;
+            
+            if (string.IsNullOrEmpty(region))
             {
-                string region = context.GetRequiredService<IConfiguration>().GetAWSOptions()
-                .Region.SystemName;
-                cfg.Host(region, h => { });
-                cfg.ConfigureEndpoints(context);
-            });
+                x.UsingInMemory((context, cfg) => cfg.ConfigureEndpoints(context));
+            }
+            else
+            {
+                x.UsingAmazonSqs((context, cfg) =>
+                {
+                    cfg.Host(region, h => { });
+                    cfg.ConfigureEndpoints(context);
+                });
+            }
 
+            x.ConfigureHealthCheckOptions(options =>
+            {
+                options.Name = "external-bus";
+            });
         });
-
-
-        ConfigureModules(builder, moduleInstances);
-        var app = builder.Build();
-
-        InitializeModules(app, moduleInstances);
-        app.MapDefaultEndpoints();
-        MapModulesEndpoint(app, moduleTypes);
-
-        // Configure the HTTP request pipeline.
-        if (app.Environment.IsDevelopment())
-        {
-
-            app.UseSwagger();
-            app.UseSwaggerUI();
-            app.UseCors(builder =>
-            {
-                builder.AllowAnyHeader()
-                .AllowAnyOrigin()
-                .AllowAnyMethod();
-            });
-        }
-
-        app.UseHttpsRedirection();
-
-        app.UseAuthorization();
-
-        app.RunMigrations(moduleInstances).Wait();
-
-        app.Run();
     }
 
-    private static void MapModulesEndpoint(IEndpointRouteBuilder app,List<Type> modules)
+    private static void ConfigureAutofac(WebApplicationBuilder builder, List<IModule> moduleInstances)
+    {
+        builder.Host.UseServiceProviderFactory(new AutofacServiceProviderFactory());
+        builder.Host.ConfigureContainer<ContainerBuilder>(containerBuilder =>
+        {
+            foreach (var moduleInstance in moduleInstances)
+            {
+                containerBuilder.RegisterModule((Autofac.Module)moduleInstance);
+                containerBuilder.RegisterInstance(moduleInstance).AsSelf().As<IModule>().SingleInstance();
+            }
+        });
+    }
+
+    private static void MapModulesEndpoint(IEndpointRouteBuilder app, List<Type> modules)
     {
         foreach (var module in modules)
         {
             var endpointTypes = module.Assembly
                 .GetTypes()
-                .Where(t => !t.IsAbstract && t.IsClass && typeof(IEndpoint).IsAssignableFrom(t))
+                .Where(t => !t.IsAbstract && t.IsClass && typeof(Shared.IEndpoint).IsAssignableFrom(t))
                 .ToList();
 
-            var endpoints = endpointTypes.Select(s =>
-            {
-                return (IEndpoint) Activator.CreateInstance(s)!;
-            });
+            var endpoints = endpointTypes.Select(s => (Shared.IEndpoint)Activator.CreateInstance(s)!);
             foreach (var endpoint in endpoints)
             {
                 endpoint.MapEndpoint(app);
@@ -147,21 +197,5 @@ public class Program
         {
             module.Initialize(root);
         }
-    }
-
-    private static void ConfigureModules(WebApplicationBuilder builder, IEnumerable<IModule> modules)
-    {
-        builder.Host.UseServiceProviderFactory(new AutofacServiceProviderFactory());
-        builder.Host.ConfigureContainer<ContainerBuilder>(containerBuilder =>
-        {
-            foreach (var moduleInstance in modules)
-            {
-                // Register as a native Autofac module to run Load() on the root container
-                containerBuilder.RegisterModule((Autofac.Module)moduleInstance);
-                
-                // Register the instance so it can be resolved during InitializeModules
-                containerBuilder.RegisterInstance(moduleInstance).AsSelf().As<IModule>().SingleInstance();
-            }
-        });
     }
 }
