@@ -13,10 +13,9 @@ public class Principal : TenantOwnedAggregate
 {
     public Guid UserId { get; private set; }
     public PrincipalType PrincipalType { get; private set; }
-    public string? PrincipalScopeUrn { get; private set; } //for setting scope for the managed policies to be attached to this principal, e.g. "az:tenantId:courses/courseId/*" so all actions in course id is approved as long they have the managed policies
-    // In-memory list for domain logic, but persisted as JSONB in Postgres
-    private List<PolicyStatement> _inlinePolicies = new();
-    public IReadOnlyCollection<PolicyStatement> InlinePolicies => _inlinePolicies.AsReadOnly();
+    public string? PrincipalScopeUrn { get; private set; }
+    private List<Policy> _inlinePolicies = new List<Policy>();
+    public IReadOnlyCollection<Policy> InlinePolicies => _inlinePolicies.AsReadOnly();
 
     // EF Core Constructor
     protected Principal() { }
@@ -26,11 +25,6 @@ public class Principal : TenantOwnedAggregate
     {
         UserId = userId;
         PrincipalType = type;
-    }
-
-    public void AddInlinePolicy(PolicyStatement statement)
-    {
-        _inlinePolicies.Add(statement);
     }
 }
 
@@ -52,26 +46,6 @@ public class Policy : TenantOwnedAggregate
     public void AddStatement(PolicyStatement statement)
     {
         _statements.Add(statement);
-    }
-}
-/// <summary>
-/// Already Configured Policies to be referenced for a resource or tenant,
-/// these policies will be attached to Principals and will have lower precedence than inline policies but higher precedence than other attached policies.
-/// They are always Allow and Deny will be handled by inline policies with higher precedence
-/// </summary>
-public class AttachedPolicy
-{
-    public string PolicyName { get; private set; } = string.Empty;
-    public List<string> Actions { get; private set; } = new();
-    public PolicyStatement BuildPolicy(List<string> resourceUrns,Guid tenantId)
-    {
-        return new PolicyStatement()
-        {
-            Actions = Actions,
-            Effective = true, // Attached policies are always Allow, Deny will be handled by inline policies with higher precedence
-            Resources = resourceUrns,
-            StatementNameId = PolicyName,
-        };
     }
 }
 public record Resource(Guid ResourceId, ResourceType ResourceType);
