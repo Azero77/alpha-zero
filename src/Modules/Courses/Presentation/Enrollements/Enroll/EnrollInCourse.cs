@@ -59,6 +59,6 @@ public class EnrollInCourseEndpoint : Endpoint<EnrollInCourseRequest, EnrollInCo
             return;
         }
 
-        await Send.CreatedAtAsync($"courses/enrollments/{result.Value}", ct);
+        await Send.CreatedAtAsync($"/courses/enrollments/{result.Value}",responseBody:  new EnrollInCourseResponse(result.Value),cancellation: ct);
     }
 }

@@ -99,7 +99,8 @@ public class Course : TenantOwnedAggregate
     {
         if (Status != CourseStatus.UnderReview) 
             return Error.Conflict("Course.Status", "Only courses under review can be rejected.");
-        
+        if(string.IsNullOrEmpty(reason))
+            return Error.Validation("Course.RejectionReason", "Rejection reason is required.");
         // Moves back to Draft for fixes
         Status = CourseStatus.Draft;
         return Result.Success;

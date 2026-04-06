@@ -39,6 +39,6 @@ public class AddSectionEndpoint : Endpoint<AddSectionRequest>
             return;
         }
 
-        await Send.NoContentAsync(cancellation: ct);
+        await Send.NoContentAsync(ct);
     }
 }

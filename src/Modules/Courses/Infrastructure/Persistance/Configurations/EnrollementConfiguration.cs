@@ -13,13 +13,18 @@ public class EnrollementConfiguration : IEntityTypeConfiguration<Enrollement>
             .ValueGeneratedNever();
         builder.Property(e => e.Status)
             .HasConversion<string>();
-
-        builder.Property(e => e.Progress)
-            .HasConversion(
-                v => v.Bitmask,
-                v => Progress.FromBitmask(v))
-            .HasColumnType("varbit");
-
         builder.HasIndex(e => new { e.StudentId, e.CourseId }).IsUnique();
+
+        builder.OwnsOne(b => b.Progress, p =>
+        {
+            p.Property(p => p.Bitmask)
+                .HasColumnName("ProgressBitmask")
+                .HasConversion(
+                    v => v,
+                    v => v)
+                .HasColumnType("varbit");
+            p.Property(p => p.TotalItems)
+                .HasColumnName("ProgressTotalItems");
+        });
     }
 }

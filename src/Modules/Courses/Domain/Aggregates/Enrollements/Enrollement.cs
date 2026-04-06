@@ -11,10 +11,12 @@ public class Enrollement : TenantOwnedAggregate
     public EnrollementStatus Status { get; private set; }
     public Progress Progress { get; private set; }
     public DateTime EnrolledOn { get; private set; }
+
     private Enrollement()
     {
         // EF
     }
+
     private Enrollement(Guid id, Guid tenantId, Guid studentId, Guid courseId, int totalTrackedItems) : base(id, tenantId)
     {
         StudentId = studentId;
@@ -40,7 +42,11 @@ public class Enrollement : TenantOwnedAggregate
         if (Status != EnrollementStatus.Active) 
             return Error.Conflict("Enrollement.Status", "Cannot complete items in an inactive enrollment.");
 
-        return Progress.MarkAsComplete(bitIndex);
+        var result = Progress.MarkAsComplete(bitIndex);
+        if (result.IsError) return result.Errors;
+
+        Progress = result.Value;
+        return Result.Success;
     }
 
     public void Deactivate() => Status = EnrollementStatus.Inactive;

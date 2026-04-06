@@ -44,8 +44,8 @@ public class CourseTests : BaseIntegrationTest
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.Created);
-        var courseIdStr = response.Headers.Location?.ToString().Split('/').Last();
-        Guid.TryParse(courseIdStr, out var courseId).Should().BeTrue();
+        var result = await response.Content.ReadFromJsonAsync<CreateCourseResponse>();
+        var courseId = result!.Id;
 
         var course = await DbContext.Courses.FindAsync(courseId);
         course.Should().NotBeNull();
@@ -61,7 +61,7 @@ public class CourseTests : BaseIntegrationTest
         var subjectId = await SeedSubject(tenantId);
         SetTenant(tenantId);
         var createCourseResponse = await Client.PostAsJsonAsync("/courses", new CreateCourseRequest { Title = "C# Basics", SubjectId = subjectId });
-        var courseId = Guid.Parse(createCourseResponse.Headers.Location!.ToString().Split('/').Last());
+        var courseId = (await createCourseResponse.Content.ReadFromJsonAsync<CreateCourseResponse>())!.Id;
 
         // Act: Add Section
         await Client.PostAsJsonAsync($"/courses/{courseId}/sections", new AddSectionRequest { Title = "Introduction" });
@@ -92,7 +92,7 @@ public class CourseTests : BaseIntegrationTest
         var subjectId = await SeedSubject(tenantId);
         SetTenant(tenantId);
         var createCourseResponse = await Client.PostAsJsonAsync("/courses", new CreateCourseRequest { Title = "Course", SubjectId = subjectId });
-        var courseId = Guid.Parse(createCourseResponse.Headers.Location!.ToString().Split('/').Last());
+        var courseId = (await createCourseResponse.Content.ReadFromJsonAsync<CreateCourseResponse>())!.Id;
 
         await Client.PostAsJsonAsync($"/courses/{courseId}/sections", new AddSectionRequest { Title = "S1" });
         await Client.PostAsJsonAsync($"/courses/{courseId}/sections", new AddSectionRequest { Title = "S2" });
@@ -121,7 +121,7 @@ public class CourseTests : BaseIntegrationTest
         var subjectId = await SeedSubject(tenantId);
         SetTenant(tenantId);
         var createCourseResponse = await Client.PostAsJsonAsync("/courses", new CreateCourseRequest { Title = "Course", SubjectId = subjectId });
-        var courseId = Guid.Parse(createCourseResponse.Headers.Location!.ToString().Split('/').Last());
+        var courseId = (await createCourseResponse.Content.ReadFromJsonAsync<CreateCourseResponse>())!.Id;
 
         await Client.PostAsJsonAsync($"/courses/{courseId}/sections", new AddSectionRequest { Title = "S1" });
         var courseResponse = await Client.GetFromJsonAsync<CourseResponse>($"/courses/{courseId}");
@@ -170,7 +170,16 @@ public class CourseTests : BaseIntegrationTest
         var subjectId = await SeedSubject(tenantId);
         SetTenant(tenantId);
         var createResp = await Client.PostAsJsonAsync("/courses", new CreateCourseRequest { Title = "ToReject", SubjectId = subjectId });
-        var courseId = Guid.Parse(createResp.Headers.Location!.ToString().Split('/').Last());
+        var courseId = (await createResp.Content.ReadFromJsonAsync<CreateCourseResponse>())!.Id;
+            //submit for review
+            // Add content (required to submit)
+        await Client.PostAsJsonAsync($"/courses/{courseId}/sections", new AddSectionRequest { Title = "S1" });
+        var courseResponse = await Client.GetFromJsonAsync<CourseResponse>($"/courses/{courseId}");
+        var sectionId = courseResponse!.Sections.First().Id;
+        await Client.PostAsJsonAsync($"/courses/{courseId}/sections/{sectionId}/lessons", new AddLessonRequest { Title = "L1", VideoId = Guid.NewGuid() });
+
+        var submitResp = await Client.PatchAsJsonAsync($"/courses/{courseId}/review", new { });
+        submitResp.StatusCode.Should().Be(HttpStatusCode.NoContent);
 
         // Act
         var response = await Client.PatchAsJsonAsync($"/courses/{courseId}/reject", new { Reason = "" });

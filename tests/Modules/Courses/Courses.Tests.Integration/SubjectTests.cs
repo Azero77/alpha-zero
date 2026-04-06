@@ -26,7 +26,7 @@ public class SubjectTests : BaseIntegrationTest
         var response = await Client.PostAsJsonAsync("/courses/subjects", request);
 
         // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.OK); // Note: The endpoint returns OK with the response body
+        response.StatusCode.Should().Be(HttpStatusCode.Created);
         var result = await response.Content.ReadFromJsonAsync<CreateSubjectResponse>();
         result.Should().NotBeNull();
         result!.Id.Should().NotBeEmpty();

@@ -28,7 +28,7 @@ public class EnrollmentTests : BaseIntegrationTest
 
         // Course
         var courseResp = await Client.PostAsJsonAsync("/courses", new CreateCourseRequest { Title = "C1", SubjectId = subjectId });
-        var courseId = Guid.Parse(courseResp.Headers.Location!.ToString().Split('/').Last());
+        var courseId = (await courseResp.Content.ReadFromJsonAsync<CreateCourseResponse>())!.Id;
 
         // Content
         await Client.PostAsJsonAsync($"/courses/{courseId}/sections", new AddSectionRequest { Title = "S1" });
@@ -38,9 +38,9 @@ public class EnrollmentTests : BaseIntegrationTest
         await Client.PostAsJsonAsync($"/courses/{courseId}/sections/{sectionId}/lessons", new AddLessonRequest { Title = "L2", VideoId = Guid.NewGuid() });
 
         // Lifecycle
-        await Client.PostAsync($"/courses/{courseId}/review", null);
-        await Client.PostAsync($"/courses/{courseId}/approve", null);
-        await Client.PostAsync($"/courses/{courseId}/publish", null);
+        await Client.PatchAsJsonAsync($"/courses/{courseId}/review", new { });
+        await Client.PatchAsJsonAsync($"/courses/{courseId}/approve", new { });
+        await Client.PatchAsJsonAsync($"/courses/{courseId}/publish", new { });
 
         return courseId;
     }
@@ -63,7 +63,7 @@ public class EnrollmentTests : BaseIntegrationTest
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.Created);
-        var enrollmentId = Guid.Parse(response.Headers.Location!.ToString().Split('/').Last());
+        var enrollmentId = (await response.Content.ReadFromJsonAsync<EnrollInCourseResponse>())!.EnrollmentId;
 
         var enrollment = await Client.GetFromJsonAsync<EnrollementResponse>($"/courses/enrollments/{enrollmentId}");
         enrollment.Should().NotBeNull();
@@ -82,7 +82,7 @@ public class EnrollmentTests : BaseIntegrationTest
         SetTenant(tenantId);
         
         var enrollResp = await Client.PostAsJsonAsync("/courses/enroll", new EnrollInCourseRequest { StudentId = studentId, CourseId = courseId });
-        var enrollmentId = Guid.Parse(enrollResp.Headers.Location!.ToString().Split('/').Last());
+        var enrollmentId = (await enrollResp.Content.ReadFromJsonAsync<EnrollInCourseResponse>())!.EnrollmentId;
 
         // Act: Complete first item (BitIndex 0)
         var completeResp = await Client.PostAsJsonAsync($"/courses/enrollements/{enrollmentId}/complete", new { BitIndex = 0 });
@@ -121,7 +121,7 @@ public class EnrollmentTests : BaseIntegrationTest
         SetTenant(tenantId);
         
         var enrollResp = await Client.PostAsJsonAsync("/courses/enroll", new EnrollInCourseRequest { StudentId = studentId, CourseId = courseId });
-        var enrollmentId = Guid.Parse(enrollResp.Headers.Location!.ToString().Split('/').Last());
+        var enrollmentId = (await enrollResp.Content.ReadFromJsonAsync<EnrollInCourseResponse>())!.EnrollmentId;
 
         // Act: Try to complete bit index 5 (only 0 and 1 exist)
         var completeResp = await Client.PostAsJsonAsync($"/courses/enrollements/{enrollmentId}/complete", new { BitIndex = 5 });

@@ -42,7 +42,8 @@ namespace AlphaZero.Modules.Courses.Infrastructure.Migrations
                     StudentId = table.Column<Guid>(type: "uuid", nullable: false),
                     CourseId = table.Column<Guid>(type: "uuid", nullable: false),
                     Status = table.Column<string>(type: "text", nullable: false),
-                    Progress = table.Column<BitArray>(type: "varbit", nullable: false),
+                    ProgressBitmask = table.Column<BitArray>(type: "varbit", nullable: false),
+                    ProgressTotalItems = table.Column<int>(type: "integer", nullable: false),
                     EnrolledOn = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     TenantId = table.Column<Guid>(type: "uuid", nullable: false)
                 },
@@ -76,6 +77,7 @@ namespace AlphaZero.Modules.Courses.Infrastructure.Migrations
                     Order = table.Column<int>(type: "integer", nullable: false),
                     CourseId = table.Column<Guid>(type: "uuid", nullable: false),
                     IsDeleted = table.Column<bool>(type: "boolean", nullable: false),
+                    OnDeleted = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
                     TenantId = table.Column<Guid>(type: "uuid", nullable: false)
                 },
                 constraints: table =>
@@ -102,6 +104,7 @@ namespace AlphaZero.Modules.Courses.Infrastructure.Migrations
                     BitIndex = table.Column<int>(type: "integer", nullable: false),
                     Title = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: false),
                     IsDeleted = table.Column<bool>(type: "boolean", nullable: false),
+                    OnDeleted = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
                     ItemType = table.Column<string>(type: "character varying(21)", maxLength: 21, nullable: false),
                     TenantId = table.Column<Guid>(type: "uuid", nullable: false)
                 },

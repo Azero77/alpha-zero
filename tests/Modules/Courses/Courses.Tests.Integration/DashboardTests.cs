@@ -25,16 +25,16 @@ public class DashboardTests : BaseIntegrationTest
         var subjectId = (await subResp.Content.ReadFromJsonAsync<CreateSubjectResponse>())!.Id;
 
         var courseResp = await Client.PostAsJsonAsync("/courses", new CreateCourseRequest { Title = title, SubjectId = subjectId });
-        var courseId = Guid.Parse(courseResp.Headers.Location!.ToString().Split('/').Last());
+        var courseId = (await courseResp.Content.ReadFromJsonAsync<CreateCourseResponse>())!.Id;
 
         await Client.PostAsJsonAsync($"/courses/{courseId}/sections", new AddSectionRequest { Title = "S1" });
         var courseData = await Client.GetFromJsonAsync<CourseResponse>($"/courses/{courseId}");
         var sectionId = courseData!.Sections.First().Id;
         await Client.PostAsJsonAsync($"/courses/{courseId}/sections/{sectionId}/lessons", new AddLessonRequest { Title = "L1", VideoId = Guid.NewGuid() });
 
-        await Client.PostAsync($"/courses/{courseId}/review", null);
-        await Client.PostAsync($"/courses/{courseId}/approve", null);
-        await Client.PostAsync($"/courses/{courseId}/publish", null);
+        await Client.PatchAsJsonAsync($"/courses/{courseId}/review", new { });
+        await Client.PatchAsJsonAsync($"/courses/{courseId}/approve", new { });
+        await Client.PatchAsJsonAsync($"/courses/{courseId}/publish", new { });
 
         return courseId;
     }

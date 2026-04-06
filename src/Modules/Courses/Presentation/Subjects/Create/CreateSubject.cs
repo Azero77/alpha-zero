@@ -58,6 +58,6 @@ public class CreateSubjectEndpoint : Endpoint<CreateSubjectRequest, CreateSubjec
             return;
         }
 
-        await Send.OkAsync(new CreateSubjectResponse(result.Value), ct);
+        await Send.CreatedAtAsync($"/courses/subjects/{result.Value}", responseBody: new CreateSubjectResponse(result.Value), cancellation: ct);
     }
 }

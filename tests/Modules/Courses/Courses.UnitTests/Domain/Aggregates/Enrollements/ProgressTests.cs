@@ -12,8 +12,9 @@ public class ProgressTests
         var progress = Progress.Create(4); // 4 items
 
         // Act
-        progress.MarkAsComplete(0);
-        progress.MarkAsComplete(1);
+        var result1 = progress.MarkAsComplete(0);
+        var result2 = result1.Value.MarkAsComplete(1);
+        progress = result2.Value;
 
         // Assert
         progress.CompletionPercentage.Should().Be(50.0);
@@ -26,8 +27,9 @@ public class ProgressTests
         var progress = Progress.Create(2);
 
         // Act
-        progress.MarkAsComplete(0);
-        progress.MarkAsComplete(1);
+        var result1 = progress.MarkAsComplete(0);
+        var result2 = result1.Value.MarkAsComplete(1);
+        progress = result2.Value;
 
         // Assert
         progress.IsAllComplete.Should().BeTrue();
@@ -54,7 +56,8 @@ public class ProgressTests
         var progress = Progress.Create(3);
 
         // Act
-        progress.MarkAsComplete(1);
+        var result = progress.MarkAsComplete(1);
+        progress = result.Value;
 
         // Assert
         progress.IsComplete(0).Should().BeFalse();

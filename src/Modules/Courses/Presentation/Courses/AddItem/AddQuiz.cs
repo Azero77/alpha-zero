@@ -13,7 +13,6 @@ public record AddQuizRequest
     public string Title { get; init; } = default!;
     public Guid QuizId { get; init; }
 }
-
 public class AddQuizEndpoint : Endpoint<AddQuizRequest>
 {
     private readonly CoursesModule _module;

@@ -160,10 +160,6 @@ namespace AlphaZero.Modules.Courses.Infrastructure.Migrations
                     b.Property<DateTime>("EnrolledOn")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<BitArray>("Progress")
-                        .IsRequired()
-                        .HasColumnType("varbit");
-
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasColumnType("text");
@@ -244,6 +240,34 @@ namespace AlphaZero.Modules.Courses.Infrastructure.Migrations
                         .WithMany("Items")
                         .HasForeignKey("SectionId")
                         .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("AlphaZero.Modules.Courses.Domain.Aggregates.Enrollements.Enrollement", b =>
+                {
+                    b.OwnsOne("AlphaZero.Modules.Courses.Domain.Aggregates.Enrollements.Progress", "Progress", b1 =>
+                        {
+                            b1.Property<Guid>("EnrollementId")
+                                .HasColumnType("uuid");
+
+                            b1.Property<BitArray>("Bitmask")
+                                .IsRequired()
+                                .HasColumnType("varbit")
+                                .HasColumnName("ProgressBitmask");
+
+                            b1.Property<int>("TotalItems")
+                                .HasColumnType("integer")
+                                .HasColumnName("ProgressTotalItems");
+
+                            b1.HasKey("EnrollementId");
+
+                            b1.ToTable("Enrollements", "Courses");
+
+                            b1.WithOwner()
+                                .HasForeignKey("EnrollementId");
+                        });
+
+                    b.Navigation("Progress")
                         .IsRequired();
                 });
 

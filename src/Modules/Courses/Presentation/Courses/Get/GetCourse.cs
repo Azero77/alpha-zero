@@ -75,11 +75,11 @@ public class GetCourseEndpoint : Endpoint<GetCourseRequest, CourseResponse>
             course.Description,
             course.SubjectId,
             course.Status,
-            course.Sections.Select(s => new SectionResponse(
+            course.Sections.OrderBy(s => s.Order).Select(s => new SectionResponse(
                 s.Id,
                 s.Title,
                 s.Order,
-                s.Items.Select(i => new ItemResponse(
+                s.Items.OrderBy(i => i.Order).Select(i => new ItemResponse(
                     i.Id,
                     i.Title,
                     i.Type,

@@ -13,7 +13,6 @@ public record AddLessonRequest
     public string Title { get; init; } = default!;
     public Guid VideoId { get; init; }
 }
-
 public class AddLessonEndpoint : Endpoint<AddLessonRequest>
 {
     private readonly CoursesModule _module;

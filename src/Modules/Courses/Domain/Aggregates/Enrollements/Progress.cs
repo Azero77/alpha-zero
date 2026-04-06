@@ -9,6 +9,8 @@ public record Progress
     public BitArray Bitmask { get; private set; }
     public int TotalItems { get; private set; }
 
+    private Progress() { } // For EF Core or serialization
+
     private Progress(int totalItems)
     {
         TotalItems = totalItems;
@@ -32,15 +34,15 @@ public record Progress
         return new Progress(bitmask);
     }
 
-    public ErrorOr<Success> MarkAsComplete(int bitIndex)
+    public ErrorOr<Progress> MarkAsComplete(int bitIndex)
     {
         if (bitIndex < 0 || bitIndex >= TotalItems)
         {
             return Error.Validation("Progress.InvalidIndex", $"Bit index {bitIndex} is out of range for this course (0-{TotalItems-1}).");
         }
-
-        Bitmask.Set(bitIndex, true);
-        return Result.Success;
+        var newBitMask = new BitArray(Bitmask);
+        newBitMask.Set(bitIndex, true);
+        return new Progress(newBitMask);
     }
 
     public bool IsComplete(int bitIndex)

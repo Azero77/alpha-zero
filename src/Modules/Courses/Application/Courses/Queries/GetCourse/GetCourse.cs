@@ -49,11 +49,11 @@ public sealed class GetCourseQueryHandler : IRequestHandler<GetCourseQuery, Erro
             course.Description,
             course.SubjectId,
             course.Status.ToString(),
-            course.Sections.Select(s => new SectionDto(
+            course.Sections.OrderBy(s => s.Order).Select(s => new SectionDto(
                 s.Id,
                 s.Title,
                 s.Order,
-                s.Items.Select(i => new ItemDto(
+                s.Items.OrderBy(i => i.Order).Select(i => new ItemDto(
                     i.Id,
                     i.Title,
                     i.GetType().Name.Replace("CourseSection", ""),
