@@ -19,6 +19,7 @@ public class Principal : TenantOwnedAggregate
     /// The unique Subject ID (sub) from AWS Cognito.
     /// </summary>
     public string IdentityId { get; private set; } = string.Empty;
+    public string Name { get; private set; } 
     public PrincipalType PrincipalType { get; private set; }
     public string? PrincipalScopeUrn { get; private set; }
     private List<Policy> _inlinePolicies = new List<Policy>();
@@ -27,14 +28,15 @@ public class Principal : TenantOwnedAggregate
     // EF Core Constructor
     protected Principal() { }
 
-    private Principal(Guid id, string identityId, PrincipalType type, Guid tenantId, string principalScopeUrn) 
+    private Principal(Guid id, string identityId, PrincipalType type, Guid tenantId, string principalScopeUrn, string name) 
         : base(id, tenantId)
     {
         IdentityId = identityId;
         PrincipalType = type;
         PrincipalScopeUrn = principalScopeUrn;
+        Name = name;
     }
-    public static ErrorOr<Principal> Create(Guid id, string identityId, PrincipalType type, Guid tenantId, string PrincipalScope)
+    public static ErrorOr<Principal> Create(Guid id, string identityId, PrincipalType type, Guid tenantId, string PrincipalScope,string name)
     {
         var regex = new Regex(RegexForPrincipalScopeUrn,RegexOptions.Compiled); 
         var result = regex.Match(PrincipalScope);
@@ -43,7 +45,24 @@ public class Principal : TenantOwnedAggregate
         var path = result.Groups["path"].Value;
         if (!IsValidPath(path))
             return Error.Validation("Path is not valid");
-        return new Principal(id, identityId, type, tenantId, PrincipalScope);
+        return new Principal(id, identityId, type, tenantId, PrincipalScope,name);
+    }
+
+    public void AddInlinePolicy(Policy policy)
+    {
+        if (!_inlinePolicies.Any(p => p.Id == policy.Id))
+        {
+            _inlinePolicies.Add(policy);
+        }
+    }
+
+    public void RemoveInlinePolicy(Guid policyId)
+    {
+        var policy = _inlinePolicies.FirstOrDefault(p => p.Id == policyId);
+        if (policy != null)
+        {
+            _inlinePolicies.Remove(policy);
+        }
     }
 
     private static bool IsValidPath(string path)

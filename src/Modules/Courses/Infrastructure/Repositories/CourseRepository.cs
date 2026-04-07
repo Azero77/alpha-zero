@@ -8,10 +8,8 @@ namespace AlphaZero.Modules.Courses.Infrastructure.Repositories;
 
 public class CourseRepository : BaseRepository<AppDbContext, Course>, ICourseRepository
 {
-    private readonly AppDbContext _context;
     public CourseRepository(AppDbContext context) : base(context)
     {
-        _context = context;
     }
 
     public async Task<Course?> GetByIdWithSectionsAsync(Guid id, CancellationToken cancellationToken = default)

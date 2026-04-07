@@ -52,3 +52,5 @@ public record PolicyStatement
 
 //for managed policies to not take resources with them
 public record PolicyTemplateStatement(string Sid, List<string> Actions, bool Effect); //will implement ResourcePatterns later
+
+

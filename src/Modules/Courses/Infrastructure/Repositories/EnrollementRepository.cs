@@ -9,10 +9,8 @@ namespace AlphaZero.Modules.Courses.Infrastructure.Repositories;
 
 public class EnrollementRepository : BaseRepository<AppDbContext, Enrollement>, IEnrollementRepository
 {
-    private readonly AppDbContext _context;
     public EnrollementRepository(AppDbContext context) : base(context)
     {
-        _context = context;
     }
 
     public async Task<Enrollement?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)

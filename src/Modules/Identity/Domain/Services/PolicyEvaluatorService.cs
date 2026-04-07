@@ -15,10 +15,12 @@ namespace AlphaZero.Modules.Identity.Domain.Services;
 public class PolicyEvaluatorService
 {
     private readonly IPolicyRepository _policyRepository;
+    private readonly IPrincipalRepository _principalRepository;
 
-    public PolicyEvaluatorService(IPolicyRepository policyRepository)
+    public PolicyEvaluatorService(IPolicyRepository policyRepository, IPrincipalRepository principalRepository)
     {
         _policyRepository = policyRepository;
+        _principalRepository = principalRepository;
     }
 
     public async Task<ErrorOr<Success>> Authorize(Guid prinicapId,
@@ -27,7 +29,7 @@ public class PolicyEvaluatorService
         ResourceType resourceType,
         string requiredPermission)
     {
-        var principal = await _policyRepository.GetPrincipal(prinicapId);
+        var principal = await _principalRepository.GetById(prinicapId);
         if (principal is null) return Error.NotFound("Principal.NotFound", "Principal not found.");
         var resourceArn = new ResourceArn(resourceType.ToString(), tenantId, resourcePath);
 

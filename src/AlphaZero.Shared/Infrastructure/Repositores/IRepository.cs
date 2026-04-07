@@ -1,11 +1,12 @@
-﻿using AlphaZero.Shared.Queries;
+﻿using AlphaZero.Shared.Domain;
+using AlphaZero.Shared.Queries;
 using Microsoft.EntityFrameworkCore;
 using System.Linq.Expressions;
 
 namespace AlphaZero.Shared.Infrastructure.Repositores;
 
 public interface IRepository<TEntity>
-    where TEntity : class
+    where TEntity : Entity
 {
     void Add(TEntity entity);
     void Remove(TEntity entity);
@@ -30,46 +31,48 @@ public interface IRepository<TEntity>
         Expression<Func<TEntity, TKey>> orderBy,
         bool ascending = true,
         CancellationToken token = default);
+
+    Task<TEntity?> GetById(Guid id);
 }
 
 public class BaseRepository<TContext, TEntity> : IRepository<TEntity>
     where TContext : DbContext
-    where TEntity : class
+    where TEntity : Entity
 {
-    private readonly TContext _context;
+    protected readonly TContext _context;
 
     public BaseRepository(TContext context)
     {
         _context = context;
     }
 
-    public void Add(TEntity entity) => _context.Set<TEntity>().Add(entity);
+    public virtual void Add(TEntity entity) => _context.Set<TEntity>().Add(entity);
 
-    public void Remove(TEntity entity) => _context.Set<TEntity>().Remove(entity);
+    public virtual void Remove(TEntity entity) => _context.Set<TEntity>().Remove(entity);
 
-    public void Update(TEntity entity) => _context.Set<TEntity>().Update(entity);
+    public virtual void Update(TEntity entity) => _context.Set<TEntity>().Update(entity);
 
-    public async Task<IReadOnlyCollection<TEntity>> GetAll(CancellationToken token = default)
+    public async virtual Task<IReadOnlyCollection<TEntity>> GetAll(CancellationToken token = default)
     {
         return await _context.Set<TEntity>()
             .AsNoTracking()
             .ToListAsync(token);
     }
 
-    public async Task<TEntity?> GetFirst(Expression<Func<TEntity, bool>> filter, CancellationToken token = default)
+    public async virtual Task<TEntity?> GetFirst(Expression<Func<TEntity, bool>> filter, CancellationToken token = default)
     {
         return await _context.Set<TEntity>()
             .AsNoTracking()
             .FirstOrDefaultAsync(filter, token);
     }
 
-    public async Task<bool> Any(Expression<Func<TEntity, bool>> filter, CancellationToken token = default)
+    public async virtual Task<bool> Any(Expression<Func<TEntity, bool>> filter, CancellationToken token = default)
     {
         return await _context.Set<TEntity>()
             .AnyAsync(filter, token);
     }
 
-    public async Task<int> Count(Expression<Func<TEntity, bool>>? filter = null, CancellationToken token = default)
+    public async virtual Task<int> Count(Expression<Func<TEntity, bool>>? filter = null, CancellationToken token = default)
     {
         var query = _context.Set<TEntity>().AsNoTracking();
         if (filter != null)
@@ -79,7 +82,7 @@ public class BaseRepository<TContext, TEntity> : IRepository<TEntity>
         return await query.CountAsync(token);
     }
 
-    public async Task<PagedResult<TEntity>> Get<TKey>(
+    public async virtual Task<PagedResult<TEntity>> Get<TKey>(
         int pageNumber,
         int perPage,
         Expression<Func<TEntity, TKey>> orderBy,
@@ -100,7 +103,7 @@ public class BaseRepository<TContext, TEntity> : IRepository<TEntity>
         return new PagedResult<TEntity>(response, count, pageNumber, perPage);
     }
 
-    public async Task<PagedResult<TEntity>> Get<TKey>(
+    public async virtual Task<PagedResult<TEntity>> Get<TKey>(
         int pageNumber,
         int perPage,
         Expression<Func<TEntity, bool>> filter,
@@ -120,5 +123,12 @@ public class BaseRepository<TContext, TEntity> : IRepository<TEntity>
             .ToListAsync(token);
 
         return new PagedResult<TEntity>(response, count, pageNumber, perPage);
+    }
+
+    public async virtual Task<TEntity?> GetById(Guid id)
+    {
+        return await _context.Set<TEntity>()
+            .FirstOrDefaultAsync(d => d.Id == id);
+
     }
 }
