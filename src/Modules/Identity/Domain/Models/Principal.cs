@@ -13,8 +13,12 @@ namespace AlphaZero.Modules.Identity.Domain.Models;
 /// </summary>
 public class Principal : TenantOwnedAggregate
 {
-    internal const string RegexForPrincipalScopeUrn = @"^(?<prefix>az):(?<service>[a-zA-z]+):(?<tenantId>[a-zA-Z0-9-]+):(?<path>[A-Za-z0-9\/\*\/\-\{\}]+)$"; //az:courses:23452:course/* or //az:section:23452:course/{courseId}/section/* can get all sections for a courseId for example
-    public Guid UserId { get; private set; }
+    internal const string RegexForPrincipalScopeUrn = @"^(?<prefix>az):(?<service>[a-zA-z]+):(?<tenantId>[a-zA-Z0-9-]+):(?<path>[A-Za-z0-9\/\*\/\-\{\}]+)$"; 
+
+    /// <summary>
+    /// The unique Subject ID (sub) from AWS Cognito.
+    /// </summary>
+    public string IdentityId { get; private set; } = string.Empty;
     public PrincipalType PrincipalType { get; private set; }
     public string? PrincipalScopeUrn { get; private set; }
     private List<Policy> _inlinePolicies = new List<Policy>();
@@ -23,23 +27,23 @@ public class Principal : TenantOwnedAggregate
     // EF Core Constructor
     protected Principal() { }
 
-    private Principal(Guid id, Guid userId, PrincipalType type, Guid tenantId, string principalScopeUrn) 
+    private Principal(Guid id, string identityId, PrincipalType type, Guid tenantId, string principalScopeUrn) 
         : base(id, tenantId)
     {
-        UserId = userId;
+        IdentityId = identityId;
         PrincipalType = type;
         PrincipalScopeUrn = principalScopeUrn;
     }
-    public static ErrorOr<Principal> Create(Guid id, Guid userId, PrincipalType type, Guid tenantId, string PrincipalScope)
+    public static ErrorOr<Principal> Create(Guid id, string identityId, PrincipalType type, Guid tenantId, string PrincipalScope)
     {
-        var regex = new Regex(RegexForPrincipalScopeUrn,RegexOptions.Compiled); //az:courses:23452:course/* or //az:section:23452:course/{courseId}/section/* can get all sections for a courseId for example
+        var regex = new Regex(RegexForPrincipalScopeUrn,RegexOptions.Compiled); 
         var result = regex.Match(PrincipalScope);
         if (!result.Success)
             return Error.Validation("Principal scope is not valid");
         var path = result.Groups["path"].Value;
         if (!IsValidPath(path))
             return Error.Validation("Path is not valid");
-        return new Principal(id, userId, type, tenantId, PrincipalScope);
+        return new Principal(id, identityId, type, tenantId, PrincipalScope);
     }
 
     private static bool IsValidPath(string path)

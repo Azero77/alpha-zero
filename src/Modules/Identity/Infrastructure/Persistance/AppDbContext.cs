@@ -1,4 +1,5 @@
-﻿using AlphaZero.Modules.Identity.Domain.Models;
+using System.Reflection;
+using AlphaZero.Modules.Identity.Domain.Models;
 using AlphaZero.Modules.Identity.Infrastructure.Models;
 using Microsoft.EntityFrameworkCore;
 
@@ -10,8 +11,14 @@ public class AppDbContext : DbContext
     {
     }
 
-    public DbSet<User> Users => Set<User>();
     public DbSet<Principal> Principals => Set<Principal>();
     public DbSet<Policy> Policies => Set<Policy>();
+    public DbSet<ManagedPolicy> ManagedPolicies => Set<ManagedPolicy>();
     public DbSet<PrincipalPolicyAssignment> PrincipalPolicyAssignments => Set<PrincipalPolicyAssignment>();
+
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        modelBuilder.ApplyConfigurationsFromAssembly(Assembly.GetExecutingAssembly());
+        base.OnModelCreating(modelBuilder);
+    }
 }
