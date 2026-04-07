@@ -47,7 +47,7 @@ public class PolicyEvaluatorService
                 {
                     if (statement.Actions.Any(a => IsActionMatched(requiredPermission, a)) && statement.Resources.Any(r => resourceArn.IsMatchedBy(r)))
                     {
-                        if(statement.Effective)
+                        if(statement.Effect)
                             isAllowedByInline = true;
                         else
                             isDeniedByInline = true;
@@ -67,9 +67,9 @@ public class PolicyEvaluatorService
             {
                 foreach (var statement in policy.Statements)
                 {
-                    if (statement.Actions.Any(a => IsActionMatched(requiredPermission, a)) && statement.Resources.Any(r => resourceArn.IsMatchedBy(r)))
+                    if (statement.Actions.Any(a => IsActionMatched(requiredPermission, a)) && resourceArn.IsMatchedBy(principal.PrincipalScopeUrn ?? ""))
                     {
-                        if (statement.Effective)
+                        if (statement.Effect)
                             isAllowedByManaged = true;
                         else
                             isDeniedByManaged = true;

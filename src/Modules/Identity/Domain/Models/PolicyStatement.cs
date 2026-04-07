@@ -1,10 +1,11 @@
 ﻿using System.Text.Json;
+using System.Text.RegularExpressions;
 
 namespace AlphaZero.Modules.Identity.Domain.Models;
 
 public record PolicyStatement
 {
-    public string StatementNameId { get; init; } = string.Empty;
+    public string Sid { get; init; } = string.Empty;
     /*
         {
           "Version": "2012-10-17",
@@ -44,7 +45,10 @@ public record PolicyStatement
         }
 */
     public List<string> Actions { get; init; } = new List<string>();
-    public bool Effective { get; init; } // true for Allow or and false for Deny
+    public bool Effect { get; init; } // true for Allow or and false for Deny
     public List<string> Resources { get; init; } = new List<string>();
     public JsonElement? Condition { get; init; } // will be implemented later
 }
+
+//for managed policies to not take resources with them
+public record PolicyTemplateStatement(string Sid, List<string> Actions, bool Effect); //will implement ResourcePatterns later
