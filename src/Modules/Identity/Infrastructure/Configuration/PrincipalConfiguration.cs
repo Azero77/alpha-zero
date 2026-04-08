@@ -16,6 +16,12 @@ public class PrincipalConfiguration : IEntityTypeConfiguration<Principal>
         builder.Property(p => p.PrincipalType).HasConversion<string>();
         builder.Property(p => p.PrincipalScopeUrn).IsRequired();
         builder.Property(p => p.TenantId).IsRequired();
+        
+        // Mapping explicit resource scope indexing
+        builder.Property(p => p.ResourceId);
+        builder.Property(p => p.ScopeResourceType).HasConversion<string>();
+        
+        builder.HasIndex(p => new { p.ResourceId, p.ScopeResourceType });
 
         // Mapping the private list of inline policies
         builder.HasMany<Policy>("_inlinePolicies")

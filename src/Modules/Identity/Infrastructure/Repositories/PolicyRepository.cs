@@ -64,4 +64,12 @@ public class PrincipalRepository : BaseRepository<AppDbContext, Principal>, IPri
         return await _context.Principals.Include(p => p.InlinePolicies)
             .FirstOrDefaultAsync(p => p.Id == id);
     }
+
+    public async Task<IReadOnlyCollection<Principal>> GetPrincipalsByResourceAsync(Guid resourceId, ResourceType resourceType, CancellationToken ct = default)
+    {
+        return await _context.Principals
+            .Include(p => p.InlinePolicies)
+            .Where(p => p.ResourceId == resourceId && p.ScopeResourceType == resourceType)
+            .ToListAsync(ct);
+    }
 }

@@ -13,7 +13,9 @@ public record CreatePrincipalCommand(
     string IdentityId, 
     PrincipalType PrincipalType, 
     string PrincipalScope, 
-    string Name) : ICommand<Guid>;
+    string Name,
+    Guid? ResourceId = null,
+    ResourceType? ScopeResourceType = null) : ICommand<Guid>;
 
 public class CreatePrincipalCommandValidator : AbstractValidator<CreatePrincipalCommand>
 {
@@ -53,7 +55,9 @@ public sealed class CreatePrincipalCommandHandler : IRequestHandler<CreatePrinci
             request.PrincipalType, 
             tenantId.Value, 
             request.PrincipalScope, 
-            request.Name);
+            request.Name,
+            request.ResourceId,
+            request.ScopeResourceType);
 
         if (principalResult.IsError) return principalResult.Errors;
 

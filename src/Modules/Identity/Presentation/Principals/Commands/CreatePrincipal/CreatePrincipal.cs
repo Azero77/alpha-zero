@@ -13,6 +13,8 @@ public record CreatePrincipalRequest
     public PrincipalType PrincipalType { get; init; }
     public string PrincipalScope { get; init; } = default!;
     public string Name { get; init; } = default!;
+    public Guid? ResourceId { get; init; }
+    public ResourceType? ScopeResourceType { get; init; }
 }
 
 public record CreatePrincipalResponse(Guid Id);
@@ -35,7 +37,7 @@ public class CreatePrincipalEndpoint : Endpoint<CreatePrincipalRequest, CreatePr
 
     public override async Task HandleAsync(CreatePrincipalRequest req, CancellationToken ct)
     {
-        var command = new CreatePrincipalCommand(req.IdentityId, req.PrincipalType, req.PrincipalScope, req.Name);
+        var command = new CreatePrincipalCommand(req.IdentityId, req.PrincipalType, req.PrincipalScope, req.Name, req.ResourceId, req.ScopeResourceType);
         var result = await _module.Send(command, ct);
 
         if (result.IsError)
