@@ -8,6 +8,9 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using MediatR;
+using Microsoft.AspNetCore.Authorization.Policy;
+using AlphaZero.Shared.Authorization;
+using AlphaZero.Modules.Identity.Domain.Services;
 
 namespace AlphaZero.Modules.Identity.Infrastructure;
 
@@ -25,6 +28,8 @@ public static class DependencyInjection
                 h.MigrationsHistoryTable("__IdentityMigrationHistory");
             });
         });
+
+        services.AddScoped<IPolicyEvaluatorService, PolicyEvaluatorService>();
     }
 
     public static void AddIdentityPrivateInfrastructure(this IServiceCollection moduleServices, IConfiguration configuration)

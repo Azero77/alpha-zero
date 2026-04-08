@@ -136,43 +136,6 @@ public class ManagedPolicy
         return returnedPolicy;
     }
 }
-
-public enum ResourceType
-{
-    Course,
-    Subject,
-    User,
-    Video,
-    Section,
-    Lesson,
-    Quiz
-}
-public enum PrincipalType
-{
-    User,
-    Role
-}dPolicy.AddStatement(new PolicyStatement
-            {
-                Sid = statement.Sid,
-                Effect = statement.Effect,
-                Actions = statement.Actions,
-                Resources = [principalScope],
-                Condition = null
-            });
-        }
-
-        return returnedPolicy;
-    }
-}
-
-public enum ResourceType
-{
-    Course,
-    Subject,
-    User,
-    Video
-    // Add more resource types as needed
-}
 public enum PrincipalType
 {
     User,

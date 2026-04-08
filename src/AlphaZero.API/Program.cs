@@ -1,6 +1,7 @@
 using AlphaZero.API.Shared;
 using AlphaZero.Modules.VideoUploading.Infrastructure.Sagas;
 using AlphaZero.Shared.Application;
+using AlphaZero.Shared.Authorization;
 using AlphaZero.Shared.Infrastructure;
 using AlphaZero.Shared.Infrastructure.Tenats;
 using Amazon.Extensions.NETCore.Setup;
@@ -31,6 +32,10 @@ public class Program
         app.UseFastEndpoints(c =>
         {
             c.Errors.UseProblemDetails();
+            c.Endpoints.Configurator = ep =>
+            {
+                ep.PreProcessor<IAMPreprocessor>(Order.Before);
+            };
         })
             .UseSwaggerGen();
         MapModulesEndpoint(app, moduleTypes);
