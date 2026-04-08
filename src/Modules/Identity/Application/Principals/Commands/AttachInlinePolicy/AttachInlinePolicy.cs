@@ -51,7 +51,11 @@ public sealed class AttachInlinePolicyCommandHandler : IRequestHandler<AttachInl
         var policy = new Policy(Guid.NewGuid(), request.PolicyName, tenantId.Value);
         foreach (var statement in request.Statements)
         {
-            policy.AddStatement(statement);
+            var result = policy.AddStatement(statement);
+            if (result.IsError)
+            {
+                return result;
+            }
         }
 
         principal.AddInlinePolicy(policy);

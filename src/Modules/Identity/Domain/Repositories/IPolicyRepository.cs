@@ -1,4 +1,5 @@
 using AlphaZero.Modules.Identity.Domain.Models;
+using AlphaZero.Shared.Authorization;
 using AlphaZero.Shared.Infrastructure.Repositores;
 
 namespace AlphaZero.Modules.Identity.Domain.Repositories;

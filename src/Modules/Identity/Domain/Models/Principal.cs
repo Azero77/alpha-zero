@@ -1,3 +1,4 @@
+using AlphaZero.Shared.Authorization;
 using AlphaZero.Shared.Domain;
 using AlphaZero.Shared.Infrastructure.Tenats;
 using Amazon.Auth.AccessControlPolicy;
@@ -24,19 +25,22 @@ public class Principal : TenantOwnedAggregate
     public string? PrincipalScopeUrn { get; private set; }
     private List<Policy> _inlinePolicies = new List<Policy>();
     public IReadOnlyCollection<Policy> InlinePolicies => _inlinePolicies.AsReadOnly();
-
+    public ResourceType? ScopeResourceType { get; private set; }
+    public Guid? ResourceId { get; private set;  }
     // EF Core Constructor
     protected Principal() { }
 
-    private Principal(Guid id, string identityId, PrincipalType type, Guid tenantId, string principalScopeUrn, string name) 
+    private Principal(Guid id, string identityId, PrincipalType type, Guid tenantId, string principalScopeUrn, string name, Guid? resourceId = null, ResourceType? scopeResourceType = null) 
         : base(id, tenantId)
     {
         IdentityId = identityId;
         PrincipalType = type;
         PrincipalScopeUrn = principalScopeUrn;
+        ResourceId = resourceId;
+        ScopeResourceType = scopeResourceType;
         Name = name;
     }
-    public static ErrorOr<Principal> Create(Guid id, string identityId, PrincipalType type, Guid tenantId, string PrincipalScope,string name)
+    public static ErrorOr<Principal> Create(Guid id, string identityId, PrincipalType type, Guid tenantId, string PrincipalScope,string name, Guid? resourceId = null, ResourceType? scopeResourceType = null)
     {
         var regex = new Regex(RegexForPrincipalScopeUrn,RegexOptions.Compiled); 
         var result = regex.Match(PrincipalScope);
@@ -45,7 +49,7 @@ public class Principal : TenantOwnedAggregate
         var path = result.Groups["path"].Value;
         if (!IsValidPath(path))
             return Error.Validation("Path is not valid");
-        return new Principal(id, identityId, type, tenantId, PrincipalScope,name);
+        return new Principal(id, identityId, type, tenantId, PrincipalScope,name, resourceId, scopeResourceType);
     }
 
     public void AddInlinePolicy(Policy policy)
@@ -103,17 +107,19 @@ public class Policy : TenantOwnedAggregate
         Name = name;
     }
 
-    public void AddStatement(PolicyStatement statement)
+    public ErrorOr<Success> AddStatement(PolicyStatement statement)
     {
+        if(_statements.Any(s => s.Sid == statement.Sid))
+            return Error.Conflict("Policy.Conflict", $"Statement with Sid {statement.Sid} already exists in the policy.");
         _statements.Add(statement);
+        return Result.Success;
     }
 }
 public record Resource(Guid ResourceId, ResourceType ResourceType);
 
 
-public class ManagedPolicy
+public class ManagedPolicy : Entity
 {
-    public Guid Id { get; init; }
     public string Name { get; init; } = string.Empty;
     public string PolicyName { get; init; } = string.Empty;
     public List<PolicyTemplateStatement> Statements { get; init; } = new List<PolicyTemplateStatement>();
