@@ -1,10 +1,10 @@
-﻿using AlphaZero.Modules.Identity.Domain.Models;
+using AlphaZero.Modules.Identity.Domain.Models;
 using AlphaZero.Modules.Identity.Domain.Repositories;
 using AlphaZero.Shared.Domain;
-using Amazon.Auth.AccessControlPolicy;
 using ErrorOr;
 
 namespace AlphaZero.Modules.Identity.Domain.Services;
+
 /// <summary>
 /// Provides methods for evaluating authorization policies and determining whether a principal has the required
 /// permissions to access a specified resource.
@@ -30,77 +30,77 @@ public class PolicyEvaluatorService
         string requiredPermission)
     {
         var principal = await _principalRepository.GetById(prinicapId);
-        if (principal is null) return Error.NotFound("Principal.NotFound", "Principal not found.");
+        if (principal is null) return Error.Forbidden("Principal.NotFound", "Principal not found.");
+        
         var resourceArn = new ResourceArn(resourceType.ToString(), tenantId, resourcePath);
-
         var managedPolicies = await _policyRepository.GetManagedPoliciesForPrincipal(principal.Id);
 
-        bool isAllowedByInline = false;
-        bool isAllowedByManaged = false;
-        bool isDeniedByManaged = false;
-        bool isDeniedByInline = false;
-       
+        // IAM Standard: Default Deny
+        bool isAllowed = false;
 
+        // 1. Evaluate Inline Policies (Custom to this user)
         if (principal.InlinePolicies.Any())
         {
             foreach (var policy in principal.InlinePolicies)
             {
                 foreach (var statement in policy.Statements)
                 {
-                    if (statement.Actions.Any(a => IsActionMatched(requiredPermission, a)) && statement.Resources.Any(r => resourceArn.IsMatchedBy(r)))
+                    if (statement.Actions.Any(a => IsActionMatched(requiredPermission, a)) && 
+                        statement.Resources.Any(r => resourceArn.IsMatchedBy(r)))
                     {
-                        if(statement.Effect)
-                            isAllowedByInline = true;
-                        else
-                            isDeniedByInline = true;
-
+                        // IAM Standard: Explicit Deny ALWAYS overrides and short-circuits
+                        if (!statement.Effect) 
+                            return Error.Forbidden("Access.Denied", "Explicit deny in inline policy.");
+                        
+                        isAllowed = true;
                     }
                 }
             }
         }
-        if (isDeniedByInline)
-            return Error.NotFound();
 
-        if (isAllowedByInline)
-            return Result.Success;
+        // 2. Evaluate Managed Policies (Templates scoped by the Principal's URN)
         if (managedPolicies is not null)
         {
             foreach (var policy in managedPolicies)
             {
                 foreach (var statement in policy.Statements)
                 {
-                    if (statement.Actions.Any(a => IsActionMatched(requiredPermission, a)) && resourceArn.IsMatchedBy(principal.PrincipalScopeUrn ?? ""))
+                    // The magic : The Managed Policy doesn't have Resources, 
+                    // it applies dynamically to the Principal's Scope!
+                    if (statement.Actions.Any(a => IsActionMatched(requiredPermission, a)) && 
+                        resourceArn.IsMatchedBy(principal.PrincipalScopeUrn ?? ""))
                     {
-                        if (statement.Effect)
-                            isAllowedByManaged = true;
-                        else
-                            isDeniedByManaged = true;
-
+                        // Explicit Deny Short-circuit
+                        if (!statement.Effect) 
+                            return Error.Forbidden("Access.Denied", "Explicit deny in managed policy.");
+                        
+                        isAllowed = true;
                     }
                 }
             }
         }
 
-        if (isDeniedByManaged)
-            return Error.NotFound();
-
-        if (isAllowedByManaged)
+        // 3. Final Decision
+        if (isAllowed)
             return Result.Success;
-        return Error.Forbidden();
 
+        // Implicit Deny (No explicit allow was found)
+        return Error.Forbidden("Access.Denied", "Implicit deny. No matching allow policy found.");
     }
 
     private bool IsActionMatched(string requiredPermission, string givenAction)
     {
-        if(requiredPermission == givenAction) return true;
+        // 1. Exact Match (Case Insensitive)
+        if (requiredPermission.Equals(givenAction, StringComparison.OrdinalIgnoreCase)) 
+            return true;
 
-        if(givenAction.EndsWith("*"))
+        // 2. Wildcard Match
+        if (givenAction.EndsWith("*"))
         {
             var prefix = givenAction.Substring(0, givenAction.Length - 1);
             return requiredPermission.StartsWith(prefix, StringComparison.OrdinalIgnoreCase);
         }
+        
         return false;
     }
-
-
 }
