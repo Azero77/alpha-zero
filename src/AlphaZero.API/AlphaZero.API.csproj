@@ -36,6 +36,7 @@
     <ProjectReference Include="..\AlphaZero.Shared\AlphaZero.Shared.csproj" />
     <ProjectReference Include="..\aspire\AlphaZero.ServiceDefaults\AlphaZero.ServiceDefaults.csproj" />
     <ProjectReference Include="..\aspire\Aspire.Shared\Aspire.Shared.csproj" />
+    <ProjectReference Include="..\Modules\Identity\Presentation\Presentation.csproj" />
     <ProjectReference Include="..\Modules\VideoStreaming\Presentation\Presentation.csproj" />
     <ProjectReference Include="..\Modules\VideoUploading\Presentation\Presentation.csproj" />
     <ProjectReference Include="..\Modules\Courses\Presentation\Presentation.csproj" />
