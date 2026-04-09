@@ -23,12 +23,14 @@ public class PrincipalConfiguration : IEntityTypeConfiguration<Principal>
         
         builder.HasIndex(p => new { p.ResourceId, p.ScopeResourceType });
 
-        // Mapping the private list of inline policies
-        builder.HasMany<Policy>("_inlinePolicies")
+        // Correct way: Map the public property and specify the backing field
+        builder.HasMany(p => p.InlinePolicies)
                .WithOne()
                .HasForeignKey("PrincipalId")
                .OnDelete(DeleteBehavior.Cascade);
 
-        builder.Navigation(p => p.InlinePolicies).Metadata.SetField("_inlinePolicies");
+        builder.Navigation(p => p.InlinePolicies)
+               .UsePropertyAccessMode(PropertyAccessMode.Field)
+               .HasField("_inlinePolicies");
     }
 }

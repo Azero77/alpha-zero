@@ -11,7 +11,7 @@ public record PrincipalPoliciesDto(
     List<ManagedPolicyDto> ManagedPolicies);
 
 public record PolicyDto(Guid Id, string Name, List<PolicyStatement> Statements);
-public record ManagedPolicyDto(Guid Id, string Name, string PolicyName, List<PolicyTemplateStatement> Statements);
+public record ManagedPolicyDto(Guid Id, string Name, List<PolicyTemplateStatement> Statements);
 
 public record GetPrincipalPoliciesQuery(Guid PrincipalId) : IRequest<ErrorOr<PrincipalPoliciesDto>>;
 
@@ -36,7 +36,7 @@ public sealed class GetPrincipalPoliciesQueryHandler : IRequestHandler<GetPrinci
         var dto = new PrincipalPoliciesDto(
             principal.Id,
             principal.InlinePolicies.Select(p => new PolicyDto(p.Id, p.Name, p.Statements.ToList())).ToList(),
-            managedPolicies?.Select(m => new ManagedPolicyDto(m.Id, m.Name, m.PolicyName, m.Statements)).ToList() ?? new List<ManagedPolicyDto>());
+            managedPolicies?.Select(m => new ManagedPolicyDto(m.Id, m.Name, m.Statements)).ToList() ?? new List<ManagedPolicyDto>());
 
         return dto;
     }

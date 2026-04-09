@@ -1,5 +1,6 @@
 using AlphaZero.Modules.Identity.Application.Principals.Queries.GetPrincipalsByResource;
 using AlphaZero.Modules.Identity.Domain.Models;
+using AlphaZero.Shared.Authorization;
 using AlphaZero.Shared.Presentation.Extensions;
 using FastEndpoints;
 using MediatR;

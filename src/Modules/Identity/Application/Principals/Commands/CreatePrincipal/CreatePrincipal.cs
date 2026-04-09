@@ -1,6 +1,7 @@
 using AlphaZero.Modules.Identity.Domain.Models;
 using AlphaZero.Modules.Identity.Domain.Repositories;
 using AlphaZero.Shared.Application;
+using AlphaZero.Shared.Authorization;
 using AlphaZero.Shared.Infrastructure.Tenats;
 using ErrorOr;
 using FluentValidation;

@@ -18,11 +18,11 @@ public interface IPolicyEvaluatorService
 
 public enum ResourceType
 {
-    Course,
-    Subject,
-    User,
-    Video,
-    Section,
-    Lesson,
-    Quiz
+    Courses,
+    Subjects,
+    Users,
+    Videos,
+    Sections,
+    Lessons,
+    Quizzes
 }

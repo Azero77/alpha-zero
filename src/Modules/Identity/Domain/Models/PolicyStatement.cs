@@ -5,6 +5,15 @@ namespace AlphaZero.Modules.Identity.Domain.Models;
 
 public record PolicyStatement
 {
+    public PolicyStatement(string sid, List<string> actions, bool effect, List<string> resources, JsonElement? condition = null)
+    {
+        Sid = sid;
+        Actions = actions;
+        Effect = effect;
+        Resources = resources;
+        Condition = condition;
+    }
+
     public string Sid { get; init; } = string.Empty;
     /*
         {
@@ -48,6 +57,7 @@ public record PolicyStatement
     public bool Effect { get; init; } // true for Allow or and false for Deny
     public List<string> Resources { get; init; } = new List<string>();
     public JsonElement? Condition { get; init; } // will be implemented later
+
 }
 
 //for managed policies to not take resources with them

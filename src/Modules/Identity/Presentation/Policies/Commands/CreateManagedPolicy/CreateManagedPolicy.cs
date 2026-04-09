@@ -10,7 +10,6 @@ namespace AlphaZero.Modules.Identity.Presentation.Policies.Commands.CreateManage
 public record CreateManagedPolicyRequest
 {
     public string Name { get; init; } = default!;
-    public string PolicyName { get; init; } = default!;
     public List<PolicyTemplateStatement> Statements { get; init; } = new();
 }
 
@@ -34,7 +33,7 @@ public class CreateManagedPolicyEndpoint : Endpoint<CreateManagedPolicyRequest, 
 
     public override async Task HandleAsync(CreateManagedPolicyRequest req, CancellationToken ct)
     {
-        var command = new CreateManagedPolicyCommand(req.Name, req.PolicyName, req.Statements);
+        var command = new CreateManagedPolicyCommand(req.Name, req.Statements);
         var result = await _module.Send(command, ct);
 
         if (result.IsError)

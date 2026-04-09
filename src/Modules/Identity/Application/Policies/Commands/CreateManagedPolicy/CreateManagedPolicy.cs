@@ -10,7 +10,6 @@ namespace AlphaZero.Modules.Identity.Application.Policies.Commands.CreateManaged
 
 public record CreateManagedPolicyCommand(
     string Name,
-    string PolicyName,
     List<PolicyTemplateStatement> Statements) : ICommand<Guid>;
 
 public class CreateManagedPolicyCommandValidator : AbstractValidator<CreateManagedPolicyCommand>
@@ -18,7 +17,6 @@ public class CreateManagedPolicyCommandValidator : AbstractValidator<CreateManag
     public CreateManagedPolicyCommandValidator()
     {
         RuleFor(x => x.Name).NotEmpty().MaximumLength(100);
-        RuleFor(x => x.PolicyName).NotEmpty().MaximumLength(100);
         RuleFor(x => x.Statements).NotEmpty();
     }
 }
@@ -37,17 +35,11 @@ public sealed class CreateManagedPolicyCommandHandler : IRequestHandler<CreateMa
     public async Task<ErrorOr<Guid>> Handle(CreateManagedPolicyCommand request, CancellationToken cancellationToken)
     {
         var policyId = Guid.NewGuid();
-        
-        var managedPolicy = new ManagedPolicy
-        {
-            Id = policyId,
-            Name = request.Name,
-            PolicyName = request.PolicyName,
-            Statements = request.Statements
-        };
+
+        var managedPolicy = new ManagedPolicy(policyId, request.Name, request.Statements);
 
         _managedPolicyRepository.Add(managedPolicy);
-        _logger.LogInformation("Managed Policy Template '{PolicyName}' created with ID {PolicyId}.", request.PolicyName, policyId);
+        _logger.LogInformation("Managed Policy Template '{PolicyName}' created with ID {PolicyId}.", request.Name, policyId);
 
         return policyId;
     }

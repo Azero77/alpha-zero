@@ -33,7 +33,7 @@ public sealed class DeleteManagedPolicyCommandHandler : IRequestHandler<DeleteMa
         var policy = await _managedPolicyRepository.GetById(request.PolicyId);
         if (policy is null) return Error.NotFound("ManagedPolicy.NotFound", "Managed policy template not found.");
 
-        _managedPolicyRepository.Delete(policy);
+        _managedPolicyRepository.Remove(policy);
         _logger.LogInformation("Managed Policy Template {PolicyId} deleted.", request.PolicyId);
 
         return Result.Success;

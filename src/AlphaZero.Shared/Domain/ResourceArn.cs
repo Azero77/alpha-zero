@@ -1,10 +1,19 @@
+using Autofac.Core;
+using ErrorOr;
+using System.Runtime.InteropServices;
+using System.Text.RegularExpressions;
+
 namespace AlphaZero.Shared.Domain;
 
 /// <summary>
 /// A value object representing a unique Resource Name (ARN/URN).
 /// Format: az:{service}:{tenantId}:{resourcePath}
 /// Example: az:courses:school-1:course/math-101/section/sec-1
+/// For resource path , wild cards are only allowed at the end of the pattern and it means that all sub-resources are included in the permission, for example az:courses:school-1:course/math-101/* means math-101 course and all its sub-resources like sections and lessons.
+/// placeholders are allowed in resouce path like {courseId} , but it is not evaluated as allowed when compared to actual values, it is usually used of principal scope
 /// </summary>
+/// 
+
 public record ResourceArn
 {
     public string Service { get; }
@@ -13,6 +22,7 @@ public record ResourceArn
 
     private const string Prefix = "az";
     public const string GlobalTenant = "global";
+    private const string ResourcePattern = @"^(?<prefix>az)(:(?<service>[a-zA-Z\*]+))?(:(?<tenantId>[a-zA-Z0-9-\*]+))?(:(?<resourcePath>[A-Za-z0-9\/\*\/\-\{\}]+))?$";
 
     public ResourceArn(string service, string tenantId, string resourcePath)
     {
@@ -29,31 +39,113 @@ public record ResourceArn
     /// </summary>
     public bool IsMatchedBy(string pattern)
     {
-        if (string.IsNullOrWhiteSpace(pattern)) return false;
+        if (string.IsNullOrWhiteSpace(pattern))
+            return false;
 
-        // 1. Exact Match
-        if (pattern == this.ToString()) return true;
+        var parsed = Parse(pattern);
+        if (parsed is null)
+            return false;
 
-        // 2. Wildcard Match (Prefix)
-        if (pattern.EndsWith("*"))
+        return MatchPrefix(parsed)
+            && MatchService(parsed)
+            && MatchTenant(parsed)
+            && MatchResource(parsed);
+    }
+
+    public record PatternParts(string prefix, string service, string? tenantId, string? resourcePath)
+    {
+        public bool IsAllTenant => tenantId == "*" || string.IsNullOrEmpty(tenantId);
+        public bool IsAllResources => resourcePath == "*" || string.IsNullOrEmpty(resourcePath);
+        public bool IsAllServices => service == "*";
+        public bool IsPrefixAllowed => prefix == ResourceArn.Prefix; //az
+    }
+    private bool MatchPrefix(PatternParts pattern)
+    {
+        return pattern.IsPrefixAllowed;
+    }
+    private bool MatchService(PatternParts pattern)
+    {
+        return pattern.IsAllServices || pattern.service == Service;
+    }
+    private bool MatchTenant(PatternParts pattern)
+    {
+        return pattern.IsAllTenant || pattern.tenantId == TenantIdString;
+    }
+    private bool MatchResource(PatternParts p)
+    {
+
+        if (p.IsAllResources)
+            return true; // all resources
+
+        if (p.resourcePath == "*")
+            return true;
+
+        if (p.resourcePath.EndsWith("*"))
         {
-            var prefix = pattern.Substring(0, pattern.Length - 1);
-            return this.ToString().StartsWith(prefix, StringComparison.OrdinalIgnoreCase);
+            var prefix = p.resourcePath.TrimEnd('*','/');
+            return ResourcePath.StartsWith(prefix, StringComparison.OrdinalIgnoreCase);
         }
 
-        return false;
+        return p.resourcePath == ResourcePath;
     }
 
-    public override string ToString() => $"{Prefix}:{Service}:{TenantIdString}:{ResourcePath}";
 
-    public static ResourceArn Parse(string arn)
+    public static bool IsValidPath(string path)
     {
-        var parts = arn.Split(':');
-        if (parts.Length < 4 || parts[0] != Prefix)
-            throw new ArgumentException("Invalid ARN format. Expected az:service:tenantId:path", nameof(arn));
+        var segments = path.Split('/', StringSplitOptions.RemoveEmptyEntries);
 
-        return new ResourceArn(parts[1], parts[2], parts[3]);
+        foreach (var segment in segments)
+        {
+            // allow wildcard
+            if (segment == "*")
+                continue;
+
+            // allow parameter
+            if (segment.StartsWith("{") && segment.EndsWith("}"))
+                continue;
+
+            // normal segment
+            if (!Regex.IsMatch(segment, @"^[a-zA-Z0-9\-]+$"))
+                return false;
+        }
+
+        return true;
     }
+    public PatternParts? Parse(string pattern)
+    {
+        var result = IsValidPattern(pattern);
+        if (result.IsError)
+            return null;
+        return ExtractValues(result.Value);
+    }
+    public static ErrorOr<Match> IsValidPattern(string pattern)
+    {
+        var regex = new Regex(ResourcePattern, RegexOptions.Compiled);
+        var match = regex.Match(pattern);
+
+        if (!match.Success) return Error.Validation("Identity.Application","Invalid ARN pattern format.");
+        var resourcePath = match.Groups["resourcePath"]?.Value;
+        if (resourcePath is not null)
+        {
+            // we need to check if resource path contain the wild card at the middle of the path which is not allowed, for example az:courses:tenantId:course/*/section/sec-1 is not valid but az:courses:tenantId:course/* is valid
+            if(resourcePath.Contains("*") && !resourcePath.EndsWith("*"))
+                return Error.Validation("Identity.Application","Invalid ARN pattern format: wildcard '*' is only allowed at the end of the resource path.");
+
+            if(!IsValidPath(resourcePath))
+                return Error.Validation("Identity.Application", "Invalid ARN pattern format: resource path contains invalid characters.");
+        }
+        return match;
+    }
+    private PatternParts ExtractValues(Match match)
+    {
+        var prefix = match.Groups["prefix"].Value;
+        var tenantId = match.Groups["tenantId"].Value;
+        var service = match.Groups["service"].Value;
+        var resourcePath = match.Groups["resourcePath"].Value;
+        return new (prefix, service, tenantId, resourcePath);
+
+    }
+    public override string ToString() => $"{Prefix}:{Service}:{TenantIdString}:{ResourcePath}";
 
     // --- Static Factories for Consistency (Matching the Template Table) ---
 

@@ -3,6 +3,7 @@ using AlphaZero.Shared.Domain;
 using AlphaZero.Shared.Infrastructure.Tenats;
 using Amazon.Auth.AccessControlPolicy;
 using ErrorOr;
+using Microsoft.IdentityModel.Tokens;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 
@@ -14,8 +15,6 @@ namespace AlphaZero.Modules.Identity.Domain.Models;
 /// </summary>
 public class Principal : TenantOwnedAggregate
 {
-    internal const string RegexForPrincipalScopeUrn = @"^(?<prefix>az):(?<service>[a-zA-z]+):(?<tenantId>[a-zA-Z0-9-]+):(?<path>[A-Za-z0-9\/\*\/\-\{\}]+)$"; 
-
     /// <summary>
     /// The unique Subject ID (sub) from AWS Cognito.
     /// </summary>
@@ -40,16 +39,12 @@ public class Principal : TenantOwnedAggregate
         ScopeResourceType = scopeResourceType;
         Name = name;
     }
-    public static ErrorOr<Principal> Create(Guid id, string identityId, PrincipalType type, Guid tenantId, string PrincipalScope,string name, Guid? resourceId = null, ResourceType? scopeResourceType = null)
+    public static ErrorOr<Principal> Create(Guid id, string identityId, PrincipalType type, Guid tenantId, string principalScope,string name, Guid? resourceId = null, ResourceType? scopeResourceType = null)
     {
-        var regex = new Regex(RegexForPrincipalScopeUrn,RegexOptions.Compiled); 
-        var result = regex.Match(PrincipalScope);
-        if (!result.Success)
-            return Error.Validation("Principal scope is not valid");
-        var path = result.Groups["path"].Value;
-        if (!IsValidPath(path))
-            return Error.Validation("Path is not valid");
-        return new Principal(id, identityId, type, tenantId, PrincipalScope,name, resourceId, scopeResourceType);
+        var parse = ResourceArn.IsValidPattern(principalScope);
+        if (parse.IsError)
+            return parse.Errors;
+        return new Principal(id, identityId, type, tenantId, principalScope,name, resourceId, scopeResourceType);
     }
 
     public void AddInlinePolicy(Policy policy)
@@ -67,28 +62,6 @@ public class Principal : TenantOwnedAggregate
         {
             _inlinePolicies.Remove(policy);
         }
-    }
-
-    private static bool IsValidPath(string path)
-    {
-        var segments = path.Split('/', StringSplitOptions.RemoveEmptyEntries);
-
-        foreach (var segment in segments)
-        {
-            // allow wildcard
-            if (segment == "*")
-                continue;
-
-            // allow parameter
-            if (segment.StartsWith("{") && segment.EndsWith("}"))
-                continue;
-
-            // normal segment
-            if (!Regex.IsMatch(segment, @"^[a-zA-Z0-9\-]+$"))
-                return false;
-        }
-
-        return true;
     }
 }
 
@@ -120,8 +93,14 @@ public record Resource(Guid ResourceId, ResourceType ResourceType);
 
 public class ManagedPolicy : Entity
 {
+
+    public ManagedPolicy(Guid id,string name,List<PolicyTemplateStatement> statements) : base(id)
+    {
+        Name = name;
+        Statements = statements;
+    }
+
     public string Name { get; init; } = string.Empty;
-    public string PolicyName { get; init; } = string.Empty;
     public List<PolicyTemplateStatement> Statements { get; init; } = new List<PolicyTemplateStatement>();
     public Policy Build(string principalScope, Guid tenantId)
     {
@@ -129,18 +108,13 @@ public class ManagedPolicy : Entity
         var returnedPolicy = new Policy(Id,Name,tenantId);
         foreach (var statement in Statements)
         {
-            returnedPolicy.AddStatement(new PolicyStatement
-            {
-                Sid = statement.Sid,
-                Effect = statement.Effect,
-                Actions = statement.Actions,
-                Resources = [principalScope],
-                Condition = null
-            });
+            returnedPolicy.AddStatement(new PolicyStatement(statement.Sid, statement.Actions, statement.Effect, new List<string> { principalScope }));
         }
 
         return returnedPolicy;
     }
+
+    
 }
 public enum PrincipalType
 {
