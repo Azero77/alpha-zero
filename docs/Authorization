@@ -1,0 +1,81 @@
+# 🔐 AlphaZero Authorization Architecture: Scoped RBAC & Dynamic Evaluation
+
+This document defines the Identity and Access Management (IAM) strategy for AlphaZero. It utilizes a **Relationship-Based Access Control (ReBAC)** model to prevent "Role Explosion" while maintaining high performance for multi-tenant course environments.
+
+---
+
+## 🏗️ The Three-Layer Identity Model
+
+To maintain a clean separation of concerns, identity is managed across three distinct layers:
+
+### 1. Global Identity (The Person)
+*   **Source:** External Auth Provider (e.g., AWS Cognito).
+*   **Identifier:** `IdentityId` (the `sub` claim in the JWT).
+*   **Scope:** Agnostic of tenants. Proves "Who" the user is across the entire AlphaZero ecosystem.
+
+### 2. Tenant Identity (The Anchor / `TenantUser`)
+*   **Entity:** `TenantUser` (Primary identity record inside a specific Tenant).
+*   **Link:** Tied to `IdentityId` + `TenantId`.
+*   **Core Properties:**
+    *   `ActiveSessionId`: A GUID updated on every login.
+    *   `TenantWidePermissions`: Base roles like "TenantAdmin" or generic school access.
+*   **Purpose:** The central anchor for all permissions within a specific academy.
+
+### 3. Contextual Identity (The Scoped Assignment)
+*   **Mechanism:** `ScopedRoleAssignment`.
+*   **Logic:** Instead of creating a new identity per course, we create a relationship link.
+*   **Fields:** `TenantUserId` | `RoleId` | `Scope (ResourceArn Pattern)`.
+*   **Example:** `Ali` is a `Student` for scope `az:courses:T1:course/physics-101/*`.
+
+---
+
+## 🗄️ Database Schema (ERD)
+
+| Table | Purpose | Key Columns |
+| :--- | :--- | :--- |
+| **`TenantUsers`** | The Anchor Identity | `Id`, `IdentityId`, `TenantId`, `ActiveSessionId` |
+| **`TenantRoles`** | Role Templates | `Id`, `Name`, `TenantId` (or global) |
+| **`ManagedPolicies`**| Permission Lists | `Id`, `Name`, `Statements (JSONB)` |
+| **`ScopedRoleAssignments`** | Contextual Links | `TenantUserId`, `TenantRoleId`, `Scope (ARN Pattern)` |
+| **`Principals`** | Custom Overrides | `TenantUserId`, `ResourceId`, `InlinePolicies (JSONB)` |
+
+---
+
+## ⚡ High-Performance Evaluation Flow
+
+Evaluation happens at runtime inside the `IPolicyEvaluatorService` and is optimized via a caching strategy.
+
+### 1. The "Effective Policy" Builder
+When a request hits an endpoint (e.g., `video:Stream` on `course/101/video/5`):
+1.  **Session Validation:** Extracts `sid` from JWT. Compares against `TenantUser.ActiveSessionId`. If they mismatch, the request is rejected (**Single Session Enforcement**).
+2.  **Role Expansion:** Finds all `ScopedRoleAssignments` where the `Scope` matches the requested resource.
+3.  **Variable Injection:** Takes the `ManagedPolicies` attached to the roles and replaces placeholders (like `${Scope}`) with the actual assignment scope.
+4.  **Custom Principal Check:** Loads any resource-specific `Principal` overrides for that specific user.
+5.  **Final Decision:** Merges all statements into an **Effective Policy Table** and performs an AWS-style evaluation (Explicit Deny > Explicit Allow > Implicit Deny).
+
+### 2. Caching Strategy (Redis)
+To ensure the `IAMPreprocessor` stays under **5ms**, we cache the **Authorized Context**:
+*   **Key:** `auth_ctx:{TenantId}:{IdentityId}`
+*   **Value:** `{ ActiveSessionId, List<EffectivePermissions> }`
+*   **Invalidation:** The cache is cleared whenever:
+    *   A student enrolls in a new course (New Scoped Assignment).
+    *   A student logs in (New `ActiveSessionId`).
+    *   A Role's Managed Policy is updated.
+
+---
+
+## 📡 Enrollment Integration
+When a student redeems a code or pays:
+1.  **Courses Module:** Publishes `EnrollmentCreatedIntegrationEvent`.
+2.  **Identity Module:**
+    *   Ensures a `TenantUser` exists for the student.
+    *   Creates a `ScopedRoleAssignment` linking the user to the `Student_Role` for that `CourseId`.
+    *   Invalidates the user's Auth Cache.
+
+---
+
+## 🛡️ Resource ARN Standards
+For wildcard evaluation to work efficiently, all modules must follow hierarchical paths:
+*   **Course:** `az:courses:{T}:course/{C}`
+*   **Lessons/Videos:** `az:courses:{T}:course/{C}/lesson/{L}`
+*   **Scoped Assignment:** `az:courses:{T}:course/{C}/*` (Grants access to everything inside).

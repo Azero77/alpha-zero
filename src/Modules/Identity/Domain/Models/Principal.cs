@@ -11,39 +11,40 @@ namespace AlphaZero.Modules.Identity.Domain.Models;
 
 /// <summary>
 /// A Principal is the actor within a specific Tenant.
-/// It links a Global User to a Tenant and provides Authorization.
+/// It links a Global User to a set of rules 
+/// it is tenant agnostic and can be assigned to multiple tenants with different scopes, or even without a scope for global access across all tenants, it can also be assigned to specific resources for more fine-grained access control when needed.
 /// </summary>
-public class Principal : TenantOwnedAggregate
+public class Principal : PrincipalTemplate
 {
     /// <summary>
     /// The unique Subject ID (sub) from AWS Cognito.
     /// </summary>
-    public string IdentityId { get; private set; } = string.Empty;
-    public string Name { get; private set; } 
-    public PrincipalType PrincipalType { get; private set; }
+    public string TenantUserId { get; private set; } = string.Empty;
     public string? PrincipalScopeUrn { get; private set; }
     private List<Policy> _inlinePolicies = new List<Policy>();
     public IReadOnlyCollection<Policy> InlinePolicies => _inlinePolicies.AsReadOnly();
     public ResourceType? ScopeResourceType { get; private set; }
     public Guid? ResourceId { get; private set;  }
-    // EF Core Constructor
-    protected Principal() { }
 
-    private Principal(Guid id, string identityId, PrincipalType type, Guid tenantId, string principalScopeUrn, string name, Guid? resourceId = null, ResourceType? scopeResourceType = null) 
-        : base(id, tenantId)
+    private Principal(Guid id, string identityId, PrincipalType type, Guid tenantId, string? principalScopeUrn, string name, Guid? resourceId = null, ResourceType? scopeResourceType = null) 
+        : base(id, name, type)
     {
-        IdentityId = identityId;
-        PrincipalType = type;
+        TenantUserId = identityId;
         PrincipalScopeUrn = principalScopeUrn;
         ResourceId = resourceId;
         ScopeResourceType = scopeResourceType;
-        Name = name;
     }
-    public static ErrorOr<Principal> Create(Guid id, string identityId, PrincipalType type, Guid tenantId, string principalScope,string name, Guid? resourceId = null, ResourceType? scopeResourceType = null)
+    public static ErrorOr<Principal> Create(Guid id, string identityId, PrincipalType type, Guid tenantId, string? principalScope,string name, Guid? resourceId = null, ResourceType? scopeResourceType = null)
     {
-        var parse = ResourceArn.IsValidPattern(principalScope);
-        if (parse.IsError)
-            return parse.Errors;
+        if((principalScope is null && resourceId is not null) || (principalScope is not null && resourceId is null))
+            return Error.Validation("Principal.InvalidScope", "Principal scope and resource ID must be either both null or both non-null.");
+
+        if(principalScope is not null)
+        {
+            var parse = ResourceArn.IsValidPattern(principalScope);
+            if (parse.IsError)
+                return parse.Errors;
+        }
         return new Principal(id, identityId, type, tenantId, principalScope,name, resourceId, scopeResourceType);
     }
 
@@ -62,6 +63,12 @@ public class Principal : TenantOwnedAggregate
         {
             _inlinePolicies.Remove(policy);
         }
+    }
+
+    public enum PrincipalScopeType
+    {
+        Global,
+        Resource
     }
 }
 

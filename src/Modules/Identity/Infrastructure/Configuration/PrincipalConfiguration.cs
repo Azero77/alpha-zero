@@ -11,8 +11,8 @@ public class PrincipalConfiguration : IEntityTypeConfiguration<Principal>
         builder.ToTable("Principals");
         builder.HasKey(p => p.Id);
 
-        builder.Property(p => p.IdentityId).IsRequired().HasMaxLength(128);
-        builder.HasIndex(p => p.IdentityId);
+        builder.Property(p => p.TenantUserId).IsRequired().HasMaxLength(128);
+        builder.HasIndex(p => p.TenantUserId);
         builder.Property(p => p.PrincipalType).HasConversion<string>();
         builder.Property(p => p.PrincipalScopeUrn).IsRequired();
         builder.Property(p => p.TenantId).IsRequired();

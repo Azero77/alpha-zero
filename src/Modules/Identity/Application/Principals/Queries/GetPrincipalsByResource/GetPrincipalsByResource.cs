@@ -32,7 +32,7 @@ public sealed class GetPrincipalsByResourceQueryHandler : IRequestHandler<GetPri
 
         return principals.Select(p => new PrincipalDto(
             p.Id,
-            p.IdentityId,
+            p.TenantUserId,
             p.Name,
             p.PrincipalType,
             p.PrincipalScopeUrn,
