@@ -1,11 +1,19 @@
-﻿using System.Text.Json;
-using System.Text.RegularExpressions;
+using System.Text.Json;
+using AlphaZero.Shared.Domain;
 
 namespace AlphaZero.Modules.Identity.Domain.Models;
 
 public record PolicyStatement
 {
-    public PolicyStatement(string sid, List<string> actions, bool effect, List<string> resources, JsonElement? condition = null)
+    public string Sid { get; init; } = string.Empty;
+    public List<string> Actions { get; init; } = new List<string>();
+    public bool Effect { get; init; } // true for Allow, false for Deny
+    
+    // Boundary: Changed from List<string> to List<ResourcePattern>
+    public List<ResourcePattern> Resources { get; init; } = new List<ResourcePattern>();
+    public JsonElement? Condition { get; init; }
+
+    public PolicyStatement(string sid, List<string> actions, bool effect, List<ResourcePattern> resources, JsonElement? condition = null)
     {
         Sid = sid;
         Actions = actions;
@@ -13,54 +21,6 @@ public record PolicyStatement
         Resources = resources;
         Condition = condition;
     }
-
-    public string Sid { get; init; } = string.Empty;
-    /*
-        {
-          "Version": "2012-10-17",
-          "Statement": [
-            {
-              "Effect": "Allow",
-              "Action": [
-                "s3:GetObject",
-                "s3:ListBucket"
-              ],
-              "Resource": [
-                "az:tenantId:courses/courseId",
-                "arn:aws:s3:::my-bucket/*"
-              ]
-            },
-            {
-              "Sid": "DenyDelete",
-              "Effect": "Deny",
-              "Action": "s3:DeleteObject",
-              "Resource": "*"
-            },
-            {
-              "Sid": "ConditionalAccess",
-              "Effect": "Allow",
-              "Action": "ec2:StartInstances",
-              "Resource": "*",
-              "Condition": { // will be implemented later
-                "IpAddress": {
-                  "aws:SourceIp": "203.0.113.0/24"
-                },
-                "Bool": {
-                  "aws:SecureTransport": "true"
-                }
-              }
-            }
-          ]
-        }
-*/
-    public List<string> Actions { get; init; } = new List<string>();
-    public bool Effect { get; init; } // true for Allow or and false for Deny
-    public List<string> Resources { get; init; } = new List<string>();
-    public JsonElement? Condition { get; init; } // will be implemented later
-
 }
 
-//for managed policies to not take resources with them
-public record PolicyTemplateStatement(string Sid, List<string> Actions, bool Effect); //will implement ResourcePatterns later
-
-
+public record PolicyTemplateStatement(string Sid, List<string> Actions, bool Effect);

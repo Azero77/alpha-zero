@@ -5,13 +5,13 @@ namespace AlphaZero.Modules.Identity.Domain.Models;
 
 public class TenantPrinciaplAssignment : AggregateRoot, IDomainTenantOwned
 {
-    private TenantPrinciaplAssignment(Guid id,Guid tenantId, TenantUser tenantUser, PrincipalTemplate principal, string scope)
+    private TenantPrinciaplAssignment(Guid id,Guid tenantId, TenantUser tenantUser, PrincipalTemplate principal, ResourceArn arn)
         : base(id)
     {
         TenantId = tenantId;
         TenantUser = tenantUser;
         Principal = principal;
-        Scope = scope;
+        Resource = arn;
     }
     //for example, a student in a course can have a principal assignment with the scope of that course, and another assignment with the scope of another course, both with the same role principal but different scopes, this allows for more flexible and fine-grained access control.
     //imaging having a student role principal for each course, it would be a mess, instead we have one student role principal and assign it to the tenant user with different scopes for each course.
@@ -21,17 +21,17 @@ public class TenantPrinciaplAssignment : AggregateRoot, IDomainTenantOwned
 
     public TenantUser TenantUser { get; private set; }
     public PrincipalTemplate Principal { get; private set; }
-    public string Scope { get; private set; }
+    public ResourceArn Resource { get; private set; }
 
-    public static ErrorOr<TenantPrinciaplAssignment> Create(Guid tenantId, TenantUser tenantUser, PrincipalTemplate principal, string scope)
+    public static ErrorOr<TenantPrinciaplAssignment> Create(Guid tenantId, TenantUser tenantUser, PrincipalTemplate principal, string resourceArn)
     {
-        //validating scope
-        var isValidScope = ResourceArn.IsValidPattern(scope);
 
-        if (isValidScope.IsError) return isValidScope.Errors;
-        //we will accept a scope ending with /* or * , but will remove it for consistency
-        var newScope = scope.TrimEnd('*','/');
-        return new TenantPrinciaplAssignment(Guid.NewGuid(), tenantId, tenantUser, principal, newScope);
+        ErrorOr<ResourceArn> resource = ResourceArn.Create(resourceArn);
+        if (resource.IsError)
+        {
+            return resource.Errors;
+        }
+        return new TenantPrinciaplAssignment(Guid.NewGuid(), tenantId, tenantUser, principal, resource.Value);
     }
 
 }

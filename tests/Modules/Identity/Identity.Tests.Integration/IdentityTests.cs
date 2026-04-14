@@ -5,6 +5,7 @@ using AlphaZero.Shared.Authorization;
 using FluentAssertions;
 using Identity.Tests.Integration.Abstractions;
 using Microsoft.EntityFrameworkCore;
+using AlphaZero.Shared.Domain;
 
 namespace Identity.Tests.Integration;
 
@@ -22,7 +23,7 @@ public class IdentityTests : BaseIntegrationTest
         var principal = Principal.Create(Guid.NewGuid(), "cognito-sub", PrincipalType.User, tenantId, "az:*:*:*", "Test User").Value;
         
         var policy = new Policy(Guid.NewGuid(), "InlinePolicy", tenantId);
-        policy.AddStatement(new PolicyStatement("S1", new() { "courses:Edit" }, true, new() { "*" }));
+        policy.AddStatement(new PolicyStatement("S1", new() { "courses:Edit" }, true, new() { ResourcePattern.All}));
         principal.AddInlinePolicy(policy);
 
         // Act

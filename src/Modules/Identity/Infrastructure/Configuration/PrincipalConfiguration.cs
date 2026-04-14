@@ -14,7 +14,6 @@ public class PrincipalConfiguration : IEntityTypeConfiguration<Principal>
         builder.Property(p => p.TenantUserId).IsRequired().HasMaxLength(128);
         builder.HasIndex(p => p.TenantUserId);
         builder.Property(p => p.PrincipalType).HasConversion<string>();
-        builder.Property(p => p.PrincipalScopeUrn).IsRequired();
         builder.Property(p => p.TenantId).IsRequired();
         
         // Mapping explicit resource scope indexing
