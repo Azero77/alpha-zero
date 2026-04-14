@@ -1,6 +1,5 @@
 using AlphaZero.Shared.Authorization;
 using ErrorOr;
-using Microsoft.AspNetCore.Components.Forms;
 using System.Text.RegularExpressions;
 
 namespace AlphaZero.Shared.Domain;
@@ -10,92 +9,215 @@ namespace AlphaZero.Shared.Domain;
 /// Must NOT contain wildcards.
 /// Format: az:{service}:{tenantId}:{resourcePath}
 /// </summary>
-public record ResourceArn
+public class ResourceArn
 {
-    public string Service { get; }
-    public string TenantIdString { get; }
-    public string ResourcePath { get; }
+    public string Service { get; private set; }
+    public string TenantIdString { get; private set; }
+    public string ResourcePath { get; private set; }
 
-    private const string ResourcePatternRegex = @"^az:(?<service>[a-zA-Z]+):(?<tenantId>[a-zA-Z0-9-]+):(?<resourcePath>[A-Za-z0-9\/\-]+)$";
+    public const string Prefix = "az";
+    public const string GlobalTenant = "global";
 
-    public ResourceArn(string service, string tenantId, string resourcePath)
+    // Strict pattern for concrete ARNs
+    private const string ConcreteRegex = @"^az:(?<service>[a-zA-Z]+):(?<tenantId>[a-zA-Z0-9-]+):(?<resourcePath>[A-Za-z0-9\/\-]+)$";
+
+    private ResourceArn(string service, string tenantId, string resourcePath)
     {
         Service = service.ToLowerInvariant();
         TenantIdString = tenantId.ToLowerInvariant();
         ResourcePath = resourcePath;
     }
 
+    private ResourceArn(string service, Guid tenantId, string resourcePath)
+    {
+        Service = service.ToLowerInvariant();
+        TenantIdString = tenantId.ToString();
+        ResourcePath = resourcePath;
+    }
+
     public static ErrorOr<ResourceArn> Create(string service, string tenantId, string resourcePath)
     {
         if (resourcePath.Contains("*"))
-            return Error.Validation("Identity.Application","ResourceArn cannot contain wildcards. Use ResourcePattern for scopes");
+            return Error.Validation("Identity.Application", "ResourceArn cannot contain wildcards. Use ResourcePattern for scopes");
 
-        if (Enum.TryParse<ResourceType>(service, out _))
+        if (!Enum.TryParse<ResourceType>(service, ignoreCase: true, result: out _))
         {
-            return Error.Validation("Identity.Application","Invalid service");
+            return Error.Validation("Identity.Application", "Invalid service");
         }
         return new ResourceArn(service, tenantId, resourcePath);
     }
+
     public static ErrorOr<ResourceArn> Create(string value)
     {
-        var match = Regex.Match(value, ResourcePatternRegex);
+        var match = Regex.Match(value, ConcreteRegex);
 
         if (!match.Success)
-            return Error.Validation("Identity.Application" , "Invalid Resource Arn pattern");
+            return Error.Validation("Identity.Application", "Invalid Resource Arn format. Expected az:{service}:{tenantId}:{path}");
 
         var service = match.Groups["service"].Value;
         var tenantId = match.Groups["tenantId"].Value;
         var path = match.Groups["resourcePath"].Value;
-        return Create(service,tenantId,path);
+        return Create(service, tenantId, path);
     }
-    public override string ToString() => $"az:{Service}:{TenantIdString}:{ResourcePath}";
+
+    public override string ToString() => $"{Prefix}:{Service}:{TenantIdString}:{ResourcePath}";
+
+    // --- Static Factories ---
+
+    public static ResourceArn ForTenant(Guid tenantId) =>
+       new("tenants", GlobalTenant, $"tenant/{tenantId}");
+
+    public static ResourceArn ForUser(Guid userId) =>
+        new("identity", GlobalTenant, $"user/{userId}");
+
+    public static ResourceArn ForPrincipal(Guid tenantId, Guid principalId) =>
+        new("identity", tenantId, $"principal/{principalId}");
+
+    public static ResourceArn ForPolicy(Guid tenantId, Guid policyId) =>
+        new("identity", tenantId, $"policy/{policyId}");
+
+    public static ResourceArn ForSubject(Guid tenantId, Guid subjectId) =>
+        new("courses", tenantId, $"subject/{subjectId}");
+
+    public static ResourceArn ForCourse(Guid tenantId, Guid courseId) =>
+        new("courses", tenantId, $"course/{courseId}");
+
+    public static ResourceArn ForSection(Guid tenantId, Guid courseId, Guid sectionId) =>
+        new("courses", tenantId, $"course/{courseId}/section/{sectionId}");
+
+    public static ResourceArn ForLesson(Guid tenantId, Guid courseId, Guid sectionId, Guid lessonId) =>
+        new("courses", tenantId, $"course/{courseId}/section/{sectionId}/lesson/{lessonId}");
+
+    public static ResourceArn ForQuiz(Guid tenantId, Guid courseId, Guid sectionId, Guid quizId) =>
+        new("courses", tenantId, $"course/{courseId}/section/{sectionId}/quiz/{quizId}");
+
+    public static ResourceArn ForEnrollment(Guid tenantId, Guid enrollmentId) =>
+        new("courses", tenantId, $"enrollment/{enrollmentId}");
+
+    public static ResourceArn ForVideo(Guid tenantId, Guid videoId) =>
+        new("video", tenantId, $"video/{videoId}");
+
+    public static ResourceArn ForLibrary(Guid tenantId, Guid libraryId) =>
+        new("library", tenantId, $"library/{libraryId}");
+
+    public static ResourceArn ForAccessCode(Guid tenantId, Guid codeId) =>
+        new("library", tenantId, $"code/{codeId}");
 }
 
 /// <summary>
 /// Represents a permission scope pattern.
-/// CAN contain wildcards at the end.
+/// CAN contain wildcards and placeholders.
 /// Format: az:{service}:{tenantId}:{resourcePathPattern}
 /// </summary>
-public record ResourcePattern
+public class ResourcePattern
 {
-    public string Value { get; }
+    public string Value { get; private set; }
+
+    private const string PatternRegex = @"^(?<prefix>az)(:(?<service>[a-zA-Z*]+))?(:(?<tenantId>[a-zA-Z0-9-*]+))?(:(?<resourcePath>[A-Za-z0-9/*/-{}]+))?$";
+
 
     private ResourcePattern(string value)
     {
-        if (!IsValid(value))
-            throw new ArgumentException($"Invalid ResourcePattern format: {value}");
-        
         Value = value.ToLowerInvariant();
     }
 
     public static ErrorOr<ResourcePattern> Create(string value)
     {
-
-        if (!IsValid(value))
-            Error.Validation("Identity.Application",$"Invalid ResourcePattern format: {value}");
+        var result = IsValidPattern(value);
+        if (result.IsError)
+            return result.Errors;
 
         return new ResourcePattern(value);
-
     }
 
-    public static bool IsValid(string pattern)
+    public static ErrorOr<Match> IsValidPattern(string pattern)
     {
-        // Matches az:service:tenant:path or az:service:tenant:path/*
-        return Regex.IsMatch(pattern, @"^az:[a-zA-Z\*]+:[a-zA-Z0-9-\*]+:[A-Za-z0-9\/\-\*]+$");
+        if (string.IsNullOrWhiteSpace(pattern))
+            return Error.Validation("Identity.Application", "Pattern cannot be empty.");
+
+        var regex = new Regex(PatternRegex, RegexOptions.Compiled);
+        var match = regex.Match(pattern);
+
+        if (!match.Success)
+            return Error.Validation("Identity.Application", "Invalid ARN pattern format.");
+
+        var resourcePath = match.Groups["resourcePath"]?.Value;
+        if (!string.IsNullOrEmpty(resourcePath))
+        {
+            if (resourcePath.Contains("*") && !resourcePath.EndsWith("*"))
+                return Error.Validation("Identity.Application", "Invalid ARN pattern format: wildcard '*' is only allowed at the end of the resource path.");
+
+            if (!IsValidPath(resourcePath))
+                return Error.Validation("Identity.Application", "Invalid ARN pattern format: resource path contains invalid characters.");
+        }
+
+        return match;
+    }
+
+    public static bool IsValidPath(string path)
+    {
+        var segments = path.Split('/', StringSplitOptions.RemoveEmptyEntries);
+
+        foreach (var segment in segments)
+        {
+            if (segment == "*") continue;
+            if (segment.StartsWith("{") && segment.EndsWith("}")) continue;
+            if (!Regex.IsMatch(segment, @"^[a-zA-Z0-9-]+$")) return false;
+        }
+
+        return true;
     }
 
     public bool IsMatch(ResourceArn arn)
     {
-        var arnString = arn.ToString().ToLowerInvariant();
-        
-        // Simple Wildcard matching
-        if (Value.EndsWith("*"))
+        var match = Regex.Match(Value, PatternRegex);
+        if (!match.Success) return false;
+
+        var pPrefix = match.Groups["prefix"].Value;
+        var pService = match.Groups["service"].Value;
+        var pTenantId = match.Groups["tenantId"].Value;
+        var pResourcePath = match.Groups["resourcePath"].Value;
+
+        // Prefix check (az)
+        if (pPrefix != ResourceArn.Prefix) return false;
+
+        // Service check
+        if (pService != "*" && !string.Equals(pService, arn.Service, StringComparison.OrdinalIgnoreCase))
+            return false;
+
+        // Tenant check
+        if (!string.IsNullOrEmpty(pTenantId) && pTenantId != "*" && !string.Equals(pTenantId, arn.TenantIdString, StringComparison.OrdinalIgnoreCase))
+            return false;
+
+        // Resource Path check
+        if (string.IsNullOrEmpty(pResourcePath) || pResourcePath == "*")
+            return true;
+
+        if (pResourcePath.EndsWith("*"))
         {
-            var prefix = Value.TrimEnd('*');
-            return arnString.StartsWith(prefix, StringComparison.OrdinalIgnoreCase);
+            var prefix = pResourcePath.TrimEnd('*', '/');
+            return arn.ResourcePath.StartsWith(prefix, StringComparison.OrdinalIgnoreCase);
         }
 
-        return arnString == Value;
+        // Handle placeholders in the pattern (e.g., az:courses:*:course/{courseId})
+        // If no placeholders were actually used, simple comparison is faster.
+        if (!pResourcePath.Contains("{"))
+            return string.Equals(pResourcePath, arn.ResourcePath, StringComparison.OrdinalIgnoreCase);
+
+        // Convert the pattern's path into a regex where {placeholder} matches any segment.
+        var pathRegexPattern = "^" + Regex.Escape(pResourcePath)
+            .Replace(@"\{", "{").Replace(@"\}", "}") // unescape brackets
+            .Replace("{", "(?<").Replace("}", ">[^/]+)") // convert {id} to (?<id>[^/]+)
+            + "$";
+
+        try
+        {
+            return Regex.IsMatch(arn.ResourcePath, pathRegexPattern, RegexOptions.IgnoreCase);
+        }
+        catch
+        {
+            return false;
+        }
     }
 
     public static ResourcePattern All => new ResourcePattern("az:*");

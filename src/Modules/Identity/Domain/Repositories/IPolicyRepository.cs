@@ -6,7 +6,6 @@ namespace AlphaZero.Modules.Identity.Domain.Repositories;
 
 public interface IPolicyRepository : IRepository<Policy>
 {
-    Task<IReadOnlyCollection<ManagedPolicy>?> GetManagedPoliciesForPrincipal(Guid id);
 }
 
 public interface IManagedPolicyRepository : IRepository<ManagedPolicy>
@@ -21,7 +20,7 @@ public interface IPrincipalRepository : IRepository<Principal>
 }
 
 
-public interface ITenantUserPrincpialAssignmentRepository : IRepository<TenantPrinciaplAssignment>
+public interface ITenantUserPrincpialAssignmentRepository : IRepository<TenantUserPrinciaplAssignment>
 {
-    Task<TenantPrinciaplAssignment?> Get(Guid tenantUserId, string resourceArn);
+    Task<TenantUserPrinciaplAssignment?> Get(Guid tenantUserId, string resourceArn);
 }

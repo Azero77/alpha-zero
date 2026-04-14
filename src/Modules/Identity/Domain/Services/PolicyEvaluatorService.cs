@@ -77,38 +77,34 @@ public class TenantUserAuthorizationStrategy : IAuthorizationStrategy
 
     public async Task<ErrorOr<Success>> Authorize(AuthorizationContext context)
     {
-        // 1. Session Check (Anchor)
+        // 1. Session Integrity Check
         var user = await _userRepository.GetById(context.Id);
         if (user == null) return Error.Forbidden("User.NotFound");
         
         if (context.SessionId.HasValue && user.ActiveSessionId != context.SessionId.Value)
-            return Error.Unauthorized("Session.Expired", "Your session has been terminated by another login.");
+            return Error.Unauthorized("Session.Expired", "Access denied. This session has been invalidated by a newer login.");
 
-        // 2. Resource ARN construction
+        // 2. Construct the Target ARN
         var targetArnResult = ResourceArn.Create(context.ResourceType.ToString(), context.TenantId.ToString(), context.ResourcePath);
         if (targetArnResult.IsError) return Error.Forbidden("Resource.Invalid");
         var targetArn = targetArnResult.Value;
 
-        // 3. Find Scoped Assignments
-        // In a real implementation, we would query all assignments for the user and filter them
-        // or query specifically for assignments that might match the targetArn.
-        // For simplicity here, we assume the repository helps us find relevant assignments.
-        
-        // This is a placeholder for the logic:
-        // Get all user assignments -> Build Effective Policies -> Evaluate
-        
-        // Let's assume we get the specific assignment for the course scope if it exists
+        // 3. Evaluate Scoped Assignments
+        // We look for an assignment that matches the target resource
         var assignment = await _assignmentRepository.Get(context.Id, targetArn.ToString());
-        if (assignment == null) return Error.Forbidden("Access.Denied", "No matching assignment found.");
+        if (assignment == null) return Error.Forbidden("Access.Denied", "No matching assignment found for this resource.");
 
-        foreach (var policy in assignment.Principal.ManagedPolicies)
+        // We treat the assignment resource as a wildcard pattern (e.g., Course/101/*)
+        var scopePattern = ResourcePattern.Create(assignment.Resource.ToString() + "/*").Value;
+
+        foreach (var managedPolicy in assignment.Principal.ManagedPolicies)
         {
-            foreach (var statement in policy.Statements)
+            foreach (var statement in managedPolicy.Statements)
             {
                 if (statement.Actions.Any(a => AuthorizationHelper.IsActionMatched(context.RequiredPermission, a)) &&
-                    assignment.Resource == targetArn)
+                    scopePattern.IsMatch(targetArn))
                 {
-                    if (!statement.Effect) return Error.Forbidden("Access.Denied", "Explicit deny.");
+                    if (!statement.Effect) return Error.Forbidden("Access.Denied", "Explicit deny in role.");
                     return Result.Success;
                 }
             }
@@ -121,14 +117,10 @@ public class TenantUserAuthorizationStrategy : IAuthorizationStrategy
 public class PrincipalUserAuthorizationStrategy : IAuthorizationStrategy
 {
     private readonly IPrincipalRepository _principalRepository;
-    private readonly IPolicyRepository _policyRepository;
 
-    public PrincipalUserAuthorizationStrategy(
-        IPrincipalRepository principalRepository, 
-        IPolicyRepository policyRepository)
+    public PrincipalUserAuthorizationStrategy(IPrincipalRepository principalRepository)
     {
         _principalRepository = principalRepository;
-        _policyRepository = policyRepository;
     }
 
     public AuthorizationMethod Method => AuthorizationMethod.Principal;
@@ -142,7 +134,7 @@ public class PrincipalUserAuthorizationStrategy : IAuthorizationStrategy
         if (targetArnResult.IsError) return Error.Forbidden("Resource.Invalid");
         var targetArn = targetArnResult.Value;
 
-        // Evaluate Inline Policies
+        // 1. Evaluate Inline Policies (Direct JSONB overrides)
         foreach (var policy in principal.InlinePolicies)
         {
             foreach (var statement in policy.Statements)
@@ -150,29 +142,26 @@ public class PrincipalUserAuthorizationStrategy : IAuthorizationStrategy
                 if (statement.Actions.Any(a => AuthorizationHelper.IsActionMatched(context.RequiredPermission, a)) &&
                     statement.Resources.Any(r => r.IsMatch(targetArn)))
                 {
-                    if (!statement.Effect) return Error.Forbidden("Access.Denied", "Explicit deny.");
+                    if (!statement.Effect) return Error.Forbidden("Access.Denied", "Explicit deny in inline policy.");
                     return Result.Success;
                 }
             }
         }
 
-        // Evaluate Template/Managed Policies
-        if (principal.PrincipalScope != null)
+        // 2. Evaluate Managed Policies (Attached directly to this principal instance)
+        // We use the Principal's own scope pattern to build the effective policies
+        var scope = principal.PrincipalScope?.Value ?? "az:*";
+
+        foreach (var managedPolicy in principal.ManagedPolicies)
         {
-            var managedPolicies = await _policyRepository.GetManagedPoliciesForPrincipal(principal.Id);
-            if (managedPolicies != null)
+            var effectivePolicy = managedPolicy.Build(scope, context.TenantId);
+            foreach (var statement in effectivePolicy.Statements)
             {
-                foreach (var policy in managedPolicies)
+                if (statement.Actions.Any(a => AuthorizationHelper.IsActionMatched(context.RequiredPermission, a)) &&
+                    statement.Resources.Any(r => r.IsMatch(targetArn)))
                 {
-                    foreach (var statement in policy.Statements)
-                    {
-                        if (statement.Actions.Any(a => AuthorizationHelper.IsActionMatched(context.RequiredPermission, a)) &&
-                            principal.PrincipalScope.IsMatch(targetArn))
-                        {
-                            if (!statement.Effect) return Error.Forbidden("Access.Denied", "Explicit deny.");
-                            return Result.Success;
-                        }
-                    }
+                    if (!statement.Effect) return Error.Forbidden("Access.Denied", "Explicit deny in managed policy.");
+                    return Result.Success;
                 }
             }
         }

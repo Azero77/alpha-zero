@@ -13,30 +13,25 @@ public class Principal : PrincipalTemplate, IDomainTenantOwned
     public ResourcePattern? PrincipalScope { get; private set; }
     
     private List<Policy> _inlinePolicies = new List<Policy>();
-    public IReadOnlyCollection<Policy> InlinePolicies => _inlinePolicies.AsReadOnly();
     
     public ResourceType? ScopeResourceType { get; private set; }
     public Guid? ResourceId { get; private set; }
 
     public Guid TenantId { get; private set; }
+    public IReadOnlyCollection<Policy> InlinePolicies => _inlinePolicies.AsReadOnly();
     public string? PrincipalScopeUrn => PrincipalScope?.Value;
-
-    private Principal(Guid id, string identityId, PrincipalType type, Guid tenantId, ResourcePattern? scope, string name, Guid? resourceId = null, ResourceType? scopeResourceType = null) 
-        : base(id, name, type)
+    
+    private Principal(Guid id, string tenantUserId, PrincipalType principalType, Guid tenantId, ResourcePattern? principalScope, string name, Guid? resourceId = null, ResourceType? scopeResourceType = null) 
+        : base(id, name, principalType)
     {
-        TenantUserId = identityId;
-        PrincipalScope = scope;
+        TenantUserId = tenantUserId;
+        PrincipalScope = principalScope;
         ResourceId = resourceId;
         ScopeResourceType = scopeResourceType;
         TenantId = tenantId;
     }
-
     public static ErrorOr<Principal> Create(Guid id, string identityId, PrincipalType type, Guid tenantId, string? principalScope, string name, Guid? resourceId = null, ResourceType? scopeResourceType = null)
     {
-        if ((principalScope is null && resourceId is not null) || (principalScope is not null && resourceId is null))
-            return Error.Validation("Principal.InvalidScope", "Principal scope pattern and resource ID must be either both null or both non-null.");
-
-        
         if (principalScope is not null)
         {
             ErrorOr<ResourcePattern> pattern = ResourcePattern.Create(principalScope);

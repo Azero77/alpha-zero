@@ -4,7 +4,7 @@ namespace AlphaZero.Modules.Identity.Domain.Models;
 
 public class PrincipalTemplate : Entity
 {
-    protected PrincipalTemplate(Guid id, string? name, PrincipalType principalType)
+    public PrincipalTemplate(Guid id, string? name, PrincipalType principalType)
         : base(id)
     {
         Name = name;

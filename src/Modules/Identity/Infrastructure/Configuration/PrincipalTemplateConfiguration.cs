@@ -1,7 +1,10 @@
 using AlphaZero.Modules.Identity.Domain.Models;
+using AlphaZero.Modules.Identity.Infrastructure.Models;
 using AlphaZero.Shared.Domain;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using System.Text.Json;
 
 namespace AlphaZero.Modules.Identity.Infrastructure.Configuration;
 
@@ -9,14 +12,15 @@ public class PrincipalTemplateConfiguration : IEntityTypeConfiguration<Principal
 {
     public void Configure(EntityTypeBuilder<PrincipalTemplate> builder)
     {
-        builder.ToTable("Principals");
-        builder.HasKey(p => p.Id);
-
         builder.Property(p => p.Name).HasMaxLength(256);
         builder.Property(p => p.PrincipalType).HasConversion<string>();
+
+        // Many-to-Many for ALL Templates (including Principals)
         builder.HasMany(p => p.ManagedPolicies)
             .WithMany()
-            .UsingEntity("PrincipalManagedPolicies");
+            .UsingEntity<PrincipalPolicyAssignment>(
+                j => j.HasOne(a => a.ManagedPolicy).WithMany().HasForeignKey(a => a.ManagedPolicyId),
+                j => j.HasOne(a => a.Principal).WithMany().HasForeignKey(a => a.PrincipalId));
     }
 }
 
@@ -24,7 +28,7 @@ public class PrincipalConfiguration : IEntityTypeConfiguration<Principal>
 {
     public void Configure(EntityTypeBuilder<Principal> builder)
     {
-        builder.Property(p => p.TenantUserId).IsRequired();
+        builder.Property(p => p.TenantUserId).IsRequired().HasMaxLength(128);
         builder.HasIndex(p => p.TenantUserId);
         builder.Property(p => p.TenantId).IsRequired();
 
@@ -37,15 +41,19 @@ public class PrincipalConfiguration : IEntityTypeConfiguration<Principal>
 
         builder.Property(p => p.ResourceId);
         builder.Property(p => p.ScopeResourceType).HasConversion<string>();
-        builder.HasIndex(p => new { p.ResourceId, p.ScopeResourceType });
 
-        builder.HasMany(p => p.InlinePolicies)
-               .WithOne()
-               .HasForeignKey("PrincipalId")
-               .OnDelete(DeleteBehavior.Cascade);
+        // ManagedPolicies are handled in PrincipalTemplateConfiguration (Inherited)
 
-        builder.Navigation(p => p.InlinePolicies)
-               .UsePropertyAccessMode(PropertyAccessMode.Field)
-               .HasField("_inlinePolicies");
+        // JSONB: InlinePolicies (Collection of Policy objects)
+        builder.Property(p => p.InlinePolicies)
+            .HasConversion(
+                v => JsonSerializer.Serialize(v, (JsonSerializerOptions)null!),
+                v => JsonSerializer.Deserialize<List<Policy>>(v, (JsonSerializerOptions)null!) ?? new List<Policy>(),
+                new ValueComparer<IReadOnlyCollection<Policy>>(
+                    (c1, c2) => c1!.SequenceEqual(c2!),
+                    c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
+                    c => c.ToList()))
+            .HasColumnType("jsonb")
+            .HasField("_inlinePolicies");
     }
 }

@@ -7,69 +7,104 @@ public class ResourceArnTests
 {
     private static readonly Guid TenantId = Guid.NewGuid();
     private static readonly Guid CourseId = Guid.NewGuid();
-    private static readonly Guid SectionId = Guid.NewGuid();
 
     [Fact]
-    public void ToString_Should_ReturnCorrectFormat()
+    public void Create_Should_Succeed_ForValidStrictArn()
     {
-        // Arrange
-        var arn = ResourceArn.ForCourse(TenantId, CourseId);
-
         // Act
-        var result = arn.ToString();
+        var result = ResourceArn.Create("courses", TenantId.ToString(), $"course/{CourseId}");
 
         // Assert
-        result.Should().Be($"az:courses:{TenantId.ToString().ToLowerInvariant()}:course/{CourseId}");
-    }
-
-    [Theory]
-    [InlineData("az:courses:{tid}:course/{cid}", true)] // Exact match
-    [InlineData("az:courses:{tid}:course/*", true)]    // Parent wildcard
-    [InlineData("az:courses:{tid}:*", true)]           // Service wildcard
-    [InlineData("az:courses:global:course/{cid}", false)] // Wrong tenant
-    [InlineData("az:video:{tid}:course/{cid}", false)]   // Wrong service
-    [InlineData("az:courses:{tid}:course/{cid}/section/1", false)] // Sub-resource doesn't match parent exact
-    public void IsMatchedBy_Should_HandleWildcardsCorrectly(string pattern, bool expected)
-    {
-        // Arrange
-        var arn = ResourceArn.ForCourse(TenantId, CourseId);
-        var formattedPattern = pattern
-            .Replace("{tid}", TenantId.ToString())
-            .Replace("{cid}", CourseId.ToString());
-
-        // Act
-        var result = arn.IsMatchedBy(formattedPattern);
-
-        // Assert
-        result.Should().Be(expected);
+        result.IsError.Should().BeFalse();
+        result.Value.ToString().Should().Be($"az:courses:{TenantId.ToString().ToLowerInvariant()}:course/{CourseId}");
     }
 
     [Fact]
-    public void ForLesson_Should_IncludeCourseAndSectionContext()
+    public void Create_Should_Fail_IfArnContainsWildcard()
     {
-        // Arrange
-        var lessonId = Guid.NewGuid();
-
         // Act
-        var arn = ResourceArn.ForLesson(TenantId, CourseId, SectionId, lessonId);
+        var result = ResourceArn.Create("courses", TenantId.ToString(), "course/*");
 
         // Assert
-        arn.ToString().Should().Contain($"course/{CourseId}");
-        arn.ToString().Should().Contain($"section/{SectionId}");
-        arn.ToString().Should().Contain($"lesson/{lessonId}");
+        result.IsError.Should().BeTrue();
+        result.FirstError.Code.Should().Be("Identity.Application");
     }
 
     [Fact]
-    public void GlobalResources_Should_UseGlobalTenantString()
+    public void ResourcePattern_Should_MatchCorrectArn()
     {
         // Arrange
-        var userId = Guid.NewGuid();
+        var arn = ResourceArn.Create("courses", TenantId.ToString(), $"course/{CourseId}").Value;
+        var pattern = ResourcePattern.Create($"az:courses:{TenantId}:course/*").Value;
 
-        // Act
-        var arn = ResourceArn.ForUser(userId);
+        // Act & Assert
+        pattern.IsMatch(arn).Should().BeTrue();
+    }
 
-        // Assert
-        arn.TenantIdString.Should().Be("global");
-        arn.ToString().Should().Be($"az:identity:global:user/{userId}");
+    [Fact]
+    public void ResourcePattern_Should_Match_AzStar()
+    {
+        // Arrange
+        var arn = ResourceArn.Create("courses", TenantId.ToString(), $"course/{CourseId}").Value;
+        var pattern = ResourcePattern.All;
+
+        // Act & Assert
+        pattern.IsMatch(arn).Should().BeTrue();
+    }
+
+    [Fact]
+    public void ResourcePattern_Should_Match_ServiceWildcard()
+    {
+        // Arrange
+        var arn = ResourceArn.Create("courses", TenantId.ToString(), $"course/{CourseId}").Value;
+        var pattern = ResourcePattern.Create($"az:*:*").Value;
+
+        // Act & Assert
+        pattern.IsMatch(arn).Should().BeTrue();
+    }
+
+    [Fact]
+    public void ResourcePattern_Should_Match_GlobalTenant()
+    {
+        // Arrange
+        var arn = ResourceArn.ForUser(Guid.NewGuid()); // global tenant
+        var pattern = ResourcePattern.Create("az:identity:global:user/*").Value;
+
+        // Act & Assert
+        pattern.IsMatch(arn).Should().BeTrue();
+    }
+
+    [Fact]
+    public void ResourcePattern_Should_Match_Placeholders()
+    {
+        // Arrange
+        var courseId = Guid.NewGuid();
+        var arn = ResourceArn.Create("courses", TenantId.ToString(), $"course/{courseId}").Value;
+        var pattern = ResourcePattern.Create($"az:courses:{TenantId}:course/{{courseId}}").Value;
+
+        // Act & Assert
+        pattern.IsMatch(arn).Should().BeTrue();
+    }
+
+    [Fact]
+    public void ResourcePattern_Should_NotMatch_IfPathSegmentDifferent_WithPlaceholders()
+    {
+        // Arrange
+        var arn = ResourceArn.Create("courses", TenantId.ToString(), $"subject/{Guid.NewGuid()}").Value;
+        var pattern = ResourcePattern.Create($"az:courses:{TenantId}:course/{{courseId}}").Value;
+
+        // Act & Assert
+        pattern.IsMatch(arn).Should().BeFalse();
+    }
+
+    [Fact]
+    public void ResourcePattern_Should_NotMatchDifferentTenant()
+    {
+        // Arrange
+        var arn = ResourceArn.Create("courses", Guid.NewGuid().ToString(), $"course/{CourseId}").Value;
+        var pattern = ResourcePattern.Create($"az:courses:{TenantId}:course/*").Value;
+
+        // Act & Assert
+        pattern.IsMatch(arn).Should().BeFalse();
     }
 }

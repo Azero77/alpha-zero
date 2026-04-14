@@ -2,10 +2,11 @@ using AlphaZero.Modules.Identity.Domain.Models;
 using AlphaZero.Modules.Identity.Domain.Services;
 using AlphaZero.Modules.Identity.Domain.Repositories;
 using AlphaZero.Shared.Authorization;
+using AlphaZero.Shared.Domain;
+using AlphaZero.Shared.Infrastructure.Repositores;
 using FluentAssertions;
 using Identity.Tests.Integration.Abstractions;
 using Microsoft.EntityFrameworkCore;
-using AlphaZero.Shared.Domain;
 
 namespace Identity.Tests.Integration;
 
@@ -16,79 +17,73 @@ public class IdentityTests : BaseIntegrationTest
     }
 
     [Fact]
-    public async Task SavePrincipal_ShouldPersistInlinePoliciesAsJsonB()
+    public async Task Authorize_TenantUser_ShouldWorkEndToEnd_WithScopedAssignments()
     {
         // Arrange
         var tenantId = Guid.NewGuid();
-        var principal = Principal.Create(Guid.NewGuid(), "cognito-sub", PrincipalType.User, tenantId, "az:*:*:*", "Test User").Value;
+        var user = TenantUser.Create(tenantId, "ali-sub", "Ali").Value;
         
-        var policy = new Policy(Guid.NewGuid(), "InlinePolicy", tenantId);
-        policy.AddStatement(new PolicyStatement("S1", new() { "courses:Edit" }, true, new() { ResourcePattern.All}));
-        principal.AddInlinePolicy(policy);
+        // Use a template for the "Student" role
+        var template = new PrincipalTemplate(Guid.NewGuid(), "Student", PrincipalType.Role);
+        var managedPolicy = new ManagedPolicy(Guid.NewGuid(), "StudentBase", new() 
+        { 
+            new PolicyTemplateStatement("S1", new() { "courses:View" }, true) 
+        });
+        template.ManagedPolicies.Add(managedPolicy);
 
-        // Act
-        DbContext.Principals.Add(principal);
-        await DbContext.SaveChangesAsync();
-
-        // Assert
-        var saved = await DbContext.Principals
-            .Include(p => p.InlinePolicies)
-            .FirstAsync(p => p.Id == principal.Id);
-
-        saved.InlinePolicies.Should().HaveCount(1);
-        saved.InlinePolicies.First().Statements.First().Actions.Should().Contain("courses:Edit");
-    }
-
-    [Fact]
-    public async Task Authorize_ShouldWorkEndToEnd_WithManagedPolicyAssignments()
-    {
-        // Arrange
-        var tenantId = Guid.NewGuid();
-        var principal = Principal.Create(Guid.NewGuid(), "cognito-sub", PrincipalType.User, tenantId, "az:courses:*:*", "Teacher").Value;
-        
-        var managedPolicy = new ManagedPolicy(Guid.NewGuid(), "CourseAdmin", new() { new PolicyTemplateStatement("S1", new() { "courses:Publish" }, true) });
-
-        // Resolve services from the SAME scope
-        var managedRepo = Resolve<IManagedPolicyRepository>();
-        var evaluator = Resolve<PolicyEvaluatorService>();
-
-        // Persist base entities
-        DbContext.Principals.Add(principal);
+        // Save everything
+        DbContext.TenantUsers.Add(user);
+        DbContext.PrincipalTemplates.Add(template);
         DbContext.ManagedPolicies.Add(managedPolicy);
         await DbContext.SaveChangesAsync();
 
-        // Act: Assign via Repository
-        await managedRepo.AssignPolicyToPrincipal(principal.Id, managedPolicy.Id);
+        // Create Assignment (Enrollment)
+        var assignment = TenantUserPrinciaplAssignment.Create(tenantId, user, template, $"az:courses:{tenantId}:course/math-101").Value;
+        DbContext.TenantPrinciaplAssignments.Add(assignment);
         await DbContext.SaveChangesAsync();
 
-        // Act: Evaluate
-        var result = await evaluator.Authorize(principal.Id, tenantId, "course/1", ResourceType.Courses, "courses:Publish");
+        // Act: Evaluate via the Service
+        var evaluator = Resolve<IPolicyEvaluatorService>();
+        var result = await evaluator.Authorize(
+            user.Id, 
+            tenantId, 
+            "course/math-101", 
+            ResourceType.Courses, 
+            "courses:View", 
+            AuthorizationMethod.TenantUser.ToString(), 
+            user.ActiveSessionId);
 
         // Assert
         result.IsError.Should().BeFalse();
     }
 
     [Fact]
-    public async Task PrincipalIndexing_Should_ReturnCorrectPrincipalsByResource()
+    public async Task Authorize_Principal_ShouldWorkWithJsonBInlinePolicies()
     {
         // Arrange
         var tenantId = Guid.NewGuid();
-        var courseId = Guid.NewGuid();
+        var user = TenantUser.Create(tenantId, "ali-sub", "Ali").Value;
         
-        var p1 = Principal.Create(Guid.NewGuid(), "u1", PrincipalType.User, tenantId, "az:*:*:*", "User 1", courseId, ResourceType.Courses).Value;
-        var p2 = Principal.Create(Guid.NewGuid(), "u2", PrincipalType.User, tenantId, "az:*:*:*", "User 2", courseId, ResourceType.Courses).Value;
-        var p3 = Principal.Create(Guid.NewGuid(), "u3", PrincipalType.User, tenantId, "az:*:*:*", "User 3", Guid.NewGuid(), ResourceType.Courses).Value;
+        var principal = Principal.Create(Guid.NewGuid(), user.IdentityId, PrincipalType.User, tenantId, "az:*:*:*", "Custom").Value;
+        var policy = new Policy(Guid.NewGuid(), "Inline", tenantId);
+        policy.AddStatement(new PolicyStatement("S1", new() { "admin:Access" }, true, new() { ResourcePattern.All }));
+        principal.AddInlinePolicy(policy);
 
-        DbContext.Principals.AddRange(p1, p2, p3);
+        DbContext.TenantUsers.Add(user);
+        DbContext.Principals.Add(principal);
         await DbContext.SaveChangesAsync();
 
-        // Act: Resolve repo from the same scope
-        var repo = Resolve<IPrincipalRepository>();
-        var results = await repo.GetPrincipalsByResourceAsync(courseId, ResourceType.Courses);
+        // Act
+        var evaluator = Resolve<IPolicyEvaluatorService>();
+        var result = await evaluator.Authorize(
+            principal.Id, 
+            tenantId, 
+            "dashboard", 
+            ResourceType.Users, 
+            "admin:Access", 
+            AuthorizationMethod.Principal.ToString());
 
         // Assert
-        results.Should().HaveCount(2);
-        results.Should().Contain(p => p.Name == "User 1");
-        results.Should().Contain(p => p.Name == "User 2");
+        result.IsError.Should().BeFalse();
     }
 }

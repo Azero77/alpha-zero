@@ -6,13 +6,13 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AlphaZero.Modules.Identity.Infrastructure.Repositories;
 
-public class TenantUserPrincpialAssignmentRepository : BaseRepository<AppDbContext, TenantPrinciaplAssignment>, ITenantUserPrincpialAssignmentRepository
+public class TenantUserPrincpialAssignmentRepository : BaseRepository<AppDbContext, TenantUserPrinciaplAssignment>, ITenantUserPrincpialAssignmentRepository
 {
     public TenantUserPrincpialAssignmentRepository(AppDbContext context) : base(context)
     {
     }
 
-    public async Task<TenantPrinciaplAssignment?> Get(Guid tenantUserId, string resourceArn)
+    public async Task<TenantUserPrinciaplAssignment?> Get(Guid tenantUserId, string resourceArn)
     {
         return await _context.TenantPrinciaplAssignments
             .Include(a => a.Principal)

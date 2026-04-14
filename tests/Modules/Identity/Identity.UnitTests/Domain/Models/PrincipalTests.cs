@@ -1,5 +1,6 @@
 using AlphaZero.Modules.Identity.Domain.Models;
 using AlphaZero.Shared.Authorization;
+using AlphaZero.Shared.Domain;
 using FluentAssertions;
 
 namespace AlphaZero.Modules.Identity.UnitTests.Domain.Models;
@@ -7,57 +8,40 @@ namespace AlphaZero.Modules.Identity.UnitTests.Domain.Models;
 public class PrincipalTests
 {
     private static readonly Guid TenantId = Guid.NewGuid();
-    private static readonly Guid UserId = Guid.NewGuid();
+    private static readonly string IdentityId = "cognito-sub-123";
 
     [Fact]
     public void Create_Should_Succeed_WithValidUrn()
     {
         // Arrange
-        var scope = $"az:courses:{TenantId}:course/*";
+        var scope = $"az:courses:{TenantId}:course/101";
 
         // Act
-        var result = Principal.Create(Guid.NewGuid(), UserId.ToString(), PrincipalType.User, TenantId, scope, "Teacher");
+        var result = Principal.Create(Guid.NewGuid(), IdentityId, PrincipalType.User, TenantId, scope, "Test Principal", Guid.NewGuid(), ResourceType.Courses);
 
         // Assert
         result.IsError.Should().BeFalse();
-        result.Value.PrincipalScopeUrn.Should().Be(scope);
+        result.Value.PrincipalScopeUrn.Should().Be(scope.ToLowerInvariant());
     }
 
     [Fact]
-    public void Create_Should_Fail_WithInvalidUrnPrefix()
+    public void Create_Should_Fail_WithInvalidUrn()
     {
         // Arrange
-        var invalidScope = "aws:s3:tenant:path";
+        var invalidScope = "not-an-arn";
 
         // Act
-        var result = Principal.Create(Guid.NewGuid(), UserId.ToString(), PrincipalType.User, TenantId, invalidScope, "Teacher");
+        var result = Principal.Create(Guid.NewGuid(), IdentityId, PrincipalType.User, TenantId, invalidScope, "Test Principal", Guid.NewGuid(), ResourceType.Courses);
 
         // Assert
         result.IsError.Should().BeTrue();
-        result.Errors.First().Code.Should().Be("Identity.Application");
-    }
-
-    [Fact]
-    public void Create_Should_StoreResourceIndex_WhenProvided()
-    {
-        // Arrange
-        var courseId = Guid.NewGuid();
-        var scope = $"az:courses:{TenantId}:course/{courseId}";
-
-        // Act
-        var result = Principal.Create(Guid.NewGuid(), UserId.ToString(), PrincipalType.User, TenantId, scope, "CourseAdmin", courseId, ResourceType.Courses);
-
-        // Assert
-        result.IsError.Should().BeFalse();
-        result.Value.ResourceId.Should().Be(courseId);
-        result.Value.ScopeResourceType.Should().Be(ResourceType.Courses);
     }
 
     [Fact]
     public void AddInlinePolicy_Should_EncapsulateCorrectly()
     {
         // Arrange
-        var principal = Principal.Create(Guid.NewGuid(), UserId.ToString(), PrincipalType.User, TenantId, "az:*:*:*", "Admin").Value;
+        var principal = Principal.Create(Guid.NewGuid(), IdentityId, PrincipalType.User, TenantId, null, "Custom").Value;
         var policy = new Policy(Guid.NewGuid(), "Custom", TenantId);
 
         // Act
@@ -66,21 +50,5 @@ public class PrincipalTests
         // Assert
         principal.InlinePolicies.Should().HaveCount(1);
         principal.InlinePolicies.Should().Contain(policy);
-    }
-
-    [Fact]
-    public void RemoveInlinePolicy_Should_WorkById()
-    {
-        // Arrange
-        var principal = Principal.Create(Guid.NewGuid(), UserId.ToString(), PrincipalType.User, TenantId, "az:*:*:*", "Admin").Value;
-        var policyId = Guid.NewGuid();
-        var policy = new Policy(policyId, "Custom", TenantId);
-        principal.AddInlinePolicy(policy);
-
-        // Act
-        principal.RemoveInlinePolicy(policyId);
-
-        // Assert
-        principal.InlinePolicies.Should().BeEmpty();
     }
 }

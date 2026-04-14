@@ -76,3 +76,10 @@ public class PrincipalRepository : BaseRepository<AppDbContext, Principal>, IPri
             .ToListAsync(ct);
     }
 }
+
+public class TenantUserRepository : BaseRepository<AppDbContext, TenantUser>
+{
+    public TenantUserRepository(AppDbContext context) : base(context)
+    {
+    }
+}

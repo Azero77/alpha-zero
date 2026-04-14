@@ -1,3 +1,4 @@
+using AlphaZero.Modules.Identity.Domain.Models;
 using AlphaZero.Modules.Identity.Domain.Repositories;
 using AlphaZero.Modules.Identity.Domain.Services;
 using AlphaZero.Modules.Identity.Infrastructure.Persistance;
@@ -5,6 +6,7 @@ using AlphaZero.Modules.Identity.Infrastructure.Repositories;
 using AlphaZero.Shared.Application;
 using AlphaZero.Shared.Authorization;
 using AlphaZero.Shared.Infrastructure;
+using AlphaZero.Shared.Infrastructure.Repositores;
 using Autofac.Core;
 using FluentValidation;
 using MediatR;
@@ -34,9 +36,10 @@ public static class DependencyInjection
         services.AddScoped<IPolicyRepository, PolicyRepository>();
         services.AddScoped<IManagedPolicyRepository, ManagedPolicyRepository>();
         services.AddScoped<IPrincipalRepository, PrincipalRepository>();
+        services.AddScoped<IRepository<TenantUser>,TenantUserRepository>(); 
         services.AddScoped<ITenantUserPrincpialAssignmentRepository, TenantUserPrincpialAssignmentRepository>();
         
-        services.AddScoped<IAuthorizationStrategy, TenatUserAuthorizationStrategy>();
+        services.AddScoped<IAuthorizationStrategy, TenantUserAuthorizationStrategy>();
         services.AddScoped<IAuthorizationStrategy, PrincipalUserAuthorizationStrategy>();
         
         services.AddScoped<IPolicyEvaluatorService, PolicyEvaluatorService>();

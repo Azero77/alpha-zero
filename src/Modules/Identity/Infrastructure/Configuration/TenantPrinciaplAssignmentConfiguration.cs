@@ -5,12 +5,10 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace AlphaZero.Modules.Identity.Infrastructure.Configuration;
 
-public class TenantPrinciaplAssignmentConfiguration : IEntityTypeConfiguration<TenantPrinciaplAssignment>
+public class TenantUserPrinciaplAssignmentConfiguration : IEntityTypeConfiguration<TenantUserPrinciaplAssignment>
 {
-    public void Configure(EntityTypeBuilder<TenantPrinciaplAssignment> builder)
+    public void Configure(EntityTypeBuilder<TenantUserPrinciaplAssignment> builder)
     {
-        builder.ToTable("TenantPrinciaplAssignments");
-        builder.HasKey(a => a.Id);
 
         builder.HasOne(a => a.TenantUser)
             .WithMany()
@@ -31,6 +29,6 @@ public class TenantPrinciaplAssignmentConfiguration : IEntityTypeConfiguration<T
 
         builder.Property(a => a.TenantId).IsRequired();
         
-        builder.HasIndex("TenantUserId", "PrincipalTemplateId", "ResourceArn").IsUnique();
+        builder.HasIndex("TenantUserId", "PrincipalTemplateId", "Resource").IsUnique();
     }
 }

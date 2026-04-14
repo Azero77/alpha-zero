@@ -1,8 +1,8 @@
-using System.Text.Json;
 using AlphaZero.Modules.Identity.Domain.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using System.Text.Json;
 
 namespace AlphaZero.Modules.Identity.Infrastructure.Configuration;
 
@@ -10,9 +10,6 @@ public class ManagedPolicyConfiguration : IEntityTypeConfiguration<ManagedPolicy
 {
     public void Configure(EntityTypeBuilder<ManagedPolicy> builder)
     {
-        builder.ToTable("ManagedPolicies");
-        builder.HasKey(m => m.Id);
-
         builder.Property(m => m.Name).IsRequired().HasMaxLength(100);
 
         // Store Templates as JSONB using explicit serialization

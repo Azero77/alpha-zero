@@ -1,27 +1,39 @@
 using System.Reflection;
 using AlphaZero.Modules.Identity.Domain.Models;
 using AlphaZero.Modules.Identity.Infrastructure.Models;
+using AlphaZero.Shared.Infrastructure.Database;
+using AlphaZero.Shared.Infrastructure.Tenats;
 using Microsoft.EntityFrameworkCore;
 
 namespace AlphaZero.Modules.Identity.Infrastructure.Persistance;
 
-public class AppDbContext : DbContext
+public class AppDbContext : DbContext, ITenantDbContext
 {
-    public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
+    private readonly ITenantProvider tenantProvider;
+    public AppDbContext(DbContextOptions<AppDbContext> options, ITenantProvider tenantProvider) : base(options)
     {
+        this.tenantProvider = tenantProvider;
     }
 
     public DbSet<Principal> Principals => Set<Principal>();
     public DbSet<PrincipalTemplate> PrincipalTemplates => Set<PrincipalTemplate>();
-    public DbSet<Policy> Policies => Set<Policy>();
     public DbSet<ManagedPolicy> ManagedPolicies => Set<ManagedPolicy>();
     public DbSet<PrincipalPolicyAssignment> PrincipalPolicyAssignments => Set<PrincipalPolicyAssignment>();
     public DbSet<TenantUser> TenantUsers => Set<TenantUser>();
-    public DbSet<TenantPrinciaplAssignment> TenantPrinciaplAssignments => Set<TenantPrinciaplAssignment>();
+    public DbSet<TenantUserPrinciaplAssignment> TenantPrinciaplAssignments => Set<TenantUserPrinciaplAssignment>();
+
+    public Guid? TenantId => tenantProvider.GetTenant();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.ApplyConfigurationsFromAssembly(Assembly.GetExecutingAssembly());
+        modelBuilder.ApplyAlphaZeroGlobalFilters(this);
+
+        // Ignore JSON-only types to prevent EF from treating them as entities
+        modelBuilder.Ignore<Policy>();
+        modelBuilder.Ignore<PolicyStatement>();
+        modelBuilder.Ignore<PolicyTemplateStatement>();
+        
         base.OnModelCreating(modelBuilder);
     }
 }

@@ -8,15 +8,17 @@ public class PrincipalPolicyAssignmentConfiguration : IEntityTypeConfiguration<P
 {
     public void Configure(EntityTypeBuilder<PrincipalPolicyAssignment> builder)
     {
-        builder.ToTable("PrincipalPolicyAssignments");
+        builder.ToTable("PrincipalManagedPolicyAssignments");
         builder.HasKey(a => new { a.PrincipalId, a.ManagedPolicyId });
 
         builder.HasOne(a => a.Principal)
                .WithMany()
-               .HasForeignKey(a => a.PrincipalId);
+               .HasForeignKey(a => a.PrincipalId)
+               .OnDelete(DeleteBehavior.Cascade);
 
         builder.HasOne(a => a.ManagedPolicy)
                .WithMany()
-               .HasForeignKey(a => a.ManagedPolicyId);
+               .HasForeignKey(a => a.ManagedPolicyId)
+               .OnDelete(DeleteBehavior.Cascade);
     }
 }

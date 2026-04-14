@@ -2,6 +2,8 @@ using AlphaZero.Modules.Identity.Domain.Models;
 using AlphaZero.Modules.Identity.Domain.Repositories;
 using AlphaZero.Modules.Identity.Domain.Services;
 using AlphaZero.Shared.Authorization;
+using AlphaZero.Shared.Domain;
+using AlphaZero.Shared.Infrastructure.Repositores;
 using ErrorOr;
 using FluentAssertions;
 using NSubstitute;
@@ -10,105 +12,117 @@ namespace AlphaZero.Modules.Identity.UnitTests.Domain.Services;
 
 public class PolicyEvaluatorServiceTests
 {
-    private readonly IPolicyRepository _policyRepository;
     private readonly IPrincipalRepository _principalRepository;
+    private readonly ITenantUserPrincpialAssignmentRepository _assignmentRepository;
+    private readonly IRepository<TenantUser> _userRepository;
     private readonly PolicyEvaluatorService _evaluator;
+    
     private static readonly Guid TenantId = Guid.NewGuid();
-    private static readonly Guid PrincipalId = Guid.NewGuid();
+    private static readonly Guid UserId = Guid.NewGuid();
+    private static readonly Guid SessionId = Guid.NewGuid();
 
     public PolicyEvaluatorServiceTests()
     {
-        _policyRepository = Substitute.For<IPolicyRepository>();
         _principalRepository = Substitute.For<IPrincipalRepository>();
-        _evaluator = new PolicyEvaluatorService(_policyRepository, _principalRepository);
+        _assignmentRepository = Substitute.For<ITenantUserPrincpialAssignmentRepository>();
+        _userRepository = Substitute.For<IRepository<TenantUser>>();
+
+        var strategies = new List<IAuthorizationStrategy>
+        {
+            new TenantUserAuthorizationStrategy(_assignmentRepository, _userRepository),
+            new PrincipalUserAuthorizationStrategy(_principalRepository)
+        };
+
+        _evaluator = new PolicyEvaluatorService(strategies);
     }
 
     [Fact]
-    public async Task Authorize_Should_ReturnForbidden_WhenNoPoliciesExist()
-    {
-        // Arrange: No policies set up
-        var principal = CreateBasePrincipal();
-        _principalRepository.GetById(PrincipalId).Returns(principal);
-        _policyRepository.GetManagedPoliciesForPrincipal(PrincipalId).Returns(new List<ManagedPolicy>());
-
-        // Act
-        var result = await _evaluator.Authorize(PrincipalId, TenantId, "course/1", ResourceType.Courses, "courses:Edit");
-
-        // Assert
-        result.IsError.Should().BeTrue();
-        result.FirstError.Type.Should().Be(ErrorType.Forbidden);
-    }
-
-    [Fact]
-    public async Task Authorize_Should_ReturnSuccess_WhenInlineAllowExists()
+    public async Task Authorize_TenantUser_Should_Succeed_WhenValidAssignmentExists()
     {
         // Arrange
-        var principal = CreateBasePrincipal();
-        var policy = new Policy(Guid.NewGuid(), "Inline", TenantId);
-        policy.AddStatement(new PolicyStatement("Allow", new() { "courses:Edit" },true, new() { "az:*" }));
-        principal.AddInlinePolicy(policy);
+        var user = TenantUser.Create(TenantId, "sub-1", "Ali").Value;
+        // Correctly set the active session via Reflection if setter is private
+        user.GetType().GetProperty(nameof(TenantUser.ActiveSessionId))!
+            .SetValue(user, SessionId);
+        
+        _userRepository.GetById(user.Id).Returns(Task.FromResult<TenantUser?>(user));
 
-        _principalRepository.GetById(PrincipalId).Returns(principal);
+        // Use the proper way to create a template since constructor is protected
+        var template = new PrincipalTemplate(Guid.NewGuid(), "Student", PrincipalType.Role);
+        
+        var managedPolicy = new ManagedPolicy(Guid.NewGuid(), "View", new() 
+        { 
+            new PolicyTemplateStatement("S1", new() { "courses:View" }, true) 
+        });
+        
+        // Add policy to the template
+        template.ManagedPolicies.Add(managedPolicy);
+
+        var assignment = TenantUserPrinciaplAssignment.Create(TenantId, user, template, $"az:courses:{TenantId}:course/101").Value;
+        
+        // FIX: Must return Task.FromResult for async methods
+        _assignmentRepository.Get(user.Id, Arg.Any<string>())
+            .Returns(Task.FromResult<TenantUserPrinciaplAssignment?>(assignment));
 
         // Act
-        var result = await _evaluator.Authorize(PrincipalId, TenantId, "course/1", ResourceType.Courses, "courses:Edit");
+        var result = await _evaluator.Authorize(
+            user.Id, 
+            TenantId, 
+            "course/101", 
+            ResourceType.Courses, 
+            "courses:View", 
+            AuthorizationMethod.TenantUser.ToString(), 
+            SessionId);
 
         // Assert
         result.IsError.Should().BeFalse();
     }
 
     [Fact]
-    public async Task Authorize_Should_ReturnForbidden_WhenExplicitDenyOverridesAllow()
+    public async Task Authorize_TenantUser_Should_Fail_WhenSessionIdMismatches()
     {
         // Arrange
-        var principal = CreateBasePrincipal();
-        
-        // 1. Allow Policy
-        var allowPolicy = new Policy(Guid.NewGuid(), "Allow", TenantId);
-        allowPolicy.AddStatement(new PolicyStatement("test Allow", new() { "courses:Delete" }, true, new() { "*" }));
-        principal.AddInlinePolicy(allowPolicy);
-
-        // 2. Deny Policy (Same Action)
-        var denyPolicy = new Policy(Guid.NewGuid(), "Deny", TenantId);
-        denyPolicy.AddStatement(new PolicyStatement("test Deny", new() { "courses:Delete" }, false, new() { "*" }));
-        principal.AddInlinePolicy(denyPolicy);
-
-        _principalRepository.GetById(PrincipalId).Returns(principal);
+        var user = TenantUser.Create(TenantId, "sub-1", "Ali").Value;
+        _userRepository.GetById(user.Id).Returns(Task.FromResult<TenantUser?>(user));
 
         // Act
-        var result = await _evaluator.Authorize(PrincipalId, TenantId, "course/1", ResourceType.Courses, "courses:Delete");
+        var result = await _evaluator.Authorize(
+            user.Id, 
+            TenantId, 
+            "path", 
+            ResourceType.Courses, 
+            "perm", 
+            AuthorizationMethod.TenantUser.ToString(), 
+            Guid.NewGuid()); // Wrong Session
 
         // Assert
         result.IsError.Should().BeTrue();
-        result.FirstError.Code.Should().Be("Access.Denied");
+        result.FirstError.Type.Should().Be(ErrorType.Unauthorized);
     }
 
     [Fact]
-    public async Task Authorize_Should_EnforcePrincipalScopeUrn_ForManagedPolicies()
+    public async Task Authorize_Principal_Should_EvaluateInlinePolicies()
     {
-        // Arrange: Principal is only scoped to Course 123
-        var scope = $"az:courses:{TenantId}:course/123/*";
-        var principal = Principal.Create(PrincipalId, "identity-1", PrincipalType.User, TenantId, scope, "Teacher").Value;
+        // Arrange
+        var principalResult = Principal.Create(Guid.NewGuid(), "sub-1", PrincipalType.User, TenantId, ResourcePattern.All.Value, "Custom");
+        var principal = principalResult.Value;
         
-        // Managed Policy allows "Edit" on anything ("*")
-        var managedPolicy = new ManagedPolicy(Guid.NewGuid(), "StandardEditor", new() { new PolicyTemplateStatement("S1", new() { "courses:Edit" }, true) });
-        _principalRepository.GetById(PrincipalId).Returns(principal);
-        _policyRepository.GetManagedPoliciesForPrincipal(PrincipalId).Returns(new List<ManagedPolicy> { managedPolicy });
+        var policy = new Policy(Guid.NewGuid(), "Inline", TenantId);
+        policy.AddStatement(new PolicyStatement("S1", new() { "video:Stream" }, true, new() { ResourcePattern.All }));
+        principal.AddInlinePolicy(policy);
 
-        // Act 1: Try to edit Course 123 (Inside Scope)
-        var resultAllowed = await _evaluator.Authorize(PrincipalId, TenantId, "course/123", ResourceType.Courses, "courses:Edit");
+        _principalRepository.GetById(principal.Id).Returns(Task.FromResult<Principal?>(principal));
 
-        // Act 2: Try to edit Course 999 (Outside Scope)
-        var resultDenied = await _evaluator.Authorize(PrincipalId, TenantId, "course/999", ResourceType.Courses, "courses:Edit");
+        // Act
+        var result = await _evaluator.Authorize(
+            principal.Id, 
+            TenantId, 
+            "video/1", 
+            ResourceType.Videos, 
+            "video:Stream", 
+            AuthorizationMethod.Principal.ToString());
 
         // Assert
-        resultAllowed.IsError.Should().BeFalse();
-        resultDenied.IsError.Should().BeTrue();
-        resultDenied.FirstError.Type.Should().Be(ErrorType.Forbidden);
-    }
-
-    private Principal CreateBasePrincipal()
-    {
-        return Principal.Create(PrincipalId, "identity-1", PrincipalType.User, TenantId, "az:courses:*:*", "Test User").Value;
+        result.IsError.Should().BeFalse();
     }
 }

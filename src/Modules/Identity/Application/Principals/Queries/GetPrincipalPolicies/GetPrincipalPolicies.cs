@@ -31,7 +31,7 @@ public sealed class GetPrincipalPoliciesQueryHandler : IRequestHandler<GetPrinci
         var principal = await _principalRepository.GetById(request.PrincipalId);
         if (principal is null) return Error.NotFound("Principal.NotFound", "Principal not found.");
 
-        var managedPolicies = await _policyRepository.GetManagedPoliciesForPrincipal(request.PrincipalId);
+        var managedPolicies = principal.ManagedPolicies;
 
         var dto = new PrincipalPoliciesDto(
             principal.Id,
