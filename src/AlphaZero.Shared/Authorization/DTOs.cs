@@ -1,4 +1,4 @@
-﻿using AlphaZero.Shared.Domain;
+using AlphaZero.Shared.Domain;
 using FastEndpoints;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -23,44 +23,53 @@ public class IAMPreprocessor : IGlobalPreProcessor
 {
     public async Task PreProcessAsync(IPreProcessorContext context, CancellationToken ct)
     {
-        //The request may contain TenantUser information, or principal information
-        // the principal will have a claim called auth_method = principal wherease the tenant user will auth_method = tenantUser
         var requirement = context.HttpContext.GetEndpoint()?.Metadata.GetMetadata<AccessControlRequirement>();
 
         if (requirement is null) return;
 
         var id = context.HttpContext.User.Claims.FirstOrDefault(c => c.Type == "sub")?.Value;
         var auth_scheme = context.HttpContext.User.Claims.FirstOrDefault(c => c.Type == "auth_method")?.Value;
+        var sid = context.HttpContext.User.Claims.FirstOrDefault(c => c.Type == "sid")?.Value;
 
-        if (auth_scheme is null || Enum.TryParse<AuthorizationMethod>(auth_scheme, out AuthorizationMethod authMethod))
+        if (string.IsNullOrEmpty(id) || !Guid.TryParse(id, out var principalId))
         {
-            await context.HttpContext.Response.SendForbiddenAsync(ct);return;
+            await context.HttpContext.Response.SendForbiddenAsync(ct); return;
         }
 
-        
-        if (string.IsNullOrEmpty(id) || !Guid.TryParse(id, out _))
+        if (string.IsNullOrEmpty(auth_scheme))
         {
-            await context.HttpContext.Response.SendForbiddenAsync(ct);return;
+            await context.HttpContext.Response.SendForbiddenAsync(ct); return;
         }
+
+        Guid? sessionId = Guid.TryParse(sid, out var sessionGuid) ? sessionGuid : null;
             
         var evaluator = context.HttpContext.RequestServices.GetRequiredService<IPolicyEvaluatorService>();
 
         ResourceArn resourceArn = requirement.resourceArnFactory(context.Request!);
         if (!Guid.TryParse(resourceArn.TenantIdString, out var tenantId))
         {
-            await context.HttpContext.Response.SendForbiddenAsync(ct);return;
+            await context.HttpContext.Response.SendForbiddenAsync(ct); return;
         }
-        if(Enum.TryParse<ResourceType>(resourceArn.Service, out var resourceType))
+
+        if (!Enum.TryParse<ResourceType>(resourceArn.Service, true, out var resourceType))
         {
-            await context.HttpContext.Response.SendForbiddenAsync(ct);return;
+            // If service name doesn't match ResourceType enum, we might need a fallback or stricter validation
+            await context.HttpContext.Response.SendForbiddenAsync(ct); return;
         }
-        var result = await evaluator.Authorize(Guid.Parse(id), tenantId, resourceArn.ResourcePath, resourceType, requirement.Action);
+
+        var result = await evaluator.Authorize(
+            principalId, 
+            tenantId, 
+            resourceArn.ResourcePath, 
+            resourceType, 
+            requirement.Action, 
+            auth_scheme, 
+            sessionId);
 
         if (result.IsError)
         {
-            await context.HttpContext.Response.SendForbiddenAsync(ct);return;
+            await context.HttpContext.Response.SendForbiddenAsync(ct); return;
         }
-            
     }
 }
 

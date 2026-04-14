@@ -62,7 +62,9 @@ public class PrincipalRepository : BaseRepository<AppDbContext, Principal>, IPri
 
     public override async Task<Principal?> GetById(Guid id)
     {
-        return await _context.Principals.Include(p => p.InlinePolicies)
+        return await _context.Principals
+            .Include(p => p.InlinePolicies)
+            .Include(t => t.ManagedPolicies)
             .FirstOrDefaultAsync(p => p.Id == id);
     }
 

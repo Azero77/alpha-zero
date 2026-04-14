@@ -28,7 +28,7 @@ public record ResourceArn
     public static ErrorOr<ResourceArn> Create(string service, string tenantId, string resourcePath)
     {
         if (resourcePath.Contains("*"))
-            return Error.Validation("identity.Application","ResourceArn cannot contain wildcards. Use ResourcePattern for scopes");
+            return Error.Validation("Identity.Application","ResourceArn cannot contain wildcards. Use ResourcePattern for scopes");
 
         if (Enum.TryParse<ResourceType>(service, out _))
         {
@@ -45,7 +45,7 @@ public record ResourceArn
 
         var service = match.Groups["service"].Value;
         var tenantId = match.Groups["tenantId"].Value;
-        var path = match.Groups["path"].Value;
+        var path = match.Groups["resourcePath"].Value;
         return Create(service,tenantId,path);
     }
     public override string ToString() => $"az:{Service}:{TenantIdString}:{ResourcePath}";
@@ -60,7 +60,7 @@ public record ResourcePattern
 {
     public string Value { get; }
 
-    public ResourcePattern(string value)
+    private ResourcePattern(string value)
     {
         if (!IsValid(value))
             throw new ArgumentException($"Invalid ResourcePattern format: {value}");

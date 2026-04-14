@@ -1,4 +1,4 @@
-﻿using ErrorOr;
+using ErrorOr;
 
 namespace AlphaZero.Shared.Authorization;
 
@@ -6,15 +6,17 @@ namespace AlphaZero.Shared.Authorization;
 /// Provides methods for evaluating authorization policies and determining whether a principal has the required
 /// permissions to access a specified resource.
 /// </summary>
-/// <remarks>This service acts as a central point for policy evaluation, delegating policy data retrieval to the
-/// configured policy repository. It is typically used in scenarios where access control decisions must be enforced
-/// based on dynamic policies associated with principals and resources.</remarks>
 public interface IPolicyEvaluatorService
 {
-    Task<ErrorOr<Success>> Authorize(Guid prinicapId, Guid tenantId, string resourcePath, ResourceType resourceType, string requiredPermission);
+    Task<ErrorOr<Success>> Authorize(
+        Guid id, 
+        Guid tenantId, 
+        string resourcePath, 
+        ResourceType resourceType, 
+        string requiredPermission,
+        string authMethod,
+        Guid? sessionId = null);
 }
-
-
 
 public enum ResourceType
 {

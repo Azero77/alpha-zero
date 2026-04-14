@@ -12,9 +12,12 @@ public class AppDbContext : DbContext
     }
 
     public DbSet<Principal> Principals => Set<Principal>();
+    public DbSet<PrincipalTemplate> PrincipalTemplates => Set<PrincipalTemplate>();
     public DbSet<Policy> Policies => Set<Policy>();
     public DbSet<ManagedPolicy> ManagedPolicies => Set<ManagedPolicy>();
     public DbSet<PrincipalPolicyAssignment> PrincipalPolicyAssignments => Set<PrincipalPolicyAssignment>();
+    public DbSet<TenantUser> TenantUsers => Set<TenantUser>();
+    public DbSet<TenantPrinciaplAssignment> TenantPrinciaplAssignments => Set<TenantPrinciaplAssignment>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
