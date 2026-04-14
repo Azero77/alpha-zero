@@ -24,6 +24,7 @@ public record ResourceArn
     public const string GlobalTenant = "global";
     private const string ResourcePattern = @"^(?<prefix>az)(:(?<service>[a-zA-Z\*]+))?(:(?<tenantId>[a-zA-Z0-9-\*]+))?(:(?<resourcePath>[A-Za-z0-9\/\*\/\-\{\}]+))?$";
 
+
     public ResourceArn(string service, string tenantId, string resourcePath)
     {
         Service = service.ToLowerInvariant();

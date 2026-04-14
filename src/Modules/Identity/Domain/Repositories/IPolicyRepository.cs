@@ -19,3 +19,9 @@ public interface IPrincipalRepository : IRepository<Principal>
 {
     Task<IReadOnlyCollection<Principal>> GetPrincipalsByResourceAsync(Guid resourceId, ResourceType resourceType, CancellationToken ct = default);
 }
+
+
+public interface ITenantUserPrincpialAssignmentRepository : IRepository<TenantPrinciaplAssignment>
+{
+    Task<TenantPrinciaplAssignment?> Get(Guid tenantUserId, string resourceArn);
+}

@@ -23,12 +23,22 @@ public class IAMPreprocessor : IGlobalPreProcessor
 {
     public async Task PreProcessAsync(IPreProcessorContext context, CancellationToken ct)
     {
+        //The request may contain TenantUser information, or principal information
+        // the principal will have a claim called auth_method = principal wherease the tenant user will auth_method = tenantUser
         var requirement = context.HttpContext.GetEndpoint()?.Metadata.GetMetadata<AccessControlRequirement>();
 
         if (requirement is null) return;
 
-        var prinipalId = context.HttpContext.User.Claims.FirstOrDefault(c => c.Type == "sub")?.Value;
-        if (string.IsNullOrEmpty(prinipalId) || !Guid.TryParse(prinipalId, out _))
+        var id = context.HttpContext.User.Claims.FirstOrDefault(c => c.Type == "sub")?.Value;
+        var auth_scheme = context.HttpContext.User.Claims.FirstOrDefault(c => c.Type == "auth_method")?.Value;
+
+        if (auth_scheme is null || Enum.TryParse<AuthorizationMethod>(auth_scheme, out AuthorizationMethod authMethod))
+        {
+            await context.HttpContext.Response.SendForbiddenAsync(ct);return;
+        }
+
+        
+        if (string.IsNullOrEmpty(id) || !Guid.TryParse(id, out _))
         {
             await context.HttpContext.Response.SendForbiddenAsync(ct);return;
         }
@@ -44,7 +54,7 @@ public class IAMPreprocessor : IGlobalPreProcessor
         {
             await context.HttpContext.Response.SendForbiddenAsync(ct);return;
         }
-        var result = await evaluator.Authorize(Guid.Parse(prinipalId), tenantId, resourceArn.ResourcePath, resourceType, requirement.Action);
+        var result = await evaluator.Authorize(Guid.Parse(id), tenantId, resourceArn.ResourcePath, resourceType, requirement.Action);
 
         if (result.IsError)
         {
@@ -52,4 +62,10 @@ public class IAMPreprocessor : IGlobalPreProcessor
         }
             
     }
+}
+
+public enum AuthorizationMethod
+{
+    Principal,
+    TenantUser
 }

@@ -29,7 +29,9 @@ public class TenantPrinciaplAssignment : AggregateRoot, IDomainTenantOwned
         var isValidScope = ResourceArn.IsValidPattern(scope);
 
         if (isValidScope.IsError) return isValidScope.Errors;
-
-        return new TenantPrinciaplAssignment(Guid.NewGuid(), tenantId, tenantUser, principal, scope);
+        //we will accept a scope ending with /* or * , but will remove it for consistency
+        var newScope = scope.TrimEnd('*','/');
+        return new TenantPrinciaplAssignment(Guid.NewGuid(), tenantId, tenantUser, principal, newScope);
     }
+
 }
