@@ -10,7 +10,8 @@ namespace AlphaZero.Modules.Identity.Presentation.Principals.Commands.CreatePrin
 
 public record CreatePrincipalRequest
 {
-    public string IdentityId { get; init; } = default!;
+    public string Username { get; init; } = default!;
+    public string Password { get; init; } = default!;
     public PrincipalType PrincipalType { get; init; }
     public string PrincipalScope { get; init; } = default!;
     public string Name { get; init; } = default!;
@@ -38,7 +39,7 @@ public class CreatePrincipalEndpoint : Endpoint<CreatePrincipalRequest, CreatePr
 
     public override async Task HandleAsync(CreatePrincipalRequest req, CancellationToken ct)
     {
-        var command = new CreatePrincipalCommand(req.IdentityId, req.PrincipalType, req.PrincipalScope, req.Name, req.ResourceId, req.ScopeResourceType);
+        var command = new CreatePrincipalCommand(req.Username, req.Password, req.PrincipalType, req.PrincipalScope, req.Name, req.ResourceId, req.ScopeResourceType);
         var result = await _module.Send(command, ct);
 
         if (result.IsError)

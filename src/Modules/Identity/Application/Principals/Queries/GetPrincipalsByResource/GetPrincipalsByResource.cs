@@ -8,7 +8,7 @@ namespace AlphaZero.Modules.Identity.Application.Principals.Queries.GetPrincipal
 
 public record PrincipalDto(
     Guid Id,
-    string IdentityId,
+    string Username,
     string Name,
     PrincipalType PrincipalType,
     string? PrincipalScopeUrn,
@@ -32,7 +32,7 @@ public sealed class GetPrincipalsByResourceQueryHandler : IRequestHandler<GetPri
 
         return principals.Select(p => new PrincipalDto(
             p.Id,
-            p.TenantUserId,
+            p.Username,
             p.Name,
             p.PrincipalType,
             p.PrincipalScopeUrn,

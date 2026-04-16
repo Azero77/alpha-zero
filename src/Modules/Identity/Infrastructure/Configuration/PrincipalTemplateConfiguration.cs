@@ -28,8 +28,9 @@ public class PrincipalConfiguration : IEntityTypeConfiguration<Principal>
 {
     public void Configure(EntityTypeBuilder<Principal> builder)
     {
-        builder.Property(p => p.TenantUserId).IsRequired().HasMaxLength(128);
-        builder.HasIndex(p => p.TenantUserId);
+        builder.Property(p => p.Username).IsRequired().HasMaxLength(128);
+        builder.HasIndex(p => new { p.Username, p.TenantId}).IsUnique();
+        builder.Property(p => p.PasswordHash).IsRequired();
         builder.Property(p => p.TenantId).IsRequired();
 
         // Boundary: Converter for ResourcePattern

@@ -44,7 +44,8 @@ public static class DependencyInjection
         
         services.AddScoped<IPolicyEvaluatorService, PolicyEvaluatorService>();
         services.AddScoped<PolicyEvaluatorService>();
-
+        services.AddScoped<IJwtProvider, Infrastructure.Auth.JwtProvider>();
+        services.AddScoped<IPasswordHasher, Infrastructure.Auth.PasswordHasher>();
     }
 
     public static void AddIdentityPrivateInfrastructure(this IServiceCollection moduleServices, IConfiguration configuration)

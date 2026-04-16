@@ -11,6 +11,7 @@ public class ManagedPolicyConfiguration : IEntityTypeConfiguration<ManagedPolicy
     public void Configure(EntityTypeBuilder<ManagedPolicy> builder)
     {
         builder.Property(m => m.Name).IsRequired().HasMaxLength(100);
+        builder.HasIndex(m => m.Name).IsUnique();
 
         // Store Templates as JSONB using explicit serialization
         builder.Property(m => m.Statements)
