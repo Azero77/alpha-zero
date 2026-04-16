@@ -14,7 +14,7 @@ public class PrincipalTemplateConfiguration : IEntityTypeConfiguration<Principal
     {
         builder.Property(p => p.Name).HasMaxLength(256);
         builder.Property(p => p.PrincipalType).HasConversion<string>();
-
+        builder.UseTptMappingStrategy();
         // Many-to-Many for ALL Templates (including Principals)
         builder.HasMany(p => p.ManagedPolicies)
             .WithMany()

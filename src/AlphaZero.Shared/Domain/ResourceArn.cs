@@ -11,28 +11,29 @@ namespace AlphaZero.Shared.Domain;
 /// </summary>
 public class ResourceArn
 {
-    public string Service { get; private set; }
-    public string TenantIdString { get; private set; }
-    public string ResourcePath { get; private set; }
+    public string Value { get; private set; } = string.Empty;
 
     public const string Prefix = "az";
     public const string GlobalTenant = "global";
 
     // Strict pattern for concrete ARNs
-    private const string ConcreteRegex = @"^az:(?<service>[a-zA-Z]+):(?<tenantId>[a-zA-Z0-9-]+):(?<resourcePath>[A-Za-z0-9\/\-]+)$";
+    private static readonly Regex ConcreteRegex = new(@"^az:(?<service>[a-zA-Z]+):(?<tenantId>[a-zA-Z0-9-]+):(?<resourcePath>[A-Za-z0-9\/\-]+)$", RegexOptions.Compiled);
 
-    private ResourceArn(string service, string tenantId, string resourcePath)
+    private ResourceArn() { } // EF Core
+
+    private ResourceArn(string value)
     {
-        Service = service.ToLowerInvariant();
-        TenantIdString = tenantId.ToLowerInvariant();
-        ResourcePath = resourcePath;
+        Value = value.ToLowerInvariant();
     }
 
-    private ResourceArn(string service, Guid tenantId, string resourcePath)
+    public string Service => GetPart("service");
+    public string TenantIdString => GetPart("tenantId");
+    public string ResourcePath => GetPart("resourcePath");
+
+    private string GetPart(string groupName)
     {
-        Service = service.ToLowerInvariant();
-        TenantIdString = tenantId.ToString();
-        ResourcePath = resourcePath;
+        var match = ConcreteRegex.Match(Value);
+        return match.Success ? match.Groups[groupName].Value : string.Empty;
     }
 
     public static ErrorOr<ResourceArn> Create(string service, string tenantId, string resourcePath)
@@ -44,64 +45,43 @@ public class ResourceArn
         {
             return Error.Validation("Identity.Application", "Invalid service");
         }
-        return new ResourceArn(service, tenantId, resourcePath);
+
+        return new ResourceArn($"{Prefix}:{service}:{tenantId}:{resourcePath}");
     }
 
     public static ErrorOr<ResourceArn> Create(string value)
     {
-        var match = Regex.Match(value, ConcreteRegex);
+        if (string.IsNullOrWhiteSpace(value))
+             return Error.Validation("Identity.Application", "Resource Arn cannot be empty.");
+
+        var match = ConcreteRegex.Match(value);
 
         if (!match.Success)
             return Error.Validation("Identity.Application", "Invalid Resource Arn format. Expected az:{service}:{tenantId}:{path}");
 
-        var service = match.Groups["service"].Value;
-        var tenantId = match.Groups["tenantId"].Value;
-        var path = match.Groups["resourcePath"].Value;
-        return Create(service, tenantId, path);
+        return new ResourceArn(value);
     }
 
-    public override string ToString() => $"{Prefix}:{Service}:{TenantIdString}:{ResourcePath}";
+    public override string ToString() => Value;
+
+    public override bool Equals(object? obj) => obj is ResourceArn other && Value == other.Value;
+    public override int GetHashCode() => Value.GetHashCode();
 
     // --- Static Factories ---
 
-    public static ResourceArn ForTenant(Guid tenantId) =>
-       new("tenants", GlobalTenant, $"tenant/{tenantId}");
-
-    public static ResourceArn ForUser(Guid userId) =>
-        new("identity", GlobalTenant, $"user/{userId}");
-
-    public static ResourceArn ForPrincipal(Guid tenantId, Guid principalId) =>
-        new("identity", tenantId, $"principal/{principalId}");
-
-    public static ResourceArn ForPolicy(Guid tenantId, Guid policyId) =>
-        new("identity", tenantId, $"policy/{policyId}");
-
-    public static ResourceArn ForSubject(Guid tenantId, Guid subjectId) =>
-        new("courses", tenantId, $"subject/{subjectId}");
-
-    public static ResourceArn ForCourse(Guid tenantId, Guid courseId) =>
-        new("courses", tenantId, $"course/{courseId}");
-
-    public static ResourceArn ForSection(Guid tenantId, Guid courseId, Guid sectionId) =>
-        new("courses", tenantId, $"course/{courseId}/section/{sectionId}");
-
-    public static ResourceArn ForLesson(Guid tenantId, Guid courseId, Guid sectionId, Guid lessonId) =>
-        new("courses", tenantId, $"course/{courseId}/section/{sectionId}/lesson/{lessonId}");
-
-    public static ResourceArn ForQuiz(Guid tenantId, Guid courseId, Guid sectionId, Guid quizId) =>
-        new("courses", tenantId, $"course/{courseId}/section/{sectionId}/quiz/{quizId}");
-
-    public static ResourceArn ForEnrollment(Guid tenantId, Guid enrollmentId) =>
-        new("courses", tenantId, $"enrollment/{enrollmentId}");
-
-    public static ResourceArn ForVideo(Guid tenantId, Guid videoId) =>
-        new("video", tenantId, $"video/{videoId}");
-
-    public static ResourceArn ForLibrary(Guid tenantId, Guid libraryId) =>
-        new("library", tenantId, $"library/{libraryId}");
-
-    public static ResourceArn ForAccessCode(Guid tenantId, Guid codeId) =>
-        new("library", tenantId, $"code/{codeId}");
+    public static ResourceArn ForTenant(Guid tenantId) => new($"az:tenants:{GlobalTenant}:tenant/{tenantId}");
+    public static ResourceArn ForUser(Guid userId) => new($"az:identity:{GlobalTenant}:user/{userId}");
+    public static ResourceArn ForPrincipal(Guid tenantId, Guid principalId) => new($"az:identity:{tenantId}:principal/{principalId}");
+    public static ResourceArn ForPolicy(Guid tenantId, Guid policyId) => new($"az:identity:{tenantId}:policy/{policyId}");
+    public static ResourceArn ForSubject(Guid tenantId, Guid subjectId) => new($"az:courses:{tenantId}:subject/{subjectId}");
+    public static ResourceArn ForCourse(Guid tenantId, Guid courseId) => new($"az:courses:{tenantId}:course/{courseId}");
+    public static ResourceArn ForSection(Guid tenantId, Guid courseId, Guid sectionId) => new($"az:courses:{tenantId}:course/{courseId}/section/{sectionId}");
+    public static ResourceArn ForLesson(Guid tenantId, Guid courseId, Guid sectionId, Guid lessonId) => new($"az:courses:{tenantId}:course/{courseId}/section/{sectionId}/lesson/{lessonId}");
+    public static ResourceArn ForQuiz(Guid tenantId, Guid courseId, Guid sectionId, Guid quizId) => new($"az:courses:{tenantId}:course/{courseId}/section/{sectionId}/quiz/{quizId}");
+    public static ResourceArn ForEnrollment(Guid tenantId, Guid enrollmentId) => new($"az:courses:{tenantId}:enrollment/{enrollmentId}");
+    public static ResourceArn ForVideo(Guid tenantId, Guid videoId) => new($"az:video:{tenantId}:video/{videoId}");
+    public static ResourceArn ForLibrary(Guid tenantId, Guid libraryId) => new($"az:library:{tenantId}:library/{libraryId}");
+    public static ResourceArn ForAccessCode(Guid tenantId, Guid codeId) => new($"az:library:{tenantId}:code/{codeId}");
 }
 
 /// <summary>
@@ -113,7 +93,7 @@ public class ResourcePattern
 {
     public string Value { get; private set; }
 
-    private const string PatternRegex = @"^(?<prefix>az)(:(?<service>[a-zA-Z*]+))?(:(?<tenantId>[a-zA-Z0-9-*]+))?(:(?<resourcePath>[A-Za-z0-9/*/-{}]+))?$";
+    private static readonly Regex PatternRegex = new(@"^(?<prefix>az)(:(?<service>[a-zA-Z*]+))?(:(?<tenantId>[a-zA-Z0-9*-]+))?(:(?<resourcePath>[A-Za-z0-9/*\-{}]+))?$", RegexOptions.Compiled);
 
 
     private ResourcePattern(string value)
@@ -135,8 +115,7 @@ public class ResourcePattern
         if (string.IsNullOrWhiteSpace(pattern))
             return Error.Validation("Identity.Application", "Pattern cannot be empty.");
 
-        var regex = new Regex(PatternRegex, RegexOptions.Compiled);
-        var match = regex.Match(pattern);
+        var match = PatternRegex.Match(pattern);
 
         if (!match.Success)
             return Error.Validation("Identity.Application", "Invalid ARN pattern format.");
@@ -170,7 +149,7 @@ public class ResourcePattern
 
     public bool IsMatch(ResourceArn arn)
     {
-        var match = Regex.Match(Value, PatternRegex);
+        var match = PatternRegex.Match(Value);
         if (!match.Success) return false;
 
         var pPrefix = match.Groups["prefix"].Value;

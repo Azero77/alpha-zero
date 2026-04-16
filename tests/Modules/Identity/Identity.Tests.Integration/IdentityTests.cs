@@ -21,6 +21,8 @@ public class IdentityTests : BaseIntegrationTest
     {
         // Arrange
         var tenantId = Guid.NewGuid();
+        SetTenant(tenantId);
+        
         var user = TenantUser.Create(tenantId, "ali-sub", "Ali").Value;
         
         // Use a template for the "Student" role
@@ -62,6 +64,8 @@ public class IdentityTests : BaseIntegrationTest
     {
         // Arrange
         var tenantId = Guid.NewGuid();
+        SetTenant(tenantId);
+
         var user = TenantUser.Create(tenantId, "ali-sub", "Ali").Value;
         
         var principal = Principal.Create(Guid.NewGuid(), user.IdentityId, PrincipalType.User, tenantId, "az:*:*:*", "Custom").Value;

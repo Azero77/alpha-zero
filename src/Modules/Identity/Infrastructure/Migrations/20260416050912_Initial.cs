@@ -30,14 +30,7 @@ namespace AlphaZero.Modules.Identity.Infrastructure.Migrations
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
                     Name = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
-                    PrincipalType = table.Column<string>(type: "text", nullable: false),
-                    Discriminator = table.Column<string>(type: "character varying(21)", maxLength: 21, nullable: false),
-                    TenantUserId = table.Column<string>(type: "character varying(128)", maxLength: 128, nullable: true),
-                    PrincipalScopePattern = table.Column<string>(type: "text", nullable: true),
-                    ScopeResourceType = table.Column<string>(type: "text", nullable: true),
-                    ResourceId = table.Column<Guid>(type: "uuid", nullable: true),
-                    TenantId = table.Column<Guid>(type: "uuid", nullable: true),
-                    InlinePolicies = table.Column<string>(type: "jsonb", nullable: true)
+                    PrincipalType = table.Column<string>(type: "text", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -84,6 +77,29 @@ namespace AlphaZero.Modules.Identity.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "Principals",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    TenantUserId = table.Column<string>(type: "character varying(128)", maxLength: 128, nullable: false),
+                    PrincipalScopePattern = table.Column<string>(type: "text", nullable: true),
+                    ScopeResourceType = table.Column<string>(type: "text", nullable: true),
+                    ResourceId = table.Column<Guid>(type: "uuid", nullable: true),
+                    TenantId = table.Column<Guid>(type: "uuid", nullable: false),
+                    InlinePolicies = table.Column<string>(type: "jsonb", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Principals", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Principals_PrincipalTemplates_Id",
+                        column: x => x.Id,
+                        principalTable: "PrincipalTemplates",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "TenantPrinciaplAssignments",
                 columns: table => new
                 {
@@ -116,8 +132,8 @@ namespace AlphaZero.Modules.Identity.Infrastructure.Migrations
                 column: "ManagedPolicyId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_PrincipalTemplates_TenantUserId",
-                table: "PrincipalTemplates",
+                name: "IX_Principals_TenantUserId",
+                table: "Principals",
                 column: "TenantUserId");
 
             migrationBuilder.CreateIndex(
@@ -153,6 +169,9 @@ namespace AlphaZero.Modules.Identity.Infrastructure.Migrations
         {
             migrationBuilder.DropTable(
                 name: "PrincipalManagedPolicyAssignments");
+
+            migrationBuilder.DropTable(
+                name: "Principals");
 
             migrationBuilder.DropTable(
                 name: "TenantPrinciaplAssignments");

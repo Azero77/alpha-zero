@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace AlphaZero.Modules.Identity.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260414222530_Initial")]
+    [Migration("20260416050912_Initial")]
     partial class Initial
     {
         /// <inheritdoc />
@@ -51,11 +51,6 @@ namespace AlphaZero.Modules.Identity.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<string>("Discriminator")
-                        .IsRequired()
-                        .HasMaxLength(21)
-                        .HasColumnType("character varying(21)");
-
                     b.Property<string>("Name")
                         .HasMaxLength(256)
                         .HasColumnType("character varying(256)");
@@ -68,9 +63,7 @@ namespace AlphaZero.Modules.Identity.Infrastructure.Migrations
 
                     b.ToTable("PrincipalTemplates");
 
-                    b.HasDiscriminator<string>("Discriminator").HasValue("PrincipalTemplate");
-
-                    b.UseTphMappingStrategy();
+                    b.UseTptMappingStrategy();
                 });
 
             modelBuilder.Entity("AlphaZero.Modules.Identity.Domain.Models.TenantUser", b =>
@@ -180,7 +173,7 @@ namespace AlphaZero.Modules.Identity.Infrastructure.Migrations
 
                     b.HasIndex("TenantUserId");
 
-                    b.HasDiscriminator().HasValue("Principal");
+                    b.ToTable("Principals");
                 });
 
             modelBuilder.Entity("AlphaZero.Modules.Identity.Domain.Models.TenantUserPrinciaplAssignment", b =>
@@ -219,6 +212,15 @@ namespace AlphaZero.Modules.Identity.Infrastructure.Migrations
                     b.Navigation("ManagedPolicy");
 
                     b.Navigation("Principal");
+                });
+
+            modelBuilder.Entity("AlphaZero.Modules.Identity.Domain.Models.Principal", b =>
+                {
+                    b.HasOne("AlphaZero.Modules.Identity.Domain.Models.PrincipalTemplate", null)
+                        .WithOne()
+                        .HasForeignKey("AlphaZero.Modules.Identity.Domain.Models.Principal", "Id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 #pragma warning restore 612, 618
         }

@@ -22,7 +22,7 @@ public class TenantUserPrinciaplAssignmentConfiguration : IEntityTypeConfigurati
 
         builder.Property(a => a.Resource)
             .HasConversion(
-                v => v.ToString(),
+                v => v.Value,
                 v => ResourceArn.Create(v).Value)
             .HasColumnName("ResourceArn")
             .IsRequired();
