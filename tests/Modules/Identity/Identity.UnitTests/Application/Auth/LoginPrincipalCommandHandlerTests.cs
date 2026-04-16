@@ -7,6 +7,7 @@ using AlphaZero.Shared.Domain;
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
+using NSubstitute.ReturnsExtensions;
 using System.Linq.Expressions;
 
 namespace AlphaZero.Modules.Identity.UnitTests.Application.Auth;
@@ -39,8 +40,8 @@ public class LoginPrincipalCommandHandlerTests
         // Arrange
         var principal = Principal.Create(Guid.NewGuid(), Username, PrincipalType.User, TenantId, null, "IAM User", PasswordHash).Value;
         
-        _principalRepository.ListAsync(Arg.Any<Expression<Func<Principal, bool>>>(), Arg.Any<CancellationToken>())
-            .Returns(new List<Principal> { principal });
+        _principalRepository.GetFirst(Arg.Any<Expression<Func<Principal, bool>>>(), Arg.Any<CancellationToken>())
+            .Returns(principal );
 
         _passwordHasher.VerifyPassword(Password, PasswordHash).Returns(true);
 
@@ -62,8 +63,8 @@ public class LoginPrincipalCommandHandlerTests
     public async Task Handle_Should_ReturnUnauthorized_WhenUsernameIsInvalid()
     {
         // Arrange
-        _principalRepository.ListAsync(Arg.Any<Expression<Func<Principal, bool>>>(), Arg.Any<CancellationToken>())
-            .Returns(new List<Principal>());
+        _principalRepository.GetFirst(Arg.Any<Expression<Func<Principal, bool>>>(), Arg.Any<CancellationToken>())
+            .ReturnsNull();
 
         var command = new LoginPrincipalCommand(TenantId, "wrong-user", Password);
 
@@ -81,8 +82,8 @@ public class LoginPrincipalCommandHandlerTests
         // Arrange
         var principal = Principal.Create(Guid.NewGuid(), Username, PrincipalType.User, TenantId, null, "IAM User", PasswordHash).Value;
 
-        _principalRepository.ListAsync(Arg.Any<Expression<Func<Principal, bool>>>(), Arg.Any<CancellationToken>())
-            .Returns(new List<Principal> { principal });
+        _principalRepository.GetFirst(Arg.Any<Expression<Func<Principal, bool>>>(), Arg.Any<CancellationToken>())
+            .Returns(principal);
 
         _passwordHasher.VerifyPassword("wrong-password", PasswordHash).Returns(false);
 

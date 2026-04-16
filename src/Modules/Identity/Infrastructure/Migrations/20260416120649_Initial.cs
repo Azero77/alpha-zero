@@ -81,7 +81,8 @@ namespace AlphaZero.Modules.Identity.Infrastructure.Migrations
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    TenantUserId = table.Column<string>(type: "character varying(128)", maxLength: 128, nullable: false),
+                    Username = table.Column<string>(type: "character varying(128)", maxLength: 128, nullable: false),
+                    PasswordHash = table.Column<string>(type: "text", nullable: false),
                     PrincipalScopePattern = table.Column<string>(type: "text", nullable: true),
                     ScopeResourceType = table.Column<string>(type: "text", nullable: true),
                     ResourceId = table.Column<Guid>(type: "uuid", nullable: true),
@@ -127,14 +128,21 @@ namespace AlphaZero.Modules.Identity.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateIndex(
+                name: "IX_ManagedPolicies_Name",
+                table: "ManagedPolicies",
+                column: "Name",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
                 name: "IX_PrincipalManagedPolicyAssignments_ManagedPolicyId",
                 table: "PrincipalManagedPolicyAssignments",
                 column: "ManagedPolicyId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Principals_TenantUserId",
+                name: "IX_Principals_Username_TenantId",
                 table: "Principals",
-                column: "TenantUserId");
+                columns: new[] { "Username", "TenantId" },
+                unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_TenantPrinciaplAssignments_PrincipalTemplateId",

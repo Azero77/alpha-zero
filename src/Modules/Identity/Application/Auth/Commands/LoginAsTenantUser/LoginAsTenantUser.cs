@@ -39,8 +39,7 @@ public sealed class LoginAsTenantUserCommandHandler : IRequestHandler<LoginAsTen
     {
         // 1. Find or Auto-Create TenantUser
         // In your SaaS, enrollment triggers this, but we'll ensure it exists here for robustness
-        var users = await _userRepository.ListAsync(u => u.IdentityId == request.IdentityId && u.TenantId == request.TenantId, cancellationToken);
-        var user = users.FirstOrDefault();
+        var user = await _userRepository.GetFirst(u => u.IdentityId == request.IdentityId && u.TenantId == request.TenantId, cancellationToken);
 
         if (user is null)
         {

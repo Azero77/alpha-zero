@@ -36,8 +36,7 @@ public sealed class LoginPrincipalCommandHandler : IRequestHandler<LoginPrincipa
 
     public async Task<ErrorOr<TokenResponse>> Handle(LoginPrincipalCommand request, CancellationToken cancellationToken)
     {
-        var principals = await _principalRepository.ListAsync(p => p.Username == request.Username && p.TenantId == request.TenantId, cancellationToken);
-        var principal = principals.FirstOrDefault();
+        var principal = await _principalRepository.GetFirst(p => p.Username == request.Username && p.TenantId == request.TenantId, cancellationToken);
 
         if (principal is null || !_passwordHasher.VerifyPassword(request.Password, principal.PasswordHash))
         {

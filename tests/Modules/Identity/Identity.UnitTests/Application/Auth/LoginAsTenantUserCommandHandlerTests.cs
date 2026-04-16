@@ -5,6 +5,7 @@ using AlphaZero.Shared.Infrastructure.Repositores;
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
+using NSubstitute.ReturnsExtensions;
 using System.Linq.Expressions;
 
 namespace AlphaZero.Modules.Identity.UnitTests.Application.Auth;
@@ -34,8 +35,8 @@ public class LoginAsTenantUserCommandHandlerTests
         var user = TenantUser.Create(TenantId, IdentityId, "Ali").Value;
         var initialSessionId = user.ActiveSessionId;
 
-        _userRepository.ListAsync(Arg.Any<Expression<Func<TenantUser, bool>>>(), Arg.Any<CancellationToken>())
-            .Returns(new List<TenantUser> { user });
+        _userRepository.GetFirst(Arg.Any<Expression<Func<TenantUser, bool>>>(), Arg.Any<CancellationToken>())
+            .Returns(user);
 
         _jwtProvider.GenerateToken(user.Id, TenantId, Arg.Any<Guid>(), AuthorizationMethod.TenantUser)
             .Returns("token-123");
@@ -58,8 +59,8 @@ public class LoginAsTenantUserCommandHandlerTests
     public async Task Handle_Should_ReturnForbidden_WhenUserIsNotEnrolled()
     {
         // Arrange
-        _userRepository.ListAsync(Arg.Any<Expression<Func<TenantUser, bool>>>(), Arg.Any<CancellationToken>())
-            .Returns(new List<TenantUser>());
+        _userRepository.GetFirst(Arg.Any<Expression<Func<TenantUser, bool>>>(), Arg.Any<CancellationToken>())
+            .ReturnsNull();
 
         var command = new LoginAsTenantUserCommand(IdentityId, TenantId, "Ali");
 

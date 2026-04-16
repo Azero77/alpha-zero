@@ -39,6 +39,9 @@ namespace AlphaZero.Modules.Identity.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("Name")
+                        .IsUnique();
+
                     b.ToTable("ManagedPolicies");
                 });
 
@@ -150,6 +153,10 @@ namespace AlphaZero.Modules.Identity.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("jsonb");
 
+                    b.Property<string>("PasswordHash")
+                        .IsRequired()
+                        .HasColumnType("text");
+
                     b.Property<string>("PrincipalScope")
                         .HasColumnType("text")
                         .HasColumnName("PrincipalScopePattern");
@@ -163,12 +170,13 @@ namespace AlphaZero.Modules.Identity.Infrastructure.Migrations
                     b.Property<Guid>("TenantId")
                         .HasColumnType("uuid");
 
-                    b.Property<string>("TenantUserId")
+                    b.Property<string>("Username")
                         .IsRequired()
                         .HasMaxLength(128)
                         .HasColumnType("character varying(128)");
 
-                    b.HasIndex("TenantUserId");
+                    b.HasIndex("Username", "TenantId")
+                        .IsUnique();
 
                     b.ToTable("Principals");
                 });
