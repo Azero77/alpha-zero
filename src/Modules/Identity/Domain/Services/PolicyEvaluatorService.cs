@@ -10,10 +10,14 @@ namespace AlphaZero.Modules.Identity.Domain.Services;
 public class PolicyEvaluatorService : IPolicyEvaluatorService
 {
     private readonly IEnumerable<IAuthorizationStrategy> _strategies;
+    private readonly IRepository<TenantUser> _userRepository;
 
-    public PolicyEvaluatorService(IEnumerable<IAuthorizationStrategy> strategies)
+    public PolicyEvaluatorService(
+        IEnumerable<IAuthorizationStrategy> strategies,
+        IRepository<TenantUser> userRepository)
     {
         _strategies = strategies;
+        _userRepository = userRepository;
     }
 
     public async Task<ErrorOr<Success>> Authorize(
@@ -25,6 +29,16 @@ public class PolicyEvaluatorService : IPolicyEvaluatorService
         string authMethod,
         Guid? sessionId = null)
     {
+        // 1. Centralized Session Check for TenantUsers
+        if (authMethod.Equals(AuthorizationMethod.TenantUser.ToString(), StringComparison.OrdinalIgnoreCase))
+        {
+            var user = await _userRepository.GetById(id);
+            if (user == null) return Error.Forbidden("User.NotFound");
+            
+            if (sessionId.HasValue && user.ActiveSessionId != sessionId.Value)
+                return Error.Unauthorized("Session.Expired", "Access denied. This session has been invalidated by a newer login.");
+        }
+
         var strategy = _strategies.FirstOrDefault(s => s.Method.ToString().Equals(authMethod, StringComparison.OrdinalIgnoreCase));
         
         if (strategy == null)
@@ -63,40 +77,28 @@ public class AuthorizationContext
 public class TenantUserAuthorizationStrategy : IAuthorizationStrategy
 {
     private readonly ITenantUserPrincpialAssignmentRepository _assignmentRepository;
-    private readonly IRepository<TenantUser> _userRepository;
 
-    public TenantUserAuthorizationStrategy(
-        ITenantUserPrincpialAssignmentRepository assignmentRepository,
-        IRepository<TenantUser> userRepository)
+    public TenantUserAuthorizationStrategy(ITenantUserPrincpialAssignmentRepository assignmentRepository)
     {
         _assignmentRepository = assignmentRepository;
-        _userRepository = userRepository;
     }
 
     public AuthorizationMethod Method => AuthorizationMethod.TenantUser;
 
     public async Task<ErrorOr<Success>> Authorize(AuthorizationContext context)
     {
-        // 1. Session Integrity Check
-        var user = await _userRepository.GetById(context.Id);
-        if (user == null) return Error.Forbidden("User.NotFound");
-        
-        if (context.SessionId.HasValue && user.ActiveSessionId != context.SessionId.Value)
-            return Error.Unauthorized("Session.Expired", "Access denied. This session has been invalidated by a newer login.");
-
-        // 2. Construct the Target ARN
+        // 1. Construct the Target ARN
         var targetArnResult = ResourceArn.Create(context.ResourceType.ToString(), context.TenantId.ToString(), context.ResourcePath);
         if (targetArnResult.IsError) return Error.Forbidden("Resource.Invalid");
         var targetArn = targetArnResult.Value;
 
-        // 3. Evaluate Scoped Assignments
-        // We look for an assignment that matches the target resource
+        // 2. Evaluate Scoped Assignments
         var assignment = await _assignmentRepository.Get(context.Id, targetArn.ToString());
         if (assignment == null) return Error.Forbidden("Access.Denied", "No matching assignment found for this resource.");
 
-        // We treat the assignment resource as a wildcard pattern (e.g., Course/101/*)
         var scopePattern = ResourcePattern.Create(assignment.Resource.ToString() + "/*").Value;
 
+        bool isAllowed = false;
         foreach (var managedPolicy in assignment.Principal.ManagedPolicies)
         {
             foreach (var statement in managedPolicy.Statements)
@@ -105,12 +107,12 @@ public class TenantUserAuthorizationStrategy : IAuthorizationStrategy
                     scopePattern.IsMatch(targetArn))
                 {
                     if (!statement.Effect) return Error.Forbidden("Access.Denied", "Explicit deny in role.");
-                    return Result.Success;
+                    isAllowed = true;
                 }
             }
         }
 
-        return Error.Forbidden("Access.Denied", "Implicit deny.");
+        return isAllowed ? Result.Success : Error.Forbidden("Access.Denied", "Implicit deny.");
     }
 }
 
@@ -134,39 +136,37 @@ public class PrincipalUserAuthorizationStrategy : IAuthorizationStrategy
         if (targetArnResult.IsError) return Error.Forbidden("Resource.Invalid");
         var targetArn = targetArnResult.Value;
 
-        // 1. Evaluate Inline Policies (Direct JSONB overrides)
+        bool isAllowed = false;
+
+        // 1. Evaluate Inline Policies
         foreach (var policy in principal.InlinePolicies)
         {
             foreach (var statement in policy.Statements)
             {
-                if (statement.Actions.Any(a => AuthorizationHelper.IsActionMatched(context.RequiredPermission, a)) &&
-                    statement.Resources.Any(r => r.IsMatch(targetArn)))
+                if (AuthorizationHelper.IsStatementMatch(statement, context.RequiredPermission, targetArn))
                 {
                     if (!statement.Effect) return Error.Forbidden("Access.Denied", "Explicit deny in inline policy.");
-                    return Result.Success;
+                    isAllowed = true;
                 }
             }
         }
 
-        // 2. Evaluate Managed Policies (Attached directly to this principal instance)
-        // We use the Principal's own scope pattern to build the effective policies
+        // 2. Evaluate Managed Policies
         var scope = principal.PrincipalScope?.Value ?? "az:*";
-
         foreach (var managedPolicy in principal.ManagedPolicies)
         {
             var effectivePolicy = managedPolicy.Build(scope, context.TenantId);
             foreach (var statement in effectivePolicy.Statements)
             {
-                if (statement.Actions.Any(a => AuthorizationHelper.IsActionMatched(context.RequiredPermission, a)) &&
-                    statement.Resources.Any(r => r.IsMatch(targetArn)))
+                if (AuthorizationHelper.IsStatementMatch(statement, context.RequiredPermission, targetArn))
                 {
                     if (!statement.Effect) return Error.Forbidden("Access.Denied", "Explicit deny in managed policy.");
-                    return Result.Success;
+                    isAllowed = true;
                 }
             }
         }
 
-        return Error.Forbidden("Access.Denied", "Implicit deny.");
+        return isAllowed ? Result.Success : Error.Forbidden("Access.Denied", "Implicit deny.");
     }
 }
 
@@ -181,5 +181,11 @@ public static class AuthorizationHelper
             return requiredPermission.StartsWith(prefix, StringComparison.OrdinalIgnoreCase);
         }
         return false;
+    }
+
+    public static bool IsStatementMatch(PolicyStatement statement, string requiredPermission, ResourceArn targetArn)
+    {
+        return statement.Actions.Any(a => IsActionMatched(requiredPermission, a)) &&
+               statement.Resources.Any(r => r.IsMatch(targetArn));
     }
 }

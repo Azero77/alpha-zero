@@ -29,11 +29,11 @@ public class PolicyEvaluatorServiceTests
 
         var strategies = new List<IAuthorizationStrategy>
         {
-            new TenantUserAuthorizationStrategy(_assignmentRepository, _userRepository),
+            new TenantUserAuthorizationStrategy(_assignmentRepository),
             new PrincipalUserAuthorizationStrategy(_principalRepository)
         };
 
-        _evaluator = new PolicyEvaluatorService(strategies);
+        _evaluator = new PolicyEvaluatorService(strategies,_userRepository);
     }
 
     [Fact]

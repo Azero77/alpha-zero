@@ -15,6 +15,7 @@
     <PackageVersion Include="AWSSDK.MediaConvert" Version="4.0.15.5" />
     <PackageVersion Include="AWSSDK.S3" Version="4.0.20.3" />
     <PackageVersion Include="AWSSDK.SQS" Version="4.0.2.23" />
+    <PackageVersion Include="Azure.Identity" Version="1.21.0" />
     <PackageVersion Include="Bogus" Version="35.6.5" />
     <PackageVersion Include="ErrorOr" Version="2.0.1" />
     <PackageVersion Include="FastEndpoints" Version="8.1.0" />
