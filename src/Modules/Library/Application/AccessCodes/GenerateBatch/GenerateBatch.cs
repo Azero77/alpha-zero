@@ -45,20 +45,20 @@ public sealed class GenerateBatchCommandHandler : IRequestHandler<GenerateBatchC
         var tenantId = _tenantProvider.GetTenant();
         if (tenantId is null) return Error.Unauthorized("Tenant.NotFound", "Tenant not found.");
 
+        // Strict Enforcement: Library must exist and belong to the tenant
         var library = await _libraryRepository.GetById(request.LibraryId);
         if (library is null) return Error.NotFound("Library.NotFound", "Library not found.");
 
         var resourceArn = ResourceArn.Create(request.TargetResourceArn);
         if (resourceArn.IsError) return resourceArn.Errors;
 
-        //check if library is allowed to generate this code
-
+        // Strict Enforcement: Library must be authorized to sell this resource
         if (!library.AllowedResources.Any(ar => ar.IsMatch(resourceArn.Value)))
         {
-            return Error.Forbidden("Library.Batch.Forbidden", "Can't Create batch for Resource because it is not allowed", new Dictionary<string, object>()
+            return Error.Forbidden("Library.Batch.Forbidden", "Library is not authorized to sell this resource.", new Dictionary<string, object>()
             {
-                {"Allowed" , string.Join(",",library.AllowedResources.Select(a => a.Value)) },
-                { "MissingResource" , request.TargetResourceArn }
+                {"Allowed" , string.Join(",", library.AllowedResources.Select(a => a.Value)) },
+                { "Requested" , request.TargetResourceArn }
             });
         }
 
@@ -68,7 +68,7 @@ public sealed class GenerateBatchCommandHandler : IRequestHandler<GenerateBatchC
 
         for (int i = 0; i < request.Quantity; i++)
         {
-            var rawCode = GenerateFriendlyCode();
+            var rawCode = CodeGeneratorHelper.GenerateFriendlyCode();
             var hash = _passwordHasher.HashPassword(rawCode);
 
             var accessCode = AccessCode.Mint(
@@ -89,10 +89,13 @@ public sealed class GenerateBatchCommandHandler : IRequestHandler<GenerateBatchC
 
         return generatedCodes;
     }
+}
 
-    private static string GenerateFriendlyCode()
+public static class CodeGeneratorHelper
+{
+    public static string GenerateFriendlyCode()
     {
-        const string chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // No I, O, 0, 1 to prevent human error
+        const string chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; 
         var bytes = RandomNumberGenerator.GetBytes(12);
         var res = new StringBuilder();
         for (int i = 0; i < 12; i++)
