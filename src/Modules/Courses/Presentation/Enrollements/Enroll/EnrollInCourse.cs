@@ -1,4 +1,6 @@
 using AlphaZero.Modules.Courses.Application.Enrollements.Commands.Enroll;
+using AlphaZero.Shared.Authorization;
+using AlphaZero.Shared.Domain;
 using AlphaZero.Shared.Presentation.Extensions;
 using FastEndpoints;
 using MediatR;
@@ -44,7 +46,7 @@ public class EnrollInCourseEndpoint : Endpoint<EnrollInCourseRequest, EnrollInCo
     public override void Configure()
     {
         Post("/courses/enroll");
-        AllowAnonymous();
+        this.AccessControl("courses:Enroll", req => ResourceArn.ForCourse(Guid.Empty, req.CourseId));
         Description(d => d.WithTags("Enrollment"));
         Summary(new EnrollInCourseSummary());
     }

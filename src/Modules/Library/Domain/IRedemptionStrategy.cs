@@ -6,5 +6,5 @@ namespace AlphaZero.Modules.Library.Domain;
 public interface IRedemptionStrategy
 {
     string StrategyId { get; }
-    Task ExecuteAsync(Guid userId, ResourceArn resource, JsonElement metadata);
+    Task ExecuteAsync(Guid userId, Guid AccessCodeId, ResourceArn resource, JsonElement metadata);
 }

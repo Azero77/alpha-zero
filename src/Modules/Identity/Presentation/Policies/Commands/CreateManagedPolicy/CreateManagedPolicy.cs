@@ -1,6 +1,8 @@
 using AlphaZero.Modules.Identity.Application.Policies.Commands.CreateManagedPolicy;
 using AlphaZero.Modules.Identity.Domain.Models;
 using AlphaZero.Shared.Presentation.Extensions;
+using AlphaZero.Shared.Domain;
+using AlphaZero.Shared.Authorization;
 using FastEndpoints;
 using MediatR;
 using Microsoft.AspNetCore.Http;
@@ -27,7 +29,7 @@ public class CreateManagedPolicyEndpoint : Endpoint<CreateManagedPolicyRequest, 
     public override void Configure()
     {
         Post("/identity/policies/managed");
-        AllowAnonymous();
+        this.AccessControl("identity:ManagePolicies",_ => ResourceArn.AppUrn);
         Description(d => d.WithTags("Identity Policies"));
     }
 

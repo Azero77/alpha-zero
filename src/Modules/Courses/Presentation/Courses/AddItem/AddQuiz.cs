@@ -1,4 +1,6 @@
 using AlphaZero.Modules.Courses.Application.Courses.Commands.AddQuiz;
+using AlphaZero.Shared.Authorization;
+using AlphaZero.Shared.Domain;
 using AlphaZero.Shared.Presentation.Extensions;
 using FastEndpoints;
 using MediatR;
@@ -25,7 +27,7 @@ public class AddQuizEndpoint : Endpoint<AddQuizRequest>
     public override void Configure()
     {
         Post("/courses/{CourseId}/sections/{SectionId}/quizzes");
-        AllowAnonymous();
+        this.AccessControl("courses:Edit", req => ResourceArn.ForCourse(Guid.Empty, req.CourseId));
         Description(d => d.WithTags("Courses"));
     }
 

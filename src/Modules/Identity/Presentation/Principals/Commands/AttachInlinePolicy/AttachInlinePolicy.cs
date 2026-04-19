@@ -1,5 +1,7 @@
 using AlphaZero.Modules.Identity.Application.Principals.Commands.AttachInlinePolicy;
 using AlphaZero.Modules.Identity.Domain.Models;
+using AlphaZero.Shared.Authorization;
+using AlphaZero.Shared.Domain;
 using AlphaZero.Shared.Presentation.Extensions;
 using FastEndpoints;
 using MediatR;
@@ -26,7 +28,7 @@ public class AttachInlinePolicyEndpoint : Endpoint<AttachInlinePolicyRequest>
     public override void Configure()
     {
         Post("/identity/principals/{PrincipalId}/policies/inline");
-        AllowAnonymous();
+        this.AccessControl("identity:ManagePrincipals", _ => ResourceArn.ForTenant(Guid.Empty));
         Description(d => d.WithTags("Identity"));
     }
 

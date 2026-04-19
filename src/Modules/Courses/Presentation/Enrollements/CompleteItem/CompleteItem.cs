@@ -1,10 +1,12 @@
 using AlphaZero.Modules.Courses.Application.Enrollements.Commands.CompleteItem;
+using AlphaZero.Shared.Authorization;
+using AlphaZero.Shared.Domain;
 using AlphaZero.Shared.Presentation.Extensions;
 using FastEndpoints;
 using MediatR;
 using Microsoft.AspNetCore.Http;
 
-namespace AlphaZero.Modules.Courses.Presentation.Enrollements.CompleteItem;
+namespace AlphaZero.Modules.Identity.Presentation.Enrollements.CompleteItem;
 
 public record CompleteItemRequest
 {
@@ -24,7 +26,7 @@ public class CompleteItemEndpoint : Endpoint<CompleteItemRequest>
     public override void Configure()
     {
         Post("/courses/enrollements/{EnrollmentId}/complete");
-        AllowAnonymous();
+        this.AccessControl("enrollments:Complete", req => ResourceArn.ForEnrollment(Guid.Empty, req.EnrollmentId));
         Description(d => d.WithTags("Enrollements"));
     }
 

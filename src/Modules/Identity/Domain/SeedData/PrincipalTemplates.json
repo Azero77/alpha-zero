@@ -1,0 +1,44 @@
+[
+  {
+    "Id": "00000000-0000-0000-0000-100000000001",
+    "Name": "Administrator",
+    "PrincipalType": "Role",
+    "ManagedPolicies": ["AdministratorAccess"]
+  },
+  {
+    "Id": "00000000-0000-0000-0000-100000000002",
+    "Name": "Student",
+    "PrincipalType": "Role",
+    "ManagedPolicies": ["StudentAccess"]
+  },
+  {
+    "Id": "00000000-0000-0000-0000-100000000003",
+    "Name": "CourseWorker",
+    "PrincipalType": "Role",
+    "ManagedPolicies": ["CourseWorkerAccess"]
+  },
+  {
+    "Id": "00000000-0000-0000-0000-100000000004",
+    "Name": "Teacher",
+    "PrincipalType": "Role",
+    "ManagedPolicies": ["TeacherAccess"]
+  },
+  {
+    "Id": "00000000-0000-0000-0000-100000000005",
+    "Name": "TenantCourseManager",
+    "PrincipalType": "Role",
+    "ManagedPolicies": ["CourseManagerAccess"]
+  },
+  {
+    "Id": "00000000-0000-0000-0000-100000000006",
+    "Name": "LibraryManager",
+    "PrincipalType": "Role",
+    "ManagedPolicies": ["LibraryManagerAccess"]
+  },
+  {
+    "Id": "00000000-0000-0000-0000-100000000007",
+    "Name": "LibraryAccountant",
+    "PrincipalType": "Role",
+    "ManagedPolicies": ["LibraryAccountantAccess"]
+  }
+]

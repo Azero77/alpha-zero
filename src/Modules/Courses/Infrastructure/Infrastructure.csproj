@@ -7,10 +7,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <None Remove="Consumers\job.json" />
-  </ItemGroup>
-
-  <ItemGroup>
     <PackageReference Include="AWS.Messaging" />
     <PackageReference Include="AWS.Messaging.Telemetry.OpenTelemetry" />
     <PackageReference Include="AWSSDK.MediaConvert" />
@@ -38,6 +34,7 @@
 		<ProjectReference Include="..\..\..\aspire\Aspire.Shared\Aspire.Shared.csproj" />
 		<ProjectReference Include="..\Application\Application.csproj" />
 		<ProjectReference Include="..\Domain\Domain.csproj" />
+		<ProjectReference Include="..\IntegrationEvents\IntegrationEvents.csproj" />
 	</ItemGroup>
 
 </Project>

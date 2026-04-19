@@ -174,13 +174,45 @@ public static class AuthorizationHelper
 {
     public static bool IsActionMatched(string requiredPermission, string givenAction)
     {
-        if (requiredPermission.Equals(givenAction, StringComparison.OrdinalIgnoreCase)) return true;
-        if (givenAction.EndsWith("*"))
+        // 1. Exact Match or Global Wildcard
+        if (givenAction == "*" || givenAction == "*:*" || requiredPermission.Equals(givenAction, StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        // 2. Handle Segmented Wildcards (service:action)
+        var requiredParts = requiredPermission.Split(':');
+        var givenParts = givenAction.Split(':');
+
+        if (requiredParts.Length != 2 || givenParts.Length != 2)
         {
-            var prefix = givenAction.Substring(0, givenAction.Length - 1);
-            return requiredPermission.StartsWith(prefix, StringComparison.OrdinalIgnoreCase);
+            // Fallback to simple trailing wildcard if not in service:action format
+            if (givenAction.EndsWith("*"))
+            {
+                var prefix = givenAction.Substring(0, givenAction.Length - 1);
+                return requiredPermission.StartsWith(prefix, StringComparison.OrdinalIgnoreCase);
+            }
+            return false;
         }
-        return false;
+
+        // Match Service Part
+        bool serviceMatch = givenParts[0] == "*" || string.Equals(givenParts[0], requiredParts[0], StringComparison.OrdinalIgnoreCase);
+        
+        // Match Action Part
+        bool actionMatch = false;
+        if (givenParts[1] == "*")
+        {
+            actionMatch = true;
+        }
+        else if (givenParts[1].EndsWith("*"))
+        {
+            var actionPrefix = givenParts[1].Substring(0, givenParts[1].Length - 1);
+            actionMatch = requiredParts[1].StartsWith(actionPrefix, StringComparison.OrdinalIgnoreCase);
+        }
+        else
+        {
+            actionMatch = string.Equals(givenParts[1], requiredParts[1], StringComparison.OrdinalIgnoreCase);
+        }
+
+        return serviceMatch && actionMatch;
     }
 
     public static bool IsStatementMatch(PolicyStatement statement, string requiredPermission, ResourceArn targetArn)

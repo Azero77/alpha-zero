@@ -3,6 +3,8 @@ using AlphaZero.Modules.VideoUploading.Application.Queries.GetVideo;
 using AlphaZero.Modules.VideoUploading.Application.Queries.ListVideos;
 using AlphaZero.Modules.VideoUploading.Application.Queries.GetVideoState;
 using AlphaZero.Modules.VideoUploading.Application.Commands.Delete;
+using AlphaZero.Shared.Authorization;
+using AlphaZero.Shared.Domain;
 using AlphaZero.API.Shared;
 using ErrorOr;
 using Microsoft.AspNetCore.Builder;
@@ -45,7 +47,8 @@ public static class Debug
         public void MapEndpoint(IEndpointRouteBuilder app)
         {
             app.MapGet("api/video-uploading/debug/videos", Handler)
-               .WithTags("Video Uploading Debug");
+               .WithTags("Video Uploading Debug")
+               .AccessControl("video:List", _ => ResourceArn.ForTenant(Guid.Empty));
         }
 
         private async Task<IResult> Handler(int? page, int? perPage, VideoUploadingModule module)
@@ -67,7 +70,8 @@ public static class Debug
         public void MapEndpoint(IEndpointRouteBuilder app)
         {
             app.MapGet("api/video-uploading/debug/videos/{id:guid}", Handler)
-               .WithTags("Video Uploading Debug");
+               .WithTags("Video Uploading Debug")
+               .AccessControl("video:View", ctx => ResourceArn.ForVideo(Guid.Empty, Guid.Parse(ctx.Request.RouteValues["id"]?.ToString() ?? Guid.Empty.ToString())));
         }
 
         private async Task<IResult> Handler(Guid id, VideoUploadingModule module)
@@ -85,7 +89,8 @@ public static class Debug
         public void MapEndpoint(IEndpointRouteBuilder app)
         {
             app.MapGet("api/video-uploading/debug/videos/{id:guid}/state", Handler)
-               .WithTags("Video Uploading Debug");
+               .WithTags("Video Uploading Debug")
+               .AccessControl("video:View", ctx => ResourceArn.ForVideo(Guid.Empty, Guid.Parse(ctx.Request.RouteValues["id"]?.ToString() ?? Guid.Empty.ToString())));
         }
 
         private async Task<IResult> Handler(Guid id, VideoUploadingModule module)
@@ -96,32 +101,15 @@ public static class Debug
                 res => Results.Ok(res),
                 errors => errors.ToMinimalResult());
         }
-    }/*
-
-    public class GetStreamingInfoEndpoint : IEndpoint
-    {
-        public void MapEndpoint(IEndpointRouteBuilder app)
-        {
-            app.MapGet("api/video-uploading/debug/videos/{id:guid}/streaming", Handler)
-               .WithTags("Video Uploading Debug");
-        }
-
-        private async Task<IResult> Handler(Guid id, VideoUploadingModule module)
-        {
-            var query = new AlphaZero.Modules.VideoUploading.Application.Queries.GetStreamingInfo.GetStreamingInfoQuery(id);
-            var response = await module.Send<AlphaZero.Modules.VideoUploading.Application.Queries.GetStreamingInfo.GetStreamingInfoQuery, ErrorOr<AlphaZero.Modules.VideoUploading.Application.Queries.GetStreamingInfo.StreamingInfo>>(query);
-            return response.Match(
-                res => Results.Ok(res),
-                errors => errors.ToMinimalResult());
-        }
-    }*/
+    }
 
     public class DeleteVideoEndpoint : IEndpoint
     {
         public void MapEndpoint(IEndpointRouteBuilder app)
         {
             app.MapDelete("api/video-uploading/debug/videos/{id:guid}", Handler)
-               .WithTags("Video Uploading Debug");
+               .WithTags("Video Uploading Debug")
+               .AccessControl("video:Delete", ctx => ResourceArn.ForVideo(Guid.Empty, Guid.Parse(ctx.Request.RouteValues["id"]?.ToString() ?? Guid.Empty.ToString())));
         }
 
         private async Task<IResult> Handler(Guid id, VideoUploadingModule module)

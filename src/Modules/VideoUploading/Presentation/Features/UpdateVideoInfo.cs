@@ -1,5 +1,7 @@
 using AlphaZero.Shared.Presentation.Extensions;
 using AlphaZero.Modules.VideoUploading.Application.Commands.Update;
+using AlphaZero.Shared.Authorization;
+using AlphaZero.Shared.Domain;
 using AlphaZero.API.Shared;
 using ErrorOr;
 using Microsoft.AspNetCore.Builder;
@@ -17,7 +19,8 @@ public static class UpdateVideoInfo
         public void MapEndpoint(IEndpointRouteBuilder app)
         {
             app.MapPatch("api/video-uploading/debug/videos/{id:guid}", Handler)
-               .WithTags("Video Uploading Debug");
+               .WithTags("Video Uploading Debug")
+               .AccessControl("video:Edit", ctx => ResourceArn.ForVideo(Guid.Empty, Guid.Parse(ctx.Request.RouteValues["id"]?.ToString() ?? Guid.Empty.ToString())));
         }
 
         private async Task<IResult> Handler(Guid id, Request request, VideoUploadingModule module)

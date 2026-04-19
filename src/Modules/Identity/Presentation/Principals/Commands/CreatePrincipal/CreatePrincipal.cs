@@ -1,6 +1,7 @@
 using AlphaZero.Modules.Identity.Application.Principals.Commands.CreatePrincipal;
 using AlphaZero.Modules.Identity.Domain.Models;
 using AlphaZero.Shared.Authorization;
+using AlphaZero.Shared.Domain;
 using AlphaZero.Shared.Presentation.Extensions;
 using FastEndpoints;
 using MediatR;
@@ -33,7 +34,7 @@ public class CreatePrincipalEndpoint : Endpoint<CreatePrincipalRequest, CreatePr
     public override void Configure()
     {
         Post("/identity/principals");
-        AllowAnonymous(); // Typically this would be restricted to Admin
+        this.AccessControl("identity:ManagePrincipals", _ => ResourceArn.ForTenant(Guid.Empty));
         Description(d => d.WithTags("Identity"));
     }
 

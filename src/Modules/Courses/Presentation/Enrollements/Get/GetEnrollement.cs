@@ -1,4 +1,6 @@
 using AlphaZero.Modules.Courses.Application.Enrollements.Queries.GetEnrollement;
+using AlphaZero.Shared.Authorization;
+using AlphaZero.Shared.Domain;
 using AlphaZero.Shared.Presentation.Extensions;
 using FastEndpoints;
 using MediatR;
@@ -29,7 +31,7 @@ public class GetEnrollementEndpoint : Endpoint<GetEnrollementRequest, Enrollemen
     public override void Configure()
     {
         Get("/courses/enrollments/{Id}");
-        AllowAnonymous();
+        this.AccessControl("enrollments:View", req => ResourceArn.ForEnrollment(Guid.Empty, req.Id));
         Description(d => d.WithTags("Enrollment"));
     }
 

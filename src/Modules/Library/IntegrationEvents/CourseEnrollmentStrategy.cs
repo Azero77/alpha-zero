@@ -16,13 +16,15 @@ public class CourseEnrollmentStrategy : IRedemptionStrategy
 {
     public string StrategyId => "enroll-course";
     private readonly IModuleBus _bus;
+    private readonly IClock _clock;
 
-    public CourseEnrollmentStrategy(IModuleBus bus)
+    public CourseEnrollmentStrategy(IModuleBus bus, IClock clock)
     {
         _bus = bus;
+        _clock = clock;
     }
 
-    public async Task ExecuteAsync(Guid userId, ResourceArn resource, JsonElement metadata)
+    public async Task ExecuteAsync(Guid userId,Guid AccessCodeId, ResourceArn resource, JsonElement metadata)
     {
         // Translation Logic (ACL):
         string plan = "Standard";
@@ -33,6 +35,9 @@ public class CourseEnrollmentStrategy : IRedemptionStrategy
 
         // Fire the integration event defined by the target module (Courses)
         await _bus.Publish(new CourseAccessUnlockedIntegrationEvent(
+            Guid.NewGuid(),
+            AccessCodeId,
+            _clock.Now,
             userId, 
             resource, 
             plan));

@@ -1,4 +1,6 @@
 using AlphaZero.Modules.Courses.Application.Courses.Commands.Reorder;
+using AlphaZero.Shared.Authorization;
+using AlphaZero.Shared.Domain;
 using AlphaZero.Shared.Presentation.Extensions;
 using FastEndpoints;
 using MediatR;
@@ -24,7 +26,7 @@ public class ReorderSectionsEndpoint : Endpoint<ReorderSectionsRequest>
     public override void Configure()
     {
         Post("/courses/{CourseId}/sections/reorder");
-        AllowAnonymous();
+        this.AccessControl("courses:Edit", req => ResourceArn.ForCourse(Guid.Empty, req.CourseId));
         Description(d => d.WithTags("Courses"));
     }
 

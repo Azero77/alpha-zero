@@ -65,7 +65,7 @@ public class RedeemCodeCommandHandler : IRequestHandler<RedeemCodeCommand, Error
             
         // 6. Execute Strategy
         var strategy = _strategyFactory.GetStrategy(accessCode.StrategyId);
-        await strategy.ExecuteAsync(currentUser.UserId, accessCode.TargetResourceArn, accessCode.Metadata.RootElement);
+        await strategy.ExecuteAsync(currentUser.UserId, accessCode.Id,accessCode.TargetResourceArn, accessCode.Metadata.RootElement);
 
         _repository.Update(accessCode);
         return Result.Success;

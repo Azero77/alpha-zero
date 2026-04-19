@@ -1,0 +1,99 @@
+[
+  {
+    "Id": "00000000-0000-0000-0000-000000000001",
+    "Name": "AdministratorAccess",
+    "Statements": [
+      {
+        "Sid": "AllowAll",
+        "Actions": ["*:*"],
+        "Effect": true
+      }
+    ]
+  },
+  {
+    "Id": "00000000-0000-0000-0000-000000000002",
+    "Name": "StudentAccess",
+    "Statements": [
+      {
+        "Sid": "AllowViewCourses",
+        "Actions": ["courses:View", "subjects:List", "subjects:View"],
+        "Effect": true
+      },
+      {
+        "Sid": "AllowStreaming",
+        "Actions": ["video:Stream"],
+        "Effect": true
+      },
+      {
+        "Sid": "AllowCompletion",
+        "Actions": ["enrollments:Complete"],
+        "Effect": true
+      }
+    ]
+  },
+  {
+    "Id": "00000000-0000-0000-0000-000000000003",
+    "Name": "CourseWorkerAccess",
+    "Statements": [
+      {
+        "Sid": "AllowCourseProduction",
+        "Actions": ["courses:Create", "courses:View", "courses:Edit", "courses:Submit"],
+        "Effect": true
+      },
+      {
+        "Sid": "AllowVideoUpload",
+        "Actions": ["video:Upload", "video:View", "video:List"],
+        "Effect": true
+      }
+    ]
+  },
+  {
+    "Id": "00000000-0000-0000-0000-000000000004",
+    "Name": "TeacherAccess",
+    "Statements": [
+      {
+        "Sid": "AllowCourseReviewAndEdit",
+        "Actions": ["courses:View", "courses:Edit", "courses:Submit"],
+        "Effect": true
+      },
+      {
+        "Sid": "AllowExamManagement",
+        "Actions": ["exams:Create", "exams:Grade", "exams:View"],
+        "Effect": true
+      }
+    ]
+  },
+  {
+    "Id": "00000000-0000-0000-0000-000000000005",
+    "Name": "CourseManagerAccess",
+    "Statements": [
+      {
+        "Sid": "AllowQAWorkflow",
+        "Actions": ["courses:View", "courses:Approve", "courses:Reject", "courses:Publish"],
+        "Effect": true
+      }
+    ]
+  },
+  {
+    "Id": "00000000-0000-0000-0000-000000000006",
+    "Name": "LibraryManagerAccess",
+    "Statements": [
+      {
+        "Sid": "AllowCodeGeneration",
+        "Actions": ["library:GenerateCodes", "library:SellCodes", "library:Audit"],
+        "Effect": true
+      }
+    ]
+  },
+  {
+    "Id": "00000000-0000-0000-0000-000000000007",
+    "Name": "LibraryAccountantAccess",
+    "Statements": [
+      {
+        "Sid": "AllowLibraryAudit",
+        "Actions": ["library:Audit", "library:AttachCourses"],
+        "Effect": true
+      }
+    ]
+  }
+]
