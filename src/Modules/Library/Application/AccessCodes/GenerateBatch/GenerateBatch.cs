@@ -32,7 +32,7 @@ public class GenerateBatchCommandValidator : AbstractValidator<GenerateBatchComm
 
 public sealed class GenerateBatchCommandHandler : IRequestHandler<GenerateBatchCommand, ErrorOr<List<string>>>
 {
-...
+    private readonly IAccessCodeRepository _accessCodeRepository;
     private readonly ILibraryRepository _libraryRepository;
     private readonly ITenantProvider _tenantProvider;
     private readonly IPasswordHasher _passwordHasher;

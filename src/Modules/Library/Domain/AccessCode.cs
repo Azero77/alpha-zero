@@ -76,7 +76,43 @@ public class AccessCode : AggregateRoot, IDomainTenantOwned
         RedeemedAt = DateTime.UtcNow;
         RedeemedByUserId = userId;
         
-        // AddDomainEvent(new AccessCodeRedeemedDomainEvent(Id, userId));
         return Result.Success;
     }
+
+    public ErrorOr<Success> Distribute()
+    {
+        if (Status != AccessCodeStatus.Minted)
+        {
+            return Error.Conflict("AccessCode.InvalidStatus", "Only Minted codes can be distributed.");
+        }
+
+        Status = AccessCodeStatus.Distributed;
+        return Result.Success;
+    }
+
+    public ErrorOr<Success> Void(string reason)
+    {
+        if (Status == AccessCodeStatus.Voided)
+        {
+            return Error.Conflict("AccessCode.AlreadyVoided", "Code is already voided.");
+        }
+
+        var oldStatus = Status;
+        Status = AccessCodeStatus.Voided;
+
+        // If it was already redeemed, we must trigger a revocation event
+        if (oldStatus == AccessCodeStatus.Redeemed && RedeemedByUserId.HasValue)
+        {
+            AddDomainEvent(new AccessCodeVoidedDomainEvent(Id, RedeemedByUserId.Value, TargetResourceArn));
+        }
+
+        return Result.Success;
+    }
+}
+
+public class AccessCodeVoidedDomainEvent(Guid AccessCodeId, Guid UserId, ResourceArn Resource) : DomainEvent()
+{
+    public Guid AccessCodeId { get; } = AccessCodeId;
+    public Guid UserId { get; } = UserId;
+    public ResourceArn Resource { get; } = Resource;
 }

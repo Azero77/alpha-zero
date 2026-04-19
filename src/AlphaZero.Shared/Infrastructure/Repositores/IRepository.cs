@@ -11,8 +11,9 @@ public interface IRepository<TEntity>
     void Add(TEntity entity);
     void Remove(TEntity entity);
     void Update(TEntity entity);
-
+    IQueryable<TEntity> Entities { get; }
     Task<IReadOnlyCollection<TEntity>> GetAll(CancellationToken token = default);
+    Task<IReadOnlyCollection<TEntity>> Get(Expression<Func<TEntity, bool>> filter,CancellationToken token = default);
     Task<TEntity?> GetFirst(Expression<Func<TEntity, bool>> filter, CancellationToken token = default);
     Task<bool> Any(Expression<Func<TEntity, bool>> filter, CancellationToken token = default);
     Task<int> Count(Expression<Func<TEntity, bool>>? filter = null, CancellationToken token = default);
@@ -40,6 +41,8 @@ public class BaseRepository<TContext, TEntity> : IRepository<TEntity>
     where TEntity : Entity
 {
     protected readonly TContext _context;
+
+    public IQueryable<TEntity> Entities => _context.Set<TEntity>();
 
     public BaseRepository(TContext context)
     {
@@ -130,5 +133,12 @@ public class BaseRepository<TContext, TEntity> : IRepository<TEntity>
         return await _context.Set<TEntity>()
             .FirstOrDefaultAsync(d => d.Id == id);
 
+    }
+
+    public async Task<IReadOnlyCollection<TEntity>> Get(Expression<Func<TEntity, bool>> filter, CancellationToken token = default)
+    {
+        return await _context.Set<TEntity>()
+            .Where(filter)
+            .ToListAsync();
     }
 }
