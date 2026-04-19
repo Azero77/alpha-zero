@@ -1,4 +1,5 @@
 using AlphaZero.Modules.Courses.Application.Enrollements.Commands.CompleteItem;
+using AlphaZero.Modules.Courses.Presentation;
 using AlphaZero.Shared.Authorization;
 using AlphaZero.Shared.Domain;
 using AlphaZero.Shared.Presentation.Extensions;

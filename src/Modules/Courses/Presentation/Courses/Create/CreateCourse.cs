@@ -48,7 +48,7 @@ public class CreateCourseEndpoint : Endpoint<CreateCourseRequest, CreateCourseRe
     public override void Configure()
     {
         Post("/courses");
-        AccessControl("courses:Create", (object o) => ResourceArn.ForTenant(Guid.Empty));
+        this.AccessControl("courses:Create", _ => ResourceArn.ForTenant(Guid.Empty));
         Description(d => d.WithTags("Courses"));
         Summary(new CreateCourseSummary());
     }

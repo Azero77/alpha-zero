@@ -98,6 +98,13 @@ public class IAMPreprocessor : IGlobalPreProcessor
         }
     }
 }
+public class IAMDevPreprocessor : IGlobalPreProcessor
+{
+    public Task PreProcessAsync(IPreProcessorContext context, CancellationToken ct)
+    {
+        return Task.CompletedTask; //this is dev for skipping authorization
+    }
+}
 
 public enum AuthorizationMethod
 {

@@ -31,7 +31,7 @@ public abstract class AppModule : Module, IModule
 {
     protected ILifetimeScope? Scope { get; private set; }
     public IConfiguration? Configuration { get; set; }
-    protected ILogger<AppModule> _logger { get; private set; }
+    protected ILogger<AppModule> _logger { get; private set; } = default!;
 
     public virtual void Initialize(ILifetimeScope root)
     {

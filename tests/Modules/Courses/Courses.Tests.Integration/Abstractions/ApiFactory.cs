@@ -46,7 +46,7 @@ public class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
         });
     }
 
-    public async Task DisposeAsync()
+    public new async Task DisposeAsync()
     {
         await _dbContainer.StopAsync();
         MockServer.Stop();

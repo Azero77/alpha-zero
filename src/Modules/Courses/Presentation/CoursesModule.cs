@@ -1,5 +1,8 @@
-﻿using Autofac;
+﻿using AlphaZero.Modules.Courses.Infrastructure.Persistance;
+using AlphaZero.Modules.Courses.Infrastructure.Sagas.CourseRedemption;
+using Autofac;
 using Infrastructure;
+using MassTransit;
 using MediatR;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -23,5 +26,17 @@ public class CoursesModule : AppModule
             moduleServices.AddCoursesPrivateInfrastructure(Configuration);
         else
             _logger?.LogWarning("Configuration is null in Courses Module (Private)");
+    }
+
+    public override void ConfigureModuleBus(IBusRegistrationConfigurator configuration)
+    {
+        configuration.AddSagaStateMachine<CourseRedemptionSaga, CourseRedemptionState>()
+            .EntityFrameworkRepository(r =>
+            {
+                r.ExistingDbContext<AppDbContext>();
+                r.UsePostgres();
+            });
+
+        configuration.AddConsumers(typeof(CoursesModule).Assembly);
     }
 }

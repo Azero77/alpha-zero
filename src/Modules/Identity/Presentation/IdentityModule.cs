@@ -1,6 +1,7 @@
 using AlphaZero.Modules.Identity.Infrastructure;
 using AlphaZero.Shared.Presentation;
 using Autofac;
+using MassTransit;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -23,5 +24,10 @@ public class IdentityModule : AppModule
             moduleServices.AddIdentityPrivateInfrastructure(Configuration);
         else
             _logger?.LogWarning("Configuration is null in Identity Module (Private)");
+    }
+
+    public override void ConfigureModuleBus(IBusRegistrationConfigurator configuration)
+    {
+        configuration.AddConsumers(typeof(IdentityModule).Assembly);
     }
 }
