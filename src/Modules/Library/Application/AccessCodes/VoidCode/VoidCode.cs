@@ -21,6 +21,7 @@ public class VoidCodeCommandValidator : AbstractValidator<VoidCodeCommand>
 
 public sealed class VoidCodeCommandHandler(
     IAccessCodeRepository repository,
+    IRedemptionStrategyFactory strategyFactory,
     IPasswordHasher passwordHasher,
     ILogger<VoidCodeCommandHandler> logger) : IRequestHandler<VoidCodeCommand, ErrorOr<Success>>
 {
@@ -34,8 +35,19 @@ public sealed class VoidCodeCommandHandler(
             return Error.NotFound("AccessCode.NotFound", "The provided code is invalid.");
         }
 
+        var wasRedeemed = code.Status == AccessCodeStatus.Redeemed;
+        var userId = code.RedeemedByUserId;
+
         var result = code.Void(request.Reason);
         if (result.IsError) return result.Errors;
+
+        // If it was already redeemed, trigger the revocation strategy
+        if (wasRedeemed && userId.HasValue)
+        {
+            var strategy = strategyFactory.GetRevocationStrategy(code.StrategyId);
+            await strategy.ExecuteAsync(userId.Value, code.Id, code.TargetResourceArn);
+            logger.LogInformation("Triggered revocation strategy '{StrategyId}' for User {UserId}.", code.StrategyId, userId.Value);
+        }
 
         repository.Update(code);
         logger.LogWarning("Access Code {CodeId} has been VOIDED. Reason: {Reason}", code.Id, request.Reason);

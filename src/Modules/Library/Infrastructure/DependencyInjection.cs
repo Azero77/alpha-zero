@@ -37,10 +37,11 @@ public static class DependencyInjection
     {
         services.AddScoped<IAccessCodeRepository, AccessCodeRepository>();
         services.AddScoped<ILibraryRepository, LibraryRepository>();
-        services.AddScoped<IRedemptionStrategyFactory, RedemptionStrategyFactory>();
+        services.AddScoped<IRedemptionStrategyFactory, StrategyFactory>();
         
         // Register Redemption Strategies (ACLs)
         services.AddScoped<IRedemptionStrategy, CourseEnrollmentStrategy>();
+        services.AddScoped<IRevocationStrategy, CourseRevocationStrategy>();
 
         services.AddScoped<IUnitOfWork, UnitOfWork<AppDbContext>>();
 

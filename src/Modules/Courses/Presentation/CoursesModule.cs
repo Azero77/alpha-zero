@@ -37,6 +37,13 @@ public class CoursesModule : AppModule
                 r.UsePostgres();
             });
 
+        configuration.AddSagaStateMachine<CourseRevocationSaga, Sagas.CourseRevocation.CourseRevocationState>()
+            .EntityFrameworkRepository(r =>
+            {
+                r.ExistingDbContext<AppDbContext>();
+                r.UsePostgres();
+            });
+
         configuration.AddConsumers(typeof(CoursesModule).Assembly);
     }
 }

@@ -51,7 +51,7 @@ public class CourseRedemptionSaga : MassTransitStateMachine<CourseRedemptionStat
                 .Send(context => new AssignStudentRoleFromSagaCommand(
                     context.Saga.CorrelationId,
                     context.Saga.UserId,
-                    AlphaZero.Shared.Domain.ResourceArn.Create(context.Saga.CourseArn).Value))
+                    ResourceArn.Create(context.Saga.CourseArn).Value))
         );
 
         During(Authorizing,
@@ -61,17 +61,39 @@ public class CourseRedemptionSaga : MassTransitStateMachine<CourseRedemptionStat
                     context.Saga.AuthorizedAt = DateTime.UtcNow;
                     _logger.LogInformation("Authorization completed for User {UserId}. Saga Finalized.", context.Saga.UserId);
                 })
-                .Finalize()
+                .Finalize(),
+
+            When(StudentRoleAssignmentFailed)
+                .Then(context =>
+                {
+                    context.Saga.FailureReason = context.Message.Reason;
+                    _logger.LogError("Authorization FAILED for User {UserId}. Triggering Compensation (Deactivating Enrollment).", context.Saga.UserId);
+                })
+                .TransitionTo(Failed)
+                .Send(context => new RevokeStudentEnrollmentFromSagaCommand(
+                    context.Saga.CorrelationId,
+                    context.Saga.UserId,
+                    ResourceArn.Create(context.Saga.CourseArn).Value.GetCourseId()))
         );
 
-        // Optional: Handle Failures
-        // DuringAny(When(EnrollmentFailed)...)
+        During(Enrolling,
+            When(StudentEnrollmentFailed)
+                .Then(context =>
+                {
+                    context.Saga.FailureReason = context.Message.Reason;
+                    _logger.LogError("Enrollment FAILED for User {UserId}. Saga Aborted.", context.Saga.UserId);
+                })
+                .TransitionTo(Failed)
+        );
     }
 
     public State Enrolling { get; private set; } = null!;
     public State Authorizing { get; private set; } = null!;
+    public State Failed { get; private set; } = null!;
 
     public Event<CourseAccessUnlockedIntegrationEvent> CourseAccessUnlocked { get; private set; } = null!;
     public Event<StudentEnrolledFromSagaEvent> StudentEnrolled { get; private set; } = null!;
     public Event<StudentRoleAssignedFromSagaEvent> StudentRoleAssigned { get; private set; } = null!;
+    public Event<StudentEnrollmentFailedEvent> StudentEnrollmentFailed { get; private set; } = null!;
+    public Event<StudentRoleAssignmentFailedEvent> StudentRoleAssignmentFailed { get; private set; } = null!;
 }

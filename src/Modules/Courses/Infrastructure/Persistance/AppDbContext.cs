@@ -21,6 +21,7 @@ public class AppDbContext : DbContext,ITenantDbContext
     public DbSet<Subject> Subjects => Set<Subject>();
     public DbSet<Enrollement> Enrollements => Set<Enrollement>();
     public DbSet<CourseRedemptionState> CourseRedemptionStates => Set<CourseRedemptionState>();
+    public DbSet<Sagas.CourseRevocation.CourseRevocationState> CourseRevocationStates => Set<Sagas.CourseRevocation.CourseRevocationState>();
 
     public Guid? TenantId => _tenantProvider.GetTenant();
 
