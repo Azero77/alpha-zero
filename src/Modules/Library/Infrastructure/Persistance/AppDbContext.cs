@@ -16,6 +16,7 @@ public class AppDbContext : DbContext, ITenantDbContext
     }
 
     public DbSet<AccessCode> AccessCodes => Set<AccessCode>();
+    public DbSet<Library> Libraries => Set<Library>();
 
     public Guid? TenantId => _tenantProvider.GetTenant();
 

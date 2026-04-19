@@ -36,6 +36,9 @@ public class AccessCodeConfiguration : IEntityTypeConfiguration<AccessCode>
             .HasConversion<string>()
             .HasMaxLength(32);
 
+        builder.Property(x => x.LibraryId).IsRequired();
+        builder.HasIndex(x => x.LibraryId);
+
         builder.Property(x => x.TenantId).IsRequired();
         builder.HasIndex(x => x.TenantId);
     }

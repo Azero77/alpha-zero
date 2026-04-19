@@ -1,4 +1,6 @@
 using AlphaZero.Modules.Library.Application.RedeemCode;
+using AlphaZero.Shared.Authorization;
+using AlphaZero.Shared.Domain;
 using AlphaZero.Shared.Presentation.Extensions;
 using FastEndpoints;
 using Microsoft.AspNetCore.Http;
@@ -22,6 +24,8 @@ public class RedeemCodeEndpoint : Endpoint<RedeemCodeRequest>
     public override void Configure()
     {
         Post("/library/redeem");
+        // Redemption requires permission to enroll in courses at the tenant level
+        this.AccessControl("courses:Enroll", _ => ResourceArn.ForTenant(Guid.Empty));
         Description(d => d.WithTags("Library"));
     }
 

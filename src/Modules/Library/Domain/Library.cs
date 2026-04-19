@@ -6,39 +6,67 @@ namespace AlphaZero.Modules.Library.Domain;
 public class Library : AggregateRoot, IDomainTenantOwned
 {
     public string Name { get; private set; } = default!;
+    public string Address { get; private set; } = default!;
+    public string ContactNumber { get; private set; } = default!;
     public Guid TenantId { get; private set; }
     
-    private readonly List<Guid> _allowedCourseIds = new();
-    public IReadOnlyCollection<Guid> AllowedCourseIds => _allowedCourseIds.AsReadOnly();
+    private readonly List<ResourcePattern> _allowedResources = new();
+    public IReadOnlyCollection<ResourcePattern> AllowedResources => _allowedResources.AsReadOnly();
 
     private Library() { }
 
-    private Library(Guid id, string name, Guid tenantId) : base(id)
+    private Library(Guid id, string name, string address, string contactNumber, Guid tenantId) : base(id)
     {
         Name = name;
+        Address = address;
+        ContactNumber = contactNumber;
         TenantId = tenantId;
     }
 
-    public static Library Create(string name, Guid tenantId)
+    public static Library Create(string name, string address, string contactNumber, Guid tenantId)
     {
-        return new Library(Guid.NewGuid(), name, tenantId);
+        return new Library(Guid.NewGuid(), name, address, contactNumber, tenantId);
     }
 
-    public ErrorOr<Success> AuthorizeCourse(Guid courseId)
+    public void Update(string name, string address, string contactNumber)
     {
-        if (_allowedCourseIds.Contains(courseId))
-            return Error.Conflict("Library.CourseAlreadyAuthorized", "Library is already authorized for this course.");
+        Name = name;
+        Address = address;
+        ContactNumber = contactNumber;
+    }
 
-        _allowedCourseIds.Add(courseId);
+    public ErrorOr<Success> AuthorizeResource(ResourceArn resource)
+    {
+        var pattern = ResourcePattern.Create(resource.Value).Value;
+        if (_allowedResources.Contains(pattern))
+            return Error.Conflict("Library.ResourceAlreadyAuthorized", "Library is already authorized for this resource.");
+
+        _allowedResources.Add(pattern);
+        AddDomainEvent(new ResourceAccessAddedToLibraryDomainEvent(this.Id, pattern));
         return Result.Success;
     }
 
-    public ErrorOr<Success> DeauthorizeCourse(Guid courseId)
+    public ErrorOr<Success> DeauthorizeResource(ResourceArn resource)
     {
-        if (!_allowedCourseIds.Contains(courseId))
-            return Error.NotFound("Library.CourseNotAuthorized", "Library is not authorized for this course.");
+        var pattern = ResourcePattern.Create(resource.Value).Value;
 
-        _allowedCourseIds.Remove(courseId);
+        if (!_allowedResources.Contains(pattern))
+            return Error.NotFound("Library.ResourceNotAuthorized", "Library is not authorized for this resource.");
+
+        _allowedResources.Remove(pattern);
+        AddDomainEvent(new ResourceAccessRemovedFromLibraryDomainEvent(this.Id, pattern));
         return Result.Success;
     }
+}
+
+public class ResourceAccessAddedToLibraryDomainEvent(Guid LibraryId, ResourcePattern ResourcePattern) : DomainEvent()
+{
+    public Guid LibraryId { get; } = LibraryId;
+    public ResourcePattern ResourcePattern { get; } = ResourcePattern;
+}
+
+public class ResourceAccessRemovedFromLibraryDomainEvent(Guid LibraryId, ResourcePattern ResourcePattern) : DomainEvent()
+{
+    public Guid LibraryId { get; } = LibraryId;
+    public ResourcePattern ResourcePattern { get; } = ResourcePattern;
 }

@@ -8,6 +8,7 @@ public class AccessCode : AggregateRoot, IDomainTenantOwned
 {
     public string CodeHash { get; private set; } = default!;
     public Guid TenantId { get; private set; }
+    public Guid LibraryId { get; private set; }
     public string StrategyId { get; private set; } = default!;
     public ResourceArn TargetResourceArn { get; private set; } = default!;
     public JsonDocument Metadata { get; private set; } = default!;
@@ -23,6 +24,7 @@ public class AccessCode : AggregateRoot, IDomainTenantOwned
         Guid id,
         string codeHash,
         Guid tenantId,
+        Guid libraryId,
         string strategyId,
         ResourceArn targetResourceArn,
         JsonDocument metadata,
@@ -32,6 +34,7 @@ public class AccessCode : AggregateRoot, IDomainTenantOwned
     {
         CodeHash = codeHash;
         TenantId = tenantId;
+        LibraryId = libraryId;
         StrategyId = strategyId;
         TargetResourceArn = targetResourceArn;
         Metadata = metadata;
@@ -43,6 +46,7 @@ public class AccessCode : AggregateRoot, IDomainTenantOwned
     public static AccessCode Mint(
         string codeHash, 
         Guid tenantId, 
+        Guid libraryId,
         string strategyId, 
         ResourceArn targetResourceArn, 
         JsonDocument metadata,
@@ -52,6 +56,7 @@ public class AccessCode : AggregateRoot, IDomainTenantOwned
             Guid.NewGuid(),
             codeHash,
             tenantId,
+            libraryId,
             strategyId,
             targetResourceArn,
             metadata,

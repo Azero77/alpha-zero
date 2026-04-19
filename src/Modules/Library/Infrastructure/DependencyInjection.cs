@@ -36,6 +36,7 @@ public static class DependencyInjection
     public static IServiceCollection AddLibraryPrivateInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
         services.AddScoped<IAccessCodeRepository, AccessCodeRepository>();
+        services.AddScoped<ILibraryRepository, LibraryRepository>();
         services.AddScoped<IRedemptionStrategyFactory, RedemptionStrategyFactory>();
         
         // Register Redemption Strategies (ACLs)
