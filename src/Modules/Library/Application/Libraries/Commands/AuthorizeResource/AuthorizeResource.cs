@@ -2,12 +2,22 @@ using AlphaZero.Modules.Library.Domain;
 using AlphaZero.Shared.Application;
 using AlphaZero.Shared.Domain;
 using ErrorOr;
+using FluentValidation;
 using MediatR;
 using Microsoft.Extensions.Logging;
 
 namespace AlphaZero.Modules.Library.Application.Libraries.Commands.AuthorizeResource;
 
 public record AuthorizeResourceCommand(Guid LibraryId, string ResourceArn) : ICommand<Success>;
+
+public class AuthorizeResourceCommandValidator : AbstractValidator<AuthorizeResourceCommand>
+{
+    public AuthorizeResourceCommandValidator()
+    {
+        RuleFor(x => x.LibraryId).NotEmpty();
+        RuleFor(x => x.ResourceArn).NotEmpty();
+    }
+}
 
 public sealed class AuthorizeResourceCommandHandler(
     ILibraryRepository libraryRepository,

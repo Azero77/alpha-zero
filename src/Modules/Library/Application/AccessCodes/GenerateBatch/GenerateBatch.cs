@@ -3,6 +3,7 @@ using AlphaZero.Shared.Application;
 using AlphaZero.Shared.Domain;
 using AlphaZero.Shared.Infrastructure.Tenats;
 using ErrorOr;
+using FluentValidation;
 using MediatR;
 using Microsoft.Extensions.Logging;
 using System.Security.Cryptography;
@@ -18,9 +19,20 @@ public record GenerateBatchCommand(
     string TargetResourceArn,
     Dictionary<string, object> Metadata) : ICommand<List<string>>;
 
+public class GenerateBatchCommandValidator : AbstractValidator<GenerateBatchCommand>
+{
+    public GenerateBatchCommandValidator()
+    {
+        RuleFor(x => x.LibraryId).NotEmpty();
+        RuleFor(x => x.Quantity).GreaterThan(0).LessThanOrEqualTo(1000);
+        RuleFor(x => x.StrategyId).NotEmpty();
+        RuleFor(x => x.TargetResourceArn).NotEmpty();
+    }
+}
+
 public sealed class GenerateBatchCommandHandler : IRequestHandler<GenerateBatchCommand, ErrorOr<List<string>>>
 {
-    private readonly IAccessCodeRepository _accessCodeRepository;
+...
     private readonly ILibraryRepository _libraryRepository;
     private readonly ITenantProvider _tenantProvider;
     private readonly IPasswordHasher _passwordHasher;

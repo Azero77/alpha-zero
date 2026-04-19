@@ -2,12 +2,23 @@ using AlphaZero.Modules.Library.Domain;
 using AlphaZero.Shared.Application;
 using AlphaZero.Shared.Infrastructure.Tenats;
 using ErrorOr;
+using FluentValidation;
 using MediatR;
 using Microsoft.Extensions.Logging;
 
 namespace AlphaZero.Modules.Library.Application.Libraries.Commands.CreateLibrary;
 
 public record CreateLibraryCommand(string Name, string Address, string ContactNumber) : ICommand<Guid>;
+
+public class CreateLibraryCommandValidator : AbstractValidator<CreateLibraryCommand>
+{
+    public CreateLibraryCommandValidator()
+    {
+        RuleFor(x => x.Name).NotEmpty().MaximumLength(256);
+        RuleFor(x => x.Address).NotEmpty().MaximumLength(512);
+        RuleFor(x => x.ContactNumber).NotEmpty().MaximumLength(32);
+    }
+}
 
 public sealed class CreateLibraryCommandHandler(
     ILibraryRepository libraryRepository,

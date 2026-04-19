@@ -2,12 +2,22 @@ using AlphaZero.Modules.Library.Domain;
 using AlphaZero.Shared.Application;
 using AlphaZero.Shared.Domain;
 using ErrorOr;
+using FluentValidation;
 using MediatR;
 using Microsoft.Extensions.Logging;
 
 namespace AlphaZero.Modules.Library.Application.Libraries.Commands.DeauthorizeResource;
 
 public record DeauthorizeResourceCommand(Guid LibraryId, string ResourceArn) : ICommand<Success>;
+
+public class DeauthorizeResourceCommandValidator : AbstractValidator<DeauthorizeResourceCommand>
+{
+    public DeauthorizeResourceCommandValidator()
+    {
+        RuleFor(x => x.LibraryId).NotEmpty();
+        RuleFor(x => x.ResourceArn).NotEmpty();
+    }
+}
 
 public sealed class DeauthorizeResourceCommandHandler(
     ILibraryRepository libraryRepository,

@@ -4,6 +4,7 @@ using AlphaZero.Shared.Application;
 using AlphaZero.Shared.Domain;
 using AlphaZero.Shared.Infrastructure.Tenats;
 using ErrorOr;
+using FluentValidation;
 using MediatR;
 using Microsoft.Extensions.Logging;
 using System.Text.Json;
@@ -14,6 +15,15 @@ public record GenerateAdminCodeCommand(
     string TargetResourceArn,
     string StrategyId = "enroll-course",
     Dictionary<string, object>? Metadata = null) : ICommand<string>;
+
+public class GenerateAdminCodeCommandValidator : AbstractValidator<GenerateAdminCodeCommand>
+{
+    public GenerateAdminCodeCommandValidator()
+    {
+        RuleFor(x => x.TargetResourceArn).NotEmpty();
+        RuleFor(x => x.StrategyId).NotEmpty();
+    }
+}
 
 public sealed class GenerateAdminCodeCommandHandler(
     IAccessCodeRepository accessCodeRepository,
