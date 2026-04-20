@@ -13,7 +13,7 @@ public sealed class ListLibrariesQueryHandler(ILibraryRepository libraryReposito
 {
     public async Task<ErrorOr<PagedResult<LibraryDto>>> Handle(ListLibrariesQuery request, CancellationToken cancellationToken)
     {
-        var result = await libraryRepository.GetPagedAsync(request.Page, request.PerPage, cancellationToken);
+        var result = await libraryRepository.Get(request.Page, request.PerPage, lib => lib.Name,token: cancellationToken);
 
         var dtos = result.Items.Select(library => new LibraryDto(
             library.Id,

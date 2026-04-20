@@ -10,4 +10,13 @@
 		<ProjectReference Include="..\..\..\AlphaZero.Shared\AlphaZero.Shared.csproj" />
 	</ItemGroup>
 
+	<ItemGroup>
+	  <None Update="SeedData\ManagedPolicies.json">
+	    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+	  </None>
+	  <None Update="SeedData\PrincipalTemplates.json">
+	    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+	  </None>
+	</ItemGroup>
+
 </Project>

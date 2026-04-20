@@ -28,7 +28,7 @@ public class CompleteItemEndpoint : Endpoint<CompleteItemRequest>
     {
         Post("/courses/enrollements/{EnrollmentId}/complete");
         this.AccessControl("enrollments:Complete", req => ResourceArn.ForEnrollment(Guid.Empty, req.EnrollmentId));
-        Description(d => d.WithTags("Enrollements"));
+        Description(d => d.WithTags("Enrollement"));
     }
 
     public override async Task HandleAsync(CompleteItemRequest req, CancellationToken ct)

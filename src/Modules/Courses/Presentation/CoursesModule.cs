@@ -1,5 +1,6 @@
 ﻿using AlphaZero.Modules.Courses.Infrastructure.Persistance;
 using AlphaZero.Modules.Courses.Infrastructure.Sagas.CourseRedemption;
+using AlphaZero.Modules.Courses.Infrastructure.Sagas.CourseRevocation;
 using Autofac;
 using Infrastructure;
 using MassTransit;
@@ -37,7 +38,7 @@ public class CoursesModule : AppModule
                 r.UsePostgres();
             });
 
-        configuration.AddSagaStateMachine<CourseRevocationSaga, Sagas.CourseRevocation.CourseRevocationState>()
+        configuration.AddSagaStateMachine<CourseRevocationSaga, CourseRevocationState>()
             .EntityFrameworkRepository(r =>
             {
                 r.ExistingDbContext<AppDbContext>();

@@ -33,6 +33,13 @@ public class AppDbContext : DbContext, ITenantDbContext
         modelBuilder.Ignore<Policy>();
         modelBuilder.Ignore<PolicyStatement>();
         modelBuilder.Ignore<PolicyTemplateStatement>();
+
+        // --- Data Seeding ---
+        var (principals, managedPolicies, assignments) = Seeding.IdentitySeedReader.GetData();
+
+        modelBuilder.Entity<ManagedPolicy>().HasData(managedPolicies);
+        modelBuilder.Entity<PrincipalTemplate>().HasData(principals);
+        modelBuilder.Entity<PrincipalPolicyAssignment>().HasData(assignments);
         
         base.OnModelCreating(modelBuilder);
     }
