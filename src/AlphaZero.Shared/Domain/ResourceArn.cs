@@ -15,7 +15,7 @@ public class ResourceArn
 
     public const string Prefix = "az";
     public const string GlobalTenant = "global";
-
+    public static ResourceArn AppUrn => new ResourceArn("az:global");
     // Strict pattern for concrete ARNs
     private static readonly Regex ConcreteRegex = new(@"^az:(?<service>[a-zA-Z]+):(?<tenantId>[a-zA-Z0-9-]+):(?<resourcePath>[A-Za-z0-9\/\-]+)$", RegexOptions.Compiled);
 
@@ -80,10 +80,10 @@ public class ResourceArn
     public static ResourceArn ForQuiz(Guid tenantId, Guid courseId, Guid sectionId, Guid quizId) => new($"az:courses:{tenantId}:course/{courseId}/section/{sectionId}/quiz/{quizId}");
     public static ResourceArn ForEnrollment(Guid tenantId, Guid enrollmentId) => new($"az:courses:{tenantId}:enrollment/{enrollmentId}");
     public static ResourceArn ForVideo(Guid tenantId, Guid videoId) => new($"az:video:{tenantId}:video/{videoId}");
+    public static ResourceArn ForCourseVideo(Guid tenantId, Guid videoId,Guid courseId) => new($"az:video:{tenantId}:course/{courseId}/video/{videoId}");
     public static ResourceArn ForLibrary(Guid tenantId, Guid libraryId) => new($"az:library:{tenantId}:library/{libraryId}");
     public static ResourceArn ForAccessCode(Guid tenantId, Guid codeId) => new($"az:library:{tenantId}:code/{codeId}");
 }
-
 /// <summary>
 /// Represents a permission scope pattern.
 /// CAN contain wildcards and placeholders.
@@ -202,4 +202,7 @@ public class ResourcePattern
     public static ResourcePattern All => new ResourcePattern("az:*");
 
     public override string ToString() => Value;
+
+    public override bool Equals(object? obj) => obj is ResourcePattern other && Value == other.Value;
+    public override int GetHashCode() => Value.GetHashCode();
 }

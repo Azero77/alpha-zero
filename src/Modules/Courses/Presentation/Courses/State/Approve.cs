@@ -1,4 +1,6 @@
 using AlphaZero.Modules.Courses.Application.Courses.Commands.State;
+using AlphaZero.Shared.Authorization;
+using AlphaZero.Shared.Domain;
 using AlphaZero.Shared.Presentation.Extensions;
 using FastEndpoints;
 using MediatR;
@@ -23,7 +25,7 @@ public class ApproveCourseEndpoint : Endpoint<ApproveCourseRequest>
     public override void Configure()
     {
         Patch("/courses/{CourseId}/approve");
-        AllowAnonymous();
+        this.AccessControl("courses:Approve", req => ResourceArn.ForCourse(Guid.Empty, req.CourseId));
         Description(d => d.WithTags("Courses"));
     }
 

@@ -7,7 +7,8 @@ namespace AlphaZero.Modules.Identity.Domain.Models;
 
 public class Principal : PrincipalTemplate, IDomainTenantOwned
 {
-    public string TenantUserId { get; private set; } = string.Empty;
+    public string Username { get; private set; } = string.Empty;
+    public string PasswordHash { get; private set; } = string.Empty;
     
     // Boundary: Explicitly using ResourcePattern
     public ResourcePattern? PrincipalScope { get; private set; }
@@ -21,16 +22,17 @@ public class Principal : PrincipalTemplate, IDomainTenantOwned
     public IReadOnlyCollection<Policy> InlinePolicies => _inlinePolicies.AsReadOnly();
     public string? PrincipalScopeUrn => PrincipalScope?.Value;
     
-    private Principal(Guid id, string tenantUserId, PrincipalType principalType, Guid tenantId, ResourcePattern? principalScope, string name, Guid? resourceId = null, ResourceType? scopeResourceType = null) 
+    private Principal(Guid id, string username, PrincipalType principalType, Guid tenantId, ResourcePattern? principalScope, string name, string passwordHash, Guid? resourceId = null, ResourceType? scopeResourceType = null) 
         : base(id, name, principalType)
     {
-        TenantUserId = tenantUserId;
+        Username = username;
+        PasswordHash = passwordHash;
         PrincipalScope = principalScope;
         ResourceId = resourceId;
         ScopeResourceType = scopeResourceType;
         TenantId = tenantId;
     }
-    public static ErrorOr<Principal> Create(Guid id, string identityId, PrincipalType type, Guid tenantId, string? principalScope, string name, Guid? resourceId = null, ResourceType? scopeResourceType = null)
+    public static ErrorOr<Principal> Create(Guid id, string username, PrincipalType type, Guid tenantId, string? principalScope, string name, string passwordHash, Guid? resourceId = null, ResourceType? scopeResourceType = null)
     {
         if (principalScope is not null)
         {
@@ -38,11 +40,11 @@ public class Principal : PrincipalTemplate, IDomainTenantOwned
             if (pattern.IsError)
                 return pattern.Errors;
 
-            return new Principal(id, identityId, type, tenantId, pattern.Value, name, resourceId, scopeResourceType);
+            return new Principal(id, username, type, tenantId, pattern.Value, name, passwordHash, resourceId, scopeResourceType);
             
         }
 
-        return new Principal(id, identityId, type, tenantId, null, name, resourceId, scopeResourceType);
+        return new Principal(id, username, type, tenantId, null, name, passwordHash, resourceId, scopeResourceType);
     }
 
     public void AddInlinePolicy(Policy policy)

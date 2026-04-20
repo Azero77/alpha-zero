@@ -1,4 +1,6 @@
 using AlphaZero.Modules.Identity.Application.Principals.Commands.DetachManagedPolicy;
+using AlphaZero.Shared.Authorization;
+using AlphaZero.Shared.Domain;
 using AlphaZero.Shared.Presentation.Extensions;
 using FastEndpoints;
 using MediatR;
@@ -24,7 +26,7 @@ public class DetachManagedPolicyEndpoint : Endpoint<DetachManagedPolicyRequest>
     public override void Configure()
     {
         Delete("/identity/principals/{PrincipalId}/policies/managed/{ManagedPolicyId}");
-        AllowAnonymous();
+        this.AccessControl("identity:ManagePrincipals", _ => ResourceArn.ForTenant(Guid.Empty));
         Description(d => d.WithTags("Identity"));
     }
 

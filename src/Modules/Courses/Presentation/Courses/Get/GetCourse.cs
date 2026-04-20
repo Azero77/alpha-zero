@@ -1,4 +1,6 @@
 using AlphaZero.Modules.Courses.Application.Courses.Queries.GetCourse;
+using AlphaZero.Shared.Authorization;
+using AlphaZero.Shared.Domain;
 using AlphaZero.Shared.Presentation.Extensions;
 using FastEndpoints;
 using MediatR;
@@ -53,7 +55,7 @@ public class GetCourseEndpoint : Endpoint<GetCourseRequest, CourseResponse>
     public override void Configure()
     {
         Get("/courses/{Id}");
-        AllowAnonymous();
+        this.AccessControl("courses:View", req => ResourceArn.ForCourse(Guid.Empty, req.Id));
         Description(d => d.WithTags("Courses"));
         Summary(new GetCourseSummary());
     }

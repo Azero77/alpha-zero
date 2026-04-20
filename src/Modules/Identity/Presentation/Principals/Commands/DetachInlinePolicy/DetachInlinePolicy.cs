@@ -1,4 +1,6 @@
 using AlphaZero.Modules.Identity.Application.Principals.Commands.DetachInlinePolicy;
+using AlphaZero.Shared.Authorization;
+using AlphaZero.Shared.Domain;
 using AlphaZero.Shared.Presentation.Extensions;
 using FastEndpoints;
 using MediatR;
@@ -24,7 +26,7 @@ public class DetachInlinePolicyEndpoint : Endpoint<DetachInlinePolicyRequest>
     public override void Configure()
     {
         Delete("/identity/principals/{PrincipalId}/policies/inline/{PolicyId}");
-        AllowAnonymous();
+        this.AccessControl("identity:ManagePrincipals", _ => ResourceArn.ForTenant(Guid.Empty));
         Description(d => d.WithTags("Identity"));
     }
 

@@ -1,5 +1,8 @@
 using AlphaZero.Modules.Courses.Application.Courses.Commands.Create;
+using AlphaZero.Shared.Authorization;
+using AlphaZero.Shared.Domain;
 using AlphaZero.Shared.Presentation.Extensions;
+using Amazon.S3;
 using FastEndpoints;
 using MediatR;
 using Microsoft.AspNetCore.Http;
@@ -45,7 +48,7 @@ public class CreateCourseEndpoint : Endpoint<CreateCourseRequest, CreateCourseRe
     public override void Configure()
     {
         Post("/courses");
-        AllowAnonymous();
+        this.AccessControl("courses:Create", _ => ResourceArn.ForTenant(Guid.Empty));
         Description(d => d.WithTags("Courses"));
         Summary(new CreateCourseSummary());
     }

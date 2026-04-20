@@ -1,9 +1,11 @@
 using AlphaZero.Modules.Courses.Application.Subjects.Queries.GetSubject;
 using AlphaZero.Modules.Courses.Application.Subjects.Queries.ListSubjects;
+using AlphaZero.Shared.Authorization;
+using AlphaZero.Shared.Domain;
 using AlphaZero.Shared.Presentation.Extensions;
 using AlphaZero.Shared.Queries;
-using FastEndpoints;
 using MediatR;
+using FastEndpoints;
 using Microsoft.AspNetCore.Http;
 
 namespace AlphaZero.Modules.Courses.Presentation.Subjects.List;
@@ -26,7 +28,7 @@ public class ListSubjectsEndpoint : Endpoint<ListSubjectsRequest, PagedResult<Su
     public override void Configure()
     {
         Get("/courses/subjects");
-        AllowAnonymous();
+        this.AccessControl("subjects:List", _ => ResourceArn.ForTenant(Guid.Empty));
         Description(d => d.WithTags("Subjects"));
     }
 

@@ -1,4 +1,6 @@
 using AlphaZero.Modules.Courses.Application.Subjects.Commands.Create;
+using AlphaZero.Shared.Authorization;
+using AlphaZero.Shared.Domain;
 using AlphaZero.Shared.Presentation.Extensions;
 using FastEndpoints;
 using MediatR;
@@ -43,7 +45,7 @@ public class CreateSubjectEndpoint : Endpoint<CreateSubjectRequest, CreateSubjec
     public override void Configure()
     {
         Post("/courses/subjects");
-        AllowAnonymous();
+        this.AccessControl("subjects:Create", _ => ResourceArn.ForTenant(Guid.Empty));
         Description(d => d.WithTags("Subjects"));
         Summary(new CreateSubjectSummary());
     }

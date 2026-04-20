@@ -29,11 +29,11 @@ public class PolicyEvaluatorServiceTests
 
         var strategies = new List<IAuthorizationStrategy>
         {
-            new TenantUserAuthorizationStrategy(_assignmentRepository, _userRepository),
+            new TenantUserAuthorizationStrategy(_assignmentRepository),
             new PrincipalUserAuthorizationStrategy(_principalRepository)
         };
 
-        _evaluator = new PolicyEvaluatorService(strategies);
+        _evaluator = new PolicyEvaluatorService(strategies,_userRepository);
     }
 
     [Fact]
@@ -104,7 +104,7 @@ public class PolicyEvaluatorServiceTests
     public async Task Authorize_Principal_Should_EvaluateInlinePolicies()
     {
         // Arrange
-        var principalResult = Principal.Create(Guid.NewGuid(), "sub-1", PrincipalType.User, TenantId, ResourcePattern.All.Value, "Custom");
+        var principalResult = Principal.Create(Guid.NewGuid(), "iam-user-1", PrincipalType.User, TenantId, ResourcePattern.All.Value, "Custom", "hashed-password");
         var principal = principalResult.Value;
         
         var policy = new Policy(Guid.NewGuid(), "Inline", TenantId);

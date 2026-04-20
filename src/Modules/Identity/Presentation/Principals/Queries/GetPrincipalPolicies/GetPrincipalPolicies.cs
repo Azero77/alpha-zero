@@ -1,4 +1,6 @@
 using AlphaZero.Modules.Identity.Application.Principals.Queries.GetPrincipalPolicies;
+using AlphaZero.Shared.Authorization;
+using AlphaZero.Shared.Domain;
 using AlphaZero.Shared.Presentation.Extensions;
 using FastEndpoints;
 using MediatR;
@@ -20,7 +22,7 @@ public class GetPrincipalPoliciesEndpoint : Endpoint<GetPrincipalPoliciesRequest
     public override void Configure()
     {
         Get("/identity/principals/{PrincipalId}/policies");
-        AllowAnonymous();
+        this.AccessControl("identity:ManagePrincipals", _ => ResourceArn.ForTenant(Guid.Empty));
         Description(d => d.WithTags("Identity"));
     }
 

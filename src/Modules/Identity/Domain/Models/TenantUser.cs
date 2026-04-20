@@ -11,7 +11,7 @@ namespace AlphaZero.Modules.Identity.Domain.Models;
 public class TenantUser : AggregateRoot, IDomainTenantOwned
 {
     public Guid TenantId { get; private set; }
-    public string IdentityId { get; private set; } = string.Empty; // The 'sub' from JWT
+    public string IdentityId { get; private set; } = string.Empty; // The 'sub' from Cognito JWT
     public string Name { get; private set; } = string.Empty;
     
     // The "Single Device" enforcer
@@ -34,7 +34,7 @@ public class TenantUser : AggregateRoot, IDomainTenantOwned
     }
 
     /// <summary>
-    /// Called during login to invalidate all other device sessions.
+    /// Called during login/exchange to invalidate all other device sessions.
     /// </summary>
     public Guid RefreshSession()
     {

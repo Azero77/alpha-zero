@@ -35,7 +35,7 @@ migrations-migrate:
 # Remove last migration
 # ------------------------
 migrations-clean:
-	dotnet ef migrations remove --project $(PROJECT) --startup-project $(API) --force --context $(DbContext)
+	dotnet ef migrations remove --project $(PROJECT) --startup-project $(API) --force --context $(DbContext	)
 
 
 #-------------------------

@@ -9,6 +9,7 @@ using Aspire.Shared;
 using Autofac;
 using Autofac.Extensions.DependencyInjection;
 using FastEndpoints;
+using FastEndpoints.Security;
 using FastEndpoints.Swagger;
 using MassTransit;
 using Microsoft.OpenApi;
@@ -32,10 +33,20 @@ public class Program
         app.UseFastEndpoints(c =>
         {
             c.Errors.UseProblemDetails();
-            c.Endpoints.Configurator = ep =>
+            if (app.Environment.IsDevelopment())
             {
-                ep.PreProcessor<IAMPreprocessor>(Order.Before);
-            };
+                c.Endpoints.Configurator = ep =>
+                {
+                    ep.PreProcessor<IAMDevPreprocessor>(Order.Before);
+                };
+            }
+            else
+            {
+                c.Endpoints.Configurator = ep =>
+                {
+                    ep.PreProcessor<IAMPreprocessor>(Order.Before);
+                };
+            }
         })
             .UseSwaggerGen();
         MapModulesEndpoint(app, moduleTypes);
@@ -63,7 +74,9 @@ public class Program
         LoadModuleAssemblies();
 
         builder.AddServiceDefaults();
-        builder.Services.AddAuthorization();
+        builder.Services
+            .AddAuthenticationJwtBearer(s => s.SigningKey = builder.Configuration?["JWT:Key"] ?? "very-secure-key")
+            .AddAuthorization();
         
         builder.Services.AddSharedInfrastructure(builder.Configuration, builder.Environment);
         builder.Services.AddDatabaseSettings(builder.Configuration);

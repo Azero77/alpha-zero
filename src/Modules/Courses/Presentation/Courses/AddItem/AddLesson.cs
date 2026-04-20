@@ -1,8 +1,10 @@
 using AlphaZero.Modules.Courses.Application.Courses.Commands.AddLesson;
 using AlphaZero.Shared.Presentation.Extensions;
+using AlphaZero.Shared.Authorization;
 using FastEndpoints;
 using MediatR;
 using Microsoft.AspNetCore.Http;
+using AlphaZero.Shared.Domain;
 
 namespace AlphaZero.Modules.Courses.Presentation.Courses.AddItem;
 
@@ -25,7 +27,7 @@ public class AddLessonEndpoint : Endpoint<AddLessonRequest>
     public override void Configure()
     {
         Post("/courses/{CourseId}/sections/{SectionId}/lessons");
-        AllowAnonymous();
+        this.AccessControl("courses:Edit", req => ResourceArn.ForCourse(Guid.Empty, req.CourseId));
         Description(d => d.WithTags("Courses"));
     }
 

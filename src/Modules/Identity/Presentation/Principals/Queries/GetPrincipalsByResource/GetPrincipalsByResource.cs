@@ -1,6 +1,7 @@
 using AlphaZero.Modules.Identity.Application.Principals.Queries.GetPrincipalsByResource;
 using AlphaZero.Modules.Identity.Domain.Models;
 using AlphaZero.Shared.Authorization;
+using AlphaZero.Shared.Domain;
 using AlphaZero.Shared.Presentation.Extensions;
 using FastEndpoints;
 using MediatR;
@@ -26,7 +27,7 @@ public class GetPrincipalsByResourceEndpoint : Endpoint<GetPrincipalsByResourceR
     public override void Configure()
     {
         Get("/identity/resources/{ResourceType}/{ResourceId}/principals");
-        AllowAnonymous();
+        this.AccessControl("identity:ManagePrincipals", _ => ResourceArn.ForTenant(Guid.Empty));
         Description(d => d.WithTags("Identity"));
     }
 

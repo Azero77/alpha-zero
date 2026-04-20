@@ -1,5 +1,7 @@
 using AlphaZero.Modules.Courses.Application.Enrollements.Queries.GetStudentDashboard;
 using AlphaZero.Modules.Courses.Domain.Aggregates.Enrollements;
+using AlphaZero.Shared.Domain;
+using AlphaZero.Shared.Authorization;
 using AlphaZero.Shared.Presentation.Extensions;
 using FastEndpoints;
 using MediatR;
@@ -40,7 +42,7 @@ public class GetStudentDashboardEndpoint : Endpoint<GetStudentDashboardRequest, 
     public override void Configure()
     {
         Get("/courses/dashboard/{StudentId}");
-        AllowAnonymous();
+        this.AccessControl("enrollments:View", req => ResourceArn.ForUser(req.StudentId));
         Description(d => d.WithTags("Enrollment"));
         Summary(new GetStudentDashboardSummary());
     }

@@ -39,7 +39,54 @@ namespace AlphaZero.Modules.Identity.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("Name")
+                        .IsUnique();
+
                     b.ToTable("ManagedPolicies");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = new Guid("00000000-0000-0000-0000-000000000001"),
+                            Name = "AdministratorAccess",
+                            Statements = "[{\"Sid\":\"AllowAll\",\"Actions\":[\"*:*\"],\"Effect\":true}]"
+                        },
+                        new
+                        {
+                            Id = new Guid("00000000-0000-0000-0000-000000000002"),
+                            Name = "StudentAccess",
+                            Statements = "[{\"Sid\":\"AllowViewCourses\",\"Actions\":[\"courses:View\",\"subjects:List\",\"subjects:View\"],\"Effect\":true},{\"Sid\":\"AllowStreaming\",\"Actions\":[\"video:Stream\"],\"Effect\":true},{\"Sid\":\"AllowCompletion\",\"Actions\":[\"enrollments:Complete\"],\"Effect\":true}]"
+                        },
+                        new
+                        {
+                            Id = new Guid("00000000-0000-0000-0000-000000000003"),
+                            Name = "CourseWorkerAccess",
+                            Statements = "[{\"Sid\":\"AllowCourseProduction\",\"Actions\":[\"courses:Create\",\"courses:View\",\"courses:Edit\",\"courses:Submit\"],\"Effect\":true},{\"Sid\":\"AllowVideoUpload\",\"Actions\":[\"video:Upload\",\"video:View\",\"video:List\"],\"Effect\":true}]"
+                        },
+                        new
+                        {
+                            Id = new Guid("00000000-0000-0000-0000-000000000004"),
+                            Name = "TeacherAccess",
+                            Statements = "[{\"Sid\":\"AllowCourseReviewAndEdit\",\"Actions\":[\"courses:View\",\"courses:Edit\",\"courses:Submit\"],\"Effect\":true},{\"Sid\":\"AllowExamManagement\",\"Actions\":[\"exams:Create\",\"exams:Grade\",\"exams:View\"],\"Effect\":true}]"
+                        },
+                        new
+                        {
+                            Id = new Guid("00000000-0000-0000-0000-000000000005"),
+                            Name = "CourseManagerAccess",
+                            Statements = "[{\"Sid\":\"AllowQAWorkflow\",\"Actions\":[\"courses:View\",\"courses:Approve\",\"courses:Reject\",\"courses:Publish\"],\"Effect\":true}]"
+                        },
+                        new
+                        {
+                            Id = new Guid("00000000-0000-0000-0000-000000000006"),
+                            Name = "LibraryManagerAccess",
+                            Statements = "[{\"Sid\":\"AllowCodeGeneration\",\"Actions\":[\"library:GenerateCodes\",\"library:SellCodes\",\"library:Audit\"],\"Effect\":true}]"
+                        },
+                        new
+                        {
+                            Id = new Guid("00000000-0000-0000-0000-000000000007"),
+                            Name = "LibraryAccountantAccess",
+                            Statements = "[{\"Sid\":\"AllowLibraryAudit\",\"Actions\":[\"library:Audit\",\"library:AttachCourses\"],\"Effect\":true}]"
+                        });
                 });
 
             modelBuilder.Entity("AlphaZero.Modules.Identity.Domain.Models.PrincipalTemplate", b =>
@@ -61,6 +108,50 @@ namespace AlphaZero.Modules.Identity.Infrastructure.Migrations
                     b.ToTable("PrincipalTemplates");
 
                     b.UseTptMappingStrategy();
+
+                    b.HasData(
+                        new
+                        {
+                            Id = new Guid("00000000-0000-0000-0000-100000000001"),
+                            Name = "Administrator",
+                            PrincipalType = "Role"
+                        },
+                        new
+                        {
+                            Id = new Guid("00000000-0000-0000-0000-100000000002"),
+                            Name = "Student",
+                            PrincipalType = "Role"
+                        },
+                        new
+                        {
+                            Id = new Guid("00000000-0000-0000-0000-100000000003"),
+                            Name = "CourseWorker",
+                            PrincipalType = "Role"
+                        },
+                        new
+                        {
+                            Id = new Guid("00000000-0000-0000-0000-100000000004"),
+                            Name = "Teacher",
+                            PrincipalType = "Role"
+                        },
+                        new
+                        {
+                            Id = new Guid("00000000-0000-0000-0000-100000000005"),
+                            Name = "TenantCourseManager",
+                            PrincipalType = "Role"
+                        },
+                        new
+                        {
+                            Id = new Guid("00000000-0000-0000-0000-100000000006"),
+                            Name = "LibraryManager",
+                            PrincipalType = "Role"
+                        },
+                        new
+                        {
+                            Id = new Guid("00000000-0000-0000-0000-100000000007"),
+                            Name = "LibraryAccountant",
+                            PrincipalType = "Role"
+                        });
                 });
 
             modelBuilder.Entity("AlphaZero.Modules.Identity.Domain.Models.TenantUser", b =>
@@ -140,6 +231,43 @@ namespace AlphaZero.Modules.Identity.Infrastructure.Migrations
                     b.HasIndex("ManagedPolicyId");
 
                     b.ToTable("PrincipalManagedPolicyAssignments", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            PrincipalId = new Guid("00000000-0000-0000-0000-100000000001"),
+                            ManagedPolicyId = new Guid("00000000-0000-0000-0000-000000000001")
+                        },
+                        new
+                        {
+                            PrincipalId = new Guid("00000000-0000-0000-0000-100000000002"),
+                            ManagedPolicyId = new Guid("00000000-0000-0000-0000-000000000002")
+                        },
+                        new
+                        {
+                            PrincipalId = new Guid("00000000-0000-0000-0000-100000000003"),
+                            ManagedPolicyId = new Guid("00000000-0000-0000-0000-000000000003")
+                        },
+                        new
+                        {
+                            PrincipalId = new Guid("00000000-0000-0000-0000-100000000004"),
+                            ManagedPolicyId = new Guid("00000000-0000-0000-0000-000000000004")
+                        },
+                        new
+                        {
+                            PrincipalId = new Guid("00000000-0000-0000-0000-100000000005"),
+                            ManagedPolicyId = new Guid("00000000-0000-0000-0000-000000000005")
+                        },
+                        new
+                        {
+                            PrincipalId = new Guid("00000000-0000-0000-0000-100000000006"),
+                            ManagedPolicyId = new Guid("00000000-0000-0000-0000-000000000006")
+                        },
+                        new
+                        {
+                            PrincipalId = new Guid("00000000-0000-0000-0000-100000000007"),
+                            ManagedPolicyId = new Guid("00000000-0000-0000-0000-000000000007")
+                        });
                 });
 
             modelBuilder.Entity("AlphaZero.Modules.Identity.Domain.Models.Principal", b =>
@@ -149,6 +277,10 @@ namespace AlphaZero.Modules.Identity.Infrastructure.Migrations
                     b.Property<string>("InlinePolicies")
                         .IsRequired()
                         .HasColumnType("jsonb");
+
+                    b.Property<string>("PasswordHash")
+                        .IsRequired()
+                        .HasColumnType("text");
 
                     b.Property<string>("PrincipalScope")
                         .HasColumnType("text")
@@ -163,12 +295,13 @@ namespace AlphaZero.Modules.Identity.Infrastructure.Migrations
                     b.Property<Guid>("TenantId")
                         .HasColumnType("uuid");
 
-                    b.Property<string>("TenantUserId")
+                    b.Property<string>("Username")
                         .IsRequired()
                         .HasMaxLength(128)
                         .HasColumnType("character varying(128)");
 
-                    b.HasIndex("TenantUserId");
+                    b.HasIndex("Username", "TenantId")
+                        .IsUnique();
 
                     b.ToTable("Principals");
                 });

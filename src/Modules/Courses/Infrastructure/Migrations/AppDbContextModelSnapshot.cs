@@ -224,6 +224,87 @@ namespace AlphaZero.Modules.Courses.Infrastructure.Migrations
                     b.ToTable("Subjects", "Courses");
                 });
 
+            modelBuilder.Entity("AlphaZero.Modules.Courses.Infrastructure.Sagas.CourseRedemption.CourseRedemptionState", b =>
+                {
+                    b.Property<Guid>("CorrelationId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("AccessCodeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("AuthorizedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CourseArn")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CurrentState")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<DateTime?>("EnrolledAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("FailureReason")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Plan")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("CorrelationId");
+
+                    b.ToTable("CourseRedemptionStates", "Courses");
+                });
+
+            modelBuilder.Entity("AlphaZero.Modules.Courses.Infrastructure.Sagas.CourseRevocation.CourseRevocationState", b =>
+                {
+                    b.Property<Guid>("CorrelationId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("AccessCodeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CurrentState")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("FailureReason")
+                        .HasColumnType("text");
+
+                    b.Property<string>("ResourceArn")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("RevokedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("UnauthorizedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("CorrelationId");
+
+                    b.ToTable("CourseRevocationStates", "Courses");
+                });
+
             modelBuilder.Entity("AlphaZero.Modules.Courses.Domain.Aggregates.Courses.CourseSectionDocument", b =>
                 {
                     b.HasBaseType("AlphaZero.Modules.Courses.Domain.Aggregates.Courses.CourseSectionItem");

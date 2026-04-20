@@ -1,0 +1,119 @@
+<mxfile host="Electron" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/29.6.6 Chrome/144.0.7559.236 Electron/40.8.4 Safari/537.36" version="29.6.6">
+  <diagram name="Page-1" id="JVtfduv-aOLkRLWDqMsP">
+    <mxGraphModel dx="3070" dy="1121" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="6yQhjBXCqBuBotHSCMWz-3" edge="1" parent="1" source="6yQhjBXCqBuBotHSCMWz-1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="6yQhjBXCqBuBotHSCMWz-2" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="6yQhjBXCqBuBotHSCMWz-1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="User wants to use our website" vertex="1">
+          <mxGeometry height="60" width="120" x="50" y="390" as="geometry" />
+        </mxCell>
+        <mxCell id="6yQhjBXCqBuBotHSCMWz-12" edge="1" parent="1" source="6yQhjBXCqBuBotHSCMWz-2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="6yQhjBXCqBuBotHSCMWz-11" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="6yQhjBXCqBuBotHSCMWz-2" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="Starts a login flow" vertex="1">
+          <mxGeometry height="60" width="120" x="250" y="390" as="geometry" />
+        </mxCell>
+        <mxCell id="6yQhjBXCqBuBotHSCMWz-6" edge="1" parent="1" source="6yQhjBXCqBuBotHSCMWz-4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="6yQhjBXCqBuBotHSCMWz-2" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="6yQhjBXCqBuBotHSCMWz-7" connectable="0" parent="6yQhjBXCqBuBotHSCMWz-6" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" value="jwt" vertex="1">
+          <mxGeometry relative="1" x="-0.6773" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="6yQhjBXCqBuBotHSCMWz-4" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="Aws Cognito" vertex="1">
+          <mxGeometry height="60" width="120" x="250" y="220" as="geometry" />
+        </mxCell>
+        <mxCell id="6yQhjBXCqBuBotHSCMWz-9" edge="1" parent="1" source="6yQhjBXCqBuBotHSCMWz-2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.789;entryY=1.077;entryDx=0;entryDy=0;entryPerimeter=0;" target="6yQhjBXCqBuBotHSCMWz-4">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="345" y="335" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="6yQhjBXCqBuBotHSCMWz-10" connectable="0" parent="6yQhjBXCqBuBotHSCMWz-9" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" value="starts an oauth flow" vertex="1">
+          <mxGeometry relative="1" x="0.2924" y="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="6yQhjBXCqBuBotHSCMWz-14" edge="1" parent="1" source="6yQhjBXCqBuBotHSCMWz-11" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="6yQhjBXCqBuBotHSCMWz-13" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="6yQhjBXCqBuBotHSCMWz-11" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="Visits a Tenant course" vertex="1">
+          <mxGeometry height="60" width="120" x="450" y="390" as="geometry" />
+        </mxCell>
+        <mxCell id="6yQhjBXCqBuBotHSCMWz-16" edge="1" parent="1" source="6yQhjBXCqBuBotHSCMWz-13" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="6yQhjBXCqBuBotHSCMWz-15" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="6yQhjBXCqBuBotHSCMWz-13" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="Wants to enroll in a course" vertex="1">
+          <mxGeometry height="60" width="120" x="450" y="530" as="geometry" />
+        </mxCell>
+        <mxCell id="6yQhjBXCqBuBotHSCMWz-18" edge="1" parent="1" source="6yQhjBXCqBuBotHSCMWz-15" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="6yQhjBXCqBuBotHSCMWz-17" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="6yQhjBXCqBuBotHSCMWz-20" edge="1" parent="1" source="6yQhjBXCqBuBotHSCMWz-15" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="6yQhjBXCqBuBotHSCMWz-19" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="6yQhjBXCqBuBotHSCMWz-15" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="prompt for entering the tenant as a student" vertex="1">
+          <mxGeometry height="60" width="120" x="250" y="530" as="geometry" />
+        </mxCell>
+        <mxCell id="6yQhjBXCqBuBotHSCMWz-28" edge="1" parent="1" source="6yQhjBXCqBuBotHSCMWz-17" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="6yQhjBXCqBuBotHSCMWz-27" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="6yQhjBXCqBuBotHSCMWz-17" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="start enrollement check (payment if needed and more info if needed)" vertex="1">
+          <mxGeometry height="80" width="170" x="40" y="520" as="geometry" />
+        </mxCell>
+        <mxCell id="6yQhjBXCqBuBotHSCMWz-22" edge="1" parent="1" source="6yQhjBXCqBuBotHSCMWz-19" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="6yQhjBXCqBuBotHSCMWz-21" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="6yQhjBXCqBuBotHSCMWz-19" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="Add a tenantUser to the db for that student with a principal of student (maybe pro, premium, ... student)" vertex="1">
+          <mxGeometry height="100" width="200" x="210" y="670" as="geometry" />
+        </mxCell>
+        <mxCell id="6yQhjBXCqBuBotHSCMWz-21" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="if course has more pricing plans&amp;nbsp;&lt;div&gt;you create a role principal for that plan, assign a student through (TenatUserPrincipalAssignment) table ,&amp;nbsp;&lt;/div&gt;" vertex="1">
+          <mxGeometry height="150" width="250" x="500" y="645" as="geometry" />
+        </mxCell>
+        <mxCell id="6yQhjBXCqBuBotHSCMWz-23" edge="1" parent="1" source="6yQhjBXCqBuBotHSCMWz-19" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.793;entryY=1.053;entryDx=0;entryDy=0;entryPerimeter=0;" target="6yQhjBXCqBuBotHSCMWz-15">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="6yQhjBXCqBuBotHSCMWz-24" connectable="0" parent="6yQhjBXCqBuBotHSCMWz-23" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" value="&lt;font style=&quot;font-size: 6px;&quot;&gt;user now when he enters a tenant ,&amp;nbsp;&lt;/font&gt;&lt;div&gt;&lt;font style=&quot;font-size: 6px;&quot;&gt;a request to /me/tenantId will be invoked in&lt;/font&gt;&lt;div&gt;&lt;font style=&quot;font-size: 6px;&quot;&gt;&amp;nbsp;order to get jwt that represent the student in the course&lt;/font&gt;&lt;/div&gt;&lt;/div&gt;" vertex="1">
+          <mxGeometry relative="1" x="0.7034" y="-2" as="geometry">
+            <mxPoint x="63" y="20" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="6yQhjBXCqBuBotHSCMWz-30" edge="1" parent="1" source="6yQhjBXCqBuBotHSCMWz-27" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="6yQhjBXCqBuBotHSCMWz-29" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="6yQhjBXCqBuBotHSCMWz-27" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="an enrollement is added to the course module that tracks the progress of the user" vertex="1">
+          <mxGeometry height="80" width="170" x="-210" y="520" as="geometry" />
+        </mxCell>
+        <mxCell id="6yQhjBXCqBuBotHSCMWz-29" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="any request is made in the course is evalueted through the jwt of the student , retreiving the policies for the scope (course) that allow or deny actions" vertex="1">
+          <mxGeometry height="110" width="280" x="-265" y="670" as="geometry" />
+        </mxCell>
+        <mxCell id="6yQhjBXCqBuBotHSCMWz-33" edge="1" parent="1" source="6yQhjBXCqBuBotHSCMWz-31" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="6yQhjBXCqBuBotHSCMWz-32" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="6yQhjBXCqBuBotHSCMWz-31" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="Admin Creates a course using a permission of (course:create inside his tenant)" vertex="1">
+          <mxGeometry height="90" width="230" x="750" y="250" as="geometry" />
+        </mxCell>
+        <mxCell id="6yQhjBXCqBuBotHSCMWz-35" edge="1" parent="1" source="6yQhjBXCqBuBotHSCMWz-32" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="6yQhjBXCqBuBotHSCMWz-34" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="6yQhjBXCqBuBotHSCMWz-32" parent="1" style="whiteSpace=wrap;html=1;rounded=0;" value="an admin will be added a policy for management of this course with all the required permissions,&amp;nbsp;" vertex="1">
+          <mxGeometry height="125" width="245" x="742.5" y="395" as="geometry" />
+        </mxCell>
+        <mxCell id="6yQhjBXCqBuBotHSCMWz-37" edge="1" parent="1" source="6yQhjBXCqBuBotHSCMWz-34" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="6yQhjBXCqBuBotHSCMWz-36" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="6yQhjBXCqBuBotHSCMWz-34" parent="1" style="whiteSpace=wrap;html=1;rounded=0;" value="an admin will create principals and assign managed principals to users&amp;nbsp;" vertex="1">
+          <mxGeometry height="125" width="245" x="1067.5" y="395" as="geometry" />
+        </mxCell>
+        <mxCell id="6yQhjBXCqBuBotHSCMWz-36" parent="1" style="whiteSpace=wrap;html=1;rounded=0;" value="principals and TenantUsers can login and be able to use course management&amp;nbsp;" vertex="1">
+          <mxGeometry height="125" width="245" x="1067.5" y="600" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

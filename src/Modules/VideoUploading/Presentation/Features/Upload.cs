@@ -1,5 +1,7 @@
 using AlphaZero.Shared.Presentation.Extensions;
 using AlphaZero.Modules.VideoUploading.Application.Commands.Upload;
+using AlphaZero.Shared.Authorization;
+using AlphaZero.Shared.Domain;
 using ErrorOr;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -18,7 +20,8 @@ public static class Upload
         public void MapEndpoint(IEndpointRouteBuilder app)
         {
             app.MapPost("api/video-uploading/upload", Handler)
-               .WithTags("Video Uploading");
+               .WithTags("Video Uploading")
+               .AccessControl("video:Upload", _ => ResourceArn.ForTenant(Guid.Empty));
         }
 
         private async Task<IResult> Handler(Request request, VideoUploadingModule module)

@@ -8,7 +8,8 @@ namespace AlphaZero.Modules.Identity.UnitTests.Domain.Models;
 public class PrincipalTests
 {
     private static readonly Guid TenantId = Guid.NewGuid();
-    private static readonly string IdentityId = "cognito-sub-123";
+    private static readonly string Username = "iam-user-123";
+    private static readonly string PasswordHash = "hashed-password";
 
     [Fact]
     public void Create_Should_Succeed_WithValidUrn()
@@ -17,7 +18,7 @@ public class PrincipalTests
         var scope = $"az:courses:{TenantId}:course/101";
 
         // Act
-        var result = Principal.Create(Guid.NewGuid(), IdentityId, PrincipalType.User, TenantId, scope, "Test Principal", Guid.NewGuid(), ResourceType.Courses);
+        var result = Principal.Create(Guid.NewGuid(), Username, PrincipalType.User, TenantId, scope, "Test Principal", PasswordHash, Guid.NewGuid(), ResourceType.Courses);
 
         // Assert
         result.IsError.Should().BeFalse();
@@ -31,7 +32,7 @@ public class PrincipalTests
         var invalidScope = "not-an-arn";
 
         // Act
-        var result = Principal.Create(Guid.NewGuid(), IdentityId, PrincipalType.User, TenantId, invalidScope, "Test Principal", Guid.NewGuid(), ResourceType.Courses);
+        var result = Principal.Create(Guid.NewGuid(), Username, PrincipalType.User, TenantId, invalidScope, "Test Principal", PasswordHash, Guid.NewGuid(), ResourceType.Courses);
 
         // Assert
         result.IsError.Should().BeTrue();
@@ -41,7 +42,7 @@ public class PrincipalTests
     public void AddInlinePolicy_Should_EncapsulateCorrectly()
     {
         // Arrange
-        var principal = Principal.Create(Guid.NewGuid(), IdentityId, PrincipalType.User, TenantId, null, "Custom").Value;
+        var principal = Principal.Create(Guid.NewGuid(), Username, PrincipalType.User, TenantId, null, "Custom", PasswordHash).Value;
         var policy = new Policy(Guid.NewGuid(), "Custom", TenantId);
 
         // Act

@@ -1,3 +1,4 @@
+using AlphaZero.Modules.Identity.Application.Auth.Commands.LoginAsTenantUser;
 using AlphaZero.Modules.Identity.Domain.Models;
 using AlphaZero.Modules.Identity.Domain.Repositories;
 using AlphaZero.Modules.Identity.Domain.Services;
@@ -5,6 +6,7 @@ using AlphaZero.Modules.Identity.Infrastructure.Persistance;
 using AlphaZero.Modules.Identity.Infrastructure.Repositories;
 using AlphaZero.Shared.Application;
 using AlphaZero.Shared.Authorization;
+using AlphaZero.Shared.Domain;
 using AlphaZero.Shared.Infrastructure;
 using AlphaZero.Shared.Infrastructure.Repositores;
 using Autofac.Core;
@@ -44,7 +46,9 @@ public static class DependencyInjection
         
         services.AddScoped<IPolicyEvaluatorService, PolicyEvaluatorService>();
         services.AddScoped<PolicyEvaluatorService>();
-
+        services.AddScoped<IJwtProvider, Auth.JwtProvider>();
+        services.AddScoped<IPasswordHasher, Auth.PasswordHasher>();
+        services.AddScoped<ICurrentTenantUserRepository, Auth.CurrentTenantUserRepository>();
     }
 
     public static void AddIdentityPrivateInfrastructure(this IServiceCollection moduleServices, IConfiguration configuration)

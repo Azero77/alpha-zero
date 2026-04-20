@@ -1,4 +1,6 @@
 using AlphaZero.Modules.Identity.Application.Policies.Commands.DeleteManagedPolicy;
+using AlphaZero.Shared.Authorization;
+using AlphaZero.Shared.Domain;
 using AlphaZero.Shared.Presentation.Extensions;
 using FastEndpoints;
 using MediatR;
@@ -20,7 +22,7 @@ public class DeleteManagedPolicyEndpoint : Endpoint<DeleteManagedPolicyRequest>
     public override void Configure()
     {
         Delete("/identity/policies/managed/{PolicyId}");
-        AllowAnonymous();
+        this.AccessControl("identity:ManagePolicies", _ => ResourceArn.AppUrn);
         Description(d => d.WithTags("Identity Policies"));
     }
 

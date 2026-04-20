@@ -1,5 +1,6 @@
 using AlphaZero.Modules.Courses.Domain.Aggregates.Courses;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace AlphaZero.Modules.Courses.Infrastructure.Persistance.Configurations;

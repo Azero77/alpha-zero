@@ -1,4 +1,5 @@
 using AlphaZero.Shared.Domain;
+using AlphaZero.Shared.Infrastructure.Tenats;
 using FastEndpoints;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -16,6 +17,36 @@ public static class EndpointExtensions
     {
         var requirement = new AccessControlRequirement(action, req => resourceArnFactory((TRequest)req));
         endpoint.Definition.Metadata(requirement);
+
+        var env = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
+        if (env == "Development")
+        {
+            endpoint.Definition.AllowAnonymous();
+        }
+    }
+    public static void AccessControl<TRequest, TResponse>(this Endpoint<TRequest, TResponse> endpoint, string action, Func<TRequest, ResourceArn> resourceArnFactory)
+        where TRequest : notnull
+    {
+        var requirement = new AccessControlRequirement(action, req => resourceArnFactory((TRequest)req));
+        endpoint.Definition.Metadata(requirement);
+
+        var env = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
+        if (env == "Development")
+        {
+            endpoint.Definition.AllowAnonymous();
+        }
+    }
+
+    public static RouteHandlerBuilder AccessControl(this RouteHandlerBuilder builder, string action, Func<HttpContext, ResourceArn> resourceArnFactory)
+    {
+        var requirement = new AccessControlRequirement(action, req => resourceArnFactory((HttpContext)req));
+        
+        if (Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") == "Development")
+        {
+            builder.AllowAnonymous();
+        }
+
+        return builder.WithMetadata(requirement);
     }
 }
 
@@ -44,9 +75,22 @@ public class IAMPreprocessor : IGlobalPreProcessor
         Guid? sessionId = Guid.TryParse(sid, out var sessionGuid) ? sessionGuid : null;
             
         var evaluator = context.HttpContext.RequestServices.GetRequiredService<IPolicyEvaluatorService>();
+        var tenantProvider = context.HttpContext.RequestServices.GetRequiredService<ITenantProvider>();
 
         ResourceArn resourceArn = requirement.resourceArnFactory(context.Request!);
-        if (!Guid.TryParse(resourceArn.TenantIdString, out var tenantId))
+        Guid tenantId;
+
+        // If the ARN uses Guid.Empty placeholder, resolve it from the tenant provider
+        if (resourceArn.TenantIdString == Guid.Empty.ToString())
+        {
+            var currentTenant = tenantProvider.GetTenant();
+            if (currentTenant == null)
+            {
+                await context.HttpContext.Response.SendForbiddenAsync(ct); return;
+            }
+            tenantId = currentTenant.Value;
+        }
+        else if (!Guid.TryParse(resourceArn.TenantIdString, out tenantId) && resourceArn.TenantIdString != ResourceArn.GlobalTenant)
         {
             await context.HttpContext.Response.SendForbiddenAsync(ct); return;
         }
@@ -70,6 +114,13 @@ public class IAMPreprocessor : IGlobalPreProcessor
         {
             await context.HttpContext.Response.SendForbiddenAsync(ct); return;
         }
+    }
+}
+public class IAMDevPreprocessor : IGlobalPreProcessor
+{
+    public Task PreProcessAsync(IPreProcessorContext context, CancellationToken ct)
+    {
+        return Task.CompletedTask; //this is dev for skipping authorization
     }
 }
 

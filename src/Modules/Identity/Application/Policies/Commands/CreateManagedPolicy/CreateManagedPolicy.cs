@@ -34,6 +34,11 @@ public sealed class CreateManagedPolicyCommandHandler : IRequestHandler<CreateMa
 
     public async Task<ErrorOr<Guid>> Handle(CreateManagedPolicyCommand request, CancellationToken cancellationToken)
     {
+        if (await _managedPolicyRepository.Any(p => p.Name == request.Name, cancellationToken))
+        {
+            return Error.Conflict("ManagedPolicy.DuplicateName", $"A managed policy with the name '{request.Name}' already exists.");
+        }
+
         var policyId = Guid.NewGuid();
 
         var managedPolicy = new ManagedPolicy(policyId, request.Name, request.Statements);

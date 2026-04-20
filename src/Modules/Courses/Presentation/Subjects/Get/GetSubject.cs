@@ -1,4 +1,6 @@
 using AlphaZero.Modules.Courses.Application.Subjects.Queries.GetSubject;
+using AlphaZero.Shared.Authorization;
+using AlphaZero.Shared.Domain;
 using AlphaZero.Shared.Presentation.Extensions;
 using FastEndpoints;
 using MediatR;
@@ -23,7 +25,7 @@ public class GetSubjectEndpoint : Endpoint<GetSubjectRequest, SubjectDto>
     public override void Configure()
     {
         Get("/courses/subjects/{id}");
-        AllowAnonymous();
+        this.AccessControl("subjects:View", req => ResourceArn.ForSubject(Guid.Empty, req.Id));
         Description(d => d.WithTags("Subjects"));
     }
 

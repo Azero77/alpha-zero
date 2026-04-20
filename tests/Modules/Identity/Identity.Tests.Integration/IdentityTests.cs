@@ -1,6 +1,9 @@
+using System.Net.Http.Json;
+using AlphaZero.Modules.Identity.Application.Auth.Commands.LoginAsTenantUser;
 using AlphaZero.Modules.Identity.Domain.Models;
-using AlphaZero.Modules.Identity.Domain.Services;
 using AlphaZero.Modules.Identity.Domain.Repositories;
+using AlphaZero.Modules.Identity.Domain.Services;
+using AlphaZero.Modules.Identity.Presentation.Auth.Commands.LoginPrincipal;
 using AlphaZero.Shared.Authorization;
 using AlphaZero.Shared.Domain;
 using AlphaZero.Shared.Infrastructure.Repositores;
@@ -60,17 +63,20 @@ public class IdentityTests : BaseIntegrationTest
     }
 
     [Fact]
-    public async Task Authorize_Principal_ShouldWorkWithJsonBInlinePolicies()
+    public async Task Authorize_Principal_Should_WorkWithJsonBInlinePolicies()
     {
         // Arrange
         var tenantId = Guid.NewGuid();
         SetTenant(tenantId);
 
+        var hasher = Resolve<IPasswordHasher>();
+        var passwordHash = hasher.HashPassword("secure-password");
+
         var user = TenantUser.Create(tenantId, "ali-sub", "Ali").Value;
-        
-        var principal = Principal.Create(Guid.NewGuid(), user.IdentityId, PrincipalType.User, tenantId, "az:*:*:*", "Custom").Value;
+
+        var principal = Principal.Create(Guid.NewGuid(), "ali-principal", PrincipalType.User, tenantId, "az:*:*:*", "Custom", passwordHash).Value;
         var policy = new Policy(Guid.NewGuid(), "Inline", tenantId);
-        policy.AddStatement(new PolicyStatement("S1", new() { "admin:Access" }, true, new() { ResourcePattern.All }));
+        policy.AddStatement(new PolicyStatement("S1", new() { "video:Stream" }, true, new() { ResourcePattern.All }));
         principal.AddInlinePolicy(policy);
 
         DbContext.TenantUsers.Add(user);
@@ -82,12 +88,44 @@ public class IdentityTests : BaseIntegrationTest
         var result = await evaluator.Authorize(
             principal.Id, 
             tenantId, 
-            "dashboard", 
-            ResourceType.Users, 
-            "admin:Access", 
+            "video/1", 
+            ResourceType.Videos, 
+            "video:Stream", 
             AuthorizationMethod.Principal.ToString());
 
         // Assert
         result.IsError.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task LoginPrincipal_Should_ReturnToken_WhenCredentialsAreValid()
+    {
+        // Arrange
+        var tenantId = Guid.NewGuid();
+        SetTenant(tenantId);
+
+        var hasher = Resolve<IPasswordHasher>();
+        var passwordHash = hasher.HashPassword("secure-password");
+
+        var principal = Principal.Create(Guid.NewGuid(), "iam-user", PrincipalType.User, tenantId, null, "IAM User", passwordHash).Value;
+        DbContext.Principals.Add(principal);
+        await DbContext.SaveChangesAsync();
+
+        var request = new LoginPrincipalRequest 
+        { 
+            TenantId = tenantId, 
+            Username = "iam-user", 
+            Password = "secure-password" 
+        };
+
+        // Act
+        var response = await Client.PostAsJsonAsync("/identity/auth/login-principal", request);
+
+        // Assert
+        response.EnsureSuccessStatusCode();
+        var result = await response.Content.ReadFromJsonAsync<TokenResponse>();
+        result.Should().NotBeNull();
+        result!.Token.Should().NotBeEmpty();
+        result.TenantUserId.Should().Be(principal.Id);
     }
 }
