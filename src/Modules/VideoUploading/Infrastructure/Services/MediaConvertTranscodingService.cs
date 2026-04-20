@@ -1,3 +1,4 @@
+using AlphaZero.Modules.VideoUploading.Application;
 using AlphaZero.Modules.VideoUploading.Application.Services;
 using AlphaZero.Modules.VideoUploading.Infrastructure.Consumers;
 using Amazon.MediaConvert;
@@ -24,6 +25,8 @@ public class MediaConvertTranscodingService : IVideoTranscodingService
         _aWSResources = aWSResources;
         _logger = logger;
     }
+
+    public VideoTranscodingMetehod Method => VideoTranscodingMetehod.SQSMediaConvert;
 
     public async Task<ErrorOr<string>> StartTranscodingJobAsync(
         Guid videoId, 

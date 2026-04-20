@@ -1,14 +1,15 @@
 using AlphaZero.Modules.VideoUploading.Application.Services;
-using ErrorOr;
-using MediatR;
-using MassTransit;
-using MassTransit.Mediator;
+using AlphaZero.Modules.VideoUploading.Domain.Models;
 using AlphaZero.Modules.VideoUploading.IntegrationEvents;
 using AlphaZero.Shared.Application;
 using AlphaZero.Shared.Domain;
 using AlphaZero.Shared.Infrastructure.Tenats;
+using Amazon.Runtime.Internal.Transform;
+using ErrorOr;
 using FluentValidation;
-using AlphaZero.Modules.VideoUploading.Domain.Models;
+using MassTransit;
+using MassTransit.Mediator;
+using MediatR;
 
 namespace AlphaZero.Modules.VideoUploading.Application.Commands.Upload;
 
@@ -49,7 +50,8 @@ public sealed class UploadCommandHandler(IUploadService uploadService, IModuleBu
             { "VideoId" , videoId.ToString()},
             { "TenantId", tenantId.Value.ToString() },
             { "Title", request.title },
-            { "Description", request.description ?? string.Empty }
+            { "Description", request.description ?? string.Empty },
+            { "VideoTranscodingMetehod", request.VideoTranscodingMetehod.ToString() }
         });
         if (response.IsError) return response.Errors;
         await moduleBus.Publish(new UploadVideoRequestedEvent(videoId, tenantId.Value, clock.Now));

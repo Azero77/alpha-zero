@@ -26,7 +26,7 @@ public static class Upload
 
         private async Task<IResult> Handler(Request request, VideoUploadingModule module)
         {
-            var command = new UploadCommand(request.fileName, request.contentType, request.title, request.description);
+            var command = new UploadCommand(request.fileName, request.contentType, request.title, request.description, Application.VideoTranscodingMetehod.SQSMediaConvert);
             var response = await module.Send<UploadCommand, ErrorOr<UploadCommandResponse>>(command);
             return response.Match(
                 res => Results.Ok(new Response(res.VideoId, res.TenantId, res.Key, res.PreSignedUrl)),

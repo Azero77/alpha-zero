@@ -1,10 +1,14 @@
 using AlphaZero.Modules.VideoUploading.Application.Services;
+using AlphaZero.Modules.VideoUploading.Domain.Models;
 using AlphaZero.Modules.VideoUploading.IntegrationEvents;
 using AlphaZero.Shared.Application;
+using Amazon.CloudFront.Model;
+using Amazon.MediaConvert.Model;
 using Aspire.Shared;
 using ErrorOr;
-using MediatR;
+using FluentValidation;
 using MassTransit;
+using MediatR;
 using Microsoft.Extensions.Logging;
 
 namespace AlphaZero.Modules.VideoUploading.Application.Commands.Process;
@@ -15,23 +19,29 @@ public record StartVideoTranscodingCommand(
     int SourceWidth, 
     int SourceHeight) : ICommand<string>;
 
+/// <summary>
+/// Will implement the strategy pattern for the VideoTranscoding Service in order to select the proper transcoding service for the specified method, MediaConvert or FFMPEG
+/// </summary>
 public sealed class StartVideoTranscodingCommandHandler : IRequestHandler<StartVideoTranscodingCommand, ErrorOr<string>>
 {
-    private readonly IVideoTranscodingService _transcodingService;
+    private readonly IEnumerable<IVideoTranscodingService> _transcodingServices;
     private readonly AWSResources _aWSResources;
     private readonly ILogger<StartVideoTranscodingCommandHandler> _logger;
     private readonly IModuleBus _moduleBus;
+    private readonly IUploadService _uploadService;
 
     public StartVideoTranscodingCommandHandler(
-        IVideoTranscodingService transcodingService,
+        IEnumerable<IVideoTranscodingService> transcodingServices,
         AWSResources aWSResources,
         ILogger<StartVideoTranscodingCommandHandler> logger,
-        IModuleBus moduleBus)
+        IModuleBus moduleBus,
+        IUploadService uploadService)
     {
-        _transcodingService = transcodingService;
+        _transcodingServices = transcodingServices;
         _aWSResources = aWSResources;
         _logger = logger;
         _moduleBus = moduleBus;
+        _uploadService = uploadService;
     }
 
     public async Task<ErrorOr<string>> Handle(StartVideoTranscodingCommand request, CancellationToken cancellationToken)
@@ -47,9 +57,20 @@ public sealed class StartVideoTranscodingCommandHandler : IRequestHandler<StartV
             ?? throw new ArgumentException("Output S3 bucket is not configured");
         string outputPath = $"s3://{destinationBucket}/streaming/{request.VideoId}/master";
 
+        var metadataResponse = await _uploadService.GetMetadata(request.Key);
+        if (metadataResponse.IsError) return metadataResponse.Errors;
+
+        var s3Metadata = metadataResponse.Value;
+        if (!Enum.TryParse<VideoTranscodingMetehod>(s3Metadata.GetValueOrDefault("videotranscodingmetehod")?.ToString(), out var method))
+        {
+            return Error.Validation("VideoState.MethodNotFound", "The provided Transcoding Method is not supported");
+        }
+        var transcodingService = _transcodingServices.FirstOrDefault(s => s.Method == method);
+        if (transcodingService is null)
+            throw new InvalidArgumentException("Trascoding Method service are not written yet");
         try
         {
-            var jobIdResult = await _transcodingService.StartTranscodingJobAsync(
+            var jobIdResult = await transcodingService.StartTranscodingJobAsync(
                 request.VideoId, 
                 sourceS3, 
                 outputPath, 

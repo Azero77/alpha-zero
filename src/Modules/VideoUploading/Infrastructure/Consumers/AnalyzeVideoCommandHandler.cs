@@ -45,6 +45,7 @@ public class AnalyzeVideoCommandHandler : IConsumer<AnalyzeVideoCommand>
             context.Message.VideoId, 
             specs.Duration, 
             specs.Resolution.width, 
-            specs.Resolution.height));
+            specs.Resolution.height
+            ));
     }
 }

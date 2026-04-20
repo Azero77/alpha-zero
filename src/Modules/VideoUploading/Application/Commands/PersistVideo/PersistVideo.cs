@@ -69,7 +69,10 @@ public sealed class PersistVideoCommandHandler : IRequestHandler<PersistVideoCom
         string? description = s3Metadata.GetValueOrDefault("description")?.ToString();
         string contentType = s3Metadata.GetValueOrDefault("Content-Type")?.ToString() ?? "video/mp4";
         long fileSize = s3Metadata.TryGetValue("Content-Length", out var len) && long.TryParse(len.ToString(), out var l) ? l : 0;
-
+        if (!Enum.TryParse<VideoTranscodingMetehod>(s3Metadata.GetValueOrDefault("videotranscodingmetehod")?.ToString(), out var method))
+        {
+            return Error.Validation("VideoState.MethodNotFound","The provided Transcoding Method is not supported");
+        }
         // 4. Create Domain Entity
         var videoResult = Video.Create(
             request.VideoId,
@@ -77,7 +80,7 @@ public sealed class PersistVideoCommandHandler : IRequestHandler<PersistVideoCom
             title,
             description,
             videoState.Key,
-            new VideoMetadata(fileName, contentType, fileSize),
+            new VideoMetadata(fileName, contentType, fileSize,method.ToString()),
             _clock);
 
         if (videoResult.IsError) return videoResult.Errors;
