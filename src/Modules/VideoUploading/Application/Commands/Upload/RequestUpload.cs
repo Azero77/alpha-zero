@@ -8,10 +8,11 @@ using AlphaZero.Shared.Application;
 using AlphaZero.Shared.Domain;
 using AlphaZero.Shared.Infrastructure.Tenats;
 using FluentValidation;
+using AlphaZero.Modules.VideoUploading.Domain.Models;
 
 namespace AlphaZero.Modules.VideoUploading.Application.Commands.Upload;
 
-public record UploadCommand(string fileName, string contentType, string title, string? description): ICommand<UploadCommandResponse>;
+public record UploadCommand(string fileName, string contentType, string title, string? description, VideoTranscodingMetehod VideoTranscodingMetehod): ICommand<UploadCommandResponse>;
 
 public class UploadCommandValidator : AbstractValidator<UploadCommand>
 {
@@ -43,7 +44,6 @@ public sealed class UploadCommandHandler(IUploadService uploadService, IModuleBu
         if (tenantId is null) return Error.Failure("Tenant.NotFound", "Tenant not found in context.");
 
         Guid videoId = Guid.NewGuid();
-        //request policis , implemented later ......
         var response = await uploadService.UploadFile(request.fileName, request.contentType, new Dictionary<string, string>()
         {
             { "VideoId" , videoId.ToString()},
