@@ -202,4 +202,7 @@ public class ResourcePattern
     public static ResourcePattern All => new ResourcePattern("az:*");
 
     public override string ToString() => Value;
+
+    public override bool Equals(object? obj) => obj is ResourcePattern other && Value == other.Value;
+    public override int GetHashCode() => Value.GetHashCode();
 }

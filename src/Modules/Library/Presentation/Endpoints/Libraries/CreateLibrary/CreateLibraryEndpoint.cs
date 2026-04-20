@@ -36,6 +36,6 @@ public class CreateLibraryEndpoint(LibraryModule module) : Endpoint<CreateLibrar
             return;
         }
 
-        await Send.CreatedAtAsync($"/library/libraries/{result.Value}", new CreateLibraryResponse(result.Value), cancellation: ct);
+        await Send.CreatedAtAsync($"/library/libraries/{result.Value}", responseBody: new CreateLibraryResponse(result.Value), cancellation: ct);
     }
 }

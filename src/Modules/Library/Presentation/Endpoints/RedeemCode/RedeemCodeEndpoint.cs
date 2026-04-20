@@ -40,6 +40,6 @@ public class RedeemCodeEndpoint : Endpoint<RedeemCodeRequest>
             return;
         }
 
-        await Send.OkAsync(ct);
+        await Send.OkAsync(cancellation: ct);
     }
 }

@@ -15,6 +15,11 @@ namespace Courses.Tests.Integration.Abstractions;
 
 public class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
 {
+    public ApiFactory()
+    {
+        Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", "Development");
+    }
+
     private readonly PostgreSqlContainer _dbContainer = new PostgreSqlBuilder()
         .WithImage("postgres:16.1-alpine3.19")
         .WithDatabase("alphazero_courses_test")
@@ -37,6 +42,7 @@ public class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
+        builder.UseEnvironment("Development");
         builder.ConfigureTestServices(services =>
         {
             // Replace Tenant Provider

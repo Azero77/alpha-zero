@@ -9,6 +9,7 @@ using Aspire.Shared;
 using Autofac;
 using Autofac.Extensions.DependencyInjection;
 using FastEndpoints;
+using FastEndpoints.Security;
 using FastEndpoints.Swagger;
 using MassTransit;
 using Microsoft.OpenApi;
@@ -73,7 +74,9 @@ public class Program
         LoadModuleAssemblies();
 
         builder.AddServiceDefaults();
-        builder.Services.AddAuthorization();
+        builder.Services
+            .AddAuthenticationJwtBearer(s => s.SigningKey = builder.Configuration?["JWT:Key"] ?? "very-secure-key")
+            .AddAuthorization();
         
         builder.Services.AddSharedInfrastructure(builder.Configuration, builder.Environment);
         builder.Services.AddDatabaseSettings(builder.Configuration);

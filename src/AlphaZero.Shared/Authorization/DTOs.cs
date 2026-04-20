@@ -17,17 +17,35 @@ public static class EndpointExtensions
     {
         var requirement = new AccessControlRequirement(action, req => resourceArnFactory((TRequest)req));
         endpoint.Definition.Metadata(requirement);
+
+        var env = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
+        if (env == "Development")
+        {
+            endpoint.Definition.AllowAnonymous();
+        }
     }
     public static void AccessControl<TRequest, TResponse>(this Endpoint<TRequest, TResponse> endpoint, string action, Func<TRequest, ResourceArn> resourceArnFactory)
         where TRequest : notnull
     {
         var requirement = new AccessControlRequirement(action, req => resourceArnFactory((TRequest)req));
         endpoint.Definition.Metadata(requirement);
+
+        var env = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
+        if (env == "Development")
+        {
+            endpoint.Definition.AllowAnonymous();
+        }
     }
 
     public static RouteHandlerBuilder AccessControl(this RouteHandlerBuilder builder, string action, Func<HttpContext, ResourceArn> resourceArnFactory)
     {
         var requirement = new AccessControlRequirement(action, req => resourceArnFactory((HttpContext)req));
+        
+        if (Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") == "Development")
+        {
+            builder.AllowAnonymous();
+        }
+
         return builder.WithMetadata(requirement);
     }
 }
