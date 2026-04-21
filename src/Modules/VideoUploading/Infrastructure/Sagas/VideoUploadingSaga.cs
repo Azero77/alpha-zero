@@ -36,7 +36,10 @@ public class VideoUploadingSaga : MassTransitStateMachine<VideoState>
         SetCompletedWhenFinalized();
         Initially(
             When(UploadVideoRequestedEvent)
-                .Then(context => context.Saga.TenantId = context.Message.TenantId)
+                .Then(context => {
+                    context.Saga.TenantId = context.Message.TenantId;
+                    context.Saga.EncryptionMethod = context.Message.EncryptionMethod;
+                })
                 .TransitionTo(Pending),
             
             When(VideoDeliveredToInputEvent)
@@ -70,7 +73,8 @@ public class VideoUploadingSaga : MassTransitStateMachine<VideoState>
                     context.Saga.CorrelationId,
                     context.Saga.Key!, 
                     context.Message.Width,
-                    context.Message.Height))
+                    context.Message.Height,
+                    context.Saga.EncryptionMethod))
                 .TransitionTo(Transcoding));
 
         During(Analyzing,
@@ -84,7 +88,8 @@ public class VideoUploadingSaga : MassTransitStateMachine<VideoState>
                     context.Saga.CorrelationId,
                     context.Saga.Key!, 
                     context.Message.Width,
-                    context.Message.Height))
+                    context.Message.Height,
+                    context.Saga.EncryptionMethod))
                 .TransitionTo(Transcoding));
 
         During(Transcoding,
@@ -126,6 +131,7 @@ public class VideoState : SagaStateMachineInstance
     public TimeSpan? Duration { get; set; }
     public string? S3OutputPrefix { get; set; }
     public string? FinalUrl { get; set; }
+    public string? EncryptionMethod { get; set; }
     public bool IsFailed { get; set; } = false;
     public int Version { get; set; }
 }

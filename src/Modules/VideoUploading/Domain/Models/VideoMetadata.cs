@@ -4,7 +4,8 @@ public record VideoMetadata(
     string OriginalFileName,
     string ContentType,
     long FileSize,
-    string TranscodingMethod
+    string TranscodingMethod,
+    string? EncryptionMethod = "None"
 );
 
 public record VideoSpecifications

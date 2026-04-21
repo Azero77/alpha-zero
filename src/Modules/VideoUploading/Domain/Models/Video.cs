@@ -139,3 +139,59 @@ public class Video : AggregateRoot, IDomainTenantOwned, ISoftDeletable
         Description = description;
     }
 }
+public sealed class S3Uri : IEquatable<S3Uri>
+{
+    public string Value { get; }
+    public string Bucket { get; }
+    public string Key { get; }
+
+    public string Prefix =>
+        string.IsNullOrEmpty(Key) || !Key.Contains('/')
+            ? string.Empty
+            : Key[..(Key.LastIndexOf('/') + 1)];
+
+    private S3Uri(string value, string bucket, string key)
+    {
+        Value = value;
+        Bucket = bucket;
+        Key = key;
+    }
+
+    public static S3Uri Parse(string s3Uri)
+    {
+        if (string.IsNullOrWhiteSpace(s3Uri))
+            throw new ArgumentException("S3 URI cannot be null or empty.", nameof(s3Uri));
+
+        if (!s3Uri.StartsWith("s3://", StringComparison.OrdinalIgnoreCase))
+            throw new ArgumentException($"Invalid S3 URI: {s3Uri}");
+
+        var uri = new Uri(s3Uri);
+
+        var bucket = uri.Host;
+        var key = uri.AbsolutePath.TrimStart('/');
+
+        if (string.IsNullOrWhiteSpace(bucket))
+            throw new ArgumentException("S3 URI must contain a bucket.");
+
+        return new S3Uri(s3Uri, bucket, key);
+    }
+
+    public override string ToString() => Value;
+
+    public bool Equals(S3Uri? other)
+    {
+        if (other is null) return false;
+        return string.Equals(Value, other.Value, StringComparison.OrdinalIgnoreCase);
+    }
+
+    public override bool Equals(object? obj) => Equals(obj as S3Uri);
+
+    public override int GetHashCode() =>
+        StringComparer.OrdinalIgnoreCase.GetHashCode(Value);
+
+    public static bool operator ==(S3Uri? left, S3Uri? right) =>
+        Equals(left, right);
+
+    public static bool operator !=(S3Uri? left, S3Uri? right) =>
+        !Equals(left, right);
+}

@@ -31,6 +31,8 @@ public static class DependencyInjection
         services.AddScoped<IUploadService, S3UploadService>();
         services.AddScoped<IVideoSpecificationExtractorService, S3VideoSpecificationExtractor>();
         services.AddScoped<IVideoTranscodingService, MediaConvertTranscodingService>();
+        services.AddScoped<IVideoTranscodingService, FFmpegTranscodingService>();
+        services.AddScoped<IVideoEncryptionService, DefaultVideoEncryptionService>();
         services.AddScoped<IVideoCdnSyncService, S3VideoCdnSyncService>();
 
         // Persistence

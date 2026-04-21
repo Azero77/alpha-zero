@@ -12,7 +12,13 @@ namespace AlphaZero.Modules.VideoUploading.Presentation.Features;
 
 public static class Upload
 {
-    public record Request(string fileName, string contentType, string title, string? description);
+    public record Request(
+        string fileName, 
+        string contentType, 
+        string title, 
+        string? description,
+        VideoTranscodingMetehod? transcodingMethod,
+        VideoEncryptionMethod? encryptionMethod);
     public record Response(Guid videoId, Guid tenantId, string key, string preSignedUrl);
 
     public class Endpoint : IEndpoint
@@ -26,7 +32,16 @@ public static class Upload
 
         private async Task<IResult> Handler(Request request, VideoUploadingModule module)
         {
-            var command = new UploadCommand(request.fileName, request.contentType, request.title, request.description, Application.VideoTranscodingMetehod.SQSMediaConvert);
+            var transcodingMethod = request.transcodingMethod ?? VideoTranscodingMetehod.FFMPEG;
+            var encryptionMethod = request.encryptionMethod ?? VideoEncryptionMethod.ClearKey;
+
+            var command = new UploadCommand(
+                request.fileName, 
+                request.contentType, 
+                request.title, 
+                request.description, 
+                transcodingMethod,
+                encryptionMethod);
             var response = await module.Send<UploadCommand, ErrorOr<UploadCommandResponse>>(command);
             return response.Match(
                 res => Results.Ok(new Response(res.VideoId, res.TenantId, res.Key, res.PreSignedUrl)),

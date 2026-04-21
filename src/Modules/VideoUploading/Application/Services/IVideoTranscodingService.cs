@@ -11,5 +11,6 @@ public interface IVideoTranscodingService
         string outputPathS3Uri, 
         int sourceWidth,
         int sourceHeight,
+        VideoEncryptionMethod encryptionMethod = VideoEncryptionMethod.None,
         CancellationToken cancellationToken = default);
 }

@@ -13,7 +13,7 @@ using MediatR;
 
 namespace AlphaZero.Modules.VideoUploading.Application.Commands.Upload;
 
-public record UploadCommand(string fileName, string contentType, string title, string? description, VideoTranscodingMetehod VideoTranscodingMetehod): ICommand<UploadCommandResponse>;
+public record UploadCommand(string fileName, string contentType, string title, string? description, VideoTranscodingMetehod VideoTranscodingMetehod, VideoEncryptionMethod VideoEncryptionMethod = VideoEncryptionMethod.None): ICommand<UploadCommandResponse>;
 
 public class UploadCommandValidator : AbstractValidator<UploadCommand>
 {
@@ -51,10 +51,11 @@ public sealed class UploadCommandHandler(IUploadService uploadService, IModuleBu
             { "TenantId", tenantId.Value.ToString() },
             { "Title", request.title },
             { "Description", request.description ?? string.Empty },
-            { "VideoTranscodingMetehod", request.VideoTranscodingMetehod.ToString() }
+            { "VideoTranscodingMetehod", request.VideoTranscodingMetehod.ToString() },
+            { "VideoEncryptionMethod", request.VideoEncryptionMethod.ToString() }
         });
         if (response.IsError) return response.Errors;
-        await moduleBus.Publish(new UploadVideoRequestedEvent(videoId, tenantId.Value, clock.Now));
+        await moduleBus.Publish(new UploadVideoRequestedEvent(videoId, tenantId.Value, clock.Now, request.VideoEncryptionMethod.ToString()));
 
         return new UploadCommandResponse(videoId, tenantId.Value, response.Value.key, response.Value.presignedUrl);
     }

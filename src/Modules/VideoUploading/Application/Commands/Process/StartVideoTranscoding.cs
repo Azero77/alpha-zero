@@ -17,7 +17,8 @@ public record StartVideoTranscodingCommand(
     Guid VideoId, 
     string Key, 
     int SourceWidth, 
-    int SourceHeight) : ICommand<string>;
+    int SourceHeight,
+    string? EncryptionMethod = "None") : ICommand<string>;
 
 /// <summary>
 /// Will implement the strategy pattern for the VideoTranscoding Service in order to select the proper transcoding service for the specified method, MediaConvert or FFMPEG
@@ -65,9 +66,15 @@ public sealed class StartVideoTranscodingCommandHandler : IRequestHandler<StartV
         {
             return Error.Validation("VideoState.MethodNotFound", "The provided Transcoding Method is not supported");
         }
+
+        if (!Enum.TryParse<VideoEncryptionMethod>(request.EncryptionMethod ?? s3Metadata.GetValueOrDefault("videoencryptionmethod")?.ToString(), out var encryptionMethod))
+        {
+             encryptionMethod = VideoEncryptionMethod.None;
+        }
+
         var transcodingService = _transcodingServices.FirstOrDefault(s => s.Method == method);
         if (transcodingService is null)
-            throw new InvalidArgumentException("Trascoding Method service are not written yet");
+            throw new InvalidOperationException("Trascoding Method service are not written yet");
         try
         {
             var jobIdResult = await transcodingService.StartTranscodingJobAsync(
@@ -76,6 +83,7 @@ public sealed class StartVideoTranscodingCommandHandler : IRequestHandler<StartV
                 outputPath, 
                 request.SourceWidth, 
                 request.SourceHeight, 
+                encryptionMethod,
                 cancellationToken);
 
             if (jobIdResult.IsError)

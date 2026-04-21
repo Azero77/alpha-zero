@@ -73,6 +73,8 @@ public sealed class PersistVideoCommandHandler : IRequestHandler<PersistVideoCom
         {
             return Error.Validation("VideoState.MethodNotFound","The provided Transcoding Method is not supported");
         }
+        string encryptionMethod = s3Metadata.GetValueOrDefault("videoencryptionmethod")?.ToString() ?? VideoEncryptionMethod.None.ToString();
+
         // 4. Create Domain Entity
         var videoResult = Video.Create(
             request.VideoId,
@@ -80,7 +82,7 @@ public sealed class PersistVideoCommandHandler : IRequestHandler<PersistVideoCom
             title,
             description,
             videoState.Key,
-            new VideoMetadata(fileName, contentType, fileSize,method.ToString()),
+            new VideoMetadata(fileName, contentType, fileSize, method.ToString(), encryptionMethod),
             _clock);
 
         if (videoResult.IsError) return videoResult.Errors;
