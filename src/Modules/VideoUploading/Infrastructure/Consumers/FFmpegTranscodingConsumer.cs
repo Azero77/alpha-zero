@@ -37,12 +37,14 @@ public class FFmpegTranscodingConsumer : IConsumer<ExecuteFFmpegTranscodingComma
         _logger.LogInformation("[FFmpegConsumer] Starting transcoding for Video {VideoId}", msg.VideoId);
 
         string tempPath = Path.Combine(Path.GetTempPath(), "transcoding", msg.VideoId.ToString());
+        if (Directory.Exists(tempPath)) Directory.Delete(tempPath, true);
         Directory.CreateDirectory(tempPath);
 
         string sourceFile = Path.Combine(tempPath, "source.mp4");
         string outputDir = Path.Combine(tempPath, "output");
         Directory.CreateDirectory(outputDir);
 
+        using var process = new Process();
         try
         {
             // 1. Download source from S3
@@ -64,16 +66,15 @@ public class FFmpegTranscodingConsumer : IConsumer<ExecuteFFmpegTranscodingComma
                     var encParams = encParamsResult.Value;
                     string keyFilePath = Path.Combine(tempPath, "video.key");
                     
-                    // keyValue is hex string, convert to bytes
                     byte[] keyBytes = Convert.FromHexString(encParams.KeyValue);
                     await File.WriteAllBytesAsync(keyFilePath, keyBytes);
 
                     hlsKeyInfoFile = Path.Combine(tempPath, "key_info");
                     await File.WriteAllLinesAsync(hlsKeyInfoFile, new[]
                     {
-                        encParams.KeyUrl ?? "video.key", // Key URL
-                        keyFilePath,                     // Path to key file for FFmpeg
-                        encParams.KeyId                  // Key ID (optional in some versions but good practice)
+                        encParams.KeyUrl ?? "video.key", 
+                        keyFilePath,                     
+                        encParams.KeyId                  
                     });
                     
                     _logger.LogInformation("[FFmpeg] Encryption enabled with method: {Method}", encMethod);
@@ -81,13 +82,10 @@ public class FFmpegTranscodingConsumer : IConsumer<ExecuteFFmpegTranscodingComma
             }
 
             // 3. Execute FFmpeg
-            // We'll build a command for ABR HLS
-            // This is a simplified version of what MediaConvert does
             string ffmpegArgs = BuildFFmpegArgs(sourceFile, outputDir, msg.SourceWidth, hlsKeyInfoFile);
-            
             _logger.LogInformation("[FFmpeg] Running command: ffmpeg {Args}", ffmpegArgs);
             
-            var startInfo = new ProcessStartInfo
+            process.StartInfo = new ProcessStartInfo
             {
                 FileName = "ffmpeg",
                 Arguments = ffmpegArgs,
@@ -96,14 +94,23 @@ public class FFmpegTranscodingConsumer : IConsumer<ExecuteFFmpegTranscodingComma
                 CreateNoWindow = true
             };
 
-            using var process = Process.Start(startInfo);
-            if (process == null) throw new Exception("Failed to start FFmpeg process");
+            process.Start();
+            var errorReaderTask = process.StandardError.ReadToEndAsync();
 
-            string errorOutput = await process.StandardError.ReadToEndAsync();
-            await process.WaitForExitAsync(context.CancellationToken);
+            try 
+            {
+                await process.WaitForExitAsync(context.CancellationToken);
+            }
+            catch (OperationCanceledException)
+            {
+                _logger.LogWarning("[FFmpeg] Transcoding cancelled for Video {VideoId}. Killing process.", msg.VideoId);
+                if (!process.HasExited) process.Kill(true);
+                throw;
+            }
 
             if (process.ExitCode != 0)
             {
+                string errorOutput = await errorReaderTask;
                 _logger.LogError("[FFmpeg] Process failed with exit code {ExitCode}. Error: {Error}", process.ExitCode, errorOutput);
                 await context.Publish(new VideoProcessingFailedEvent(msg.VideoId, "FFmpeg processing failed", msg.SourceKey));
                 return;
@@ -121,18 +128,18 @@ public class FFmpegTranscodingConsumer : IConsumer<ExecuteFFmpegTranscodingComma
         catch (Exception ex)
         {
             _logger.LogError(ex, "[FFmpeg] Unexpected error during transcoding for Video {VideoId}", msg.VideoId);
+            if (!process.HasExited) try { process.Kill(true); } catch { }
             await context.Publish(new VideoProcessingFailedEvent(msg.VideoId, ex.Message, msg.SourceKey));
         }
         finally
         {
-            // Cleanup
+            if (!process.HasExited) try { process.Kill(true); } catch { }
             try { Directory.Delete(tempPath, true); } catch { }
         }
     }
 
     private string BuildFFmpegArgs(string inputFile, string outputDir, int sourceWidth, string? keyInfoFile)
     {
-        // Define renditions based on source width
         var renditions = new List<(int width, int height, int bitrate, string name)>
         {
             (1920, 1080, 3000, "1080p"),
@@ -141,9 +148,8 @@ public class FFmpegTranscodingConsumer : IConsumer<ExecuteFFmpegTranscodingComma
             (640, 360, 500, "360p")
         };
 
-        // Filter out upscaling
         var activeRenditions = renditions.Where(r => r.width <= sourceWidth).ToList();
-        if (activeRenditions.Count == 0) activeRenditions.Add(renditions.Last()); // At least keep 360p
+        if (activeRenditions.Count == 0) activeRenditions.Add(renditions.Last());
 
         var args = $"-i \"{inputFile}\" ";
         string varStreamMap = "";
@@ -151,14 +157,22 @@ public class FFmpegTranscodingConsumer : IConsumer<ExecuteFFmpegTranscodingComma
         for (int i = 0; i < activeRenditions.Count; i++)
         {
             var r = activeRenditions[i];
+            // Use CRF 21 for High Quality, 23 for Standard (mimics QVBR 7/8)
+            int crf = r.width >= 1280 ? 21 : 23;
+            
             args += $"-map 0:v -map 0:a ";
-            args += $"-c:v:{i} h264 -b:v:{i} {r.bitrate}k -maxrate:v:{i} {r.bitrate}k -bufsize:v:{i} {r.bitrate * 2}k ";
-            args += $"-filter:v:{i} \"scale=w={r.width}:h={r.height}:force_original_aspect_ratio=decrease,pad=ceil(iw/2)*2:ceil(ih/2)*2\" ";
-            args += $"-c:a:{i} aac -b:a:{i} 64k -ar:{i} 44100 ";
+            // Bug Fix 3: QVBR equivalent using CRF + maxrate/bufsize
+            args += $"-c:v:{i} libx264 -crf:{i} {crf} -maxrate:v:{i} {r.bitrate}k -bufsize:v:{i} {r.bitrate * 2}k -preset fast ";
+            // Bug Fix 1: Noise Reduction (hqdn3d)
+            args += $"-filter:v:{i} \"hqdn3d,scale=w={r.width}:h={r.height}:force_original_aspect_ratio=decrease,pad=ceil(iw/2)*2:ceil(ih/2)*2\" ";
+            // Bug Fix 2: Audio Normalization (loudnorm)
+            args += $"-c:a:{i} aac -b:a:{i} 128k -ar:{i} 44100 -filter:a:{i} \"loudnorm=I=-24:LRA=7:tp=-2\" ";
             varStreamMap += $"v:{i},a:{i} ";
         }
 
         args += $"-f hls -hls_time 6 -hls_playlist_type vod -hls_segment_type fmp4 -master_pl_name master.m3u8 ";
+        // CMAF Specifics: Independent segments and I-Frame index for Trick Play (scrubbing)
+        args += $"-hls_flags independent_segments -hls_fmp4_iframe_index 1 ";
         
         if (!string.IsNullOrEmpty(keyInfoFile))
         {
