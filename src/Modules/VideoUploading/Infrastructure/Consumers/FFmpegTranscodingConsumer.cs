@@ -119,7 +119,16 @@ public class FFmpegTranscodingConsumer : IConsumer<ExecuteFFmpegTranscodingComma
             // 4. Upload to S3
             _logger.LogInformation("[FFmpeg] Uploading results to S3: {Prefix}", msg.DestinationPrefix);
             var transferUtility = new TransferUtility(_s3Client);
-            await transferUtility.UploadDirectoryAsync(outputDir, _awsResources.OutputS3!.BucketName, msg.DestinationPrefix,SearchOption.AllDirectories, cancellationToken: context.CancellationToken);
+            
+            var uploadRequest = new TransferUtilityUploadDirectoryRequest
+            {
+                Directory = outputDir,
+                BucketName = _awsResources.OutputS3!.BucketName,
+                KeyPrefix = msg.DestinationPrefix,
+                SearchOption = SearchOption.AllDirectories
+            };
+
+            await transferUtility.UploadDirectoryAsync(uploadRequest, context.CancellationToken);
 
             // 5. Notify Finish
             await context.Publish(new VideoTranscodingFinishedEvent(msg.VideoId, msg.DestinationPrefix));
@@ -170,9 +179,14 @@ public class FFmpegTranscodingConsumer : IConsumer<ExecuteFFmpegTranscodingComma
             varStreamMap += $"v:{i},a:{i} ";
         }
 
-        args += $"-f hls -hls_time 6 -hls_playlist_type vod -hls_segment_type fmp4 -master_pl_name master.m3u8 ";
-        // CMAF Specifics: Independent segments and I-Frame index for Trick Play (scrubbing)
-        args += $"-hls_flags independent_segments -hls_fmp4_iframe_index 1 ";
+        // Bug Fix: FFmpeg HLS muxer does not support encrypted fmp4 segments yet.
+        // We fallback to mpegts for encrypted streams to ensure compatibility and success.
+        string segmentType = !string.IsNullOrEmpty(keyInfoFile) ? "mpegts" : "fmp4";
+
+        args += $"-f hls -hls_time 6 -hls_playlist_type vod -hls_segment_type {segmentType} -master_pl_name master.m3u8 ";
+        
+        // CMAF Specifics: Independent segments and I-Frame manifests (iframes_only is more compatible with mpegts)
+        args += $"-hls_flags independent_segments+iframes_only ";
         
         if (!string.IsNullOrEmpty(keyInfoFile))
         {
