@@ -119,7 +119,7 @@ public class FFmpegTranscodingConsumer : IConsumer<ExecuteFFmpegTranscodingComma
             // 4. Upload to S3
             _logger.LogInformation("[FFmpeg] Uploading results to S3: {Prefix}", msg.DestinationPrefix);
             var transferUtility = new TransferUtility(_s3Client);
-            await transferUtility.UploadDirectoryAsync(outputDir, _awsResources.OutputS3!.BucketName, msg.DestinationPrefix, context.CancellationToken);
+            await transferUtility.UploadDirectoryAsync(outputDir, _awsResources.OutputS3!.BucketName, msg.DestinationPrefix,SearchOption.AllDirectories, cancellationToken: context.CancellationToken);
 
             // 5. Notify Finish
             await context.Publish(new VideoTranscodingFinishedEvent(msg.VideoId, msg.DestinationPrefix));

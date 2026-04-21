@@ -35,7 +35,7 @@ public class UploadCommandValidator : AbstractValidator<UploadCommand>
     }
 }
 
-public record UploadCommandResponse(Guid VideoId, Guid TenantId, string Key, string PreSignedUrl);
+public record UploadCommandResponse(Guid VideoId, Guid TenantId, string Key, string PreSignedUrl, string TranscodingMethod, string EncryptionMethod);
 
 public sealed class UploadCommandHandler(IUploadService uploadService, IModuleBus moduleBus, IClock clock, ITenantProvider tenantProvider) : IRequestHandler<UploadCommand, ErrorOr<UploadCommandResponse>>
 {
@@ -57,6 +57,12 @@ public sealed class UploadCommandHandler(IUploadService uploadService, IModuleBu
         if (response.IsError) return response.Errors;
         await moduleBus.Publish(new UploadVideoRequestedEvent(videoId, tenantId.Value, clock.Now, request.VideoEncryptionMethod.ToString()));
 
-        return new UploadCommandResponse(videoId, tenantId.Value, response.Value.key, response.Value.presignedUrl);
+        return new UploadCommandResponse(
+            videoId, 
+            tenantId.Value, 
+            response.Value.key, 
+            response.Value.presignedUrl,
+            request.VideoTranscodingMetehod.ToString(),
+            request.VideoEncryptionMethod.ToString());
     }
 }

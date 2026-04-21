@@ -29,7 +29,7 @@ public class MediaConvertTranscodingService : IVideoTranscodingService
         _logger = logger;
     }
 
-    public VideoTranscodingMetehod Method => VideoTranscodingMetehod.SQSMediaConvert;
+    public VideoTranscodingMetehod Method => VideoTranscodingMetehod.MediaConvert;
 
     public async Task<ErrorOr<string>> StartTranscodingJobAsync(
         Guid videoId, 

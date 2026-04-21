@@ -24,6 +24,8 @@ export class UploadVideoUseCase {
       uploadInfo.tenantId, 
       title,
       description || '',
+      uploadInfo.transcodingMethod,
+      uploadInfo.encryptionMethod,
       onProgress
     );
 

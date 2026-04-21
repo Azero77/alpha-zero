@@ -7,5 +7,5 @@ namespace AlphaZero.Modules.VideoUploading.Application;
 public enum VideoTranscodingMetehod
 {
     FFMPEG,
-    SQSMediaConvert
+    MediaConvert
 }

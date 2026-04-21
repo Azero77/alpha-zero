@@ -89,7 +89,7 @@ public class S3VideoCdnSyncService : IVideoCdnSyncService
             await _s3Client.DeleteObjectsAsync(deleteRequest, cancellationToken);
 
             // 4. Return Relative Path (Frontend will append CDN Domain)
-            return $"{s3KeyPrefix}/master.m3u8";
+            return $"{s3KeyPrefix.TrimEnd('/')}/master.m3u8";
         }
         catch (Exception ex)
         {

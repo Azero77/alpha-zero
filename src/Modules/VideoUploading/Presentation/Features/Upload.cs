@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using AlphaZero.API.Shared;
+using AlphaZero.Modules.VideoUploading.Application;
 
 namespace AlphaZero.Modules.VideoUploading.Presentation.Features;
 
@@ -19,7 +20,13 @@ public static class Upload
         string? description,
         VideoTranscodingMetehod? transcodingMethod,
         VideoEncryptionMethod? encryptionMethod);
-    public record Response(Guid videoId, Guid tenantId, string key, string preSignedUrl);
+    public record Response(
+        Guid videoId, 
+        Guid tenantId, 
+        string key, 
+        string preSignedUrl,
+        string transcodingMethod,
+        string encryptionMethod);
 
     public class Endpoint : IEndpoint
     {
@@ -44,7 +51,13 @@ public static class Upload
                 encryptionMethod);
             var response = await module.Send<UploadCommand, ErrorOr<UploadCommandResponse>>(command);
             return response.Match(
-                res => Results.Ok(new Response(res.VideoId, res.TenantId, res.Key, res.PreSignedUrl)),
+                res => Results.Ok(new Response(
+                    res.VideoId, 
+                    res.TenantId, 
+                    res.Key, 
+                    res.PreSignedUrl,
+                    res.TranscodingMethod,
+                    res.EncryptionMethod)),
                 errors => errors.ToMinimalResult());
         }
     }}
