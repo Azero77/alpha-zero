@@ -75,7 +75,7 @@ public class S3VideoCdnSyncService : IVideoCdnSyncService
                     SourceBucket = s3Bucket, // Assumed to be in the same input bucket
                     SourceKey = customThumbnailKey,
                     DestinationBucket = destinationBucket,
-                    DestinationKey = $"{s3KeyPrefix.TrimEnd('/')}/thumbnail.jpg" // Renamed for consistency
+                    DestinationKey = $"{s3KeyPrefix.TrimEnd('/')}/thumbnails/custom.jpg" // Renamed for consistency
                 }, cancellationToken));
             }
 

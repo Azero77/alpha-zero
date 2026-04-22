@@ -15,5 +15,5 @@ public record ThumbnailInfo
         UseCustom = useCustom;
     }
 
-    public static ThumbnailInfo Empty => new ThumbnailInfo(null);
+    public static ThumbnailInfo Empty => new ThumbnailInfo(customThumbnailKey: null);
 }

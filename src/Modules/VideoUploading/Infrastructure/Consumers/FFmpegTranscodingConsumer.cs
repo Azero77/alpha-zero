@@ -43,6 +43,7 @@ public class FFmpegTranscodingConsumer : IConsumer<ExecuteFFmpegTranscodingComma
         string sourceFile = Path.Combine(tempPath, "source.mp4");
         string outputDir = Path.Combine(tempPath, "output");
         Directory.CreateDirectory(outputDir);
+        Directory.CreateDirectory(Path.Combine(outputDir, "thumbnails"));
 
         using var process = new Process();
         try
@@ -169,7 +170,7 @@ public class FFmpegTranscodingConsumer : IConsumer<ExecuteFFmpegTranscodingComma
         
         // --- Added: Auto-Thumbnail Generation ---
         // Capture a single frame at 5 seconds (or 0 if video is shorter)
-        args += $"-ss 00:00:05 -vframes 1 -q:v 2 \"{outputDir}/poster.jpg\" ";
+        args += $"-ss 00:00:05 -vframes 1 -q:v 2 \"{outputDir}/thumbnails/poster.jpg\" ";
         // Reset the input seeking for the rest of the command
         args += $"-ss 0 ";
 

@@ -79,15 +79,14 @@ public class Video : AggregateRoot, IDomainTenantOwned, ISoftDeletable
         PublishedOn = clock.Now;
 
         // Finalize thumbnail URL
-        // If we have a custom thumbnail, it should have been moved/synced already
-        // If not, we use the auto-generated one from the streaming folder
-        string thumbPart = Thumbnail.UseCustom 
-            ? "thumbnail.jpg" // Assuming custom thumbnails are renamed/synced as this
-            : "thumbnails/poster.jpg"; 
+        // If we have a custom thumbnail, it's synced as thumbnails/custom.jpg
+        // If not, we use the auto-generated one: thumbnails/poster.jpg
+        string thumbFileName = Thumbnail.UseCustom ? "custom.jpg" : "poster.jpg"; 
+        string thumbUrl = $"{finalUrl.TrimEnd('/')}/thumbnails/{thumbFileName}";
 
         Thumbnail = new ThumbnailInfo(
             Thumbnail.CustomThumbnailKey, 
-            $"{finalUrl.TrimEnd('/')}/{thumbPart}", 
+            thumbUrl, 
             Thumbnail.UseCustom);
 
         AddDomainEvent(new VideoPublishedDomainEvent(Id, PublishedOn.Value));
