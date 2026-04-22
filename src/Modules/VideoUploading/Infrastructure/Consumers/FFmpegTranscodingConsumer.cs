@@ -166,6 +166,13 @@ public class FFmpegTranscodingConsumer : IConsumer<ExecuteFFmpegTranscodingComma
         if (activeRenditions.Count == 0) activeRenditions.Add(renditions.Last());
 
         var args = $"-i \"{inputFile}\" -threads 0 ";
+        
+        // --- Added: Auto-Thumbnail Generation ---
+        // Capture a single frame at 5 seconds (or 0 if video is shorter)
+        args += $"-ss 00:00:05 -vframes 1 -q:v 2 \"{outputDir}/poster.jpg\" ";
+        // Reset the input seeking for the rest of the command
+        args += $"-ss 0 ";
+
         string varStreamMap = "";
         
         for (int i = 0; i < activeRenditions.Count; i++)

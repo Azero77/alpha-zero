@@ -31,6 +31,7 @@ public class SyncVideoToCdnCommandHandler : IConsumer<SyncVideoToCdnCommand>
             context.Message.VideoId, 
             context.Message.S3KeyPrefix, 
             _aWSResources!.OutputS3!.BucketName, 
+            context.Message.CustomThumbnailKey,
             context.CancellationToken);
 
         if (syncResult.IsError)

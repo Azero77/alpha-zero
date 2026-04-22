@@ -78,6 +78,8 @@ public sealed class PersistVideoCommandHandler : IRequestHandler<PersistVideoCom
         string encryptionMethod = s3Metadata.GetValueOrDefault("videoencryptionmethod")?.ToString() ?? VideoEncryptionMethod.None.ToString();
 
         // 4. Create Domain Entity
+        var thumbnail = new ThumbnailInfo(videoState.CustomThumbnailKey, null, videoState.CustomThumbnailKey != null);
+
         var videoResult = Video.Create(
             request.VideoId,
             videoState.TenantId,
@@ -85,6 +87,7 @@ public sealed class PersistVideoCommandHandler : IRequestHandler<PersistVideoCom
             description,
             videoState.Key,
             new VideoMetadata(fileName, contentType, fileSize, method.ToString(), encryptionMethod),
+            thumbnail,
             _clock);
 
         if (videoResult.IsError) return videoResult.Errors;

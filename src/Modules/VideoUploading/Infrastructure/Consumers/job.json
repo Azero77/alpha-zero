@@ -185,6 +185,37 @@
             "FragmentLength": 2
           }
         }
+      },
+      {
+        "CustomName": "thumbnails",
+        "Name": "File Group",
+        "Outputs": [
+          {
+            "ContainerSettings": {
+              "Container": "RAW"
+            },
+            "VideoDescription": {
+              "Width": 1280,
+              "Height": 720,
+              "CodecSettings": {
+                "Codec": "FRAME_CAPTURE",
+                "FrameCaptureSettings": {
+                  "FramerateNumerator": 1,
+                  "FramerateDenominator": 5,
+                  "MaxCaptures": 1,
+                  "Quality": 80
+                }
+              }
+            },
+            "NameModifier": "_poster"
+          }
+        ],
+        "OutputGroupSettings": {
+          "Type": "FILE_GROUP_SETTINGS",
+          "FileGroupSettings": {
+            "Destination": "##THUMBNAIL_PATH##"
+          }
+        }
       }
     ],
     "FollowSource": 1,

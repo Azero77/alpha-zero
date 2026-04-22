@@ -10,6 +10,7 @@ public record VideoStateDto(
     string CurrentState,
     string? MediaConverterJobId,
     string? Key,
+    string? CustomThumbnailKey,
     bool IsFailed,
     int Version);
 

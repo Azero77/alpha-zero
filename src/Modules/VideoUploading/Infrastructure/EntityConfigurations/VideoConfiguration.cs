@@ -37,6 +37,13 @@ public class VideoConfiguration : IEntityTypeConfiguration<Video>
             });
         });
 
+        builder.OwnsOne(x => x.Thumbnail, t =>
+        {
+            t.Property(p => p.CustomThumbnailKey).HasColumnName("CustomThumbnailKey").HasMaxLength(512);
+            t.Property(p => p.ThumbnailUrl).HasColumnName("ThumbnailUrl").HasMaxLength(1024);
+            t.Property(p => p.UseCustom).HasColumnName("UseCustomThumbnail").HasDefaultValue(false);
+        });
+
         builder.Property(x => x.Status).HasConversion<string>();
         builder.Property(x => x.TenantId).IsRequired();
     }

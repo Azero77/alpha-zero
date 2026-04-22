@@ -29,6 +29,7 @@ public class VideoStateRepository : IVideoStateRepository
             state.CurrentState,
             state.MediaConverterJobId,
             state.Key,
+            state.CustomThumbnailKey,
             state.IsFailed,
             state.Version);
     }

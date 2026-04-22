@@ -14,19 +14,22 @@ namespace AlphaZero.Modules.VideoUploading.Presentation.Features;
 public static class Upload
 {
     public record Request(
-        string fileName, 
-        string contentType, 
-        string title, 
+        string fileName,
+        string contentType,
+        string title,
         string? description,
         VideoTranscodingMetehod? transcodingMethod,
-        VideoEncryptionMethod? encryptionMethod);
+        VideoEncryptionMethod? encryptionMethod,
+        bool? generateCustomThumbnailUrl);
     public record Response(
-        Guid videoId, 
-        Guid tenantId, 
-        string key, 
+        Guid videoId,
+        Guid tenantId,
+        string key,
         string preSignedUrl,
         string transcodingMethod,
-        string encryptionMethod);
+        string encryptionMethod,
+        string? thumbnailKey = null,
+        string? thumbnailPreSignedUrl = null);
 
     public class Endpoint : IEndpoint
     {
@@ -39,25 +42,29 @@ public static class Upload
 
         private async Task<IResult> Handler(Request request, VideoUploadingModule module)
         {
-            var transcodingMethod = request.transcodingMethod ?? VideoTranscodingMetehod.MediaConvert;
+            var transcodingMethod = request.transcodingMethod ?? VideoTranscodingMetehod.FFMPEG;
             var encryptionMethod = request.encryptionMethod ?? VideoEncryptionMethod.ClearKey;
 
             var command = new UploadCommand(
-                request.fileName, 
-                request.contentType, 
-                request.title, 
-                request.description, 
+                request.fileName,
+                request.contentType,
+                request.title,
+                request.description,
                 transcodingMethod,
-                encryptionMethod);
+                encryptionMethod,
+                request.generateCustomThumbnailUrl ?? false);
             var response = await module.Send<UploadCommand, ErrorOr<UploadCommandResponse>>(command);
             return response.Match(
                 res => Results.Ok(new Response(
-                    res.VideoId, 
-                    res.TenantId, 
-                    res.Key, 
+                    res.VideoId,
+                    res.TenantId,
+                    res.Key,
                     res.PreSignedUrl,
                     res.TranscodingMethod,
-                    res.EncryptionMethod)),
+                    res.EncryptionMethod,
+                    res.ThumbnailKey,
+                    res.ThumbnailPreSignedUrl)),
                 errors => errors.ToMinimalResult());
         }
-    }}
+    }
+}

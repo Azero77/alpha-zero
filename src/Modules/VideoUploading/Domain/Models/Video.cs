@@ -33,6 +33,7 @@ public class Video : AggregateRoot, IDomainTenantOwned, ISoftDeletable
         string? description,
         string sourceKey,
         VideoMetadata metadata,
+        ThumbnailInfo thumbnail,
         DateTime createdOn) : base(id)
     {
         TenantId = tenantId;
@@ -40,6 +41,7 @@ public class Video : AggregateRoot, IDomainTenantOwned, ISoftDeletable
         Description = description;
         SourceKey = sourceKey;
         Metadata = metadata;
+        Thumbnail = thumbnail;
         Specifications = VideoSpecifications.Empty;
         Status = VideoStatus.Processing;
         CreatedOn = createdOn;
@@ -52,12 +54,13 @@ public class Video : AggregateRoot, IDomainTenantOwned, ISoftDeletable
         string? description,
         string sourceKey,
         VideoMetadata metadata,
+        ThumbnailInfo thumbnail,
         IClock clock)
     {
         if (string.IsNullOrWhiteSpace(title))
             return VideoErrors.EmptyTitle;
 
-        return new Video(id, tenantId, title, description, sourceKey, metadata, clock.Now);
+        return new Video(id, tenantId, title, description, sourceKey, metadata, thumbnail, clock.Now);
     }
 
     public ErrorOr<Success> MarkAsOptimized(string outputFolder)
@@ -74,6 +77,18 @@ public class Video : AggregateRoot, IDomainTenantOwned, ISoftDeletable
         Status = VideoStatus.Published;
         OutputFolder = finalUrl;
         PublishedOn = clock.Now;
+
+        // Finalize thumbnail URL
+        // If we have a custom thumbnail, it should have been moved/synced already
+        // If not, we use the auto-generated one from the streaming folder
+        string thumbPart = Thumbnail.UseCustom 
+            ? "thumbnail.jpg" // Assuming custom thumbnails are renamed/synced as this
+            : "thumbnails/poster.jpg"; 
+
+        Thumbnail = new ThumbnailInfo(
+            Thumbnail.CustomThumbnailKey, 
+            $"{finalUrl.TrimEnd('/')}/{thumbPart}", 
+            Thumbnail.UseCustom);
 
         AddDomainEvent(new VideoPublishedDomainEvent(Id, PublishedOn.Value));
 

@@ -81,6 +81,7 @@ public class MediaConvertTranscodingService : IVideoTranscodingService
         jsonTemplate = jsonTemplate
             .Replace("##INPUT_FILE##", inputS3)
             .Replace("##OUTPUT_PATH##", outputPath)
+            .Replace("##THUMBNAIL_PATH##", outputPath.Replace("/master", "/thumbnails/"))
             .Replace("##KMS_KEY_ARN##", _aWSResources.MediaConvertKeyKMSArn)
             .Replace("##MediaConvertRole##", _aWSResources.MediaConvertRoleArn);
 

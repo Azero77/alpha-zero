@@ -11,7 +11,7 @@ using static Aspire.Shared.AWSResources;
 
 
 
-public class S3VideoStreamingService(AWSResources resources, IConfiguration configuration) : IStreamingService
+public class S3VideoStreamingService(AWSResources resources) : IStreamingService
 {
     public Task<ErrorOr<StreamingInfoResponseDTO>> GetStreamingInfo(Guid videoId)
     {
