@@ -12,6 +12,7 @@ public class Video : AggregateRoot, IDomainTenantOwned, ISoftDeletable
     public VideoStatus Status { get; private set; }
     public VideoMetadata Metadata { get; private set; } = null!;
     public VideoSpecifications Specifications { get; private set; } = null!;
+    public ThumbnailInfo Thumbnail { get; private set; } = null!;
     public string SourceKey { get; private set; } = null!;
     public string? OutputFolder { get; private set; }
     public DateTime CreatedOn { get; private set; }

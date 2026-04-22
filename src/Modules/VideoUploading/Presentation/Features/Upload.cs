@@ -39,7 +39,7 @@ public static class Upload
 
         private async Task<IResult> Handler(Request request, VideoUploadingModule module)
         {
-            var transcodingMethod = request.transcodingMethod ?? VideoTranscodingMetehod.FFMPEG;
+            var transcodingMethod = request.transcodingMethod ?? VideoTranscodingMetehod.MediaConvert;
             var encryptionMethod = request.encryptionMethod ?? VideoEncryptionMethod.ClearKey;
 
             var command = new UploadCommand(

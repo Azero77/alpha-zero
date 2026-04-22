@@ -8,7 +8,7 @@ using System.Security.Cryptography;
 
 namespace AlphaZero.Modules.VideoUploading.Infrastructure.Services;
 
-public class DefaultVideoEncryptionService(AppDbContext dbContext) : IVideoEncryptionService
+public class DefaultVideoEncryptionService(AppDbContext dbContext, Microsoft.Extensions.Configuration.IConfiguration configuration) : IVideoEncryptionService
 {
     public async Task<ErrorOr<EncryptionParams>> GetEncryptionParamsAsync(
         Guid videoId, 
@@ -20,8 +20,12 @@ public class DefaultVideoEncryptionService(AppDbContext dbContext) : IVideoEncry
             return Error.Validation("Encryption.NotRequired", "No encryption required for this method.");
         }
 
+        string baseUrl = configuration["ApiBaseUrl"] ?? "https://localhost:7016";
+
         if (method == VideoEncryptionMethod.ClearKey)
         {
+            string keyUrl = $"{baseUrl.TrimEnd('/')}/api/video/keys/{videoId}";
+
             // 1. Check if key already exists
             var existingSecret = await dbContext.VideoSecrets
                 .FirstOrDefaultAsync(s => s.VideoId == videoId, ct);
@@ -31,7 +35,7 @@ public class DefaultVideoEncryptionService(AppDbContext dbContext) : IVideoEncry
                 return new EncryptionParams(
                     existingSecret.KeyId, 
                     existingSecret.KeyValue, 
-                    existingSecret.IV); // Note: KeyUrl will be constructed by the consumer or SPEKE
+                    keyUrl); 
             }
 
             // 2. Generate a 16-byte random key for AES-128
@@ -49,8 +53,8 @@ public class DefaultVideoEncryptionService(AppDbContext dbContext) : IVideoEncry
             await dbContext.VideoSecrets.AddAsync(newSecret, ct);
             await dbContext.SaveChangesAsync(ct);
 
-            // 4. Return params (KeyUrl is handled by the calling service/SPEKE)
-            return new EncryptionParams(keyId, keyValue);
+            // 4. Return params
+            return new EncryptionParams(keyId, keyValue, keyUrl);
         }
 
         if (method == VideoEncryptionMethod.DRM)

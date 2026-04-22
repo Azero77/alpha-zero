@@ -49,13 +49,10 @@ export class ShakaPlayerManager {
     const shakaConfig = {
       streaming: {
         lowLatencyMode: false,
-        jumpLargeGaps: true,
       },
       manifest: {
         hls: {
           ignoreTextStreamFailures: true,
-          // Support for MPEG-TS encrypted streams
-          useFullAlternateInterpretation: true,
         }
       }
     };
