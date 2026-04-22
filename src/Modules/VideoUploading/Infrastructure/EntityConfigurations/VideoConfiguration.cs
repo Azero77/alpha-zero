@@ -23,6 +23,8 @@ public class VideoConfiguration : IEntityTypeConfiguration<Video>
             m.Property(p => p.OriginalFileName).HasColumnName("OriginalFileName").IsRequired();
             m.Property(p => p.ContentType).HasColumnName("ContentType").IsRequired();
             m.Property(p => p.FileSize).HasColumnName("FileSize").IsRequired();
+            m.Property(p => p.TranscodingMethod).HasColumnName("Metadata_TranscodingMethod").IsRequired();
+            m.Property(p => p.EncryptionMethod).HasColumnName("Metadata_EncryptionMethod");
         });
 
         builder.OwnsOne(x => x.Specifications, s =>

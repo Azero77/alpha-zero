@@ -1,12 +1,12 @@
 namespace AlphaZero.Modules.VideoUploading.Domain.Models;
 
-public class VideoMetadata : IEquatable<VideoMetadata>
+public record VideoMetadata
 {
-    public string OriginalFileName { get; private set; } = null!;
-    public string ContentType { get; private set; } = null!;
-    public long FileSize { get; private set; }
-    public string TranscodingMethod { get; private set; } = null!;
-    public string? EncryptionMethod { get; private set; } = "None";
+    public string OriginalFileName { get; init; } = null!;
+    public string ContentType { get; init; } = null!;
+    public long FileSize { get; init; }
+    public string TranscodingMethod { get; init; } = null!;
+    public string? EncryptionMethod { get; init; } = "None";
 
     private VideoMetadata()
     {
@@ -18,7 +18,9 @@ public class VideoMetadata : IEquatable<VideoMetadata>
         string contentType, 
         long fileSize, 
         string transcodingMethod, 
-        string? encryptionMethod = "None")
+        string? encryptionMethod = "None",
+        string? encryptionKey = null,
+        string? encryptionKeyId = null)
     {
         OriginalFileName = originalFileName;
         ContentType = contentType;
@@ -26,28 +28,6 @@ public class VideoMetadata : IEquatable<VideoMetadata>
         TranscodingMethod = transcodingMethod;
         EncryptionMethod = encryptionMethod;
     }
-
-    public override bool Equals(object? obj) => Equals(obj as VideoMetadata);
-
-    public bool Equals(VideoMetadata? other)
-    {
-        if (other is null) return false;
-        if (ReferenceEquals(this, other)) return true;
-
-        return OriginalFileName == other.OriginalFileName &&
-               ContentType == other.ContentType &&
-               FileSize == other.FileSize &&
-               TranscodingMethod == other.TranscodingMethod &&
-               EncryptionMethod == other.EncryptionMethod;
-    }
-
-    public override int GetHashCode()
-    {
-        return HashCode.Combine(OriginalFileName, ContentType, FileSize, TranscodingMethod, EncryptionMethod);
-    }
-
-    public static bool operator ==(VideoMetadata? left, VideoMetadata? right) => Equals(left, right);
-    public static bool operator !=(VideoMetadata? left, VideoMetadata? right) => !Equals(left, right);
 }
 
 public record VideoSpecifications

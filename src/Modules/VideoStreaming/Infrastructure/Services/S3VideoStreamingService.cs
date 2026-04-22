@@ -11,16 +11,16 @@ using static Aspire.Shared.AWSResources;
 
 
 
-public class S3VideoStreamingService(AWSResources resources,IConfiguration configuration) : IStreamingService
+public class S3VideoStreamingService(AWSResources resources, IConfiguration configuration) : IStreamingService
 {
     public Task<ErrorOr<StreamingInfoResponseDTO>> GetStreamingInfo(Guid videoId)
     {
         string bucket = resources!.CdnS3!.BucketName;
-        string region = configuration.GetAWSOptions()
-            .Region.SystemName;
         var result = new StreamingInfoResponseDTO(
-            $"https://{bucket}.s3.amazonaws.com/streaming/{videoId}/master.m3u8",
-            videoId.ToString().Replace("-", ""));
+            url: $"https://{bucket}.s3.amazonaws.com/streaming/{videoId}/master.m3u8",
+            encryptionMethod: "ClearKey",
+            licenseUrl: $"/api/video/keys/{videoId}"); // Relative to API Base
+
         return Task.FromResult(result.ToErrorOr());
     }
 }
@@ -31,8 +31,10 @@ public class CloudFlareCdnVideoStreamingService(AWSResources resources) : IStrea
     {
         var domain = resources.CdnDomain;
 
-        var response = new StreamingInfoResponseDTO($"http://{domain}/streaming/{videoId}/master.m3u8",
-            videoId.ToString().Replace("-",""));
+        var response = new StreamingInfoResponseDTO(
+            url: $"http://{domain}/streaming/{videoId}/master.m3u8",
+            encryptionMethod: "ClearKey",
+            licenseUrl: $"/api/video/keys/{videoId}");
 
         return Task.FromResult(response.ToErrorOr());
     }

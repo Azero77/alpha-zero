@@ -76,6 +76,37 @@ namespace AlphaZero.Modules.VideoUploading.Infrastructure.Migrations
                     b.ToTable("Videos", "video_uploading");
                 });
 
+            modelBuilder.Entity("AlphaZero.Modules.VideoUploading.Domain.Models.VideoSecret", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("IV")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<string>("KeyId")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<string>("KeyValue")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
+
+                    b.Property<Guid>("VideoId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("VideoId")
+                        .IsUnique();
+
+                    b.ToTable("VideoSecrets", "video_uploading");
+                });
+
             modelBuilder.Entity("AlphaZero.Modules.VideoUploading.Infrastructure.Sagas.VideoState", b =>
                 {
                     b.Property<Guid>("CorrelationId")
@@ -141,7 +172,8 @@ namespace AlphaZero.Modules.VideoUploading.Infrastructure.Migrations
                                 .HasColumnName("ContentType");
 
                             b1.Property<string>("EncryptionMethod")
-                                .HasColumnType("text");
+                                .HasColumnType("text")
+                                .HasColumnName("Metadata_EncryptionMethod");
 
                             b1.Property<long>("FileSize")
                                 .HasColumnType("bigint")
@@ -154,7 +186,8 @@ namespace AlphaZero.Modules.VideoUploading.Infrastructure.Migrations
 
                             b1.Property<string>("TranscodingMethod")
                                 .IsRequired()
-                                .HasColumnType("text");
+                                .HasColumnType("text")
+                                .HasColumnName("Metadata_TranscodingMethod");
 
                             b1.HasKey("VideoId");
 

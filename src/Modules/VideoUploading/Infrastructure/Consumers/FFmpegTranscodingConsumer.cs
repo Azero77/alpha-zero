@@ -64,20 +64,25 @@ public class FFmpegTranscodingConsumer : IConsumer<ExecuteFFmpegTranscodingComma
                 if (!encParamsResult.IsError)
                 {
                     var encParams = encParamsResult.Value;
+                    // Keep the key OUTSIDE the outputDir so it's not uploaded
                     string keyFilePath = Path.Combine(tempPath, "video.key");
                     
                     byte[] keyBytes = Convert.FromHexString(encParams.KeyValue);
                     await File.WriteAllBytesAsync(keyFilePath, keyBytes);
 
                     hlsKeyInfoFile = Path.Combine(tempPath, "key_info");
+                    
+                    // The first line is the URI in the manifest. 
+                    // This MUST match our Key Delivery Service endpoint.
+                    string manifestKeyUri = encParams.KeyUrl ?? $"https://localhost:7016/api/video/keys/{msg.VideoId}";
+
                     await File.WriteAllLinesAsync(hlsKeyInfoFile, new[]
                     {
-                        encParams.KeyUrl ?? "video.key", 
-                        keyFilePath,                     
-                        encParams.KeyId                  
+                        manifestKeyUri, 
+                        keyFilePath                      
                     });
                     
-                    _logger.LogInformation("[FFmpeg] Encryption enabled with method: {Method}", encMethod);
+                    _logger.LogInformation("[FFmpeg] Encryption enabled. Manifest will point to: {Uri}", manifestKeyUri);
                 }
             }
 
@@ -160,7 +165,7 @@ public class FFmpegTranscodingConsumer : IConsumer<ExecuteFFmpegTranscodingComma
         var activeRenditions = renditions.Where(r => r.width <= sourceWidth).ToList();
         if (activeRenditions.Count == 0) activeRenditions.Add(renditions.Last());
 
-        var args = $"-i \"{inputFile}\" ";
+        var args = $"-i \"{inputFile}\" -threads 0 ";
         string varStreamMap = "";
         
         for (int i = 0; i < activeRenditions.Count; i++)
@@ -172,7 +177,7 @@ public class FFmpegTranscodingConsumer : IConsumer<ExecuteFFmpegTranscodingComma
             args += $"-map 0:v -map 0:a ";
             // Bug Fix 3: QVBR equivalent using CRF + maxrate/bufsize
             args += $"-c:v:{i} libx264 -crf:{i} {crf} -maxrate:v:{i} {r.bitrate}k -bufsize:v:{i} {r.bitrate * 2}k -preset fast ";
-            // Bug Fix 1: Noise Reduction (hqdn3d)
+            // Bug Fix 1: Noise Reduction (hqdn3d) - Keeping as requested
             args += $"-filter:v:{i} \"hqdn3d,scale=w={r.width}:h={r.height}:force_original_aspect_ratio=decrease,pad=ceil(iw/2)*2:ceil(ih/2)*2\" ";
             // Bug Fix 2: Audio Normalization (loudnorm)
             args += $"-c:a:{i} aac -b:a:{i} 128k -ar:{i} 44100 -filter:a:{i} \"loudnorm=I=-24:LRA=7:tp=-2\" ";

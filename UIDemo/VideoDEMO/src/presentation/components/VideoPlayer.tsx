@@ -22,8 +22,13 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ config, className }) =
           containerRef.current!,
           config
         );
-      } catch (err) {
-        console.error('Failed to initialize Shaka Player', err);
+      } catch (err: any) {
+        console.error('Failed to initialize Shaka Player', {
+          code: err.code,
+          severity: err.severity,
+          category: err.category,
+          data: err.data
+        });
       }
     };
 

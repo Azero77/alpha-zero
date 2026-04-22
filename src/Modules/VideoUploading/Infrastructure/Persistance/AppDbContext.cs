@@ -13,6 +13,7 @@ public class AppDbContext : DbContext, ITenantDbContext
 
     public DbSet<Video> Videos { get; set; } = null!;
     public DbSet<VideoState> VideoState { get; set; } = null!;
+    public DbSet<VideoSecret> VideoSecrets { get; set; } = null!;
 
     public Guid? TenantId => _tenantProvider.GetTenant();
 
