@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { ShakaPlayerManager, type PlayerConfig } from '../../infrastructure/player/shaka-player-impl';
+import './VideoPlayer.css';
 
 interface VideoPlayerProps {
   config: PlayerConfig;
@@ -22,8 +23,13 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ config, className }) =
           containerRef.current!,
           config
         );
-      } catch (err) {
-        console.error('Failed to initialize Shaka Player', err);
+      } catch (err: any) {
+        console.error('Failed to initialize Shaka Player', {
+          code: err.code,
+          severity: err.severity,
+          category: err.category,
+          data: err.data
+        });
       }
     };
 
@@ -39,7 +45,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ config, className }) =
       <video
         ref={videoRef}
         className="w-full h-full"
-        poster="/placeholder-poster.jpg"
+        poster={config.posterUrl}
       />
     </div>
   );

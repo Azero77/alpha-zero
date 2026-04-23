@@ -36,7 +36,11 @@ public class VideoUploadingSaga : MassTransitStateMachine<VideoState>
         SetCompletedWhenFinalized();
         Initially(
             When(UploadVideoRequestedEvent)
-                .Then(context => context.Saga.TenantId = context.Message.TenantId)
+                .Then(context => {
+                    context.Saga.TenantId = context.Message.TenantId;
+                    context.Saga.EncryptionMethod = context.Message.EncryptionMethod;
+                    context.Saga.CustomThumbnailKey = context.Message.ThumbnailKey;
+                })
                 .TransitionTo(Pending),
             
             When(VideoDeliveredToInputEvent)
@@ -70,7 +74,8 @@ public class VideoUploadingSaga : MassTransitStateMachine<VideoState>
                     context.Saga.CorrelationId,
                     context.Saga.Key!, 
                     context.Message.Width,
-                    context.Message.Height))
+                    context.Message.Height,
+                    context.Saga.EncryptionMethod))
                 .TransitionTo(Transcoding));
 
         During(Analyzing,
@@ -84,7 +89,8 @@ public class VideoUploadingSaga : MassTransitStateMachine<VideoState>
                     context.Saga.CorrelationId,
                     context.Saga.Key!, 
                     context.Message.Width,
-                    context.Message.Height))
+                    context.Message.Height,
+                    context.Saga.EncryptionMethod))
                 .TransitionTo(Transcoding));
 
         During(Transcoding,
@@ -97,7 +103,8 @@ public class VideoUploadingSaga : MassTransitStateMachine<VideoState>
                 })
                 .Publish(context => new SyncVideoToCdnCommand(
                     context.Saga.CorrelationId, 
-                    context.Saga.S3OutputPrefix!))
+                    context.Saga.S3OutputPrefix!,
+                    context.Saga.CustomThumbnailKey))
                 .TransitionTo(Distributing));
 
         During(Distributing,
@@ -126,6 +133,8 @@ public class VideoState : SagaStateMachineInstance
     public TimeSpan? Duration { get; set; }
     public string? S3OutputPrefix { get; set; }
     public string? FinalUrl { get; set; }
+    public string? EncryptionMethod { get; set; }
+    public string? CustomThumbnailKey { get; set; }
     public bool IsFailed { get; set; } = false;
     public int Version { get; set; }
 }

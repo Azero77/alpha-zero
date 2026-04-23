@@ -29,8 +29,7 @@ public class S3VideoCdnSyncService : IVideoCdnSyncService
         _logger = logger;
         _moduleBus = moduleBus;
     }
-
-    public async Task<ErrorOr<string>> SyncToCdnAsync(Guid videoId, string s3KeyPrefix, string s3Bucket, CancellationToken cancellationToken = default)
+    public async Task<ErrorOr<string>> SyncToCdnAsync(Guid videoId, string s3KeyPrefix, string s3Bucket, string? customThumbnailKey, CancellationToken cancellationToken = default)
     {
         var destinationBucket = _awsResources.CdnS3?.BucketName;
         if (string.IsNullOrEmpty(destinationBucket))
@@ -44,7 +43,7 @@ public class S3VideoCdnSyncService : IVideoCdnSyncService
             _logger.LogInformation("Starting Parallel CDN Sync for Video {VideoId} from {SourceBucket}/{Prefix}", 
                 videoId, s3Bucket, s3KeyPrefix);
 
-            // 1. List all objects
+            // 1. List all objects in the transcoding output
             var listRequest = new ListObjectsV2Request { BucketName = s3Bucket, Prefix = s3KeyPrefix };
             var objectsToSync = new List<S3Object>();
             ListObjectsV2Response listResponse;
@@ -58,7 +57,6 @@ public class S3VideoCdnSyncService : IVideoCdnSyncService
             if (objectsToSync.Count == 0) return Error.NotFound("CdnSync.NoFiles");
 
             // 2. Parallel Copy
-            // We initiate all copy tasks simultaneously to saturate the network/IO
             var copyTasks = objectsToSync.Select(s3Object => 
                 _s3Client.CopyObjectAsync(new CopyObjectRequest
                 {
@@ -68,28 +66,44 @@ public class S3VideoCdnSyncService : IVideoCdnSyncService
                     DestinationKey = s3Object.Key
                 }, cancellationToken)).ToList();
 
+            // 3. Add Custom Thumbnail to Sync if exists
+            if (!string.IsNullOrEmpty(customThumbnailKey))
+            {
+                _logger.LogInformation("Syncing custom thumbnail {Key} for Video {VideoId}", customThumbnailKey, videoId);
+                copyTasks.Add(_s3Client.CopyObjectAsync(new CopyObjectRequest
+                {
+                    SourceBucket = s3Bucket, // Assumed to be in the same input bucket
+                    SourceKey = customThumbnailKey,
+                    DestinationBucket = destinationBucket,
+                    DestinationKey = $"{s3KeyPrefix.TrimEnd('/')}/thumbnails/custom.jpg" // Renamed for consistency
+                }, cancellationToken));
+            }
+
             var copyResults = await Task.WhenAll(copyTasks);
             if (copyTasks.Any(t => t.IsFaulted))
             {
                 _logger.LogCritical("Sync video to cdn faulted , please delete the prefix from the cdn s3");
-                await _moduleBus.Publish(new VideoProcessingFailedEvent(videoId,"Sync Failed",s3KeyPrefix));
+                await _moduleBus.Publish(new VideoProcessingFailedEvent(videoId, "Sync Failed", s3KeyPrefix));
+                return Error.Failure("CdnSync.Failure","One task has faulted");
                 //here we should have a handler deletes all the files from the cdn s3 
-                
             }
-            
-            _logger.LogInformation("Successfully copied {Count} files in parallel for Video {VideoId}", objectsToSync.Count, videoId);
+            _logger.LogInformation("Successfully copied {Count} files in parallel for Video {VideoId}", copyTasks.Count, videoId);
 
-            // 3. Cleanup Source
+            // 4. Cleanup Source (Only streaming files, maybe keep custom thumbnail for safety or delete it too)
             var deleteRequest = new DeleteObjectsRequest
             {
                 BucketName = s3Bucket,
                 Objects = objectsToSync.Select(o => new KeyVersion { Key = o.Key }).ToList()
             };
+            if (!string.IsNullOrEmpty(customThumbnailKey))
+            {
+                deleteRequest.Objects.Add(new KeyVersion { Key = customThumbnailKey });
+            }
 
             await _s3Client.DeleteObjectsAsync(deleteRequest, cancellationToken);
 
             // 4. Return Relative Path (Frontend will append CDN Domain)
-            return $"{s3KeyPrefix}/master.m3u8";
+            return $"{s3KeyPrefix.TrimEnd('/')}/master.m3u8";
         }
         catch (Exception ex)
         {

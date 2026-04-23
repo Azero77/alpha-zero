@@ -23,6 +23,8 @@ public class VideoConfiguration : IEntityTypeConfiguration<Video>
             m.Property(p => p.OriginalFileName).HasColumnName("OriginalFileName").IsRequired();
             m.Property(p => p.ContentType).HasColumnName("ContentType").IsRequired();
             m.Property(p => p.FileSize).HasColumnName("FileSize").IsRequired();
+            m.Property(p => p.TranscodingMethod).HasColumnName("Metadata_TranscodingMethod").IsRequired();
+            m.Property(p => p.EncryptionMethod).HasColumnName("Metadata_EncryptionMethod");
         });
 
         builder.OwnsOne(x => x.Specifications, s =>
@@ -33,6 +35,13 @@ public class VideoConfiguration : IEntityTypeConfiguration<Video>
                 r.Property(p => p.width).HasColumnName("Width");
                 r.Property(p => p.height).HasColumnName("Height");
             });
+        });
+
+        builder.OwnsOne(x => x.Thumbnail, t =>
+        {
+            t.Property(p => p.CustomThumbnailKey).HasColumnName("CustomThumbnailKey").HasMaxLength(512);
+            t.Property(p => p.ThumbnailUrl).HasColumnName("ThumbnailUrl").HasMaxLength(1024);
+            t.Property(p => p.UseCustom).HasColumnName("UseCustomThumbnail").HasDefaultValue(false);
         });
 
         builder.Property(x => x.Status).HasConversion<string>();

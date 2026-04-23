@@ -1,3 +1,5 @@
+using AlphaZero.Modules.VideoUploading.Domain.Models;
+using AlphaZero.Shared.Infrastructure.Repositores;
 using ErrorOr;
 
 namespace AlphaZero.Modules.VideoUploading.Application.Repositories;
@@ -8,6 +10,7 @@ public record VideoStateDto(
     string CurrentState,
     string? MediaConverterJobId,
     string? Key,
+    string? CustomThumbnailKey,
     bool IsFailed,
     int Version);
 

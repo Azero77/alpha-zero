@@ -33,7 +33,8 @@ public class TranscodeVideoCommandHandler : IConsumer<TranscodeVideoCommand>
                 context.Message.VideoId, 
                 context.Message.Key, 
                 context.Message.Width,
-                context.Message.Height), context.CancellationToken);
+                context.Message.Height,
+                context.Message.EncryptionMethod), context.CancellationToken);
 
         if (result.IsError)
         {

@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace AlphaZero.Modules.VideoUploading.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260401111035_RemovedTemp")]
-    partial class RemovedTemp
+    [Migration("20260422045150_AddedThumbnailInfo")]
+    partial class AddedThumbnailInfo
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -21,7 +21,7 @@ namespace AlphaZero.Modules.VideoUploading.Infrastructure.Migrations
 #pragma warning disable 612, 618
             modelBuilder
                 .HasDefaultSchema("video_uploading")
-                .HasAnnotation("ProductVersion", "9.0.9")
+                .HasAnnotation("ProductVersion", "10.0.5")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -37,6 +37,12 @@ namespace AlphaZero.Modules.VideoUploading.Infrastructure.Migrations
                     b.Property<string>("Description")
                         .HasMaxLength(1000)
                         .HasColumnType("character varying(1000)");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime?>("OnDeleted")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("OutputFolder")
                         .HasMaxLength(512)
@@ -64,7 +70,44 @@ namespace AlphaZero.Modules.VideoUploading.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("IsDeleted")
+                        .HasFilter("\"IsDeleted\" = FALSE");
+
+                    b.HasIndex("TenantId")
+                        .HasFilter("\"IsDeleted\" = FALSE");
+
                     b.ToTable("Videos", "video_uploading");
+                });
+
+            modelBuilder.Entity("AlphaZero.Modules.VideoUploading.Domain.Models.VideoSecret", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("IV")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<string>("KeyId")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<string>("KeyValue")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
+
+                    b.Property<Guid>("VideoId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("VideoId")
+                        .IsUnique();
+
+                    b.ToTable("VideoSecrets", "video_uploading");
                 });
 
             modelBuilder.Entity("AlphaZero.Modules.VideoUploading.Infrastructure.Sagas.VideoState", b =>
@@ -77,8 +120,15 @@ namespace AlphaZero.Modules.VideoUploading.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<string>("CustomThumbnailKey")
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
+
                     b.Property<TimeSpan?>("Duration")
                         .HasColumnType("interval");
+
+                    b.Property<string>("EncryptionMethod")
+                        .HasColumnType("text");
 
                     b.Property<string>("FinalUrl")
                         .HasColumnType("text");
@@ -118,6 +168,35 @@ namespace AlphaZero.Modules.VideoUploading.Infrastructure.Migrations
 
             modelBuilder.Entity("AlphaZero.Modules.VideoUploading.Domain.Models.Video", b =>
                 {
+                    b.OwnsOne("AlphaZero.Modules.VideoUploading.Domain.Models.ThumbnailInfo", "Thumbnail", b1 =>
+                        {
+                            b1.Property<Guid>("VideoId")
+                                .HasColumnType("uuid");
+
+                            b1.Property<string>("CustomThumbnailKey")
+                                .HasMaxLength(512)
+                                .HasColumnType("character varying(512)")
+                                .HasColumnName("CustomThumbnailKey");
+
+                            b1.Property<string>("ThumbnailUrl")
+                                .HasMaxLength(1024)
+                                .HasColumnType("character varying(1024)")
+                                .HasColumnName("ThumbnailUrl");
+
+                            b1.Property<bool>("UseCustom")
+                                .ValueGeneratedOnAdd()
+                                .HasColumnType("boolean")
+                                .HasDefaultValue(false)
+                                .HasColumnName("UseCustomThumbnail");
+
+                            b1.HasKey("VideoId");
+
+                            b1.ToTable("Videos", "video_uploading");
+
+                            b1.WithOwner()
+                                .HasForeignKey("VideoId");
+                        });
+
                     b.OwnsOne("AlphaZero.Modules.VideoUploading.Domain.Models.VideoMetadata", "Metadata", b1 =>
                         {
                             b1.Property<Guid>("VideoId")
@@ -128,6 +207,10 @@ namespace AlphaZero.Modules.VideoUploading.Infrastructure.Migrations
                                 .HasColumnType("text")
                                 .HasColumnName("ContentType");
 
+                            b1.Property<string>("EncryptionMethod")
+                                .HasColumnType("text")
+                                .HasColumnName("Metadata_EncryptionMethod");
+
                             b1.Property<long>("FileSize")
                                 .HasColumnType("bigint")
                                 .HasColumnName("FileSize");
@@ -136,6 +219,11 @@ namespace AlphaZero.Modules.VideoUploading.Infrastructure.Migrations
                                 .IsRequired()
                                 .HasColumnType("text")
                                 .HasColumnName("OriginalFileName");
+
+                            b1.Property<string>("TranscodingMethod")
+                                .IsRequired()
+                                .HasColumnType("text")
+                                .HasColumnName("Metadata_TranscodingMethod");
 
                             b1.HasKey("VideoId");
 
@@ -190,6 +278,9 @@ namespace AlphaZero.Modules.VideoUploading.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("Specifications")
+                        .IsRequired();
+
+                    b.Navigation("Thumbnail")
                         .IsRequired();
                 });
 #pragma warning restore 612, 618

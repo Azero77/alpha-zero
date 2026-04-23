@@ -42,5 +42,6 @@ public class VideoUploadingModule : AppModule, IVideoUploadingModule
 
         // Register local consumers that should run on the in-memory bus with their own scopes
         configuration.AddConsumers(typeof(VideoUploadingModule).Assembly);
+        configuration.AddConsumers(typeof(AppDbContext).Assembly);
     }
 }

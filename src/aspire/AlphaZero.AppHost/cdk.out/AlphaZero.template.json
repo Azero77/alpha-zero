@@ -121,6 +121,8 @@
         "x-amz-meta-tenantid",
         "x-amz-meta-title",
         "x-amz-meta-description",
+        "x-amz-meta-videotranscodingmetehod",
+        "x-amz-meta-videoencryptionmethod",
         "*"
        ],
        "AllowedMethods": [
@@ -136,7 +138,9 @@
         "x-amz-meta-videoid",
         "x-amz-meta-tenantid",
         "x-amz-meta-title",
-        "x-amz-meta-description"
+        "x-amz-meta-description",
+        "x-amz-meta-videotranscodingmetehod",
+        "x-amz-meta-videoencryptionmethod"
        ],
        "MaxAge": 3600
       }

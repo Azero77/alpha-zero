@@ -7,9 +7,9 @@ namespace AlphaZero.Modules.VideoUploading.IntegrationEvents;
 
 public record AnalyzeVideoCommand(Guid VideoId, string Key);
 
-public record TranscodeVideoCommand(Guid VideoId, string Key, int Width, int Height);
+public record TranscodeVideoCommand(Guid VideoId, string Key, int Width, int Height, string? EncryptionMethod = "None");
 
-public record SyncVideoToCdnCommand(Guid VideoId, string S3KeyPrefix);
+public record SyncVideoToCdnCommand(Guid VideoId, string S3KeyPrefix, string? CustomThumbnailKey = null);
 
 
 /* 
@@ -18,7 +18,7 @@ public record SyncVideoToCdnCommand(Guid VideoId, string S3KeyPrefix);
  */
 
 // PHASE 1: INGESTION
-public record UploadVideoRequestedEvent(Guid VideoId, Guid TenantId, DateTime OnTime);
+public record UploadVideoRequestedEvent(Guid VideoId, Guid TenantId, DateTime OnTime, string? EncryptionMethod = "None", string? ThumbnailKey = null);
 public record VideoDeliveredToInputEvent(Guid VideoId, string Key, string BucketName, Guid TenantId);
 
 // PHASE 2: ANALYSIS

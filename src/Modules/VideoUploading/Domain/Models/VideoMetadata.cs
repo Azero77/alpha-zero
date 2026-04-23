@@ -1,10 +1,34 @@
 namespace AlphaZero.Modules.VideoUploading.Domain.Models;
 
-public record VideoMetadata(
-    string OriginalFileName,
-    string ContentType,
-    long FileSize
-);
+public record VideoMetadata
+{
+    public string OriginalFileName { get; init; } = null!;
+    public string ContentType { get; init; } = null!;
+    public long FileSize { get; init; }
+    public string TranscodingMethod { get; init; } = null!;
+    public string? EncryptionMethod { get; init; } = "None";
+
+    private VideoMetadata()
+    {
+        // EF Core
+    }
+
+    public VideoMetadata(
+        string originalFileName, 
+        string contentType, 
+        long fileSize, 
+        string transcodingMethod, 
+        string? encryptionMethod = "None",
+        string? encryptionKey = null,
+        string? encryptionKeyId = null)
+    {
+        OriginalFileName = originalFileName;
+        ContentType = contentType;
+        FileSize = fileSize;
+        TranscodingMethod = transcodingMethod;
+        EncryptionMethod = encryptionMethod;
+    }
+}
 
 public record VideoSpecifications
 {

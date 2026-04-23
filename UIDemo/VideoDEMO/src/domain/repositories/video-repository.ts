@@ -13,12 +13,14 @@ export interface UploadResponse {
   tenantId: string;
   key: string;
   preSignedUrl: string;
+  transcodingMethod: string;
+  encryptionMethod: string;
 }
 
 export interface StreamingInfo {
   url: string;
-  isPremium?: boolean;
-  key?: string; // Legacy / clearKey
+  encryptionMethod?: string;
+  licenseUrl?: string;
   drm?: {
     widevineUrl?: string;
     playReadyUrl?: string;
@@ -33,5 +35,5 @@ export interface IVideoRepository {
   deleteVideo(id: string): Promise<void>;
   requestUpload(request: UploadRequest): Promise<UploadResponse>;
   getStreamingInfo(id: string): Promise<StreamingInfo>;
-  uploadToS3(url: string, file: File, videoId: string, tenantId: string, title: string, description: string, onProgress?: (progress: number) => void): Promise<void>;
+  uploadToS3(url: string, file: File, videoId: string, tenantId: string, title: string, description: string, transcodingMethod: string, encryptionMethod: string, onProgress?: (progress: number) => void): Promise<void>;
 }

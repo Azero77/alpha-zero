@@ -36,8 +36,8 @@ var input_s3 = awscdkStack.AddS3Bucket("InputS3", new BucketProps
         {
             AllowedMethods = new[] { HttpMethods.GET,HttpMethods.PUT},
             AllowedOrigins = new[] { "*" },
-            AllowedHeaders = new[] { "content-type", "x-amz-meta-file-name", "x-amz-meta-videoid", "x-amz-meta-tenantid", "x-amz-meta-title", "x-amz-meta-description", "*" },
-            ExposedHeaders = new[] { "ETag", "x-amz-meta-file-name", "x-amz-meta-videoid", "x-amz-meta-tenantid", "x-amz-meta-title", "x-amz-meta-description" },
+            AllowedHeaders = new[] { "content-type", "x-amz-meta-file-name", "x-amz-meta-videoid", "x-amz-meta-tenantid", "x-amz-meta-title", "x-amz-meta-description", "x-amz-meta-videotranscodingmetehod", "x-amz-meta-videoencryptionmethod", "*" },
+            ExposedHeaders = new[] { "ETag", "x-amz-meta-file-name", "x-amz-meta-videoid", "x-amz-meta-tenantid", "x-amz-meta-title", "x-amz-meta-description", "x-amz-meta-videotranscodingmetehod", "x-amz-meta-videoencryptionmethod" },
             MaxAge = 3600
         }
     }

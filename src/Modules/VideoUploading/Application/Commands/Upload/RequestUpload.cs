@@ -1,18 +1,26 @@
 using AlphaZero.Modules.VideoUploading.Application.Services;
-using ErrorOr;
-using MediatR;
-using MassTransit;
-using MassTransit.Mediator;
+using AlphaZero.Modules.VideoUploading.Domain.Models;
 using AlphaZero.Modules.VideoUploading.IntegrationEvents;
 using AlphaZero.Shared.Application;
 using AlphaZero.Shared.Domain;
 using AlphaZero.Shared.Infrastructure.Tenats;
+using Amazon.Runtime.Internal.Transform;
+using ErrorOr;
 using FluentValidation;
-using AlphaZero.Modules.VideoUploading.Domain.Models;
+using MassTransit;
+using MassTransit.Mediator;
+using MediatR;
 
 namespace AlphaZero.Modules.VideoUploading.Application.Commands.Upload;
 
-public record UploadCommand(string fileName, string contentType, string title, string? description, VideoTranscodingMetehod VideoTranscodingMetehod): ICommand<UploadCommandResponse>;
+public record UploadCommand(
+    string fileName, 
+    string contentType, 
+    string title, 
+    string? description, 
+    VideoTranscodingMetehod VideoTranscodingMetehod, 
+    VideoEncryptionMethod VideoEncryptionMethod = VideoEncryptionMethod.None,
+    bool generateCustomThumbnailUrl = false): ICommand<UploadCommandResponse>;
 
 public class UploadCommandValidator : AbstractValidator<UploadCommand>
 {
@@ -34,7 +42,15 @@ public class UploadCommandValidator : AbstractValidator<UploadCommand>
     }
 }
 
-public record UploadCommandResponse(Guid VideoId, Guid TenantId, string Key, string PreSignedUrl);
+public record UploadCommandResponse(
+    Guid VideoId, 
+    Guid TenantId, 
+    string Key, 
+    string PreSignedUrl, 
+    string TranscodingMethod, 
+    string EncryptionMethod,
+    string? ThumbnailKey = null,
+    string? ThumbnailPreSignedUrl = null);
 
 public sealed class UploadCommandHandler(IUploadService uploadService, IModuleBus moduleBus, IClock clock, ITenantProvider tenantProvider) : IRequestHandler<UploadCommand, ErrorOr<UploadCommandResponse>>
 {
@@ -49,11 +65,46 @@ public sealed class UploadCommandHandler(IUploadService uploadService, IModuleBu
             { "VideoId" , videoId.ToString()},
             { "TenantId", tenantId.Value.ToString() },
             { "Title", request.title },
-            { "Description", request.description ?? string.Empty }
+            { "Description", request.description ?? string.Empty },
+            { "VideoTranscodingMetehod", request.VideoTranscodingMetehod.ToString() },
+            { "VideoEncryptionMethod", request.VideoEncryptionMethod.ToString() }
         });
         if (response.IsError) return response.Errors;
-        await moduleBus.Publish(new UploadVideoRequestedEvent(videoId, tenantId.Value, clock.Now));
 
-        return new UploadCommandResponse(videoId, tenantId.Value, response.Value.key, response.Value.presignedUrl);
+        string? thumbnailKey = null;
+        string? thumbnailPreSignedUrl = null;
+
+        if (request.generateCustomThumbnailUrl)
+        {
+            var thumbResponse = await uploadService.UploadFile("thumbnail.jpg", "image/jpeg", new Dictionary<string, string>()
+            {
+                { "VideoId" , videoId.ToString()},
+                { "TenantId", tenantId.Value.ToString() },
+                { "IsThumbnail", "true" }
+            });
+
+            if (!thumbResponse.IsError)
+            {
+                thumbnailKey = thumbResponse.Value.key;
+                thumbnailPreSignedUrl = thumbResponse.Value.presignedUrl;
+            }
+        }
+
+        await moduleBus.Publish(new UploadVideoRequestedEvent(
+            videoId, 
+            tenantId.Value, 
+            clock.Now, 
+            request.VideoEncryptionMethod.ToString(),
+            thumbnailKey));
+
+        return new UploadCommandResponse(
+            videoId, 
+            tenantId.Value, 
+            response.Value.key, 
+            response.Value.presignedUrl,
+            request.VideoTranscodingMetehod.ToString(),
+            request.VideoEncryptionMethod.ToString(),
+            thumbnailKey,
+            thumbnailPreSignedUrl);
     }
 }

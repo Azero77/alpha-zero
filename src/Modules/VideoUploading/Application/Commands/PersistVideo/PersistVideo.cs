@@ -64,20 +64,30 @@ public sealed class PersistVideoCommandHandler : IRequestHandler<PersistVideoCom
         if (metadataResponse.IsError) return metadataResponse.Errors;
 
         var s3Metadata = metadataResponse.Value;
-        string fileName = s3Metadata.GetValueOrDefault("file-name")?.ToString() ?? "Unknown";
-        string title = s3Metadata.GetValueOrDefault("title")?.ToString() ?? fileName;
-        string? description = s3Metadata.GetValueOrDefault("description")?.ToString();
+        string fileName = Uri.UnescapeDataString(s3Metadata.GetValueOrDefault("file-name")?.ToString() ?? "Unknown");
+        string title = Uri.UnescapeDataString(s3Metadata.GetValueOrDefault("title")?.ToString() ?? fileName);
+        string? description = s3Metadata.GetValueOrDefault("description") is not null 
+            ? Uri.UnescapeDataString(s3Metadata.GetValueOrDefault("description")!.ToString()!) 
+            : null;
         string contentType = s3Metadata.GetValueOrDefault("Content-Type")?.ToString() ?? "video/mp4";
         long fileSize = s3Metadata.TryGetValue("Content-Length", out var len) && long.TryParse(len.ToString(), out var l) ? l : 0;
+        if (!Enum.TryParse<VideoTranscodingMetehod>(s3Metadata.GetValueOrDefault("videotranscodingmetehod")?.ToString(), out var method))
+        {
+            return Error.Validation("VideoState.MethodNotFound","The provided Transcoding Method is not supported");
+        }
+        string encryptionMethod = s3Metadata.GetValueOrDefault("videoencryptionmethod")?.ToString() ?? VideoEncryptionMethod.None.ToString();
 
         // 4. Create Domain Entity
+        var thumbnail = new ThumbnailInfo(videoState.CustomThumbnailKey, null, videoState.CustomThumbnailKey != null);
+
         var videoResult = Video.Create(
             request.VideoId,
             videoState.TenantId,
             title,
             description,
             videoState.Key,
-            new VideoMetadata(fileName, contentType, fileSize),
+            new VideoMetadata(fileName, contentType, fileSize, method.ToString(), encryptionMethod),
+            thumbnail,
             _clock);
 
         if (videoResult.IsError) return videoResult.Errors;

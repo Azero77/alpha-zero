@@ -1,5 +1,7 @@
 using AlphaZero.Modules.VideoUploading.Application.Repositories;
+using AlphaZero.Modules.VideoUploading.Domain.Models;
 using AlphaZero.Modules.VideoUploading.Infrastructure.Persistance;
+using AlphaZero.Shared.Infrastructure.Repositores;
 using Microsoft.EntityFrameworkCore;
 
 namespace AlphaZero.Modules.VideoUploading.Infrastructure.Repositories;
@@ -27,7 +29,14 @@ public class VideoStateRepository : IVideoStateRepository
             state.CurrentState,
             state.MediaConverterJobId,
             state.Key,
+            state.CustomThumbnailKey,
             state.IsFailed,
             state.Version);
+    }
+}
+public class VideoSecretRepository : BaseRepository<AppDbContext,VideoSecret>,IRepository<VideoSecret>
+{
+    public VideoSecretRepository(AppDbContext context) : base(context)
+    {
     }
 }

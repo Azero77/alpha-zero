@@ -1,6 +1,7 @@
 using AlphaZero.Modules.VideoUploading.Application;
 using AlphaZero.Modules.VideoUploading.Application.Repositories;
 using AlphaZero.Modules.VideoUploading.Application.Services;
+using AlphaZero.Modules.VideoUploading.Domain.Models;
 using AlphaZero.Modules.VideoUploading.Domain.Services;
 using AlphaZero.Modules.VideoUploading.Infrastructure.Persistance;
 using AlphaZero.Modules.VideoUploading.Infrastructure.Repositories;
@@ -8,6 +9,7 @@ using AlphaZero.Modules.VideoUploading.Infrastructure.Services;
 using AlphaZero.Shared.Application;
 using AlphaZero.Shared.Domain;
 using AlphaZero.Shared.Infrastructure;
+using AlphaZero.Shared.Infrastructure.Repositores;
 using AlphaZero.Shared.Infrastructure.SoftDelete;
 using Amazon.MediaConvert;
 using Amazon.S3;
@@ -31,6 +33,8 @@ public static class DependencyInjection
         services.AddScoped<IUploadService, S3UploadService>();
         services.AddScoped<IVideoSpecificationExtractorService, S3VideoSpecificationExtractor>();
         services.AddScoped<IVideoTranscodingService, MediaConvertTranscodingService>();
+        services.AddScoped<IVideoTranscodingService, FFmpegTranscodingService>();
+        services.AddScoped<IVideoEncryptionService, DefaultVideoEncryptionService>();
         services.AddScoped<IVideoCdnSyncService, S3VideoCdnSyncService>();
 
         // Persistence
@@ -63,6 +67,7 @@ public static class DependencyInjection
         // Module Specific Infrastructure
         moduleServices.AddScoped<IVideoRepository, VideoRepository>();
         moduleServices.AddScoped<IVideoStateRepository, VideoStateRepository>();
+        moduleServices.AddScoped<IRepository<VideoSecret>,VideoSecretRepository>();
         moduleServices.AddScoped<IUnitOfWork, UnitOfWork<AppDbContext>>();
         
     }
