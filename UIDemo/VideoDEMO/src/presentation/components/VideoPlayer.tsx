@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { ShakaPlayerManager, type PlayerConfig } from '../../infrastructure/player/shaka-player-impl';
+import './VideoPlayer.css';
 
 interface VideoPlayerProps {
   config: PlayerConfig;

@@ -1,0 +1,34 @@
+/* Shaka Player UI Fixes */
+.shaka-container button {
+    /* Reset Tailwind defaults that might interfere with Shaka UI */
+    background-color: transparent;
+    border: none;
+    padding: 0;
+    margin: 0;
+}
+
+.shaka-container button:focus {
+    outline: none;
+}
+
+/* Fix for overlapping play/replay buttons */
+.shaka-play-pause-button {
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+}
+
+.shaka-recenter-button {
+    /* Ensure center buttons don't stack weirdly */
+    margin: auto !important;
+}
+
+/* Production aesthetic for the control bar */
+.shaka-bottom-controls {
+    @apply bg-gradient-to-t from-black/60 to-transparent !important;
+    padding: 0 10px !important;
+}
+
+.shaka-range-container {
+    bottom: 45px !important;
+}
