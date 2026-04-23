@@ -1,9 +1,10 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import type { Video } from '../../domain/models/video';
-import { Play, Trash2, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
+import { Play, Trash2, CheckCircle, AlertCircle, Loader2, Video as VideoIcon } from 'lucide-react';
 import { clsx } from 'clsx';
 import { normalizeVideoStatus } from '../../shared/utils/status-utils';
+import { config } from '../../core/config';
 
 interface VideoCardProps {
   video: Video;
@@ -27,6 +28,10 @@ export const VideoCard: React.FC<VideoCardProps> = ({ video, onPlay, onDelete })
 
   const isPlayable = normalizedStatus === 'Published';
 
+  const thumbnailUrl = video.thumbnailUrl 
+    ? (video.thumbnailUrl.startsWith('http') ? video.thumbnailUrl : `${config.cdnUrl}/${video.thumbnailUrl}`)
+    : null;
+
   return (
     <motion.div
       layout
@@ -37,8 +42,19 @@ export const VideoCard: React.FC<VideoCardProps> = ({ video, onPlay, onDelete })
       className="card group relative flex flex-col"
     >
       {/* Thumbnail Placeholder */}
-      <div className="aspect-video w-full bg-slate-100 relative group-hover:bg-slate-200 transition-colors">
-        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+      <div className="aspect-video w-full bg-slate-100 relative group-hover:bg-slate-200 transition-colors overflow-hidden">
+        {thumbnailUrl ? (
+          <img 
+            src={thumbnailUrl} 
+            alt={video.title}
+            className="absolute inset-0 w-full h-full object-cover"
+          />
+        ) : (
+          <div className="absolute inset-0 flex items-center justify-center text-slate-300">
+            <VideoIcon size={40} />
+          </div>
+        )}
+        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/20 backdrop-blur-[2px]">
           {isPlayable && (
             <button
               onClick={() => onPlay(video)}

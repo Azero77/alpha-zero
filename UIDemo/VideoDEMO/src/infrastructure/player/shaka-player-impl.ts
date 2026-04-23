@@ -3,6 +3,7 @@ import 'shaka-player/dist/controls.css';
 
 export interface PlayerConfig {
   manifestUrl: string;
+  posterUrl?: string;
   clearKey?: {
     keyId?: string;
     key: string;
@@ -90,6 +91,30 @@ export class ShakaPlayerManager {
 
     this.player.configure(shakaConfig);
     this.ui = new shaka.ui.Overlay(this.player, containerElement, videoElement);
+
+    // 4. Production-Ready UI Configuration
+    const uiConfig = {
+      controlPanelElements: [
+        'play_pause',
+        'time_and_duration',
+        'spacer',
+        'mute',
+        'volume',
+        'quality',
+        'playback_rate',
+        'fullscreen',
+      ],
+      // This helps prevent overlapping by explicitly managing the center button
+      addBigPlayButton: true,
+      // Ensure the seek bar doesn't overlap with buttons
+      seekBarColors: {
+        base: 'rgba(255, 255, 255, 0.3)',
+        buffered: 'rgba(255, 255, 255, 0.5)',
+        played: '#0ea5e9', // Primary-500
+      }
+    };
+
+    this.ui.configure(uiConfig);
 
     try {
       console.log('[Player] Loading manifest:', config.manifestUrl);

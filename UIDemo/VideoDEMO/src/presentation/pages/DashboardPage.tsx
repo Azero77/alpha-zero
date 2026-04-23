@@ -9,6 +9,7 @@ import { clsx } from 'clsx';
 import { VideoRepositoryImpl } from '../../infrastructure/api/video-repository-impl';
 import type { StreamingInfo } from '../../domain/repositories/video-repository';
 import { usePollVideoStatus } from '../hooks/usePollVideoStatus';
+import { config } from '../../core/config';
 
 const videoRepo = new VideoRepositoryImpl();
 
@@ -37,10 +38,15 @@ export const DashboardPage: React.FC = () => {
   };
 
   const playerConfig = useMemo(() => {
-    if (!streamingInfo) return null;
+    if (!streamingInfo || !selectedVideo) return null;
     
+    const posterUrl = selectedVideo.thumbnailUrl 
+      ? (selectedVideo.thumbnailUrl.startsWith('http') ? selectedVideo.thumbnailUrl : `${config.cdnUrl}/${selectedVideo.thumbnailUrl}`)
+      : undefined;
+
     return {
       manifestUrl: streamingInfo.url,
+      posterUrl: posterUrl,
       // If the backend sends DRM details (Premium video)
       drm: streamingInfo.drm ? {
         widevineUrl: streamingInfo.drm.widevineUrl,

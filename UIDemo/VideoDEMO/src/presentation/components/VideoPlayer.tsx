@@ -44,7 +44,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ config, className }) =
       <video
         ref={videoRef}
         className="w-full h-full"
-        poster="/placeholder-poster.jpg"
+        poster={config.posterUrl}
       />
     </div>
   );

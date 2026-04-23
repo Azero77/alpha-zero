@@ -22,6 +22,7 @@ export interface Video {
   title: string;
   description?: string;
   status: VideoStatus;
+  thumbnailUrl?: string;
   sagaState?: string;
   metadata: VideoMetadata;
   specifications: VideoSpecifications;

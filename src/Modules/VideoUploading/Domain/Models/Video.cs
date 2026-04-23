@@ -79,10 +79,13 @@ public class Video : AggregateRoot, IDomainTenantOwned, ISoftDeletable
         PublishedOn = clock.Now;
 
         // Finalize thumbnail URL
-        // If we have a custom thumbnail, it's synced as thumbnails/custom.jpg
-        // If not, we use the auto-generated one: thumbnails/poster.jpg
+        // If finalUrl is "path/to/master.m3u8", get "path/to/"
+        string folderPrefix = finalUrl.Contains('/') 
+            ? finalUrl[..(finalUrl.LastIndexOf('/') + 1)] 
+            : "";
+
         string thumbFileName = Thumbnail.UseCustom ? "custom.jpg" : "poster.jpg"; 
-        string thumbUrl = $"{finalUrl.TrimEnd('/')}/thumbnails/{thumbFileName}";
+        string thumbUrl = $"{folderPrefix}thumbnails/{thumbFileName}";
 
         Thumbnail = new ThumbnailInfo(
             Thumbnail.CustomThumbnailKey, 
