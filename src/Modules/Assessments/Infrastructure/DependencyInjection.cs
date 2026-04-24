@@ -1,5 +1,6 @@
 using AlphaZero.Modules.Assessments.Application;
 using AlphaZero.Modules.Assessments.Application.Repositories;
+using AlphaZero.Modules.Assessments.Domain.Aggregates.Assessments.Servies;
 using AlphaZero.Modules.Assessments.Infrastructure.Persistence;
 using AlphaZero.Modules.Assessments.Infrastructure.Repositories;
 using AlphaZero.Shared.Application;
@@ -45,8 +46,10 @@ public static class DependencyInjection
             opts.AddOpenBehavior(typeof(UnitOfWorkDecoratorCommandHandler<,>));
         });
         
-        // Register resolvers
-        // moduleServices.AddScoped<IQuestionResolver, McqResolver>();
-        // ...
+        // Register validators and factory
+        moduleServices.AddScoped<IAssestmentValidtorFactory, AssestmentValidtorFactory>();
+        moduleServices.AddScoped<McqAssessmentValidator>();
+        moduleServices.AddScoped<HandwrittenAssessmentValidator>();
+        moduleServices.AddScoped<HybridAssessmentValidator>();
     }
 }

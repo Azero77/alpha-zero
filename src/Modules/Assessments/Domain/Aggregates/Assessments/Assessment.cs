@@ -1,6 +1,7 @@
 using AlphaZero.Modules.Assessments.Domain.Enums;
 using AlphaZero.Modules.Assessments.Domain.Events;
 using AlphaZero.Modules.Assessments.Domain.Models.Content;
+using AlphaZero.Modules.Assessments.Domain.Aggregates.Assessments.Servies;
 using AlphaZero.Shared.Domain;
 using AlphaZero.Shared.Infrastructure.Tenats;
 using ErrorOr;
@@ -41,14 +42,16 @@ public class Assessment : TenantOwnedAggregate, ISoftDeletable
         return new Assessment(id, tenantId, title, description, type, passingScore);
     }
 
-    public ErrorOr<Success> UpdateContent(AssessmentContent content)
+    public ErrorOr<Success> UpdateContent(AssessmentContent content, IAssestmentValidator validator)
     {
         if (Status == AssessmentStatus.Archived)
             return Error.Conflict("Assessment.Status", "Cannot update content of an archived assessment.");
 
-        // Validation: Ensure content items match the assessment logic
-        if (Type == AssessmentType.MCQ && content.Items.Any(i => i.Type == ItemType.Question && i.QuestionType != QuestionType.MCQ))
-            return Error.Validation("Assessment.Content", "MCQ Assessments can only contain MCQ questions.");
+        if (validator.AssessmentType != this.Type)
+            return Error.Unexpected("Assessment.ValidatorMismatch", "The provided validator does not match the assessment type.");
+
+        var validationResult = validator.Validate(content);
+        if (validationResult.IsError) return validationResult.Errors;
 
         Content = content;
         return Result.Success;
