@@ -1,0 +1,61 @@
+@import "tailwindcss";
+
+@theme {
+  --font-serif: 'Instrument Serif', serif;
+  --font-sans: 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif;
+  
+  --color-background: oklch(0.129 0.042 264.695);
+  --color-foreground: oklch(0.985 0.001 106.423);
+  
+  --color-card: oklch(0.129 0.042 264.695);
+  --color-card-foreground: oklch(0.985 0.001 106.423);
+  
+  --color-primary: oklch(0.511 0.262 276.966);
+  --color-primary-foreground: oklch(0.985 0.001 106.423);
+  
+  --color-muted: oklch(0.258 0.016 252.667);
+  --color-muted-foreground: oklch(0.707 0.022 261.325);
+  
+  --color-accent: oklch(0.258 0.016 252.667);
+  --color-accent-foreground: oklch(0.985 0.001 106.423);
+  
+  --color-border: oklch(0.258 0.016 252.667);
+}
+
+@layer base {
+  * {
+    @apply border-zinc-800;
+  }
+
+  body {
+    @apply bg-zinc-950 text-zinc-100;
+    font-family: var(--font-sans);
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-serif);
+    font-weight: 400;
+  }
+}
+
+/* Custom scrollbar for professional look */
+::-webkit-scrollbar {
+  width: 10px;
+}
+::-webkit-scrollbar-track {
+  @apply bg-zinc-950;
+}
+::-webkit-scrollbar-thumb {
+  @apply bg-zinc-800 rounded-full border-4 border-zinc-950;
+}
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-zinc-700;
+}
+
+/* Tiptap focus ring */
+.ProseMirror-focused {
+  outline: none;
+}

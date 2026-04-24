@@ -19,4 +19,23 @@ public class CourseRepository : BaseRepository<AppDbContext, Course>, ICourseRep
                 .ThenInclude(s => s.Items)
             .FirstOrDefaultAsync(c => c.Id == id, cancellationToken);
     }
+
+    public async Task<(Guid CourseId, int BitIndex)?> GetItemBitIndexByResourceIdAsync(Guid resourceId, CancellationToken cancellationToken = default)
+    {
+        var itemInfo = await _context.Courses
+            .SelectMany(c => c.Sections)
+            .SelectMany(s => s.Items)
+            .Where(i => i.ResourceId == resourceId)
+            .Select(i => new { i.SectionId, i.BitIndex })
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (itemInfo == null) return null;
+
+        var courseId = await _context.Set<CourseSection>()
+            .Where(s => s.Id == itemInfo.SectionId)
+            .Select(s => s.CourseId)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        return (courseId, itemInfo.BitIndex);
+    }
 }

@@ -83,6 +83,8 @@ public class ResourceArn
     public static ResourceArn ForCourseVideo(Guid tenantId, Guid videoId,Guid courseId) => new($"az:video:{tenantId}:course/{courseId}/video/{videoId}");
     public static ResourceArn ForLibrary(Guid tenantId, Guid libraryId) => new($"az:library:{tenantId}:library/{libraryId}");
     public static ResourceArn ForAccessCode(Guid tenantId, Guid codeId) => new($"az:library:{tenantId}:code/{codeId}");
+    public static ResourceArn ForAssessment(Guid tenantId, Guid assessmentId) => new($"az:assessments:{tenantId}:assessment/{assessmentId}");
+    public static ResourceArn ForAssessmentSubmission(Guid tenantId, Guid submissionId) => new($"az:assessments:{tenantId}:submission/{submissionId}");
 }
 /// <summary>
 /// Represents a permission scope pattern.

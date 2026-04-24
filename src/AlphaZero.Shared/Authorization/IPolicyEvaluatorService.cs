@@ -30,5 +30,7 @@ public enum ResourceType
     Tenants,
     Identity,
     Video,
-    Library
+    Library,
+    Assessments,
+    Submissions
 }
