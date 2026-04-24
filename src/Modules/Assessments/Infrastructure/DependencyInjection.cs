@@ -1,5 +1,7 @@
 using AlphaZero.Modules.Assessments.Application;
 using AlphaZero.Modules.Assessments.Application.Repositories;
+using AlphaZero.Modules.Assessments.Application.Resolvers;
+using AlphaZero.Modules.Assessments.Application.Services;
 using AlphaZero.Modules.Assessments.Domain.Aggregates.Assessments.Servies;
 using AlphaZero.Modules.Assessments.Infrastructure.Persistence;
 using AlphaZero.Modules.Assessments.Infrastructure.Repositories;
@@ -51,5 +53,9 @@ public static class DependencyInjection
         moduleServices.AddScoped<McqAssessmentValidator>();
         moduleServices.AddScoped<HandwrittenAssessmentValidator>();
         moduleServices.AddScoped<HybridAssessmentValidator>();
+
+        // Register Grading services
+        moduleServices.AddScoped<AssessmentGradingService>();
+        moduleServices.AddScoped<IQuestionResolver, McqQuestionResolver>();
     }
 }

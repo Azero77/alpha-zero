@@ -1,4 +1,5 @@
 using AlphaZero.Modules.Assessments.Domain.Events;
+using AlphaZero.Modules.Assessments.Domain.Models.Content;
 using AlphaZero.Modules.Assessments.Domain.Models.Submissions;
 using AlphaZero.Shared.Domain;
 using AlphaZero.Shared.Infrastructure.Tenats;
@@ -9,6 +10,7 @@ namespace AlphaZero.Modules.Assessments.Domain.Aggregates.Submissions;
 public class AssessmentSubmission : TenantOwnedAggregate
 {
     public Guid AssessmentId { get; private set; }
+    public Guid AssessmentVersionId { get; private set; } // Points to immutable content snapshot
     public Guid StudentId { get; private set; }
     public SubmissionStatus Status { get; private set; }
     public decimal? TotalScore { get; private set; }
@@ -20,17 +22,18 @@ public class AssessmentSubmission : TenantOwnedAggregate
 
     private AssessmentSubmission() { }
 
-    private AssessmentSubmission(Guid id, Guid tenantId, Guid assessmentId, Guid studentId) 
+    private AssessmentSubmission(Guid id, Guid tenantId, Guid assessmentId, Guid assessmentVersionId, Guid studentId) 
         : base(id, tenantId)
     {
         AssessmentId = assessmentId;
+        AssessmentVersionId = assessmentVersionId;
         StudentId = studentId;
         Status = SubmissionStatus.InProgress;
     }
 
-    public static AssessmentSubmission Create(Guid id, Guid tenantId, Guid assessmentId, Guid studentId)
+    public static AssessmentSubmission Create(Guid id, Guid tenantId, Guid assessmentId, Guid assessmentVersionId, Guid studentId)
     {
-        return new AssessmentSubmission(id, tenantId, assessmentId, studentId);
+        return new AssessmentSubmission(id, tenantId, assessmentId, assessmentVersionId, studentId);
     }
 
     public ErrorOr<Success> Submit(AssessmentSubmissionResponses responses)

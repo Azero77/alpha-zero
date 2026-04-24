@@ -17,8 +17,26 @@ public class AssessmentConfiguration : IEntityTypeConfiguration<Assessment>
         builder.Property(a => a.Type).HasConversion<string>();
         builder.Property(a => a.Status).HasConversion<string>();
 
-        // JSONB Mapping
-        builder.Property(a => a.Content)
+        // JSONB Mapping - removed from root, moved to Version
+        
+        builder.HasMany(a => a.Versions)
+            .WithOne()
+            .HasForeignKey(v => v.AssessmentId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.Navigation(a => a.Versions)
+            .UsePropertyAccessMode(PropertyAccessMode.Field);
+    }
+}
+
+public class AssessmentVersionConfiguration : IEntityTypeConfiguration<AssessmentVersion>
+{
+    public void Configure(EntityTypeBuilder<AssessmentVersion> builder)
+    {
+        builder.HasKey(v => v.Id);
+        builder.Property(v => v.Id).ValueGeneratedNever();
+
+        builder.Property(v => v.Content)
             .HasColumnType("jsonb");
     }
 }

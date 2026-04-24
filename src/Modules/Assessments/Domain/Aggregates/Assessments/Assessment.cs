@@ -16,8 +16,10 @@ public class Assessment : TenantOwnedAggregate, ISoftDeletable
     public decimal PassingScore { get; private set; }
     public AssessmentStatus Status { get; private set; }
     
-    // The JSONB content
-    public AssessmentContent Content { get; private set; } = new();
+    public Guid? CurrentVersionId { get; private set; }
+    
+    private readonly List<AssessmentVersion> _versions = new();
+    public IReadOnlyCollection<AssessmentVersion> Versions => _versions.AsReadOnly();
 
     public bool IsDeleted { get; private set; }
     public DateTime? OnDeleted { get; private set; }
@@ -53,7 +55,12 @@ public class Assessment : TenantOwnedAggregate, ISoftDeletable
         var validationResult = validator.Validate(content);
         if (validationResult.IsError) return validationResult.Errors;
 
-        Content = content;
+        var nextVersionNumber = _versions.Count + 1;
+        var newVersion = new AssessmentVersion(Guid.NewGuid(), TenantId, Id, nextVersionNumber, content);
+        
+        _versions.Add(newVersion);
+        CurrentVersionId = newVersion.Id;
+
         return Result.Success;
     }
 
@@ -62,8 +69,8 @@ public class Assessment : TenantOwnedAggregate, ISoftDeletable
         if (Status == AssessmentStatus.Published)
             return Error.Conflict("Assessment.Status", "Assessment is already published.");
 
-        if (Content.Items.Count(i => i.Type == ItemType.Question) == 0)
-            return Error.Validation("Assessment.Empty", "Assessment must have at least one question before publishing.");
+        if (CurrentVersionId == null)
+            return Error.Validation("Assessment.Empty", "Assessment must have content before publishing.");
 
         Status = AssessmentStatus.Published;
         AddDomainEvent(new AssessmentPublishedDomainEvent(Id));
