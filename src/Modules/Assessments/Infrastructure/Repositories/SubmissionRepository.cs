@@ -1,14 +1,14 @@
 using AlphaZero.Modules.Assessments.Application.Repositories;
 using AlphaZero.Modules.Assessments.Domain.Aggregates.Submissions;
-using AlphaZero.Modules.Assessments.Infrastructure.Persistence;
+using AlphaZero.Modules.Assessments.Infrastructure.Persistance;
 using AlphaZero.Shared.Infrastructure.Repositores;
 using Microsoft.EntityFrameworkCore;
 
 namespace AlphaZero.Modules.Assessments.Infrastructure.Repositories;
 
-public class SubmissionRepository : BaseRepository<AssessmentsDbContext, AssessmentSubmission>, ISubmissionRepository
+public class SubmissionRepository : BaseRepository<AppDbContext, AssessmentSubmission>, ISubmissionRepository
 {
-    public SubmissionRepository(AssessmentsDbContext context) : base(context)
+    public SubmissionRepository(AppDbContext context) : base(context)
     {
     }
 

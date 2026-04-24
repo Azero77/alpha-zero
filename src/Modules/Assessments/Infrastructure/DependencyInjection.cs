@@ -3,7 +3,7 @@ using AlphaZero.Modules.Assessments.Application.Repositories;
 using AlphaZero.Modules.Assessments.Application.Resolvers;
 using AlphaZero.Modules.Assessments.Application.Services;
 using AlphaZero.Modules.Assessments.Domain.Aggregates.Assessments.Servies;
-using AlphaZero.Modules.Assessments.Infrastructure.Persistence;
+using AlphaZero.Modules.Assessments.Infrastructure.Persistance;
 using AlphaZero.Modules.Assessments.Infrastructure.Repositories;
 using AlphaZero.Shared.Application;
 using AlphaZero.Shared.Infrastructure;
@@ -21,12 +21,12 @@ public static class DependencyInjection
     {
         DatabaseSettings dbSettings = DatabaseSettings.GetDatabaseSettings(configuration);
 
-        services.AddDbContext<AssessmentsDbContext>((sp, opts) =>
+        services.AddDbContext<AppDbContext>((sp, opts) =>
         {
             opts.UseNpgsql(dbSettings.ConnectionString, h =>
             {
-                h.MigrationsAssembly(typeof(AssessmentsDbContext).Assembly.FullName);
-                h.MigrationsHistoryTable("__AssessmentsMigrationHistory", AssessmentsDbContext.Schema);
+                h.MigrationsAssembly(typeof(AppDbContext).Assembly.FullName);
+                h.MigrationsHistoryTable("__AssessmentsMigrationHistory", AppDbContext.Schema);
             });
             opts.AddInterceptors(sp.GetRequiredService<SoftDeleteInterceptor>());
         });
@@ -37,7 +37,7 @@ public static class DependencyInjection
         moduleServices.AddScoped<IAssessmentRepository, AssessmentRepository>();
         moduleServices.AddScoped<ISubmissionRepository, SubmissionRepository>();
 
-        moduleServices.AddScoped<IUnitOfWork, UnitOfWork<AssessmentsDbContext>>();
+        moduleServices.AddScoped<IUnitOfWork, UnitOfWork<AppDbContext>>();
 
         moduleServices.AddValidatorsFromAssembly(typeof(IAssessmentsApplicationMarker).Assembly);
 

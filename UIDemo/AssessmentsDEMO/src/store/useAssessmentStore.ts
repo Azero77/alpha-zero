@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { Assessment, AssessmentSubmission, AssessmentType } from './types';
+import type { Assessment, AssessmentSubmission } from './types';
 
 interface AssessmentState {
   assessments: Assessment[];

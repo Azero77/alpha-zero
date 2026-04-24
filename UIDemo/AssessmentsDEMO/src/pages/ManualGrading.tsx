@@ -1,21 +1,24 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { 
   ChevronLeft, 
   CheckCircle, 
-  XCircle, 
   MessageSquare,
   Sparkles,
-  Award
+  Award,
+  Zap,
+  Target,
+  FileSearch,
+  ScanEye
 } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAssessmentStore } from '../store/useAssessmentStore';
+import { motion } from 'framer-motion';
 
 const ManualGrading = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { submissions, updateSubmission, assessments } = useAssessmentStore();
   
-  // For demo purposes, we'll find the submission or use a mock one
   const submission = submissions.find(s => s.id === id) || {
     id: 'sub-1',
     assessmentId: 'assessment-1',
@@ -33,131 +36,196 @@ const ManualGrading = () => {
   const assessment = assessments.find(a => a.id === submission.assessmentId);
   const handwrittenQuestion = assessment?.versions[0].content.items.find(i => i.questionType === 'Handwritten');
 
-  const [score, setScore] = useState<number>(0);
+  const [score, setScore] = useState<number>(18);
   const [feedback, setFeedback] = useState<string>('');
 
   const handleFinalize = () => {
     updateSubmission(submission.id, { 
       status: 'Graded', 
-      totalScore: score + 10, // Assuming 10 points from automated MCQ
+      totalScore: score + 10,
       gradedAt: new Date().toISOString()
     });
-    alert('Grading Finalized!');
+    alert('Evaluation successfully committed to the blockchain/database.');
     navigate('/');
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col w-full font-sans">
-      {/* Grading Header */}
-      <header className="bg-slate-900 border-b border-slate-800 p-4 sticky top-0 z-50">
-        <div className="max-w-[1600px] mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-6">
-            <button onClick={() => navigate('/')} className="p-2 hover:bg-slate-800 rounded-lg transition-colors text-slate-400 hover:text-white">
-              <ChevronLeft />
+    <div className="min-h-screen bg-zinc-950 text-zinc-100 flex flex-col w-full selection:bg-indigo-500/30 font-sans overflow-hidden">
+      {/* Immersive Grading Header */}
+      <header className="bg-zinc-900 border-b border-white/5 p-6 z-50 shadow-2xl relative">
+        <div className="max-w-[1800px] mx-auto flex items-center justify-between">
+          <div className="flex items-center gap-8">
+            <button onClick={() => navigate('/')} className="p-3 hover:bg-white/5 rounded-2xl transition-all text-zinc-500 hover:text-white border border-transparent hover:border-white/10">
+              <ChevronLeft size={24} />
             </button>
             <div>
-              <h1 className="font-bold text-lg">Grading: {assessment?.title}</h1>
-              <div className="flex items-center gap-3 mt-1">
-                <span className="text-xs px-2 py-0.5 bg-blue-500/20 text-blue-400 rounded-full font-medium border border-blue-500/20">
-                  Student: {submission.studentId}
+              <div className="flex items-center gap-3 mb-1">
+                <h1 className="font-serif text-3xl tracking-tight leading-none">{assessment?.title}</h1>
+                <span className="text-[10px] font-black px-2 py-0.5 bg-indigo-500/10 text-indigo-400 rounded-md border border-indigo-500/20 uppercase tracking-widest">
+                  Manual Review
                 </span>
-                <span className="text-xs text-slate-500">Submitted: {new Date(submission.submittedAt).toLocaleString()}</span>
+              </div>
+              <div className="flex items-center gap-6">
+                <div className="flex items-center gap-2">
+                   <div className="w-6 h-6 rounded-full bg-zinc-800 border border-white/10 flex items-center justify-center text-[10px] font-bold">AH</div>
+                   <span className="text-sm font-medium text-zinc-400">{submission.studentId}</span>
+                </div>
+                <div className="w-1.5 h-1.5 rounded-full bg-zinc-800" />
+                <span className="text-xs text-zinc-600 font-mono">ID: {submission.id}</span>
               </div>
             </div>
           </div>
           <button 
             onClick={handleFinalize}
-            className="bg-blue-600 hover:bg-blue-500 px-8 py-2 rounded-xl font-bold transition-all shadow-lg shadow-blue-600/20 flex items-center gap-2"
+            className="bg-white hover:bg-zinc-200 text-zinc-950 px-10 py-3.5 rounded-2xl font-black uppercase tracking-[0.1em] text-xs transition-all shadow-[0_20px_50px_rgba(255,255,255,0.1)] hover:scale-105 active:scale-95 flex items-center gap-3"
           >
             <CheckCircle size={18} /> Finalize Grade
           </button>
         </div>
       </header>
 
-      <main className="flex-1 flex w-full">
-        {/* Left: Student Upload */}
-        <div className="flex-1 bg-black overflow-y-auto p-12 border-r border-slate-800">
-          <div className="max-w-3xl mx-auto space-y-12">
-            <div className="space-y-4">
-              <h2 className="text-sm font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2">
-                Question Prompt
-              </h2>
-              <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 text-xl text-slate-200 leading-relaxed shadow-sm">
-                 {(handwrittenQuestion?.renderData as any).content?.[0]?.content?.[0]?.text}
+      <main className="flex-1 flex w-full overflow-hidden">
+        {/* Left: Interactive Canvas */}
+        <div className="flex-1 bg-black overflow-y-auto custom-scrollbar p-16 relative">
+          {/* Subtle grid background */}
+          <div className="absolute inset-0 opacity-[0.15] pointer-events-none bg-[radial-gradient(#27272a_1px,transparent_1px)] [background-size:24px_24px]" />
+          
+          <div className="max-w-4xl mx-auto space-y-20 relative">
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="space-y-6"
+            >
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-white/5 rounded-xl text-zinc-500">
+                  <FileSearch size={18} />
+                </div>
+                <h2 className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.3em]">Evaluation Prompt</h2>
               </div>
-            </div>
+              <div className="bg-zinc-900/50 border border-white/5 rounded-[2rem] p-10 text-2xl text-zinc-200 leading-relaxed font-light backdrop-blur-sm shadow-2xl ring-1 ring-white/5 italic">
+                 "{(handwrittenQuestion?.renderData as any).content?.[0]?.content?.[0]?.text}"
+              </div>
+            </motion.div>
 
-            <div className="space-y-4">
-              <h2 className="text-sm font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2">
-                Student Upload
-              </h2>
-              <div className="relative aspect-[3/4] bg-slate-900 rounded-3xl overflow-hidden border-2 border-slate-800 shadow-2xl group">
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+              className="space-y-6"
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-white/5 rounded-xl text-zinc-500">
+                    <ScanEye size={18} />
+                  </div>
+                  <h2 className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.3em]">Student Evidence</h2>
+                </div>
+                <div className="flex items-center gap-2 px-3 py-1 bg-emerald-500/10 text-emerald-400 rounded-lg text-[10px] font-black uppercase tracking-widest border border-emerald-500/20">
+                  <Target size={12} /> High Res Scan
+                </div>
+              </div>
+
+              <div className="relative aspect-[3/4] bg-zinc-900 rounded-[3rem] overflow-hidden border border-white/5 shadow-[0_50px_100px_rgba(0,0,0,0.6)] group ring-1 ring-white/10">
                 <div className="absolute inset-0 flex items-center justify-center">
-                  {/* Mock image placeholder */}
-                  <div className="w-full h-full bg-[url('https://images.unsplash.com/photo-1503676260728-1c00da094a0b?auto=format&fit=crop&q=80&w=1000')] bg-cover bg-center opacity-50 blur-sm group-hover:blur-none transition-all duration-700" />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent pointer-events-none" />
-                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-center group-hover:opacity-0 transition-opacity">
-                    <p className="text-white font-bold text-2xl drop-shadow-lg">Ali_Physics_Answer.jpg</p>
-                    <p className="text-slate-400 text-sm mt-2">Hover to view high-resolution scan</p>
+                  <div className="w-full h-full bg-[url('https://images.unsplash.com/photo-1503676260728-1c00da094a0b?auto=format&fit=crop&q=80&w=1000')] bg-cover bg-center group-hover:scale-110 transition-transform duration-[2s]" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
+                  
+                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                    <motion.div 
+                       animate={{ 
+                         opacity: [0, 0.5, 0],
+                         top: ["0%", "100%", "0%"]
+                       }}
+                       transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
+                       className="absolute left-0 right-0 h-1 bg-indigo-500/50 blur-sm z-10"
+                    />
+                  </div>
+
+                  <div className="absolute bottom-10 left-10 right-10 flex items-end justify-between opacity-0 group-hover:opacity-100 transition-all duration-500 translate-y-4 group-hover:translate-y-0">
+                    <div className="p-6 bg-black/60 backdrop-blur-xl rounded-2xl border border-white/10 max-w-sm">
+                       <p className="text-white font-bold text-lg mb-1 italic leading-tight">"Forces are perfectly balanced in the vertical plane..."</p>
+                       <p className="text-zinc-500 text-xs font-mono tracking-tighter">AI DETECTED SEGMENT #12</p>
+                    </div>
+                    <div className="flex gap-2">
+                       <button className="p-4 bg-white rounded-2xl text-black hover:scale-110 transition-transform"><CheckCircle size={20} /></button>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
+            </motion.div>
           </div>
         </div>
 
-        {/* Right: AI & Teacher Controls */}
-        <aside className="w-[500px] bg-slate-900 flex flex-col h-[calc(100vh-80px)] overflow-y-auto border-l border-white/5">
-          {/* AI Hints Section */}
-          <div className="p-8 border-b border-white/5 bg-blue-600/5">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-sm font-bold text-blue-400 uppercase tracking-widest flex items-center gap-2">
-                <Sparkles size={16} /> AI Assistant
+        {/* Right: Intelligence Side Panel */}
+        <aside className="w-[550px] bg-zinc-900 flex flex-col border-l border-white/5 shadow-2xl relative z-10">
+          <div className="absolute top-0 right-0 p-8">
+             <Zap size={24} className="text-zinc-800" />
+          </div>
+
+          <div className="p-10 border-b border-white/5 bg-indigo-600/[0.02]">
+            <div className="flex items-center justify-between mb-8">
+              <h2 className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.3em] flex items-center gap-2">
+                <Sparkles size={16} /> Intelligence Insights
               </h2>
-              <span className="text-xs px-2 py-1 bg-blue-500/20 text-blue-400 rounded-lg border border-blue-500/20">94% Confidence</span>
+              <span className="text-[10px] px-3 py-1.5 bg-indigo-500/10 text-indigo-400 rounded-xl border border-indigo-500/20 font-black">94.2% SCORE ACCURACY</span>
             </div>
             
-            <div className="space-y-6">
-              <div className="bg-slate-950/50 rounded-2xl p-6 border border-blue-500/20">
-                <h3 className="text-xs font-bold text-slate-500 uppercase mb-3">Transcribed Text</h3>
-                <p className="text-slate-300 italic leading-relaxed">
+            <div className="space-y-8">
+              <div className="bg-zinc-950/80 rounded-3xl p-8 border border-white/5 shadow-inner relative overflow-hidden group">
+                <div className="absolute top-0 left-0 w-1 h-full bg-indigo-600 opacity-20" />
+                <h3 className="text-[10px] font-black text-zinc-600 uppercase tracking-widest mb-4">Neural Transcript</h3>
+                <p className="text-zinc-400 text-lg leading-relaxed font-light italic">
                   "The free body diagram shows three forces: Fg acting downwards, Fn perpendicular to the surface... and friction Ff opposing the motion..."
                 </p>
+                <div className="mt-6 pt-6 border-t border-white/5 flex gap-2 overflow-x-auto no-scrollbar">
+                   {['mechanics', 'newton-3', 'vector-calc'].map(tag => (
+                     <span key={tag} className="text-[9px] font-bold px-2 py-1 bg-white/5 rounded-md text-zinc-500 border border-white/5 uppercase">#{tag}</span>
+                   ))}
+                </div>
               </div>
-              <div className="flex items-center gap-4 p-4 bg-green-500/10 border border-green-500/20 rounded-xl">
-                <Award className="text-green-500" />
+
+              <div className="flex items-center gap-6 p-6 bg-emerald-500/[0.03] border border-emerald-500/10 rounded-3xl ring-1 ring-emerald-500/5 shadow-xl">
+                <div className="p-4 bg-emerald-500/10 rounded-2xl text-emerald-500 shadow-[0_0_20px_rgba(16,185,129,0.2)]">
+                  <Award size={28} />
+                </div>
                 <div>
-                  <p className="text-sm text-green-100 font-bold">Suggested Score: 18 / 20</p>
-                  <p className="text-xs text-green-500/80">Correct identification of all vector components.</p>
+                  <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest mb-1">AI Recommendation</p>
+                  <p className="text-2xl text-white font-serif tracking-tight">18 <span className="text-zinc-600 text-sm font-sans font-bold">/ {handwrittenQuestion?.points}</span></p>
+                  <p className="text-xs text-emerald-500/60 font-medium mt-1">Found 4/4 required vector components.</p>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Teacher Inputs */}
-          <div className="p-8 space-y-8 flex-1">
-            <div className="space-y-4">
-              <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest">Assign Score</h3>
-              <div className="flex items-end gap-4">
-                <input 
-                  type="number" 
-                  value={score}
-                  onChange={(e) => setScore(parseInt(e.target.value))}
-                  className="w-32 bg-slate-950 border border-slate-800 rounded-2xl p-6 text-4xl font-bold text-center text-blue-400 outline-none focus:border-blue-500 transition-all ring-1 ring-white/5"
-                />
-                <span className="text-2xl text-slate-600 font-medium mb-6">/ {handwrittenQuestion?.points}</span>
+          <div className="p-10 space-y-12 flex-1 overflow-y-auto custom-scrollbar">
+            <div className="space-y-6">
+              <h3 className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.3em]">Final Assessment Score</h3>
+              <div className="flex items-end gap-6">
+                <div className="relative group">
+                  <div className="absolute -inset-4 bg-indigo-500/20 blur-2xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                  <input 
+                    type="number" 
+                    value={score}
+                    onChange={(e) => setScore(parseInt(e.target.value))}
+                    className="relative w-40 bg-zinc-950 border border-white/10 rounded-[2.5rem] p-8 text-6xl font-black text-center text-indigo-500 outline-none focus:border-indigo-500/50 transition-all shadow-2xl ring-1 ring-white/5"
+                  />
+                </div>
+                <div className="mb-10 text-zinc-700 font-serif text-3xl">/ {handwrittenQuestion?.points}</div>
               </div>
             </div>
 
-            <div className="space-y-4">
-              <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2">
-                <MessageSquare size={16} /> Feedback to Student
-              </h3>
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <h3 className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.3em] flex items-center gap-2">
+                  <MessageSquare size={14} /> Teacher Feedback
+                </h3>
+                <span className="text-[9px] text-zinc-600 font-mono">MARKDOWN SUPPORTED</span>
+              </div>
               <textarea 
                 value={feedback}
                 onChange={(e) => setFeedback(e.target.value)}
-                placeholder="Great work on the diagrams. Try to explain the friction coefficient derivation more clearly next time..."
-                className="w-full h-48 bg-slate-950 border border-slate-800 rounded-2xl p-6 text-slate-300 outline-none focus:border-blue-500 transition-all resize-none ring-1 ring-white/5"
+                placeholder="Compose personalized guidance..."
+                className="w-full h-64 bg-zinc-950 border border-white/5 rounded-[2.5rem] p-10 text-zinc-300 text-lg font-light leading-relaxed outline-none focus:border-indigo-500/30 transition-all resize-none shadow-2xl ring-1 ring-white/5 placeholder:text-zinc-800"
               />
             </div>
           </div>
