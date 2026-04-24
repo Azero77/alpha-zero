@@ -34,7 +34,8 @@ public sealed class SubmitAssessmentCommandHandler : IRequestHandler<SubmitAsses
         var submission = await _submissionRepository.GetByIdAsync(request.SubmissionId, ct);
         if (submission is null) return Error.NotFound("Submission.NotFound", "Submission not found.");
 
-        var assessment = await _assessmentRepository.GetByIdAsync(submission.AssessmentId, ct);
+        // Optimized load: only fetch the version student used
+        var assessment = await _assessmentRepository.GetByIdWithVersionAsync(submission.AssessmentId, submission.AssessmentVersionId, ct);
         if (assessment is null) return Error.NotFound("Assessment.NotFound", "Assessment not found.");
 
         // 1. Update submission state to Submitted
@@ -44,8 +45,9 @@ public sealed class SubmitAssessmentCommandHandler : IRequestHandler<SubmitAsses
         // 2. Perform Grading
         decimal totalScore = await _gradingService.CalculateScoreAsync(assessment, submission);
 
-        // 3. Check if all questions are graded (MCQ path is always complete, Hybrid might need manual review)
-        bool needsManualReview = assessment.Content.Items
+        // 3. Determine if manual review is needed using the loaded version
+        var version = assessment.Versions.First();
+        bool needsManualReview = version.Content.Items
             .Any(i => i.Type == Domain.Enums.ItemType.Question && 
                       (i.QuestionType == Domain.Enums.QuestionType.Handwritten || 
                        i.QuestionType == Domain.Enums.QuestionType.Voice ||

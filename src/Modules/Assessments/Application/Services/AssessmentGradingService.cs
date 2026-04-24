@@ -18,7 +18,13 @@ public class AssessmentGradingService
     {
         decimal totalScore = 0;
 
-        foreach (var item in assessment.Content.Items.Where(i => i.Type == Domain.Enums.ItemType.Question))
+        // Get the specific version that was loaded into the aggregate
+        var version = assessment.Versions.FirstOrDefault(v => v.Id == submission.AssessmentVersionId);
+        
+        if (version == null)
+            throw new InvalidOperationException("The required assessment version was not loaded.");
+
+        foreach (var item in version.Content.Items.Where(i => i.Type == Domain.Enums.ItemType.Question))
         {
             if (submission.Responses.Answers.TryGetValue(item.Id, out var answer))
             {
@@ -29,7 +35,6 @@ public class AssessmentGradingService
                     if (score.HasValue)
                     {
                         totalScore += score.Value;
-                        // Professional touch: if answer is a complex object, we could enrich it with the score
                     }
                 }
             }

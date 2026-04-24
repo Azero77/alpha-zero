@@ -16,4 +16,18 @@ public class AssessmentRepository : BaseRepository<AssessmentsDbContext, Assessm
     {
         return await _context.Assessments.FirstOrDefaultAsync(a => a.Id == id, cancellationToken);
     }
+
+    public async Task<Assessment?> GetByIdWithCurrentVersionAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        return await _context.Assessments
+            .Include(a => a.Versions.Where(v => v.Id == a.CurrentVersionId))
+            .FirstOrDefaultAsync(a => a.Id == id, cancellationToken);
+    }
+
+    public async Task<Assessment?> GetByIdWithVersionAsync(Guid id, Guid versionId, CancellationToken cancellationToken = default)
+    {
+        return await _context.Assessments
+            .Include(a => a.Versions.Where(v => v.Id == versionId))
+            .FirstOrDefaultAsync(a => a.Id == id, cancellationToken);
+    }
 }
