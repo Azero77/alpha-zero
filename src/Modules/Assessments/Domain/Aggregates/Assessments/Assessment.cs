@@ -85,6 +85,18 @@ public class Assessment : TenantOwnedAggregate, ISoftDeletable
         Status = AssessmentStatus.Archived;
         return Result.Success;
     }
+
+    public bool NeedsManualReview(Guid version)
+    {
+        AssessmentVersion? assessmentVersion = _versions.FirstOrDefault(v => version == v.Id);
+
+        if(assessmentVersion == null) return false;
+        return assessmentVersion.Content.Items
+           .Any(i => i.Type == Domain.Enums.ItemType.Question &&
+                     (i.QuestionType == Domain.Enums.QuestionType.Handwritten ||
+                      i.QuestionType == Domain.Enums.QuestionType.Voice ||
+                      i.QuestionType == Domain.Enums.QuestionType.Video));
+    }
 }
 
 public enum AssessmentStatus

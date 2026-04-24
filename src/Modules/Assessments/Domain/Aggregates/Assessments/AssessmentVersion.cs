@@ -10,8 +10,6 @@ public class AssessmentVersion : TenantOwnedEntity
     public AssessmentContent Content { get; private set; } = null!;
     public DateTime CreatedAt { get; private set; }
 
-    private AssessmentVersion() { } // For EF Core
-
     internal AssessmentVersion(Guid id, Guid tenantId, Guid assessmentId, int versionNumber, AssessmentContent content) 
         : base(id, tenantId)
     {

@@ -1,5 +1,6 @@
 using AlphaZero.Modules.Assessments.Application.Repositories;
 using AlphaZero.Modules.Assessments.Domain.Aggregates.Assessments;
+using AlphaZero.Modules.Assessments.Domain.Aggregates.Assessments.Servies;
 using AlphaZero.Modules.Assessments.Domain.Enums;
 using AlphaZero.Modules.Assessments.Domain.Models.Content;
 using AlphaZero.Shared.Application;
@@ -36,12 +37,16 @@ public sealed class CreateAssessmentCommandHandler : IRequestHandler<CreateAsses
     public CreateAssessmentCommandHandler(
         IAssessmentRepository assessmentRepository,
         ITenantProvider tenantProvider,
-        ILogger<CreateAssessmentCommandHandler> logger)
+        ILogger<CreateAssessmentCommandHandler> logger,
+        IAssestmentValidtorFactory assestmentValidtorFactory)
     {
         _assessmentRepository = assessmentRepository;
         _tenantProvider = tenantProvider;
         _logger = logger;
+        _assestmentValidtorFactory = assestmentValidtorFactory;
     }
+
+    private readonly IAssestmentValidtorFactory _assestmentValidtorFactory;
 
     public async Task<ErrorOr<Guid>> Handle(CreateAssessmentCommand request, CancellationToken cancellationToken)
     {
@@ -63,7 +68,7 @@ public sealed class CreateAssessmentCommandHandler : IRequestHandler<CreateAsses
         
         if (request.InitialContent != null)
         {
-            assessment.UpdateContent(request.InitialContent);
+            assessment.UpdateContent(request.InitialContent,_assestmentValidtorFactory.CreateValidator(request.Type));
         }
 
         _assessmentRepository.Add(assessment);

@@ -47,11 +47,7 @@ public sealed class SubmitAssessmentCommandHandler : IRequestHandler<SubmitAsses
 
         // 3. Determine if manual review is needed using the loaded version
         var version = assessment.Versions.First();
-        bool needsManualReview = version.Content.Items
-            .Any(i => i.Type == Domain.Enums.ItemType.Question && 
-                      (i.QuestionType == Domain.Enums.QuestionType.Handwritten || 
-                       i.QuestionType == Domain.Enums.QuestionType.Voice ||
-                       i.QuestionType == Domain.Enums.QuestionType.Video));
+        bool needsManualReview = assessment.NeedsManualReview(version.Id);
 
         if (needsManualReview)
         {
