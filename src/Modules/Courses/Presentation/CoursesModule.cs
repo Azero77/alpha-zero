@@ -46,5 +46,6 @@ public class CoursesModule : AppModule
             });
 
         configuration.AddConsumers(typeof(CoursesModule).Assembly);
+        configuration.AddConsumers(typeof(AlphaZero.Modules.Courses.Infrastructure.Consumers.AssessmentMetadataChangedConsumer).Assembly);
     }
 }

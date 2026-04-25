@@ -14,9 +14,12 @@ public class CourseSectionItemConfiguration : IEntityTypeConfiguration<CourseSec
             .IsRequired()
             .HasMaxLength(256);
 
+        builder.Property(i => i.Metadata)
+            .HasColumnType("jsonb");
+
         builder.HasDiscriminator<string>("ItemType")
             .HasValue<CourseSectionLesson>("Lesson")
-            .HasValue<CourseSectionQuiz>("Quiz")
+            .HasValue<CourseSectionAssessment>("Assessment")
             .HasValue<CourseSectionDocument>("Document");
     }
 }

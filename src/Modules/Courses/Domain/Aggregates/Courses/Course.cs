@@ -2,6 +2,7 @@
 using AlphaZero.Shared.Domain;
 using AlphaZero.Shared.Infrastructure.Tenats;
 using ErrorOr;
+using System.Text.Json;
 
 namespace AlphaZero.Modules.Courses.Domain.Aggregates.Courses;
 
@@ -39,23 +40,23 @@ public class Course : TenantOwnedAggregate, ISoftDeletable
         _sections.Add(section);
     }
 
-    public ErrorOr<Success> AddLesson(Guid sectionId, string title, Guid videoId)
+    public ErrorOr<Success> AddLesson(Guid sectionId, string title, Guid videoId, JsonElement metadata)
     {
         var section = _sections.FirstOrDefault(s => s.Id == sectionId);
         if (section == null) return Error.NotFound("Course.Section", "Section not found.");
 
-        var lesson = new CourseSectionLesson(Guid.NewGuid(), TenantId, title, videoId, section.Items.Count, NextAvailableBitIndex++);
+        var lesson = new CourseSectionLesson(Guid.NewGuid(), TenantId, title, videoId, section.Items.Count, NextAvailableBitIndex++, metadata);
         section.AddItem(lesson);
         return Result.Success;
     }
 
-    public ErrorOr<Success> AddQuiz(Guid sectionId, string title, Guid quizId)
+    public ErrorOr<Success> AddAssessment(Guid sectionId, string title, Guid assessmentId, JsonElement metadata)
     {
         var section = _sections.FirstOrDefault(s => s.Id == sectionId);
         if (section == null) return Error.NotFound("Course.Section", "Section not found.");
 
-        var quiz = new CourseSectionQuiz(Guid.NewGuid(), TenantId, title, quizId, section.Items.Count, NextAvailableBitIndex++);
-        section.AddItem(quiz);
+        var assessment = new CourseSectionAssessment(Guid.NewGuid(), TenantId, title, assessmentId, section.Items.Count, NextAvailableBitIndex++, metadata);
+        section.AddItem(assessment);
         return Result.Success;
     }
 
@@ -159,6 +160,15 @@ public class Course : TenantOwnedAggregate, ISoftDeletable
             return Error.NotFound("Course.Item", "Item not found in this course.");
 
         return Result.Success;
+    }
+
+    public void UpdateResourceMetadata(Guid resourceId, JsonElement metadata)
+    {
+        var items = _sections.SelectMany(s => s.Items).Where(i => i.ResourceId == resourceId);
+        foreach (var item in items)
+        {
+            item.SetMetadata(metadata);
+        }
     }
 }
 

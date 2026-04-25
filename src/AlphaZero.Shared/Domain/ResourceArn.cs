@@ -77,7 +77,7 @@ public class ResourceArn
     public static ResourceArn ForCourse(Guid tenantId, Guid courseId) => new($"az:courses:{tenantId}:course/{courseId}");
     public static ResourceArn ForSection(Guid tenantId, Guid courseId, Guid sectionId) => new($"az:courses:{tenantId}:course/{courseId}/section/{sectionId}");
     public static ResourceArn ForLesson(Guid tenantId, Guid courseId, Guid sectionId, Guid lessonId) => new($"az:courses:{tenantId}:course/{courseId}/section/{sectionId}/lesson/{lessonId}");
-    public static ResourceArn ForQuiz(Guid tenantId, Guid courseId, Guid sectionId, Guid quizId) => new($"az:courses:{tenantId}:course/{courseId}/section/{sectionId}/quiz/{quizId}");
+    public static ResourceArn ForAssessment(Guid tenantId, Guid courseId, Guid sectionId, Guid assessmentId) => new($"az:courses:{tenantId}:course/{courseId}/section/{sectionId}/assessment/{assessmentId}");
     public static ResourceArn ForEnrollment(Guid tenantId, Guid enrollmentId) => new($"az:courses:{tenantId}:enrollment/{enrollmentId}");
     public static ResourceArn ForVideo(Guid tenantId, Guid videoId) => new($"az:video:{tenantId}:video/{videoId}");
     public static ResourceArn ForCourseVideo(Guid tenantId, Guid videoId,Guid courseId) => new($"az:video:{tenantId}:course/{courseId}/video/{videoId}");

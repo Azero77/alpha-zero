@@ -1,6 +1,7 @@
 using AlphaZero.Shared.Domain;
 using AlphaZero.Shared.Infrastructure.Tenats;
 using ErrorOr;
+using System.Text.Json;
 
 namespace AlphaZero.Modules.Courses.Domain.Aggregates.Courses;
 
@@ -15,43 +16,46 @@ public abstract class CourseSectionItem : TenantOwnedEntity, ISoftDeletable
     public bool IsDeleted { get; private set; }
 
     public DateTime? OnDeleted { get; private set; } = null!;
+    public JsonElement Metadata { get; private set; } = null!;
 
-    protected CourseSectionItem(Guid id, Guid tenantId, string title, Guid resourceId, int order, int bitIndex) : base(id, tenantId)
+    protected CourseSectionItem(Guid id, Guid tenantId, string title, Guid resourceId, int order, int bitIndex, JsonElement metadata) : base(id, tenantId)
     {
         Title = title;
         ResourceId = resourceId;
         Order = order;
         BitIndex = bitIndex;
+        Metadata = metadata;
     }
 
     internal void UpdateOrder(int newOrder) => Order = newOrder;
     internal void UpdateResource(Guid resourceId) => ResourceId = resourceId;
+    internal void SetMetadata(JsonElement metadata) => Metadata = metadata;
 }
 
 public class CourseSectionLesson : CourseSectionItem
 {
-    internal CourseSectionLesson(Guid id, Guid tenantId, string title, Guid resourceId, int order, int bitIndex) 
-        : base(id, tenantId, title, resourceId, order, bitIndex)
+    internal CourseSectionLesson(Guid id, Guid tenantId, string title, Guid resourceId, int order, int bitIndex, JsonElement metadata) 
+        : base(id, tenantId, title, resourceId, order, bitIndex, metadata)
     {
     }
 
     public Guid VideoId => ResourceId;
 }
 
-public class CourseSectionQuiz : CourseSectionItem
+public class CourseSectionAssessment : CourseSectionItem
 {
-    internal CourseSectionQuiz(Guid id, Guid tenantId, string title, Guid resourceId, int order, int bitIndex) 
-        : base(id, tenantId, title, resourceId, order, bitIndex)
+    internal CourseSectionAssessment(Guid id, Guid tenantId, string title, Guid resourceId, int order, int bitIndex, JsonElement metadata) 
+        : base(id, tenantId, title, resourceId, order, bitIndex, metadata)
     {
     }
 
-    public Guid QuizId => ResourceId;
+    public Guid AssessmentId => ResourceId;
 }
 
 public class CourseSectionDocument : CourseSectionItem
 {
-    internal CourseSectionDocument(Guid id, Guid tenantId, string title, Guid resourceId, int order, int bitIndex) 
-        : base(id, tenantId, title, resourceId, order, bitIndex)
+    internal CourseSectionDocument(Guid id, Guid tenantId, string title, Guid resourceId, int order, int bitIndex, JsonElement metadata) 
+        : base(id, tenantId, title, resourceId, order, bitIndex, metadata)
     {
     }
     public Guid DocumentId => ResourceId;

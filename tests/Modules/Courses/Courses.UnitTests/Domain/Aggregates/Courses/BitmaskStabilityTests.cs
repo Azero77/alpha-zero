@@ -19,7 +19,7 @@ public class BitmaskStabilityTests
 
         // Act
         course.AddLesson(sectionId, "Lesson 1", Guid.NewGuid());
-        course.AddQuiz(sectionId, "Quiz 1", Guid.NewGuid());
+        course.AddAssessment(sectionId, "Assessment 1", Guid.NewGuid());
         course.AddLesson(sectionId, "Lesson 2", Guid.NewGuid());
 
         // Assert

@@ -37,7 +37,7 @@ public class GetCourseSummary : Summary<GetCourseEndpoint>
     public GetCourseSummary()
     {
         Summary = "Retrieves a course by its ID";
-        Description = "Returns the complete structure of a course, including all sections, lessons, and quizzes.";
+        Description = "Returns the complete structure of a course, including all sections, lessons, and assessments.";
         Response<CourseResponse>(200, "Course structure retrieved successfully");
         Response(404, "Course not found");
     }

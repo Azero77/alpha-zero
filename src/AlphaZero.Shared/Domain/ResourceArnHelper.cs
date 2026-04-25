@@ -90,9 +90,9 @@ public static class ResourceArnHelper
         return GetByKey(GetSegments(arn), "lesson");
     }
 
-    public static Guid GetQuizId(this ResourceArn arn)
+    public static Guid GetAssessmentId(this ResourceArn arn)
     {
-        return GetByKey(GetSegments(arn), "quiz");
+        return GetByKey(GetSegments(arn), "assessment");
     }
 
     public static Guid GetEnrollmentId(this ResourceArn arn)
@@ -129,7 +129,7 @@ public static class ResourceArnHelper
             ResourceType.Courses=> arn.GetCourseId(),
             ResourceType.Sections => arn.GetSectionId(),
             ResourceType.Lessons => arn.GetLessonId(),
-            ResourceType.Quizzes => arn.GetQuizId(),
+            ResourceType.Assessments => arn.GetAssessmentId(),
             //ResourceType.Enrollment => arn.GetEnrollmentId(),
             ResourceType.Video => arn.GetVideoId(),
             ResourceType.Library => arn.GetLibraryId(),

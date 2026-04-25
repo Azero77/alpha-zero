@@ -41,7 +41,22 @@ public class Assessment : TenantOwnedAggregate, ISoftDeletable
         if (string.IsNullOrWhiteSpace(title)) return Error.Validation("Assessment.Title", "Title is required.");
         if (passingScore < 0) return Error.Validation("Assessment.PassingScore", "Passing score cannot be negative.");
 
-        return new Assessment(id, tenantId, title, description, type, passingScore);
+        var assessment = new Assessment(id, tenantId, title, description, type, passingScore);
+        assessment.AddDomainEvent(new AssessmentCreatedDomainEvent(id, title, type.ToString(), passingScore));
+        return assessment;
+    }
+
+    public ErrorOr<Success> UpdateInformation(string title, string? description, decimal passingScore)
+    {
+        if (Status == AssessmentStatus.Archived)
+            return Error.Conflict("Assessment.Status", "Cannot update archived assessment.");
+
+        Title = title;
+        Description = description;
+        PassingScore = passingScore;
+
+        AddDomainEvent(new AssessmentCreatedDomainEvent(Id, Title, Type.ToString(), PassingScore)); // Reuse event or create MetadataChanged
+        return Result.Success;
     }
 
     public ErrorOr<Success> UpdateContent(AssessmentContent content, IAssestmentValidator validator)
