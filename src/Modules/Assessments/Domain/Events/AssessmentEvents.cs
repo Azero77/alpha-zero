@@ -18,6 +18,22 @@ public class AssessmentCreatedDomainEvent : DomainEvent
     }
 }
 
+public class AssessmentMetadataUpdatedDomainEvent : DomainEvent
+{
+    public Guid AssessmentId { get; }
+    public string Title { get; }
+    public string Type { get; }
+    public decimal PassingScore { get; }
+
+    public AssessmentMetadataUpdatedDomainEvent(Guid assessmentId, string title, string type, decimal passingScore)
+    {
+        AssessmentId = assessmentId;
+        Title = title;
+        Type = type;
+        PassingScore = passingScore;
+    }
+}
+
 public class AssessmentPublishedDomainEvent : DomainEvent
 {
     public Guid AssessmentId { get; }

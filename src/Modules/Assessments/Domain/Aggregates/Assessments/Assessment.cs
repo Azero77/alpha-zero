@@ -55,7 +55,7 @@ public class Assessment : TenantOwnedAggregate, ISoftDeletable
         Description = description;
         PassingScore = passingScore;
 
-        AddDomainEvent(new AssessmentCreatedDomainEvent(Id, Title, Type.ToString(), PassingScore)); // Reuse event or create MetadataChanged
+        AddDomainEvent(new AssessmentMetadataUpdatedDomainEvent(Id, Title, Type.ToString(), PassingScore)); 
         return Result.Success;
     }
 

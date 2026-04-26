@@ -45,11 +45,9 @@ public class AssessmentGradingCompletedConsumer : IConsumer<AssessmentGradingCom
         }
 
         // 2. Find the Enrollment for this student and course
-        var enrollments = await _enrollementRepository.GetStudentEnrollmentsForTenantAsync(message.StudentId, Guid.Empty); // GUID Empty because we ignore tenant filter in repo?
-        // Wait, GetStudentEnrollmentsForTenantAsync needs tenantId.
-        // Actually, we want to find the enrollment for this student and this course specifically.
-        
-        var enrollment = (await _enrollementRepository.Get(e => e.StudentId == message.StudentId && e.CourseId == itemInfo.Value.CourseId)).FirstOrDefault();
+        // We use a custom query or ignore filters because consumers don't have a Tenant context seeded usually
+        var enrollment = await _enrollementRepository.GetFirst(
+            e => e.StudentId == message.StudentId && e.CourseId == itemInfo.Value.CourseId);
 
         if (enrollment == null)
         {
