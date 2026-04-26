@@ -16,7 +16,7 @@ public abstract class CourseSectionItem : TenantOwnedEntity, ISoftDeletable
     public bool IsDeleted { get; private set; }
 
     public DateTime? OnDeleted { get; private set; } = null!;
-    public JsonElement Metadata { get; private set; } = null!;
+    public JsonElement Metadata { get; private set; }
 
     protected CourseSectionItem(Guid id, Guid tenantId, string title, Guid resourceId, int order, int bitIndex, JsonElement metadata) : base(id, tenantId)
     {

@@ -49,6 +49,7 @@ public class SQSS3EventHandler : IConsumer<S3EventNotification>
                 }
                 string? videoId = metadataResponse.Metadata?[S3UploadService.VideoIdMetaDataHeader];
                 string? tenantIdStr = metadataResponse.Metadata?["TenantId"];
+                string? targetResourceArn = metadataResponse.Metadata?["TargetResourceArn"];
 
                 if (videoId is null || !Guid.TryParse(videoId, out Guid videoGuid) ||
                     tenantIdStr is null || !Guid.TryParse(tenantIdStr, out Guid tenantGuid))
@@ -58,7 +59,7 @@ public class SQSS3EventHandler : IConsumer<S3EventNotification>
                     continue;
                 }
 
-                await _moduleBus.Publish(new VideoDeliveredToInputEvent(videoGuid, key, bucketName, tenantGuid));
+                await _moduleBus.Publish(new VideoDeliveredToInputEvent(videoGuid, key, bucketName, tenantGuid, targetResourceArn));
             }
             else if (record.EventName.Value.StartsWith("ObjectRemoved:"))
             {

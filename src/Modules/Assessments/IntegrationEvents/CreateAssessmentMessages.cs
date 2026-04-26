@@ -7,7 +7,7 @@ public record CreateAssessmentRequest(
     string Title,
     string Type,
     decimal PassingScore,
-    string Description,
+    string? Description,
     Guid TenantId
     );
 /// <summary>

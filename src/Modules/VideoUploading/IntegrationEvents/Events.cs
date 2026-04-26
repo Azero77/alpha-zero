@@ -18,8 +18,19 @@ public record SyncVideoToCdnCommand(Guid VideoId, string S3KeyPrefix, string? Cu
  */
 
 // PHASE 1: INGESTION
-public record UploadVideoRequestedEvent(Guid VideoId, Guid TenantId, DateTime OnTime, string? EncryptionMethod = "None", string? ThumbnailKey = null);
-public record VideoDeliveredToInputEvent(Guid VideoId, string Key, string BucketName, Guid TenantId);
+public record UploadVideoRequestedEvent(
+    Guid VideoId, 
+    Guid TenantId, 
+    DateTime OnTime, 
+    string? EncryptionMethod = "None", 
+    string? ThumbnailKey = null,
+    string? TargetResourceArn = null);
+public record VideoDeliveredToInputEvent(
+    Guid VideoId, 
+    string Key, 
+    string BucketName, 
+    Guid TenantId,
+    string? TargetResourceArn = null);
 
 // PHASE 2: ANALYSIS
 public record VideoMetadataProcessedEvent(Guid VideoId, TimeSpan Duration, int Width, int Height);
@@ -32,7 +43,10 @@ public record VideoTranscodingFinishedEvent(Guid VideoId, string OutputKeyPrefix
 public record VideoCdnSyncCompletedEvent(Guid VideoId, string RelativeUrl);
 
 // PHASE 5: FINALIZATION
-public record VideoPublishedEvent(Guid VideoId, string RelativeUrl);
+public record VideoPublishedEvent(
+    Guid VideoId, 
+    string RelativeUrl,
+    string? TargetResourceArn = null);
 public record VideoProcessingFailedEvent(Guid VideoId, string Reason, string? Key);
 
 // LIFECYCLE

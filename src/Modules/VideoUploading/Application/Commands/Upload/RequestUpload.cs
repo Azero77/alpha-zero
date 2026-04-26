@@ -20,7 +20,8 @@ public record UploadCommand(
     string? description, 
     VideoTranscodingMetehod VideoTranscodingMetehod, 
     VideoEncryptionMethod VideoEncryptionMethod = VideoEncryptionMethod.None,
-    bool generateCustomThumbnailUrl = false): ICommand<UploadCommandResponse>;
+    bool generateCustomThumbnailUrl = false,
+    string? TargetResourceArn = null): ICommand<UploadCommandResponse>;
 
 public class UploadCommandValidator : AbstractValidator<UploadCommand>
 {
@@ -67,7 +68,8 @@ public sealed class UploadCommandHandler(IUploadService uploadService, IModuleBu
             { "Title", request.title },
             { "Description", request.description ?? string.Empty },
             { "VideoTranscodingMetehod", request.VideoTranscodingMetehod.ToString() },
-            { "VideoEncryptionMethod", request.VideoEncryptionMethod.ToString() }
+            { "VideoEncryptionMethod", request.VideoEncryptionMethod.ToString() },
+            { "TargetResourceArn", request.TargetResourceArn ?? string.Empty }
         });
         if (response.IsError) return response.Errors;
 
@@ -95,7 +97,8 @@ public sealed class UploadCommandHandler(IUploadService uploadService, IModuleBu
             tenantId.Value, 
             clock.Now, 
             request.VideoEncryptionMethod.ToString(),
-            thumbnailKey));
+            thumbnailKey,
+            request.TargetResourceArn));
 
         return new UploadCommandResponse(
             videoId, 
