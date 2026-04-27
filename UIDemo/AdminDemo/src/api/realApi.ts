@@ -104,18 +104,38 @@ export class RealApiService {
   // --- Assessments (Provider: Assessments) ---
 
   async getQuizzes(): Promise<Quiz[]> {
-    // If no global list exists, we might need a different strategy, 
-    // but usually there's a way to see all quizzes for a tenant.
     try {
       const response = await apiClient.get('/assessments');
-      return response.data;
+      // Extract from PagedResult if present, otherwise return as array
+      const items = response.data.items || response.data || [];
+      
+      const reverseTypeMap: Record<number, string> = {
+        0: 'MCQ',
+        1: 'Handwritten',
+        2: 'Hybrid'
+      };
+
+      return items.map((q: any) => ({
+        ...q,
+        type: typeof q.type === 'number' ? reverseTypeMap[q.type] : q.type
+      }));
     } catch {
       return [];
     }
   }
 
   async createQuiz(quiz: Omit<Quiz, 'id'>): Promise<Quiz> {
-    const response = await apiClient.post('/assessments', quiz);
+    // Map frontend string enums to backend integer enums
+    const typeMap: Record<string, number> = {
+      'MCQ': 0,
+      'Handwritten': 1,
+      'Hybrid': 2
+    };
+
+    const response = await apiClient.post('/assessments', {
+      ...quiz,
+      type: typeMap[quiz.type as string] ?? 0
+    });
     return response.data;
   }
 }

@@ -2,6 +2,7 @@ using AlphaZero.Modules.Assessments.Application.Repositories;
 using AlphaZero.Modules.Assessments.Domain.Aggregates.Assessments;
 using AlphaZero.Modules.Assessments.Domain.Events;
 using AlphaZero.Modules.Assessments.IntegrationEvents;
+using AlphaZero.Shared.Application;
 using MassTransit;
 using MediatR;
 using Microsoft.Extensions.Logging;
@@ -14,12 +15,12 @@ public class AssessmentDomainEventHandlers :
     INotificationHandler<AssessmentPublishedDomainEvent>
 {
     private readonly IAssessmentRepository _assessmentRepository;
-    private readonly IPublishEndpoint _publishEndpoint;
+    private readonly IModuleBus _publishEndpoint;
     private readonly ILogger<AssessmentDomainEventHandlers> _logger;
 
     public AssessmentDomainEventHandlers(
         IAssessmentRepository assessmentRepository,
-        IPublishEndpoint publishEndpoint,
+        IModuleBus publishEndpoint,
         ILogger<AssessmentDomainEventHandlers> logger)
     {
         _assessmentRepository = assessmentRepository;

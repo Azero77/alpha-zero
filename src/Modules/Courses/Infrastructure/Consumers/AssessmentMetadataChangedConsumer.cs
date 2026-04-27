@@ -1,18 +1,18 @@
 using AlphaZero.Modules.Assessments.IntegrationEvents;
 using AlphaZero.Modules.Courses.Application.Courses.Commands.SyncResourceMetadata;
+using AlphaZero.Modules.Courses.Presentation;
 using MassTransit;
-using MediatR;
 using System.Text.Json;
 
 namespace AlphaZero.Modules.Courses.Infrastructure.Consumers;
 
 public class AssessmentMetadataChangedConsumer : IConsumer<AssessmentMetadataChangedIntegrationEvent>
 {
-    private readonly IMediator _mediator;
+    private readonly CoursesModule _coursesModule;
 
-    public AssessmentMetadataChangedConsumer(IMediator mediator)
+    public AssessmentMetadataChangedConsumer(CoursesModule coursesModule)
     {
-        _mediator = mediator;
+        _coursesModule = coursesModule;
     }
 
     public async Task Consume(ConsumeContext<AssessmentMetadataChangedIntegrationEvent> context)
@@ -30,7 +30,7 @@ public class AssessmentMetadataChangedConsumer : IConsumer<AssessmentMetadataCha
 
         var command = new SyncResourceMetadataCommand(msg.AssessmentId, metadataJson);
         
-        // MediatR pipeline handles Unit of Work / SaveChanges
-        await _mediator.Send(command, context.CancellationToken);
+        // Use the module's Send method which uses the internal scope/mediator
+        await _coursesModule.Send(command, context.CancellationToken);
     }
 }

@@ -27,6 +27,7 @@ public static class DependencyInjection
             });
             opts.AddInterceptors(sp.GetRequiredService<SoftDeleteInterceptor>());
         });
+        
     }
 
     public static void AddCoursesPrivateInfrastructure(this IServiceCollection moduleServices, IConfiguration configuration)
