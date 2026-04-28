@@ -45,8 +45,21 @@ public record VideoCdnSyncCompletedEvent(Guid VideoId, string RelativeUrl);
 // PHASE 5: FINALIZATION
 public record VideoPublishedEvent(
     Guid VideoId, 
-    string RelativeUrl,
-    string? TargetResourceArn = null);
+    string RelativeUrl, 
+    string? TargetResourceArn);
+
+public record GetVideoMetadataRequest(Guid VideoId);
+
+public record VideoMetadataResponse(
+    Guid VideoId,
+    string Title,
+    string? Description,
+    string Status,
+    string? Duration,
+    string? RelativeUrl);
+
+public record VideoMetaDataNotFoundResponse(Guid VideoId);
+
 public record VideoProcessingFailedEvent(Guid VideoId, string Reason, string? Key);
 
 // LIFECYCLE

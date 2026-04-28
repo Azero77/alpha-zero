@@ -26,48 +26,62 @@ public sealed class GetAssessmentQueryHandler : IRequestHandler<GetAssessmentQue
     {
         _assessmentRepository = assessmentRepository;
     }
-
-    public async Task<ErrorOr<AssessmentDetailsDto>> Handle(GetAssessmentQuery request, CancellationToken cancellationToken)
+    public async Task<ErrorOr<AssessmentDetailsDto>> Handle(
+    GetAssessmentQuery request,
+    CancellationToken cancellationToken)
     {
-        // If version is null, get with current version. 
-        // Otherwise, we'll need to fetch the specific version.
-        
-        var query = _assessmentRepository.Entities
-            .Where(a => a.Id == request.Id);
+        var result = await _assessmentRepository.Entities
+            .Where(a => a.Id == request.Id)
+            .Select(a => new
+            {
+                a.Id,
+                a.Title,
+                a.Description,
+                Type = a.Type.ToString(),
+                a.PassingScore,
+                Status = a.Status.ToString(),
 
-        if (request.Version.HasValue)
-        {
-            // Fetch with specific version number
-            query = query.Include(a => a.Versions.Where(v => v.VersionNumber == request.Version.Value));
-        }
-        else
-        {
-            // Fetch with current version
-            query = query.Include(a => a.Versions.Where(v => v.Id == a.CurrentVersionId));
-        }
+                Version = request.Version.HasValue
+                    ? a.Versions
+                        .Where(v => v.VersionNumber == request.Version.Value)
+                        .Select(v => new
+                        {
+                            v.VersionNumber,
+                            v.Content
+                        })
+                        .FirstOrDefault()
+                    : a.Versions
+                        .Where(v => v.Id == a.CurrentVersionId)
+                        .Select(v => new
+                        {
+                            v.VersionNumber,
+                            v.Content
+                        })
+                        .FirstOrDefault()
+            })
+            .FirstOrDefaultAsync(cancellationToken);
 
-        var assessment = await query.FirstOrDefaultAsync(cancellationToken);
-        
-        if (assessment is null)
+        if (result is null)
         {
             return Error.NotFound("Assessment.NotFound", "Assessment not found.");
         }
 
-        var selectedVersion = assessment.Versions.FirstOrDefault();
-        
-        if (request.Version.HasValue && selectedVersion == null)
+        if (request.Version.HasValue && result.Version is null)
         {
-            return Error.NotFound("Assessment.VersionNotFound", $"Version {request.Version.Value} not found for this assessment.");
+            return Error.NotFound(
+                "Assessment.VersionNotFound",
+                $"Version {request.Version.Value} not found for this assessment.");
         }
 
         return new AssessmentDetailsDto(
-            assessment.Id,
-            assessment.Title,
-            assessment.Description,
-            assessment.Type.ToString(),
-            assessment.PassingScore,
-            assessment.Status.ToString(),
-            selectedVersion?.VersionNumber ?? 0,
-            selectedVersion?.Content);
+            result.Id,
+            result.Title,
+            result.Description,
+            result.Type,
+            result.PassingScore,
+            result.Status,
+            result.Version?.VersionNumber ?? 0,
+            result.Version?.Content);
     }
+
 }
