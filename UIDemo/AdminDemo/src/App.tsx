@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AppLayout } from './layouts/AppLayout';
 import { VideoDashboard } from './features/videos/VideoDashboard';
 import { QuizDashboard } from './features/quizzes/QuizDashboard';
+import { QuizEditor } from './features/quizzes/QuizEditor';
 import { CourseArchitect } from './features/courses/CourseArchitect';
 import { SubjectManager } from './features/courses/SubjectManager';
 import { LearnerDashboard } from './features/learner/LearnerDashboard';
@@ -57,6 +58,7 @@ function App() {
             <Route index element={<DashboardHome />} />
             <Route path="videos" element={<VideoDashboard />} />
             <Route path="quizzes" element={<QuizDashboard />} />
+            <Route path="quizzes/:id" element={<QuizEditor />} />
             <Route path="courses" element={<CourseArchitect />} />
             <Route path="subjects" element={<SubjectManager />} />
             <Route path="learn" element={<LearnerDashboard />} />

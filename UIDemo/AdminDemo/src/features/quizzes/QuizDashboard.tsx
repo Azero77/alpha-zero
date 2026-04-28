@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { FileText, Plus, Brain, Target, MoreHorizontal, ArrowRight, Info, CheckCircle2 } from 'lucide-react';
 import { api } from '../../api';
+import { Link } from 'react-router-dom';
 import { clsx } from 'clsx';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -33,9 +34,9 @@ export const QuizDashboard: React.FC = () => {
          {isLoading ? (
            <div className="col-span-full py-20 text-center text-slate-400 font-medium">Synchronizing assessments...</div>
          ) : quizzes?.map(quiz => (
-           <motion.div 
+           <Link 
+             to={`/quizzes/${quiz.id}`}
              key={quiz.id}
-             whileHover={{ y: -4 }}
              className="bg-white dark:bg-slate-950 p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm hover:border-slate-400 dark:hover:border-slate-500 transition-all cursor-pointer group flex flex-col h-full"
            >
              <div className="flex justify-between items-start mb-6">
@@ -65,7 +66,7 @@ export const QuizDashboard: React.FC = () => {
                 </div>
                 <ArrowRight size={14} className="text-slate-300 group-hover:text-primary-600 transition-colors" />
              </div>
-           </motion.div>
+           </Link>
          ))}
 
          <button 

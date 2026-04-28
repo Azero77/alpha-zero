@@ -138,4 +138,19 @@ export class RealApiService {
     });
     return response.data;
   }
+
+  async getAssessment(id: string): Promise<Quiz> {
+    const response = await apiClient.get(`/assessments/${id}`);
+    // Handle potential backend differences in structure
+    const data = response.data;
+    const reverseTypeMap: Record<number, string> = { 0: 'MCQ', 1: 'Handwritten', 2: 'Hybrid' };
+    return {
+      ...data,
+      type: typeof data.type === 'number' ? reverseTypeMap[data.type] : data.type
+    };
+  }
+
+  async updateAssessmentContent(id: string, content: any): Promise<void> {
+    await apiClient.put(`/assessments/${id}/content`, { content });
+  }
 }

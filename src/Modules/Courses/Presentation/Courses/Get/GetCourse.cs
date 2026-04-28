@@ -5,6 +5,7 @@ using AlphaZero.Shared.Presentation.Extensions;
 using FastEndpoints;
 using MediatR;
 using Microsoft.AspNetCore.Http;
+using System.Text.Json;
 
 namespace AlphaZero.Modules.Courses.Presentation.Courses.Get;
 
@@ -30,7 +31,8 @@ public record ItemResponse(
     string Type,
     int Order,
     int BitIndex,
-    Guid ResourceId);
+    Guid ResourceId,
+    JsonElement Metadata);
 
 public class GetCourseSummary : Summary<GetCourseEndpoint>
 {
@@ -87,7 +89,8 @@ public class GetCourseEndpoint : Endpoint<GetCourseRequest, CourseResponse>
                     i.Type,
                     i.Order,
                     i.BitIndex,
-                    i.ResourceId)).ToList())).ToList());
+                    i.ResourceId,
+                    i.Metadata)).ToList())).ToList());
 
         await Send.OkAsync(response, ct);
     }

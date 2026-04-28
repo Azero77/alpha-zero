@@ -68,12 +68,12 @@ export const CourseViewer: React.FC = () => {
                            <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 opacity-60">
                              {item.type}
                            </span>
-                           {item.metadata.Duration && (
+                           {item.metadata?.Duration && (
                              <span className="text-[9px] font-mono text-slate-400">{item.metadata.Duration}</span>
                            )}
                         </div>
                       </div>
-                      {item.metadata.Status === 'Ready' ? (
+                      {item.metadata?.Status === 'Ready' ? (
                         <CheckCircle2 size={14} className="text-green-500" />
                       ) : (
                         <Lock size={14} className="text-slate-300" />
