@@ -1,6 +1,5 @@
 using AlphaZero.Modules.Assessments.IntegrationEvents;
 using AlphaZero.Modules.Courses.Application.Courses.Commands.SyncResourceMetadata;
-using AlphaZero.Modules.Courses.Presentation;
 using MassTransit;
 using System.Text.Json;
 
@@ -8,9 +7,9 @@ namespace AlphaZero.Modules.Courses.Infrastructure.Consumers;
 
 public class AssessmentMetadataChangedConsumer : IConsumer<AssessmentMetadataChangedIntegrationEvent>
 {
-    private readonly CoursesModule _coursesModule;
+    private readonly ICoursesModule _coursesModule;
 
-    public AssessmentMetadataChangedConsumer(CoursesModule coursesModule)
+    public AssessmentMetadataChangedConsumer(ICoursesModule coursesModule)
     {
         _coursesModule = coursesModule;
     }

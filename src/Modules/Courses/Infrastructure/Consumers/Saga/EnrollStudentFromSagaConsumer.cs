@@ -1,17 +1,16 @@
 using AlphaZero.Modules.Courses.Application.Enrollements.Commands.Enroll;
 using AlphaZero.Modules.Courses.IntegrationEvents;
 using MassTransit;
-using MediatR;
 using Microsoft.Extensions.Logging;
 
 namespace AlphaZero.Modules.Courses.Infrastructure.Consumers.Saga;
 
-public class EnrollStudentFromSagaConsumer(IMediator mediatr, ILogger<EnrollStudentFromSagaConsumer> logger) : IConsumer<EnrollStudentFromSagaCommand>
+public class EnrollStudentFromSagaConsumer(ICoursesModule coursesModule, ILogger<EnrollStudentFromSagaConsumer> logger) : IConsumer<EnrollStudentFromSagaCommand>
 {
     public async Task Consume(ConsumeContext<EnrollStudentFromSagaCommand> context)
     {
         var command = new EnrollInCourseCommand(context.Message.UserId, context.Message.CourseId);
-        var result = await mediatr.Send(command);
+        var result = await coursesModule.Send(command);
 
         if (result.IsError)
         {

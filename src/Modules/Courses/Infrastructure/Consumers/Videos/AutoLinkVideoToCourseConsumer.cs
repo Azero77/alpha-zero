@@ -1,6 +1,5 @@
 using AlphaZero.Modules.Courses.Application.Courses.Commands.AddLesson;
 using AlphaZero.Modules.VideoUploading.IntegrationEvents;
-using AlphaZero.Modules.Courses.Presentation;
 using AlphaZero.Shared.Domain;
 using MassTransit;
 using Microsoft.Extensions.Logging;
@@ -10,10 +9,10 @@ namespace AlphaZero.Modules.Courses.Infrastructure.Consumers.Videos;
 
 public class AutoLinkVideoToCourseConsumer : IConsumer<VideoPublishedEvent>
 {
-    private readonly CoursesModule _coursesModule;
+    private readonly ICoursesModule _coursesModule;
     private readonly ILogger<AutoLinkVideoToCourseConsumer> _logger;
 
-    public AutoLinkVideoToCourseConsumer(CoursesModule coursesModule, ILogger<AutoLinkVideoToCourseConsumer> logger)
+    public AutoLinkVideoToCourseConsumer(ICoursesModule coursesModule, ILogger<AutoLinkVideoToCourseConsumer> logger)
     {
         _coursesModule = coursesModule;
         _logger = logger;
