@@ -1,12 +1,11 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { BookOpen, Plus, MoreHorizontal, GripVertical, Video, FileText, ChevronRight, ChevronDown, Trash2, ArrowRight, Layers, CheckCircle2, X } from 'lucide-react';
+import { BookOpen, Plus, MoreHorizontal, Video, FileText, ChevronRight, ChevronDown, Trash2, ArrowRight, Layers, CheckCircle2, X } from 'lucide-react';
 import { api } from '../../api';
 import { clsx } from 'clsx';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export const CourseArchitect: React.FC = () => {
-  const queryClient = useQueryClient();
   const { data: courses, isLoading } = useQuery({
     queryKey: ['courses'],
     queryFn: () => api.getCourses()
@@ -88,7 +87,6 @@ export const CourseArchitect: React.FC = () => {
 };
 
 const CourseEditor = ({ courseId }: { courseId: string }) => {
-  const queryClient = useQueryClient();
   const [isAddSectionOpen, setIsAddSectionOpen] = useState(false);
 
   // DEEP FETCH: Get the full structure including sections and items
@@ -163,6 +161,9 @@ const SectionOrchestrator = ({ section, courseId }: { section: any, courseId: st
         
         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
           <button onClick={() => setShowQuickAdd(!showQuickAdd)} className="p-2 text-slate-400 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded-lg transition-all">
+            <Plus size={16} />
+          </button>
+          <button className="p-2 text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-lg transition-all">
             <Plus size={16} />
           </button>
           <button className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all">
@@ -284,7 +285,7 @@ const AddLessonModal = ({ courseId, sectionId, onClose }: any) => {
             <label className="text-[10px] font-bold uppercase text-slate-400">Select Asset</label>
             <select value={selectedVideoId} onChange={e => setSelectedVideoId(e.target.value)} className="w-full h-10 px-3 py-2 text-sm rounded-md border border-slate-200 dark:border-slate-800 bg-transparent">
               <option value="">Select a video...</option>
-              {videos?.map(v => <option key={v.id} value={v.id}>{v.title}</option>)}
+              {videos?.map((v: any) => <option key={v.id} value={v.id}>{v.title}</option>)}
             </select>
           </div>
         </div>
@@ -304,7 +305,7 @@ const AddAssessmentModal = ({ courseId, sectionId, onClose }: any) => {
 
   const addMutation = useMutation({
     mutationFn: () => {
-      const q = quizzes?.find(x => x.id === selectedQuizId);
+      const q = quizzes?.find((x: any) => x.id === selectedQuizId);
       return api.addAssessment(courseId, sectionId, { 
         title, 
         assessmentId: selectedQuizId,
@@ -335,7 +336,7 @@ const AddAssessmentModal = ({ courseId, sectionId, onClose }: any) => {
             <label className="text-[10px] font-bold uppercase text-slate-400">Select Template</label>
             <select value={selectedQuizId} onChange={e => setSelectedQuizId(e.target.value)} className="w-full h-10 px-3 py-2 text-sm rounded-md border border-slate-200 dark:border-slate-800 bg-transparent">
               <option value="">Select a quiz...</option>
-              {quizzes?.map(q => <option key={q.id} value={q.id}>{q.title}</option>)}
+              {quizzes?.map((q: any) => <option key={q.id} value={q.id}>{q.title}</option>)}
             </select>
           </div>
         </div>
@@ -453,7 +454,7 @@ const CreateCourseModal = ({ onClose }: { onClose: () => void }) => {
                     className="w-full h-10 px-3 py-2 text-sm rounded-md border border-slate-200 dark:border-slate-800 bg-transparent outline-none focus:ring-2 focus:ring-primary-500"
                   >
                     <option value="">Select a Subject...</option>
-                    {subjects?.map(s => (
+                    {subjects?.map((s: any) => (
                       <option key={s.id} value={s.id}>{s.name}</option>
                     ))}
                   </select>

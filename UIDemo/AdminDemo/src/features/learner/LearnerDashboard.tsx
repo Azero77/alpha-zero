@@ -1,6 +1,6 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { BookOpen, Clock, Award, PlayCircle, ArrowRight } from 'lucide-react';
+import { BookOpen, Clock, PlayCircle, ArrowRight } from 'lucide-react';
 import { api } from '../../api';
 import { Link } from 'react-router-dom';
 
@@ -49,7 +49,7 @@ export const LearnerDashboard: React.FC = () => {
                 <div className="flex items-center gap-4">
                   <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                     <PlayCircle size={14} className="text-primary-500" />
-                    {course.sections.reduce((acc, s) => acc + s.items.length, 0)} Items
+                    {course.sections?.reduce((acc: number, s: any) => acc + (s.items?.length || 0), 0) || 0} Items
                   </div>
                   <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                     <Clock size={14} />

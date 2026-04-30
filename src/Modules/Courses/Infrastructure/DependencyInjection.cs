@@ -1,6 +1,8 @@
+using AlphaZero.Modules.Courses.Application.Courses.Commands.AddAssessment;
 using AlphaZero.Modules.Courses.Application.Repositories;
 using AlphaZero.Modules.Courses.Infrastructure.Persistance;
 using AlphaZero.Modules.Courses.Infrastructure.Repositories;
+using AlphaZero.Modules.Courses.Infrastructure.RequestResponseMessaging;
 using AlphaZero.Shared.Application;
 using AlphaZero.Shared.Infrastructure;
 using AlphaZero.Shared.Infrastructure.SoftDelete;
@@ -35,7 +37,7 @@ public static class DependencyInjection
         moduleServices.AddScoped<ICourseRepository, CourseRepository>();
         moduleServices.AddScoped<ISubjectRepository, SubjectRepository>();
         moduleServices.AddScoped<IEnrollementRepository, EnrollementRepository>();
-
+        moduleServices.AddScoped<IAssessmentService, AssessmentService>();
         moduleServices.AddScoped<IUnitOfWork, UnitOfWork<AppDbContext>>();
 
         moduleServices.AddValidatorsFromAssembly(typeof(ICoursesApplicationMarker).Assembly);

@@ -42,11 +42,11 @@ export const AppLayout = () => {
         {/* Mode Switcher */}
         <div className="px-6 mb-8">
            <div className="p-1 bg-slate-100 dark:bg-slate-900 rounded-lg flex gap-1 border border-slate-200 dark:border-slate-800">
-             <NavLink to="/" className={({ isActive }) => clsx("flex-1 flex items-center justify-center gap-2 py-1.5 rounded-md text-[10px] font-black uppercase tracking-widest transition-all", !isLearnerMode ? "bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm border border-slate-200 dark:border-slate-700" : "text-slate-400 hover:text-slate-600")}>
+             <NavLink to="/" className={({ isActive }) => clsx("flex-1 flex items-center justify-center gap-2 py-1.5 rounded-md text-[10px] font-black uppercase tracking-widest transition-all", isActive && !isLearnerMode ? "bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm border border-slate-200 dark:border-slate-700" : "text-slate-400 hover:text-slate-600")}>
                <ShieldCheck size={12} />
                Architect
              </NavLink>
-             <NavLink to="/learn" className={({ isActive }) => clsx("flex-1 flex items-center justify-center gap-2 py-1.5 rounded-md text-[10px] font-black uppercase tracking-widest transition-all", isLearnerMode ? "bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm border border-slate-200 dark:border-slate-700" : "text-slate-400 hover:text-slate-600")}>
+             <NavLink to="/learn" className={({ isActive }) => clsx("flex-1 flex items-center justify-center gap-2 py-1.5 rounded-md text-[10px] font-black uppercase tracking-widest transition-all", isActive || isLearnerMode ? "bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm border border-slate-200 dark:border-slate-700" : "text-slate-400 hover:text-slate-600")}>
                <User size={12} />
                Learner
              </NavLink>

@@ -1,5 +1,6 @@
 ﻿using AlphaZero.Modules.Assessments.IntegrationEvents;
 using AlphaZero.Modules.Courses.Application.Courses.Commands.AddAssessment;
+using AlphaZero.Shared.Application;
 using ErrorOr;
 using MassTransit;
 
@@ -9,9 +10,9 @@ public class AssessmentService : IAssessmentService
 {
     private readonly IRequestClient<CreateAssessmentRequest> _requestClient;
 
-    public AssessmentService(IRequestClient<CreateAssessmentRequest> requestClient)
+    public AssessmentService(IModuleBus moduleBus)
     {
-        _requestClient = requestClient;
+        _requestClient = moduleBus.CreateRequestClient<CreateAssessmentRequest>();
     }
 
     public async Task<ErrorOr<AssessmentCreatedResponse>> AddAssessment(CreateAssessmentRequest request)

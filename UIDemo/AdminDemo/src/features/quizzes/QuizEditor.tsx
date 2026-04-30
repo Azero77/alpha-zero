@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ChevronLeft, Plus, Trash2, GripVertical, Save, Brain, Settings, FileText, CheckCircle2 } from 'lucide-react';
+import { ChevronLeft, Plus, Trash2, GripVertical, Save, Brain, Settings, FileText, Info, X } from 'lucide-react';
 import { api } from '../../api';
 import { clsx } from 'clsx';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -36,7 +36,7 @@ export const QuizEditor: React.FC = () => {
       id: Math.random().toString(36).slice(2, 9),
       type: type === 'Paragraph' ? 0 : 1,
       renderData: { title: 'New ' + type, content: '' },
-      questionType: type === 'Question' ? 0 : null, // Default to MCQ
+      questionType: type === 'Question' ? 0 : null, 
       points: type === 'Question' ? 10 : null,
       gradingData: type === 'Question' ? { choices: [], correctChoiceId: null } : null
     };
@@ -49,6 +49,70 @@ export const QuizEditor: React.FC = () => {
 
   const removeItem = (itemId: string) => {
     setItems(items.filter(item => item.id !== itemId));
+  };
+
+  // Option Management Logic
+  const addOption = (itemId: string) => {
+    setItems(items.map(item => {
+      if (item.id === itemId) {
+        const newOption = { id: Math.random().toString(36).slice(2, 7), renderData: { label: '' } };
+        return {
+          ...item,
+          gradingData: {
+            ...item.gradingData,
+            choices: [...(item.gradingData?.choices || []), newOption]
+          }
+        };
+      }
+      return item;
+    }));
+  };
+
+  const updateOption = (itemId: string, optionId: string, label: string) => {
+    setItems(items.map(item => {
+      if (item.id === itemId) {
+        return {
+          ...item,
+          gradingData: {
+            ...item.gradingData,
+            choices: item.gradingData.choices.map((c: any) => 
+              c.id === optionId ? { ...c, renderData: { label } } : c
+            )
+          }
+        };
+      }
+      return item;
+    }));
+  };
+
+  const setCorrectOption = (itemId: string, optionId: string) => {
+    setItems(items.map(item => {
+      if (item.id === itemId) {
+        return {
+          ...item,
+          gradingData: {
+            ...item.gradingData,
+            correctChoiceId: optionId
+          }
+        };
+      }
+      return item;
+    }));
+  };
+
+  const removeOption = (itemId: string, optionId: string) => {
+    setItems(items.map(item => {
+      if (item.id === itemId) {
+        return {
+          ...item,
+          gradingData: {
+            ...item.gradingData,
+            choices: item.gradingData.choices.filter((c: any) => c.id !== optionId)
+          }
+        };
+      }
+      return item;
+    }));
   };
 
   if (isLoading) return <div className="p-20 text-center font-bold uppercase tracking-widest text-slate-400 animate-pulse">Initializing Lab Scope...</div>;
@@ -137,16 +201,40 @@ export const QuizEditor: React.FC = () => {
 
                         <div className="space-y-4">
                            <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Response Matrix</label>
-                           <div className="space-y-2">
-                              {/* Simple mock for choices */}
-                              <div className="flex items-center gap-3 p-3 bg-slate-50 dark:bg-slate-900 rounded-lg border border-slate-100 dark:border-slate-800">
-                                 <div className="w-4 h-4 rounded-full border-2 border-primary-600 flex items-center justify-center">
-                                   <div className="w-2 h-2 rounded-full bg-primary-600" />
-                                 </div>
-                                 <span className="text-sm font-medium">Example Option A (Correct)</span>
-                              </div>
-                              <button className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-primary-600 hover:text-primary-700 p-2">
-                                <Plus size={14} strokeWidth={3} />
+                           <div className="space-y-3">
+                              {item.gradingData?.choices?.map((choice: any) => (
+                                <div key={choice.id} className="flex items-center gap-3 group/opt">
+                                  <button 
+                                    onClick={() => setCorrectOption(item.id, choice.id)}
+                                    className={clsx(
+                                      "w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all",
+                                      item.gradingData.correctChoiceId === choice.id 
+                                        ? "border-primary-600 bg-primary-600 shadow-[0_0_8px_rgba(0,112,243,0.4)]" 
+                                        : "border-slate-200 dark:border-slate-800"
+                                    )}
+                                  >
+                                    {item.gradingData.correctChoiceId === choice.id && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                                  </button>
+                                  <input 
+                                    type="text"
+                                    className="flex-1 h-9 bg-slate-50 dark:bg-slate-900 border-transparent focus:bg-white dark:focus:bg-slate-950"
+                                    placeholder="Option label..."
+                                    value={choice.renderData.label}
+                                    onChange={e => updateOption(item.id, choice.id, e.target.value)}
+                                  />
+                                  <button onClick={() => removeOption(item.id, choice.id)} className="p-1 opacity-0 group-hover/opt:opacity-100 text-slate-400 hover:text-red-500 transition-all">
+                                    <X size={14} />
+                                  </button>
+                                </div>
+                              ))}
+                              
+                              <button 
+                                onClick={() => addOption(item.id)}
+                                className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-primary-600 hover:text-primary-700 p-2 group/add"
+                              >
+                                <div className="w-5 h-5 rounded-full bg-primary-50 dark:bg-primary-900/20 flex items-center justify-center group-hover/add:bg-primary-600 group-hover/add:text-white transition-colors">
+                                  <Plus size={12} strokeWidth={3} />
+                                </div>
                                 Add Option
                               </button>
                            </div>

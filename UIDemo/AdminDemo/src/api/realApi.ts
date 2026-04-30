@@ -14,7 +14,6 @@ export class RealApiService {
   async getCourses(): Promise<Course[]> {
     try {
       const response = await apiClient.get('/courses');
-      // Extract items from the PagedResult structure
       return response.data.items || [];
     } catch (e) {
       console.warn('GET /courses failed, falling back to empty list', e);
@@ -57,7 +56,6 @@ export class RealApiService {
   }
 
   async addAssessment(courseId: string, sectionId: string, req: AddAssessmentRequest) {
-    // This uses the Orchestrated Endpoint: POST /courses/{id}/sections/{id}/assessments
     const response = await apiClient.post(`/courses/${courseId}/sections/${sectionId}/assessments`, req);
     return response.data;
   }
@@ -66,7 +64,6 @@ export class RealApiService {
 
   async getVideos(): Promise<Video[]> {
     const response = await apiClient.get('/api/video-uploading/debug/videos');
-    // Map backend DTO from PagedResult.items to our frontend Video type
     const items = response.data.items || [];
     return items.map((v: any) => ({
       id: v.id,
@@ -83,14 +80,23 @@ export class RealApiService {
       ...req,
       contentType: 'video/mp4'
     });
-    return response.data; // videoId, preSignedUrl, etc.
+    return response.data; 
   }
 
-  async uploadFile(url: string, file: File, onProgress?: (progress: number) => void) {
+  async uploadFile(url: string, file: File, uploadInfo: any, onProgress?: (progress: number) => void) {
     const axios = (await import('axios')).default;
+    
+    // AWS S3 Presigned URLs require metadata headers to match the signature
     await axios.put(url, file, {
       headers: {
         'Content-Type': file.type || 'video/mp4',
+        'x-amz-meta-file-name': encodeURIComponent(file.name),
+        'x-amz-meta-videoid': uploadInfo.videoId,
+        'x-amz-meta-tenantid': uploadInfo.tenantId,
+        'x-amz-meta-title': encodeURIComponent(uploadInfo.title || file.name),
+        'x-amz-meta-description': encodeURIComponent(uploadInfo.description || ''),
+        'x-amz-meta-videotranscodingmetehod': uploadInfo.transcodingMethod || 'FFMPEG',
+        'x-amz-meta-videoencryptionmethod': uploadInfo.encryptionMethod || 'None'
       },
       onUploadProgress: (progressEvent) => {
         if (onProgress && progressEvent.total) {
@@ -106,15 +112,8 @@ export class RealApiService {
   async getQuizzes(): Promise<Quiz[]> {
     try {
       const response = await apiClient.get('/assessments');
-      // Extract from PagedResult if present, otherwise return as array
       const items = response.data.items || response.data || [];
-      
-      const reverseTypeMap: Record<number, string> = {
-        0: 'MCQ',
-        1: 'Handwritten',
-        2: 'Hybrid'
-      };
-
+      const reverseTypeMap: Record<number, string> = { 0: 'MCQ', 1: 'Handwritten', 2: 'Hybrid' };
       return items.map((q: any) => ({
         ...q,
         type: typeof q.type === 'number' ? reverseTypeMap[q.type] : q.type
@@ -125,13 +124,7 @@ export class RealApiService {
   }
 
   async createQuiz(quiz: Omit<Quiz, 'id'>): Promise<Quiz> {
-    // Map frontend string enums to backend integer enums
-    const typeMap: Record<string, number> = {
-      'MCQ': 0,
-      'Handwritten': 1,
-      'Hybrid': 2
-    };
-
+    const typeMap: Record<string, number> = { 'MCQ': 0, 'Handwritten': 1, 'Hybrid': 2 };
     const response = await apiClient.post('/assessments', {
       ...quiz,
       type: typeMap[quiz.type as string] ?? 0
@@ -141,7 +134,6 @@ export class RealApiService {
 
   async getAssessment(id: string): Promise<Quiz> {
     const response = await apiClient.get(`/assessments/${id}`);
-    // Handle potential backend differences in structure
     const data = response.data;
     const reverseTypeMap: Record<number, string> = { 0: 'MCQ', 1: 'Handwritten', 2: 'Hybrid' };
     return {

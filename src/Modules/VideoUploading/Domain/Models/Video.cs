@@ -20,7 +20,6 @@ public class Video : AggregateRoot, IDomainTenantOwned, ISoftDeletable
     public bool IsDeleted { get; private set; }
 
     public DateTime? OnDeleted { get; private set; } = null!;
-
     private Video()
     {
         //EF

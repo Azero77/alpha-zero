@@ -149,7 +149,7 @@ const UploadModal = ({ onClose }: { onClose: () => void }) => {
       });
 
       // 2. Binary PUT to S3 using the new uploadFile method
-      await (api as any).uploadFile(uploadInfo.preSignedUrl, file, (p: number) => {
+      await (api as any).uploadFile(uploadInfo.preSignedUrl, file, { ...uploadInfo, title, description: '' }, (p: number) => {
         setProgress(p);
       });
 

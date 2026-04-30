@@ -38,11 +38,11 @@ public sealed class AddLessonCommandHandler : IRequestHandler<AddLessonCommand, 
 
     public AddLessonCommandHandler(
         ICourseRepository courseRepository, 
-        IRequestClient<GetVideoMetadataRequest> videoRequestClient,
+        IModuleBus moduleBus,
         ILogger<AddLessonCommandHandler> logger)
     {
         _courseRepository = courseRepository;
-        _videoRequestClient = videoRequestClient;
+        _videoRequestClient = moduleBus.CreateRequestClient<GetVideoMetadataRequest>();
         _logger = logger;
     }
 

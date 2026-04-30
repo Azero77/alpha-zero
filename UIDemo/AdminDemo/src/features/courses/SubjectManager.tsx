@@ -1,12 +1,10 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Layers, Plus, Search, MoreHorizontal, CheckCircle2, Info, BookMarked } from 'lucide-react';
+import { Plus, Search, MoreHorizontal, CheckCircle2, BookMarked } from 'lucide-react';
 import { api } from '../../api';
-import { clsx } from 'clsx';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export const SubjectManager: React.FC = () => {
-  const queryClient = useQueryClient();
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const { data: subjects, isLoading } = useQuery({

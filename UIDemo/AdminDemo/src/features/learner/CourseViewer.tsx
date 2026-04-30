@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Video, FileText, ChevronLeft, CheckCircle2, Lock, Play, BarChart2 } from 'lucide-react';
+import { Video, FileText, ChevronLeft, CheckCircle2, Lock, Play } from 'lucide-react';
 import { api } from '../../api';
 import { clsx } from 'clsx';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -73,7 +73,7 @@ export const CourseViewer: React.FC = () => {
                            )}
                         </div>
                       </div>
-                      {item.metadata?.Status === 'Ready' ? (
+                      {item.metadata?.Status === 'Ready' || item.metadata?.Status === 'Published' ? (
                         <CheckCircle2 size={14} className="text-green-500" />
                       ) : (
                         <Lock size={14} className="text-slate-300" />
@@ -109,7 +109,7 @@ export const CourseViewer: React.FC = () => {
                 {selectedItem.type === 'Lesson' ? (
                   <div className="space-y-8">
                     <div className="aspect-video bg-slate-900 rounded-2xl overflow-hidden border border-slate-800 shadow-2xl relative group cursor-pointer">
-                       <img src={`https://picsum.photos/seed/${selectedItem.id}/1280/720`} className="w-full h-full object-cover opacity-40 group-hover:scale-105 transition-transform duration-1000" />
+                       <img src={`https://picsum.photos/seed/${selectedItem.id}/1280/720`} className="w-full h-full object-cover opacity-40 group-hover:scale-105 transition-transform duration-1000" alt="Video cover" />
                        <div className="absolute inset-0 flex items-center justify-center">
                           <div className="w-20 h-20 bg-white dark:bg-white text-slate-900 rounded-full flex items-center justify-center shadow-2xl group-hover:scale-110 transition-all">
                              <Play fill="currentColor" size={24} />
@@ -117,7 +117,7 @@ export const CourseViewer: React.FC = () => {
                        </div>
                        {/* Bitmask Progress Overlay */}
                        <div className="absolute top-6 right-6 px-4 py-2 glass rounded-full text-[10px] font-black uppercase tracking-widest text-white border-white/20">
-                          {selectedItem.metadata.Status || 'Ready'}
+                          {selectedItem.metadata?.Status || 'Ready'}
                        </div>
                     </div>
                     <div className="prose dark:prose-invert max-w-none">
@@ -135,7 +135,7 @@ export const CourseViewer: React.FC = () => {
                          <p className="text-sm text-slate-500 font-medium">Verify your understanding of the core concepts.</p>
                        </div>
                        <div className="w-16 h-16 border-2 border-primary-500 rounded-2xl flex flex-col items-center justify-center text-primary-600">
-                          <span className="text-lg font-black leading-none">{selectedItem.metadata.PassingScore || 70}</span>
+                          <span className="text-lg font-black leading-none">{selectedItem.metadata?.PassingScore || 70}</span>
                           <span className="text-[8px] font-bold uppercase">Pass</span>
                        </div>
                     </div>
@@ -143,7 +143,7 @@ export const CourseViewer: React.FC = () => {
                     <div className="grid grid-cols-2 gap-6">
                        <div className="p-6 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl space-y-2">
                          <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Type</div>
-                         <p className="text-sm font-black uppercase">{selectedItem.metadata.Type || 'MCQ'}</p>
+                         <p className="text-sm font-black uppercase">{selectedItem.metadata?.Type || 'MCQ'}</p>
                        </div>
                        <div className="p-6 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl space-y-2">
                          <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Questions</div>

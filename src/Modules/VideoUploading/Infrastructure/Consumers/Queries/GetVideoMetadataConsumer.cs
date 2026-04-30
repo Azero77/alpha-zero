@@ -15,7 +15,7 @@ public class GetVideoMetadataConsumer : IConsumer<GetVideoMetadataRequest>
 
     public async Task Consume(ConsumeContext<GetVideoMetadataRequest> context)
     {
-        var video = await _videoRepository.GetById(context.Message.VideoId);
+        var video = await _videoRepository.GetByIdAsync(context.Message.VideoId);
         
         if (video == null)
         {
@@ -28,7 +28,7 @@ public class GetVideoMetadataConsumer : IConsumer<GetVideoMetadataRequest>
             video.Title,
             video.Description,
             video.Status.ToString(),
-            video.Duration.HasValue ? video.Duration.Value.ToString(@"hh\:mm\:ss") : null,
-            video.RelativeUrl));
+            video.Specifications.Duration.ToString(@"hh\:mm\:ss"),
+            video.OutputFolder));
     }
 }

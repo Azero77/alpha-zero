@@ -20,7 +20,6 @@ public class AppDbContext : DbContext, ITenantDbContext
     public DbSet<AssessmentSubmission> Submissions => Set<AssessmentSubmission>();
 
     public Guid? TenantId => _tenantProvider.GetTenant();
-
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.HasDefaultSchema(Schema);

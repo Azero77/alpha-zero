@@ -128,7 +128,21 @@ export class MockApiService {
     return newQuiz;
   }
 
+  async getAssessment(id: string): Promise<Quiz> {
+    await sleep(300);
+    const q = this.quizzes.find(x => x.id === id);
+    if (!q) throw new Error('Not found');
+    return q;
+  }
+
+  async updateAssessmentContent(id: string, content: any): Promise<void> {
+    await sleep(300);
+    const q = this.quizzes.find(x => x.id === id);
+    if (q) q.content = content;
+  }
+
   async requestUpload(_req: { fileName: string, title: string, targetResourceArn: string }) {
+
     await sleep(300);
     return {
       videoId: `video-${Date.now()}`,
