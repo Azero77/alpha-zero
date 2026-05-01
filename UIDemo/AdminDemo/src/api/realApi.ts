@@ -1,4 +1,5 @@
 import { apiClient } from './apiClient';
+import { config } from '../config';
 import type { 
   Course, 
   Video, 
@@ -23,7 +24,25 @@ export class RealApiService {
 
   async getCourse(id: string): Promise<Course> {
     const response = await apiClient.get(`/courses/${id}`);
-    return response.data;
+    const course = response.data;
+    
+    // Normalize item thumbnails in course structure
+    if (course.sections) {
+      course.sections.forEach((section: any) => {
+        if (section.items) {
+          section.items.forEach((item: any) => {
+            if (item.metadata && item.metadata.ThumbnailUrl) {
+              const thumb = item.metadata.ThumbnailUrl;
+              item.metadata.ThumbnailUrl = thumb.startsWith('http') 
+                ? thumb 
+                : `${config.CDN_URL}/${thumb}`;
+            }
+          });
+        }
+      });
+    }
+    
+    return course;
   }
 
   async createCourse(req: CreateCourseRequest): Promise<Course> {
@@ -60,44 +79,107 @@ export class RealApiService {
     return response.data;
   }
 
+  async reorderSections(courseId: string, sectionIds: string[]) {
+    await apiClient.post(`/courses/${courseId}/sections/reorder`, { sectionIds });
+  }
+
+  async reorderItems(courseId: string, sectionId: string, itemIds: string[]) {
+    await apiClient.post(`/courses/${courseId}/sections/${sectionId}/reorder`, { itemIds });
+  }
+
+  async approveCourse(courseId: string) {
+    await apiClient.patch(`/courses/${courseId}/approve`);
+  }
+
+  async publishCourse(courseId: string) {
+    await apiClient.patch(`/courses/${courseId}/publish`);
+  }
+
+  async rejectCourse(courseId: string, reason: string) {
+    await apiClient.patch(`/courses/${courseId}/reject`, { reason });
+  }
+
+  async submitForReview(courseId: string) {
+    await apiClient.patch(`/courses/${courseId}/review`);
+  }
+
   // --- Videos (Provider: VideoUploading) ---
 
   async getVideos(): Promise<Video[]> {
     const response = await apiClient.get('/api/video-uploading/debug/videos');
     const items = response.data.items || [];
-    return items.map((v: any) => ({
-      id: v.id,
-      title: v.title,
-      description: v.description,
-      status: v.status || 'Ready',
-      duration: v.duration,
-      url: v.streamingUrl
-    }));
+    return items.map((v: any) => {
+      const thumbnailUrl = v.thumbnailUrl 
+        ? (v.thumbnailUrl.startsWith('http') ? v.thumbnailUrl : `${config.CDN_URL}/${v.thumbnailUrl}`)
+        : null;
+
+      return {
+        id: v.id,
+        title: v.title,
+        description: v.description,
+        status: v.status || 'Ready',
+        duration: v.duration,
+        thumbnailUrl,
+        streamingUrl: v.streamingUrl,
+        url: v.streamingUrl
+      };
+    });
   }
 
-  async requestUpload(req: { fileName: string, title: string, targetResourceArn: string }) {
+  async requestUpload(req: { 
+    fileName: string, 
+    title: string, 
+    targetResourceArn: string, 
+    generateCustomThumbnailUrl?: boolean 
+  }) {
     const response = await apiClient.post('/api/video-uploading/upload', {
       ...req,
-      contentType: 'video/mp4'
+      contentType: 'video/mp4',
+      generateCustomThumbnailUrl: req.generateCustomThumbnailUrl ?? false
     });
     return response.data; 
+  }
+
+  async getStreamingInfo(id: string): Promise<any> {
+    const response = await apiClient.get(`/api/video/${id}`);
+    return response.data;
+  }
+
+  async getVideoState(id: string): Promise<any> {
+    const response = await apiClient.get(`/api/video-uploading/debug/videos/${id}/state`);
+    return response.data;
+  }
+
+  async deleteVideo(id: string): Promise<void> {
+    await apiClient.delete(`/api/video-uploading/debug/videos/${id}`);
   }
 
   async uploadFile(url: string, file: File, uploadInfo: any, onProgress?: (progress: number) => void) {
     const axios = (await import('axios')).default;
     
     // AWS S3 Presigned URLs require metadata headers to match the signature
+    const headers: Record<string, string> = {
+      'Content-Type': file.type || 'video/mp4',
+    };
+
+    // If it's a thumbnail, the backend might expect specific headers or just the content type
+    // Based on src/Modules/VideoUploading/Application/Commands/Upload/RequestUpload.cs:81
+    // It adds "IsThumbnail" metadata.
+    
+    if (uploadInfo.isThumbnail) {
+      headers['x-amz-meta-isthumbnail'] = 'true';
+    } else {
+      headers['x-amz-meta-file-name'] = encodeURIComponent(file.name);
+      headers['x-amz-meta-videoid'] = uploadInfo.videoId;
+      headers['x-amz-meta-tenantid'] = uploadInfo.tenantId;
+      headers['x-amz-meta-title'] = encodeURIComponent(uploadInfo.title || file.name);
+      headers['x-amz-meta-description'] = encodeURIComponent(uploadInfo.description || '');
+      headers['x-amz-meta-videotranscodingmetehod'] = uploadInfo.transcodingMethod || 'FFMPEG';
+      headers['x-amz-meta-videoencryptionmethod'] = uploadInfo.encryptionMethod || 'None';
+    }
+
     await axios.put(url, file, {
-      headers: {
-        'Content-Type': file.type || 'video/mp4',
-        'x-amz-meta-file-name': encodeURIComponent(file.name),
-        'x-amz-meta-videoid': uploadInfo.videoId,
-        'x-amz-meta-tenantid': uploadInfo.tenantId,
-        'x-amz-meta-title': encodeURIComponent(uploadInfo.title || file.name),
-        'x-amz-meta-description': encodeURIComponent(uploadInfo.description || ''),
-        'x-amz-meta-videotranscodingmetehod': uploadInfo.transcodingMethod || 'FFMPEG',
-        'x-amz-meta-videoencryptionmethod': uploadInfo.encryptionMethod || 'None'
-      },
+      headers,
       onUploadProgress: (progressEvent) => {
         if (onProgress && progressEvent.total) {
           const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total);

@@ -6,6 +6,58 @@ import { api } from '../../api';
 import { clsx } from 'clsx';
 import { motion, AnimatePresence } from 'framer-motion';
 
+import { VideoPlayer } from '../../components/video/VideoPlayer';
+import { useMemo } from 'react';
+
+const VideoPlayerContainer = ({ item }: { item: any }) => {
+  const { data: streamingInfo, isLoading } = useQuery({
+    queryKey: ['streaming', item.resourceId],
+    queryFn: () => (api as any).getStreamingInfo(item.resourceId),
+    enabled: !!item.resourceId && (item.metadata?.Status === 'Ready' || item.metadata?.Status === 'Published')
+  });
+
+  const playerConfig = useMemo(() => {
+    if (!streamingInfo) return null;
+    return {
+      manifestUrl: streamingInfo.url,
+      posterUrl: item.metadata?.ThumbnailUrl,
+      drm: streamingInfo.drm,
+      clearKey: streamingInfo.key ? {
+        keyId: streamingInfo.key,
+        key: streamingInfo.key
+      } : undefined
+    };
+  }, [streamingInfo, item]);
+
+  if (isLoading) {
+    return (
+      <div className="aspect-video bg-slate-900 rounded-2xl flex flex-col items-center justify-center gap-4 border border-slate-800 animate-pulse">
+         <Play className="text-slate-800" size={48} />
+         <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-600">Initializing Secure Stream...</span>
+      </div>
+    );
+  }
+
+  if (!playerConfig) {
+    return (
+      <div className="aspect-video bg-slate-100 dark:bg-slate-900 rounded-2xl flex flex-col items-center justify-center gap-4 border border-slate-200 dark:border-slate-800">
+         <Lock className="text-slate-300 dark:text-slate-700" size={48} />
+         <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Content Processing or Unauthorized</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative group">
+       <VideoPlayer config={playerConfig} className="rounded-2xl shadow-2xl overflow-hidden border border-slate-200 dark:border-slate-800" />
+       {/* Progress Bitmask Overlay */}
+       <div className="absolute top-6 right-6 px-4 py-2 glass rounded-full text-[10px] font-black uppercase tracking-widest text-slate-900 dark:text-white pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity">
+          {item.metadata?.Status || 'Ready'}
+       </div>
+    </div>
+  );
+};
+
 export const CourseViewer: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
@@ -108,18 +160,7 @@ export const CourseViewer: React.FC = () => {
 
                 {selectedItem.type === 'Lesson' ? (
                   <div className="space-y-8">
-                    <div className="aspect-video bg-slate-900 rounded-2xl overflow-hidden border border-slate-800 shadow-2xl relative group cursor-pointer">
-                       <img src={`https://picsum.photos/seed/${selectedItem.id}/1280/720`} className="w-full h-full object-cover opacity-40 group-hover:scale-105 transition-transform duration-1000" alt="Video cover" />
-                       <div className="absolute inset-0 flex items-center justify-center">
-                          <div className="w-20 h-20 bg-white dark:bg-white text-slate-900 rounded-full flex items-center justify-center shadow-2xl group-hover:scale-110 transition-all">
-                             <Play fill="currentColor" size={24} />
-                          </div>
-                       </div>
-                       {/* Bitmask Progress Overlay */}
-                       <div className="absolute top-6 right-6 px-4 py-2 glass rounded-full text-[10px] font-black uppercase tracking-widest text-white border-white/20">
-                          {selectedItem.metadata?.Status || 'Ready'}
-                       </div>
-                    </div>
+                    <VideoPlayerContainer item={selectedItem} />
                     <div className="prose dark:prose-invert max-w-none">
                       <p className="text-slate-500 font-medium leading-relaxed italic">
                         In this module, we explore the fundamental principles of {selectedItem.title}. 

@@ -32,8 +32,22 @@ export class MockApiService {
   ];
 
   private videos: Video[] = [
-    { id: 'video-1', title: 'What is Motion?', description: 'Intro to mechanics', status: 'Ready', duration: '10:20' },
-    { id: 'video-2', title: 'Newtonian Laws', description: 'Force and inertia', status: 'Processing' }
+    { 
+      id: 'video-1', 
+      title: 'What is Motion?', 
+      description: 'Intro to mechanics', 
+      status: 'Ready', 
+      duration: '10:20',
+      thumbnailUrl: 'https://picsum.photos/seed/v1/400/225',
+      streamingUrl: 'https://storage.googleapis.com/shaka-demo-assets/angel-one/dash.mpd'
+    },
+    { 
+      id: 'video-2', 
+      title: 'Newtonian Laws', 
+      description: 'Force and inertia', 
+      status: 'Processing',
+      thumbnailUrl: 'https://picsum.photos/seed/v2/400/225'
+    }
   ];
 
   private quizzes: Quiz[] = [
@@ -85,7 +99,7 @@ export class MockApiService {
         order: section.items.length,
         bitIndex: section.items.length, // Rough simplification
         resourceId: req.videoId,
-        metadata: { Status: 'Processing' }
+        metadata: { Status: 'Ready', Duration: '12:00', ThumbnailUrl: 'https://picsum.photos/seed/item/400/225' }
       };
       section.items.push(newItem);
       return newItem;
@@ -141,14 +155,30 @@ export class MockApiService {
     if (q) q.content = content;
   }
 
-  async requestUpload(_req: { fileName: string, title: string, targetResourceArn: string }) {
+  async getStreamingInfo(_id: string) {
+    await sleep(300);
+    return {
+      url: 'https://storage.googleapis.com/shaka-demo-assets/angel-one/dash.mpd',
+      type: 'DASH'
+    };
+  }
+
+  async requestUpload(_req: { fileName: string, title: string, targetResourceArn: string, generateCustomThumbnailUrl?: boolean }) {
 
     await sleep(300);
     return {
       videoId: `video-${Date.now()}`,
       preSignedUrl: 'https://mock-s3.com/upload',
+      thumbnailPreSignedUrl: _req.generateCustomThumbnailUrl ? 'https://mock-s3.com/thumb-upload' : null,
       tenantId: 'tenant-1'
     };
+  }
+
+  async uploadFile(_url: string, _file: File, _info: any, onProgress: any) {
+    for (let i = 0; i <= 100; i += 20) {
+      await sleep(100);
+      onProgress(i);
+    }
   }
 }
 

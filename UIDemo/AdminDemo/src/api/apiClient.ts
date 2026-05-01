@@ -1,14 +1,11 @@
 import axios from 'axios';
-
-// Default to the provided localhost URL
-const BASE_URL = 'https://localhost:7016';
+import { config } from '../config';
 
 export const apiClient = axios.create({
-  baseURL: BASE_URL,
+  baseURL: config.BASE_URL,
   headers: {
     'Content-Type': 'application/json',
-    // Hardcoded for demo purposes as requested
-    'X-Tenant-Id': 'tenant-1' 
+    'X-Tenant-Id': config.TENANT_ID
   }
 });
 

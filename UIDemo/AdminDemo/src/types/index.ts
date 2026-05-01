@@ -30,9 +30,10 @@ export interface Video {
   id: string;
   title: string;
   description: string | null;
-  status: 'Processing' | 'Ready' | 'Failed';
+  status: 'Processing' | 'Ready' | 'Published' | 'Failed' | 'Deleted';
   duration?: string;
   thumbnailUrl?: string;
+  streamingUrl?: string;
   url?: string;
 }
 
