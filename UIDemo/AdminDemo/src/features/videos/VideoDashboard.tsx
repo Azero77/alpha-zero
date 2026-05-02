@@ -198,7 +198,13 @@ const UploadModal = ({ onClose }: { onClose: () => void }) => {
   const [thumbFile, setThumbFile] = useState<File | null>(null);
   const [title, setTitle] = useState('');
   const [targetArn, setTargetArn] = useState('');
+  const [selectedCourseId, setSelectedCourseId] = useState('');
   const queryClient = useQueryClient();
+
+  const { data: courses } = useQuery({
+    queryKey: ['courses'],
+    queryFn: () => api.getCourses()
+  });
 
   const onDropVideo = useCallback((files: File[]) => {
     if (files[0]) {
@@ -223,6 +229,16 @@ const UploadModal = ({ onClose }: { onClose: () => void }) => {
     multiple: false
   });
 
+  const handleCourseChange = (courseId: string) => {
+    setSelectedCourseId(courseId);
+    if (courseId) {
+      // az:courses:tenant-1:course/uuid
+      setTargetArn(`az:courses:tenant-1:course/${courseId}`);
+    } else {
+      setTargetArn('');
+    }
+  };
+
   const handleUpload = async () => {
     if (!videoFile || !title) return;
     
@@ -237,13 +253,19 @@ const UploadModal = ({ onClose }: { onClose: () => void }) => {
       });
 
       // 2. Upload Video
-      await (api as any).uploadFile(uploadInfo.preSignedUrl, videoFile, uploadInfo, (p: number) => {
+      const videoHeaders = uploadInfo.headers || uploadInfo.Headers || (uploadInfo as any).headers;
+      const videoUrl = uploadInfo.preSignedUrl || uploadInfo.PreSignedUrl || (uploadInfo as any).presignedUrl;
+
+      await (api as any).uploadFile(videoUrl, videoFile, videoHeaders, (p: number) => {
         setProgress(p * 0.8); // 80% weight for video
       });
 
       // 3. Upload Thumbnail if exists
-      if (thumbFile && uploadInfo.thumbnailPreSignedUrl) {
-        await (api as any).uploadFile(uploadInfo.thumbnailPreSignedUrl, thumbFile, { isThumbnail: true }, (p: number) => {
+      const thumbHeaders = uploadInfo.thumbnailHeaders || uploadInfo.ThumbnailHeaders || (uploadInfo as any).thumbnailHeaders;
+      const thumbUrl = uploadInfo.thumbnailPreSignedUrl || uploadInfo.ThumbnailPreSignedUrl || (uploadInfo as any).thumbnailPresignedUrl;
+
+      if (thumbFile && thumbUrl && thumbHeaders) {
+        await (api as any).uploadFile(thumbUrl, thumbFile, thumbHeaders, (p: number) => {
           setProgress(80 + (p * 0.2)); // Remaining 20%
         });
       }
@@ -286,8 +308,22 @@ const UploadModal = ({ onClose }: { onClose: () => void }) => {
                     <input type="text" placeholder="e.g. Chapter 4: Thermodynamics" value={title} onChange={(e) => setTitle(e.target.value)} />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Target Resource ARN</label>
-                    <input type="text" className="font-mono text-xs" placeholder="az:courses:tenant-1:course/uuid" value={targetArn} onChange={(e) => setTargetArn(e.target.value)} />
+                    <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Target Academy</label>
+                    <select 
+                      value={selectedCourseId}
+                      onChange={(e) => handleCourseChange(e.target.value)}
+                      className="w-full h-10 px-3 py-2 text-sm rounded-md border border-slate-200 dark:border-slate-800 bg-transparent outline-none focus:ring-2 focus:ring-primary-500"
+                    >
+                      <option value="">Select an Academy...</option>
+                      {courses?.map((c: any) => (
+                        <option key={c.id} value={c.id}>{c.title}</option>
+                      ))}
+                    </select>
+                    {targetArn && (
+                      <p className="text-[9px] font-mono text-slate-400 truncate uppercase tracking-tighter">
+                        {targetArn}
+                      </p>
+                    )}
                   </div>
 
                   <div {...getVideoProps()} className={clsx(

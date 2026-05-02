@@ -21,12 +21,13 @@ public class PublishCourseEndpoint : Endpoint<PublishCourseRequest>
     {
         _module = module;
     }
-
     public override void Configure()
     {
-        Patch("/courses/{CourseId}/publish");
+        Post("/courses/{CourseId}/publish");
         this.AccessControl("courses:Publish", req => ResourceArn.ForCourse(Guid.Empty, req.CourseId));
-        Description(d => d.WithTags("Courses"));
+        Description(d => d
+            .WithTags("Courses")
+            .Accepts<PublishCourseRequest>("application/json"));
     }
 
     public override async Task HandleAsync(PublishCourseRequest req, CancellationToken ct)

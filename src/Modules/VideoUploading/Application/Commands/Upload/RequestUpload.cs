@@ -50,8 +50,10 @@ public record UploadCommandResponse(
     string PreSignedUrl, 
     string TranscodingMethod, 
     string EncryptionMethod,
+    Dictionary<string, string> Headers,
     string? ThumbnailKey = null,
-    string? ThumbnailPreSignedUrl = null);
+    string? ThumbnailPreSignedUrl = null,
+    Dictionary<string, string>? ThumbnailHeaders = null);
 
 public sealed class UploadCommandHandler(IUploadService uploadService, IModuleBus moduleBus, IClock clock, ITenantProvider tenantProvider) : IRequestHandler<UploadCommand, ErrorOr<UploadCommandResponse>>
 {
@@ -75,6 +77,7 @@ public sealed class UploadCommandHandler(IUploadService uploadService, IModuleBu
 
         string? thumbnailKey = null;
         string? thumbnailPreSignedUrl = null;
+        Dictionary<string, string>? thumbnailHeaders = null;
 
         if (request.generateCustomThumbnailUrl)
         {
@@ -89,6 +92,7 @@ public sealed class UploadCommandHandler(IUploadService uploadService, IModuleBu
             {
                 thumbnailKey = thumbResponse.Value.key;
                 thumbnailPreSignedUrl = thumbResponse.Value.presignedUrl;
+                thumbnailHeaders = thumbResponse.Value.headers;
             }
         }
 
@@ -107,7 +111,9 @@ public sealed class UploadCommandHandler(IUploadService uploadService, IModuleBu
             response.Value.presignedUrl,
             request.VideoTranscodingMetehod.ToString(),
             request.VideoEncryptionMethod.ToString(),
+            response.Value.headers,
             thumbnailKey,
-            thumbnailPreSignedUrl);
+            thumbnailPreSignedUrl,
+            thumbnailHeaders);
     }
 }

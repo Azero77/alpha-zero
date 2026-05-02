@@ -10,17 +10,23 @@ import { VideoPlayer } from '../../components/video/VideoPlayer';
 import { useMemo } from 'react';
 
 const VideoPlayerContainer = ({ item }: { item: any }) => {
+  const isReady = useMemo(() => {
+    const status = (item.metadata?.Status || item.metadata?.status || '').toLowerCase();
+    const hasResource = item.resourceId && item.resourceId !== '00000000-0000-0000-0000-000000000000';
+    return hasResource && (status === 'ready' || status === 'published');
+  }, [item]);
+
   const { data: streamingInfo, isLoading } = useQuery({
     queryKey: ['streaming', item.resourceId],
     queryFn: () => (api as any).getStreamingInfo(item.resourceId),
-    enabled: !!item.resourceId && (item.metadata?.Status === 'Ready' || item.metadata?.Status === 'Published')
+    enabled: !!item.resourceId && isReady
   });
 
   const playerConfig = useMemo(() => {
     if (!streamingInfo) return null;
     return {
       manifestUrl: streamingInfo.url,
-      posterUrl: item.metadata?.ThumbnailUrl,
+      posterUrl: item.metadata?.ThumbnailUrl || item.metadata?.thumbnailUrl,
       drm: streamingInfo.drm,
       clearKey: streamingInfo.key ? {
         keyId: streamingInfo.key,
@@ -38,11 +44,13 @@ const VideoPlayerContainer = ({ item }: { item: any }) => {
     );
   }
 
-  if (!playerConfig) {
+  if (!isReady || !playerConfig) {
     return (
       <div className="aspect-video bg-slate-100 dark:bg-slate-900 rounded-2xl flex flex-col items-center justify-center gap-4 border border-slate-200 dark:border-slate-800">
          <Lock className="text-slate-300 dark:text-slate-700" size={48} />
-         <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Content Processing or Unauthorized</span>
+         <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
+           {!isReady ? 'Content Processing...' : 'Unauthorized or Pipeline Error'}
+         </span>
       </div>
     );
   }
@@ -120,16 +128,19 @@ export const CourseViewer: React.FC = () => {
                            <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 opacity-60">
                              {item.type}
                            </span>
-                           {item.metadata?.Duration && (
-                             <span className="text-[9px] font-mono text-slate-400">{item.metadata.Duration}</span>
+                           {(item.metadata?.Duration || item.metadata?.duration) && (
+                             <span className="text-[9px] font-mono text-slate-400">{item.metadata.Duration || item.metadata.duration}</span>
                            )}
                         </div>
                       </div>
-                      {item.metadata?.Status === 'Ready' || item.metadata?.Status === 'Published' ? (
-                        <CheckCircle2 size={14} className="text-green-500" />
-                      ) : (
-                        <Lock size={14} className="text-slate-300" />
-                      )}
+                      {(() => {
+                        const hasResource = item.resourceId && item.resourceId !== '00000000-0000-0000-0000-000000000000';
+                        return hasResource ? (
+                          <CheckCircle2 size={14} className="text-green-500" />
+                        ) : (
+                          <Lock size={14} className="text-slate-300" />
+                        );
+                      })()}
                     </div>
                   </button>
                 ))}

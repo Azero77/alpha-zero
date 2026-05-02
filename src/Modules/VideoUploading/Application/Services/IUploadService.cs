@@ -12,4 +12,4 @@ public interface IUploadService
 }
 
 
-public record GetPresignedUrlResponse(string key, string presignedUrl);
+public record GetPresignedUrlResponse(string key, string presignedUrl, Dictionary<string, string> headers);

@@ -125,6 +125,30 @@ const CourseEditor = ({ courseId }: { courseId: string }) => {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['course', courseId] })
   });
 
+  const submitMutation = useMutation({
+    mutationFn: () => (api as any).submitForReview(courseId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['course', courseId] });
+      queryClient.invalidateQueries({ queryKey: ['courses'] });
+    }
+  });
+
+  const approveMutation = useMutation({
+    mutationFn: () => (api as any).approveCourse(courseId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['course', courseId] });
+      queryClient.invalidateQueries({ queryKey: ['courses'] });
+    }
+  });
+
+  const publishMutation = useMutation({
+    mutationFn: () => (api as any).publishCourse(courseId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['course', courseId] });
+      queryClient.invalidateQueries({ queryKey: ['courses'] });
+    }
+  });
+
   function handleDragEnd(event: DragEndEvent) {
     if (!course) return;
     const { active, over } = event;
@@ -150,14 +174,51 @@ const CourseEditor = ({ courseId }: { courseId: string }) => {
           <h2 className="text-2xl font-black tracking-tight">{course.title}</h2>
           <div className="flex items-center gap-3">
              <span className={clsx("text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded border", 
-               course.status === 'Draft' ? "text-amber-500 border-amber-200 bg-amber-50" : "text-green-500 border-green-200 bg-green-50"
+               course.status === 'Draft' ? "text-amber-500 border-amber-200 bg-amber-50" : 
+               course.status === 'UnderReview' ? "text-blue-500 border-blue-200 bg-blue-50" :
+               course.status === 'Approved' ? "text-indigo-500 border-indigo-200 bg-indigo-50" :
+               "text-green-500 border-green-200 bg-green-50"
              )}>{course.status}</span>
              <p className="text-[10px] font-mono text-slate-400 uppercase tracking-widest">az:course/{course.id.slice(0,8)}</p>
           </div>
         </div>
         <div className="flex items-center gap-3">
-           <button onClick={() => (api as any).submitForReview(course.id)} className="btn btn-secondary text-[10px] font-black uppercase tracking-widest px-6 h-9">Submit Review</button>
-           <button onClick={() => (api as any).publishCourse(course.id)} className="btn btn-primary text-[10px] font-black uppercase tracking-widest px-6 h-9">Publish Academy</button>
+           {course.status === 'Draft' && (
+             <button 
+               onClick={() => submitMutation.mutate()} 
+               disabled={submitMutation.isPending}
+               className="btn btn-secondary text-[10px] font-black uppercase tracking-widest px-6 h-9"
+             >
+               {submitMutation.isPending ? 'Submitting...' : 'Submit Review'}
+             </button>
+           )}
+           
+           {course.status === 'UnderReview' && (
+             <button 
+               onClick={() => approveMutation.mutate()} 
+               disabled={approveMutation.isPending}
+               className="btn btn-primary text-[10px] font-black uppercase tracking-widest px-6 h-9"
+             >
+               {approveMutation.isPending ? 'Approving...' : 'Approve Course'}
+             </button>
+           )}
+
+           {course.status === 'Approved' && (
+             <button 
+               onClick={() => publishMutation.mutate()} 
+               disabled={publishMutation.isPending}
+               className="btn btn-primary text-[10px] font-black uppercase tracking-widest px-6 h-9"
+             >
+               {publishMutation.isPending ? 'Publishing...' : 'Publish Academy'}
+             </button>
+           )}
+
+           {course.status === 'Published' && (
+             <div className="flex items-center gap-2 text-green-600 bg-green-50 px-4 py-2 rounded-lg border border-green-100">
+               <CheckCircle2 size={14} />
+               <span className="text-[10px] font-black uppercase tracking-widest">Live</span>
+             </div>
+           )}
         </div>
       </div>
 
@@ -300,7 +361,7 @@ const PreviewModal = ({ item, onClose }: { item: any, onClose: () => void }) => 
 
   const playerConfig = useMemo(() => {
     if (!streamingInfo) return null;
-    return { manifestUrl: streamingInfo.url, posterUrl: item.metadata?.ThumbnailUrl, drm: streamingInfo.drm, clearKey: streamingInfo.key ? { keyId: streamingInfo.key, key: streamingInfo.key } : undefined };
+    return { manifestUrl: streamingInfo.url, posterUrl: item.metadata?.ThumbnailUrl || item.metadata?.thumbnailUrl, drm: streamingInfo.drm, clearKey: streamingInfo.key ? { keyId: streamingInfo.key, key: streamingInfo.key } : undefined };
   }, [streamingInfo, item]);
 
   return (
@@ -338,12 +399,20 @@ const SortableItem = ({ item, onPreview }: { item: any, onPreview: () => void })
             <span className="text-[9px] font-mono text-slate-400 font-bold uppercase tracking-tighter">IDX:{item.bitIndex}</span>
             <div className="w-1 h-1 bg-slate-300 dark:bg-slate-700 rounded-full" />
             <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">{item.type}</span>
-            {item.metadata?.Status && (
+            {(item.metadata?.Status || item.metadata?.status) && (
               <>
                 <div className="w-1 h-1 bg-slate-300 dark:bg-slate-700 rounded-full" />
                 <div className="flex items-center gap-1.5">
-                   <div className={clsx("w-1.5 h-1.5 rounded-full", item.metadata.Status === 'Ready' || item.metadata.Status === 'Published' ? "bg-green-500" : "bg-amber-500")} />
-                   <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">{item.metadata.Status}</span>
+                   {(() => {
+                     const s = (item.metadata?.Status || item.metadata?.status || '').toLowerCase();
+                     const isReady = s === 'ready' || s === 'published';
+                     return (
+                       <>
+                         <div className={clsx("w-1.5 h-1.5 rounded-full", isReady ? "bg-green-500" : "bg-amber-500")} />
+                         <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">{item.metadata.Status || item.metadata.status}</span>
+                       </>
+                     );
+                   })()}
                 </div>
               </>
             )}
@@ -351,7 +420,7 @@ const SortableItem = ({ item, onPreview }: { item: any, onPreview: () => void })
         </div>
       </div>
       <div className="flex items-center gap-2">
-         {item.type === 'Lesson' && (item.metadata?.Status === 'Ready' || item.metadata?.Status === 'Published') && (
+         {item.type === 'Lesson' && item.resourceId && item.resourceId !== '00000000-0000-0000-0000-000000000000' && (
            <button onClick={onPreview} className="p-2 text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded-lg transition-all"><Activity size={16} /></button>
          )}
          <button className="p-1 text-slate-300 hover:text-slate-900 dark:hover:text-white transition-colors"><MoreHorizontal size={16} /></button>

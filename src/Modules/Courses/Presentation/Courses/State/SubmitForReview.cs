@@ -21,12 +21,13 @@ public class SubmitForReviewEndpoint : Endpoint<SubmitForReviewRequest>
     {
         _module = module;
     }
-
     public override void Configure()
     {
-        Patch("/courses/{CourseId}/review");
+        Post("/courses/{CourseId}/review");
         this.AccessControl("courses:Submit", req => ResourceArn.ForCourse(Guid.Empty, req.CourseId));
-        Description(d => d.WithTags("Courses"));
+        Description(d => d
+            .WithTags("Courses")
+            .Accepts<SubmitForReviewRequest>("application/json"));
     }
 
     public override async Task HandleAsync(SubmitForReviewRequest req, CancellationToken ct)

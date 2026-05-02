@@ -35,7 +35,7 @@ public class S3UploadService : IUploadService
                 Expires = DateTime.UtcNow.AddHours(1),
             };
             var result = await _client.GetPreSignedURLAsync(request);
-            return new GetPresignedUrlResponse(key, result);
+            return new GetPresignedUrlResponse(key, result, new Dictionary<string, string>());
         }
         catch (AmazonS3Exception exception)
         {
@@ -90,44 +90,61 @@ public class S3UploadService : IUploadService
         {
             Guid guid = Guid.NewGuid();
             string key = $"{FilesFolder}/{guid}";
+            var headersToSign = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                { "content-type", contentType }
+            };
+
             var request = new GetPreSignedUrlRequest()
             {
                 BucketName = _s3Settings.BucketName,
                 ContentType = contentType,
-                Metadata = {
-                        ["file-name"] = Uri.EscapeDataString(fileName)
-                    },
                 Verb = HttpVerb.PUT,
                 Expires = DateTime.UtcNow.AddMinutes(15),
                 Key = key,
-
             };
+
+            string escapedFileName = Uri.EscapeDataString(fileName);
+            request.Metadata.Add("file-name", escapedFileName);
+            headersToSign.Add("x-amz-meta-file-name", escapedFileName);
+
             if (metadata is not null)
             {
                 foreach (var pair in metadata)
                 {
-                    request.Metadata.Add(pair.Key.ToLowerInvariant(), Uri.EscapeDataString(pair.Value));
+                    string lowerKey = pair.Key.ToLowerInvariant();
+                    string escapedValue = Uri.EscapeDataString(pair.Value);
+                    request.Metadata.Add(lowerKey, escapedValue);
+                    headersToSign.Add($"x-amz-meta-{lowerKey}", escapedValue);
                 }
             }
 
             string url = await _client.GetPreSignedURLAsync(request);
 
-            return new GetPresignedUrlResponse(key, url);
+            return new GetPresignedUrlResponse(key, url, headersToSign);
         }
         catch (AmazonS3Exception exception)
         {
             return Error.Failure("Resources.Failure", exception.Message);
         }
     }
+
     public async Task<ErrorOr<Success>> DeleteFile(string key)
     {
-        DeleteObjectRequest request = new DeleteObjectRequest()
+        try
         {
-            BucketName = _s3Settings.BucketName,
-            Key = key,
-        };
-        var response = await _client.DeleteObjectAsync(request);
-        int code = (int)response.HttpStatusCode;
-        return code >= 200 && code < 300 ? Result.Success : Error.Failure();
+            DeleteObjectRequest request = new DeleteObjectRequest()
+            {
+                BucketName = _s3Settings.BucketName,
+                Key = key,
+            };
+            var response = await _client.DeleteObjectAsync(request);
+            int code = (int)response.HttpStatusCode;
+            return code >= 200 && code < 300 ? Result.Success : Error.Failure();
+        }
+        catch (AmazonS3Exception exception)
+        {
+            return Error.Failure("Resources.Failure", exception.Message);
+        }
     }
 }

@@ -1,4 +1,5 @@
-﻿using AlphaZero.Modules.Assessments.Application.Assessments.Commands.Create;
+using AlphaZero.Modules.Assessments.Application;
+using AlphaZero.Modules.Assessments.Application.Assessments.Commands.Create;
 using AlphaZero.Modules.Assessments.Domain.Enums;
 using AlphaZero.Modules.Assessments.IntegrationEvents;
 using MassTransit;
@@ -6,11 +7,11 @@ using MediatR;
 
 namespace AlphaZero.Modules.Assessments.Infrastructure.Consumers;
 
-public class CreateAssessmentRequestHandler(IMediator mediator) : IConsumer<CreateAssessmentRequest>
+
+public class CreateAssessmentRequestHandler(IAssessmentsModule module) : IConsumer<CreateAssessmentRequest>
 {
     public async Task Consume(ConsumeContext<CreateAssessmentRequest> context)
     {
-        
         if(!Enum.TryParse<AssessmentType>(context.Message.Type, out var assessmentType))
         {
             await context.RespondAsync(new AssessmentCreationFailedResponse
@@ -22,7 +23,7 @@ public class CreateAssessmentRequestHandler(IMediator mediator) : IConsumer<Crea
         }
         var request = new CreateAssessmentCommand(context.Message.Title,context.Message.Description,assessmentType, context.Message.PassingScore);
 
-        var response = await mediator.Send(request);
+        var response = await module.Send(request);
         if(response.IsError)
         {
             await context.RespondAsync(new AssessmentCreationFailedResponse
