@@ -6,6 +6,8 @@ using AlphaZero.Modules.VideoUploading.Domain.Services;
 using AlphaZero.Modules.VideoUploading.Infrastructure.Persistance;
 using AlphaZero.Modules.VideoUploading.Infrastructure.Repositories;
 using AlphaZero.Modules.VideoUploading.Infrastructure.Services;
+using AlphaZero.Modules.VideoUploading.Infrastructure.Streaming;
+using AlphaZero.Modules.VideoUploading.Application.Streaming.Queries;
 using AlphaZero.Shared.Application;
 using AlphaZero.Shared.Domain;
 using AlphaZero.Shared.Infrastructure;
@@ -69,6 +71,6 @@ public static class DependencyInjection
         moduleServices.AddScoped<IVideoStateRepository, VideoStateRepository>();
         moduleServices.AddScoped<IRepository<VideoSecret>,VideoSecretRepository>();
         moduleServices.AddScoped<IUnitOfWork, UnitOfWork<AppDbContext>>();
-        
+        moduleServices.AddScoped<IStreamingService, DatabaseCloudFlareCdnVideoStreamingService>();
     }
 }
