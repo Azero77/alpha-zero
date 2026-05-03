@@ -12,7 +12,7 @@ using System.IO;
 
 namespace AlphaZero.Modules.VideoUploading.Infrastructure.Consumers;
 
-public class FFmpegTranscodingConsumer : IConsumer<ExecuteFFmpegTranscodingCommand>
+public class FFmpegTranscodingConsumer : IJobConsumer<ExecuteFFmpegTranscodingCommand>
 {
     private readonly IAmazonS3 _s3Client;
     private readonly AWSResources _awsResources;
@@ -31,9 +31,9 @@ public class FFmpegTranscodingConsumer : IConsumer<ExecuteFFmpegTranscodingComma
         _logger = logger;
     }
 
-    public async Task Consume(ConsumeContext<ExecuteFFmpegTranscodingCommand> context)
+    public async Task Run(JobContext<ExecuteFFmpegTranscodingCommand> context)
     {
-        var msg = context.Message;
+        var msg = context.Job;
         _logger.LogInformation("[FFmpegConsumer] Starting transcoding for Video {VideoId}", msg.VideoId);
 
         string tempPath = Path.Combine(Path.GetTempPath(), "transcoding", msg.VideoId.ToString());
@@ -216,7 +216,7 @@ public class FFMpegTrancodingConsumerDefinition : ConsumerDefinition<FFmpegTrans
 {
     protected override void ConfigureConsumer(IReceiveEndpointConfigurator endpointConfigurator, IConsumerConfigurator<FFmpegTranscodingConsumer> consumerConfigurator, IRegistrationContext context)
     {
-        consumerConfigurator.Options<JobOptions<FFmpegTranscodingConsumer>>(options =>
+        consumerConfigurator.Options<JobOptions<ExecuteFFmpegTranscodingCommand>>(options =>
         {
             options.SetRetry(c => c.None()); // No retries, failures should be handled in the consumer logic
             options.SetJobTimeout(TimeSpan.FromMinutes(60)); // Set a reasonable timeout for transcoding jobs

@@ -11,15 +11,15 @@ using Microsoft.Extensions.Logging;
 namespace AlphaZero.Modules.VideoUploading.Infrastructure.Services;
 
 public class FFmpegTranscodingService : IVideoTranscodingService
-{
-    private readonly IRequestClient<SubmitJob<ExecuteFFmpegTranscodingCommand>> _jobRequestClient;
+{   
     private readonly ILogger<FFmpegTranscodingService> _logger;
+    private readonly IModuleBus _moduleBus;
 
     public FFmpegTranscodingService(
         ILogger<FFmpegTranscodingService> logger, IModuleBus moduleBus)
     {
         _logger = logger;
-        _jobRequestClient = moduleBus.CreateRequestClient<SubmitJob<ExecuteFFmpegTranscodingCommand>>();
+        _moduleBus = moduleBus;
     }
 
     public VideoTranscodingMetehod Method => VideoTranscodingMetehod.FFMPEG;
@@ -51,8 +51,9 @@ public class FFmpegTranscodingService : IVideoTranscodingService
             sourceWidth,
             sourceHeight,
             encryptionMethod.ToString());
-        var response = await _jobRequestClient.GetResponse<JobSubmissionAccepted>(new { JobId = videoId , Job = command}, cancellationToken);
-        _logger.LogInformation("[FFmpegService] Job {JobId} successfully saved to database.", response.Message.JobId);
+        
+        await _moduleBus.Publish<SubmitJob<ExecuteFFmpegTranscodingCommand>>(new { JobId = videoId , Job = command });
+        _logger.LogInformation("[FFmpegService] Job {JobId} successfully saved to database.", videoId);
         return videoId.ToString(); //the video id is the job id, so we can track the job status using the video id
     }
 }

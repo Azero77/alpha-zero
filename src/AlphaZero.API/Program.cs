@@ -149,24 +149,23 @@ public class Program
             {
                 options.FinalizeCompleted = true;
 
+
             }).EntityFrameworkRepository(r =>
             {
                 r.ConcurrencyMode = ConcurrencyMode.Pessimistic;
                 r.ExistingDbContext<JobServiceSagaDbContext>();
-                r.UsePostgres("Jobs");
+                r.UsePostgres();
             });
             x.AddConsumers(filter => !filter.Name.Contains("sqs", StringComparison.InvariantCultureIgnoreCase), assemblies);
             foreach (var module in moduleInstances)
             {
                 module.ConfigureModuleBus(x);
             }
+            x.AddDelayedMessageScheduler();
             x.UsingInMemory((context, cfg) =>
             {
+                cfg.UseDelayedMessageScheduler();
                 cfg.ConfigureEndpoints(context);
-               /* cfg.ServiceInstance(options =>
-                {
-                    options.ConfigureJobServiceEndpoints();
-                });*/
             });
             /*x.AddEntityFrameworkOutbox<OrchestrationDbContext>(o =>
             {
