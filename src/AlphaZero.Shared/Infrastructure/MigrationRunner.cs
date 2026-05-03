@@ -1,4 +1,4 @@
-﻿using AlphaZero.Shared.Infrastructure.Persistance;
+﻿using MassTransit.EntityFrameworkCoreIntegration;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -20,7 +20,7 @@ public static class MigrationRunner
         logger.LogInformation("Starting automated database migrations for {ModuleCount} modules...", modules.Count);
 
         //Run The Orchestration DbContext Migration
-        var orchestrationDbContext = app.Services.GetRequiredService<OrchestrationDbContext>();
+        var orchestrationDbContext = app.Services.GetRequiredService<JobServiceSagaDbContext>();
 
         await orchestrationDbContext.Database.MigrateAsync();
         foreach (var module in modules)

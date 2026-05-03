@@ -31,6 +31,5 @@ public class IdentityModule : AppModule, IIdentityModule
 
     public override void ConfigureModuleBus(IBusRegistrationConfigurator configuration)
     {
-        configuration.AddConsumers(typeof(IdentityModule).Assembly);
     }
 }

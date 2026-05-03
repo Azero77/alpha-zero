@@ -12,7 +12,7 @@ using System.IO;
 
 namespace AlphaZero.Modules.VideoUploading.Infrastructure.Consumers;
 
-public class FFmpegTranscodingConsumer : IJobConsumer<ExecuteFFmpegTranscodingCommand>
+public class FFmpegTranscodingConsumer : IConsumer<ExecuteFFmpegTranscodingCommand>
 {
     private readonly IAmazonS3 _s3Client;
     private readonly AWSResources _awsResources;
@@ -31,9 +31,9 @@ public class FFmpegTranscodingConsumer : IJobConsumer<ExecuteFFmpegTranscodingCo
         _logger = logger;
     }
 
-    public async Task Run(JobContext<ExecuteFFmpegTranscodingCommand> context)
+    public async Task Consume(ConsumeContext<ExecuteFFmpegTranscodingCommand> context)
     {
-        var msg = context.Job;
+        var msg = context.Message;
         _logger.LogInformation("[FFmpegConsumer] Starting transcoding for Video {VideoId}", msg.VideoId);
 
         string tempPath = Path.Combine(Path.GetTempPath(), "transcoding", msg.VideoId.ToString());
@@ -208,5 +208,18 @@ public class FFmpegTranscodingConsumer : IJobConsumer<ExecuteFFmpegTranscodingCo
         args += $"-var_stream_map \"{varStreamMap.Trim()}\" \"{outputDir}/stream_%v.m3u8\"";
 
         return args;
+    }
+}
+
+
+public class FFMpegTrancodingConsumerDefinition : ConsumerDefinition<FFmpegTranscodingConsumer>
+{
+    protected override void ConfigureConsumer(IReceiveEndpointConfigurator endpointConfigurator, IConsumerConfigurator<FFmpegTranscodingConsumer> consumerConfigurator, IRegistrationContext context)
+    {
+        consumerConfigurator.Options<JobOptions<FFmpegTranscodingConsumer>>(options =>
+        {
+            options.SetRetry(c => c.None()); // No retries, failures should be handled in the consumer logic
+            options.SetJobTimeout(TimeSpan.FromMinutes(60)); // Set a reasonable timeout for transcoding jobs
+        });
     }
 }

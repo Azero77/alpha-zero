@@ -27,13 +27,21 @@ public class SQSS3EventHandler : IConsumer<S3EventNotification>
 
     public async Task Consume(ConsumeContext<S3EventNotification> context)
     {
+        if (context.Message.Records == null)
+        {
+            _logger.LogDebug("Received S3 event with no records.");
+            return;
+        }
+
         foreach (var record in context.Message.Records)
         {
             if (record.EventName.Value.StartsWith("ObjectCreated:"))
             {
-
                 string key = record.S3.Object.Key;
                 string bucketName = record.S3.Bucket.Name;
+                
+                // Skip objects that look like folders or non-video files if necessary, 
+                // but at least ensure we handle metadata correctly.
                 var metadataRequest = new GetObjectMetadataRequest()
                 {
                     BucketName = bucketName,
@@ -43,18 +51,28 @@ public class SQSS3EventHandler : IConsumer<S3EventNotification>
                 var metadataResponse = await _s3.GetObjectMetadataAsync(metadataRequest);
                 if (metadataResponse is null || metadataResponse.Metadata is null)
                 {
-                    await _moduleBus.Publish(new VideoProcessingFailedEvent(Guid.Empty,"Invalid Metadata",key));
-                    _logger.LogCritical("Video Uploaded with no videoId , key : {key}" , key);
+                    await _moduleBus.Publish(new VideoProcessingFailedEvent(Guid.Empty, "Invalid Metadata", key));
+                    _logger.LogCritical("Video Uploaded with no metadata, key : {key}", key);
                     continue;
                 }
-                string? videoId = metadataResponse.Metadata?[S3UploadService.VideoIdMetaDataHeader];
-                string? tenantIdStr = metadataResponse.Metadata?["TenantId"];
-                string? targetResourceArn = metadataResponse.Metadata?["TargetResourceArn"];
+
+                // S3 Metadata keys are often normalized to lowercase by AWS.
+                // We try both the original case and lowercase to be safe.
+                string? videoId = metadataResponse.Metadata[S3UploadService.VideoIdMetaDataHeader] 
+                               ?? metadataResponse.Metadata[S3UploadService.VideoIdMetaDataHeader.ToLowerInvariant()];
+                
+                string? tenantIdStr = metadataResponse.Metadata["TenantId"] 
+                                  ?? metadataResponse.Metadata["tenantid"];
+                
+                string? targetResourceArn = metadataResponse.Metadata["TargetResourceArn"] 
+                                        ?? metadataResponse.Metadata["targetresourcearn"];
 
                 if (videoId is null || !Guid.TryParse(videoId, out Guid videoGuid) ||
                     tenantIdStr is null || !Guid.TryParse(tenantIdStr, out Guid tenantGuid))
                 {
-                    _logger.LogError("Video with missing or invalid metadata has been found, Key : {key}. VideoId: {VideoId}, TenantId: {TenantId}", 
+                    // If it's a file we don't care about (e.g. MediaConvert outputs), just skip without error if it's in the output bucket.
+                    // But for now, let's keep the warning but make it clearer.
+                    _logger.LogWarning("Video with missing or invalid metadata has been found, Key : {key}. VideoId: {VideoId}, TenantId: {TenantId}", 
                         key, videoId, tenantIdStr);
                     continue;
                 }

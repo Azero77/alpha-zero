@@ -1,23 +1,14 @@
-using AlphaZero.API.Shared;
-using AlphaZero.Modules.VideoUploading.Infrastructure.Sagas;
 using AlphaZero.Shared.Application;
 using AlphaZero.Shared.Authorization;
 using AlphaZero.Shared.Infrastructure;
-using AlphaZero.Shared.Infrastructure.Persistance;
-using AlphaZero.Shared.Infrastructure.SoftDelete;
-using AlphaZero.Shared.Infrastructure.Tenats;
-using Amazon.Extensions.NETCore.Setup;
-using Aspire.Shared;
 using Autofac;
-using Autofac.Core;
 using Autofac.Extensions.DependencyInjection;
 using FastEndpoints;
 using FastEndpoints.Security;
 using FastEndpoints.Swagger;
 using MassTransit;
+using MassTransit.EntityFrameworkCoreIntegration;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.OpenApi;
-using System.Configuration;
 using System.Reflection;
 
 namespace AlphaZero.API;
@@ -140,35 +131,50 @@ public class Program
             .Where(a => a.FullName!.StartsWith("AlphaZero"))
             .ToArray();
 
-        builder.Services.AddDbContext<OrchestrationDbContext>((sp, opts) =>
+        builder.Services.AddDbContext<JobServiceSagaDbContext>((sp, opts) =>
         {
             DatabaseSettings dbSettings = DatabaseSettings.GetDatabaseSettings(builder.Configuration);
 
             opts.UseNpgsql(dbSettings.ConnectionString, h =>
             {
-                h.MigrationsAssembly(typeof(OrchestrationDbContext).Assembly.FullName);
-                h.MigrationsHistoryTable("__OrchestrationMigrationHistory", OrchestrationDbContext.Schema);
+                h.MigrationsAssembly(typeof(DatabaseSettings).Assembly.FullName);//shared assembly name
+                h.MigrationsHistoryTable("__JobServiceSagaMigrationHistory", "Jobs");
             });
-            opts.AddInterceptors(sp.GetRequiredService<SoftDeleteInterceptor>());
         });
 
         builder.Services.AddMassTransit<IModuleBus>(x =>
         {
             x.SetKebabCaseEndpointNameFormatter();
-            x.AddJobSagaStateMachines();
-            x.SetEntityFrameworkSagaRepositoryProvider(r =>
+            x.AddJobSagaStateMachines(options =>
+            {
+                options.FinalizeCompleted = true;
+
+            }).EntityFrameworkRepository(r =>
             {
                 r.ConcurrencyMode = ConcurrencyMode.Pessimistic;
-                r.ExistingDbContext<OrchestrationDbContext>();
-                r.UsePostgres();
+                r.ExistingDbContext<JobServiceSagaDbContext>();
+                r.UsePostgres("Jobs");
             });
             x.AddConsumers(filter => !filter.Name.Contains("sqs", StringComparison.InvariantCultureIgnoreCase), assemblies);
             foreach (var module in moduleInstances)
             {
                 module.ConfigureModuleBus(x);
             }
-            x.UsingInMemory((context, cfg) => cfg.ConfigureEndpoints(context));
-            
+            x.UsingInMemory((context, cfg) =>
+            {
+                cfg.ConfigureEndpoints(context);
+                cfg.ServiceInstance(options =>
+                {
+                    options.ConfigureJobServiceEndpoints();
+                });
+            });
+            /*x.AddEntityFrameworkOutbox<OrchestrationDbContext>(o =>
+            {
+                o.UsePostgres();
+                o.UseBusOutbox();
+            });*/
+
+
             x.ConfigureHealthCheckOptions(options =>
             {
                 options.Name = "module-bus";

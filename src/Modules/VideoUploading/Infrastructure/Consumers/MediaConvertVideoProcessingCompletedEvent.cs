@@ -52,8 +52,16 @@ public class SQSMediaConverterJobStatusEventHandler :
     public async Task Consume(ConsumeContext<MediaConvertJobEvent> context)
     {
         var detail = context.Message.Detail;
+        if (detail == null || detail.UserMetadata == null)
+        {
+            _logger.LogDebug("Received MediaConvert event with no detail or UserMetadata.");
+            return;
+        }
+
+        // Create a case-insensitive view of the metadata
+        var metadata = new Dictionary<string, string>(detail.UserMetadata, StringComparer.OrdinalIgnoreCase);
         
-        if (!detail.UserMetadata.TryGetValue(S3UploadService.VideoIdMetaDataHeader, out var videoIdStr) ||
+        if (!metadata.TryGetValue(S3UploadService.VideoIdMetaDataHeader, out var videoIdStr) ||
             !Guid.TryParse(videoIdStr, out var videoId))
         {
             _logger.LogCritical("MediaConvert Job {JobId} Status {Status} for Video with no Id", detail.JobId, detail.Status);
@@ -70,7 +78,7 @@ public class SQSMediaConverterJobStatusEventHandler :
             case "COMPLETE":
                 _logger.LogInformation("MediaConvert Job {JobId} completed for Video {VideoId}", detail.JobId, videoId);
                 
-                if (detail.UserMetadata.TryGetValue("outputPath", out var outputPath) &&
+                if (metadata.TryGetValue("outputPath", out var outputPath) &&
                     TryGetParamsForInputPath(outputPath, out string key, out string bucket))
                 {
                     // MediaConvert outputPath includes s3://bucket/streaming/videoId/
