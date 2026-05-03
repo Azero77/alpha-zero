@@ -10,6 +10,10 @@ using ErrorOr;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
+using AlphaZero.Shared.Queries;
+using AlphaZero.Modules.VideoUploading.Domain.Models;
+
+using Aspire.Shared;
 
 namespace AlphaZero.Modules.VideoUploading.Presentation.Features;
 
@@ -21,6 +25,7 @@ public static class Debug
         string? Description,
         string Status,
         string? ThumbnailUrl,
+        string? StreamingUrl,
         AlphaZero.Modules.VideoUploading.Domain.Models.VideoMetadata Metadata,
         AlphaZero.Modules.VideoUploading.Domain.Models.VideoSpecifications Specifications,
         string SourceKey,
@@ -28,14 +33,31 @@ public static class Debug
         DateTime CreatedOn,
         DateTime? PublishedOn);
 
-    private static VideoResponse MapToResponse(AlphaZero.Modules.VideoUploading.Domain.Models.Video video)
+    private static VideoResponse MapToResponse(AlphaZero.Modules.VideoUploading.Domain.Models.Video video, AWSResources resources)
     {
+        var domain = resources.CdnDomain;
+        
+        string? thumbnailUrl = video.Thumbnail?.ThumbnailUrl;
+        if (!string.IsNullOrEmpty(thumbnailUrl) && !thumbnailUrl.StartsWith("http"))
+        {
+            thumbnailUrl = $"http://{domain}/{thumbnailUrl.TrimStart('/')}";
+        }
+
+        string? streamingUrl = null;
+        if (video.Status == VideoStatus.Published && !string.IsNullOrEmpty(video.OutputFolder))
+        {
+            streamingUrl = video.OutputFolder.StartsWith("http") 
+                ? video.OutputFolder 
+                : $"http://{domain}/{video.OutputFolder.TrimStart('/')}/master.m3u8";
+        }
+
         return new VideoResponse(
             video.Id,
             video.Title,
             video.Description,
             video.Status.ToString(),
-            video.Thumbnail?.ThumbnailUrl,
+            thumbnailUrl,
+            streamingUrl,
             video.Metadata,
             video.Specifications,
             video.SourceKey,    
@@ -53,13 +75,13 @@ public static class Debug
                .AccessControl("video:List", _ => ResourceArn.ForTenant(Guid.Empty));
         }
 
-        private async Task<IResult> Handler(int? page, int? perPage, VideoUploadingModule module)
+        private async Task<IResult> Handler(int? page, int? perPage, VideoUploadingModule module, AWSResources resources)
         {
             var query = new ListVideosQuery(page ?? 1, perPage ?? 10);
-            var response = await module.Send<ListVideosQuery, ErrorOr<AlphaZero.Shared.Queries.PagedResult<AlphaZero.Modules.VideoUploading.Domain.Models.Video>>>(query);
+            var response = await module.Send<ListVideosQuery, ErrorOr<PagedResult<Video>>>(query);
             return response.Match(
-                res => Results.Ok(new AlphaZero.Shared.Queries.PagedResult<VideoResponse>(
-                    res.Items.Select(MapToResponse).ToList(),
+                res => Results.Ok(new PagedResult<VideoResponse>(
+                    res.Items.Select(v => MapToResponse(v, resources)).ToList(),
                     res.TotalCount,
                     res.CurrentPage,
                     res.PageSize)),
@@ -76,12 +98,12 @@ public static class Debug
                .AccessControl("video:View", ctx => ResourceArn.ForVideo(Guid.Empty, Guid.Parse(ctx.Request.RouteValues["id"]?.ToString() ?? Guid.Empty.ToString())));
         }
 
-        private async Task<IResult> Handler(Guid id, VideoUploadingModule module)
+        private async Task<IResult> Handler(Guid id, VideoUploadingModule module, AWSResources resources)
         {
             var query = new GetVideoQuery(id);
             var response = await module.Send<GetVideoQuery, ErrorOr<AlphaZero.Modules.VideoUploading.Domain.Models.Video>>(query);
             return response.Match(
-                res => Results.Ok(MapToResponse(res)),
+                res => Results.Ok(MapToResponse(res, resources)),
                 errors => errors.ToMinimalResult());
         }
     }

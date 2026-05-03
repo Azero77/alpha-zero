@@ -148,6 +148,9 @@ namespace AlphaZero.Modules.VideoUploading.Infrastructure.Migrations
                     b.Property<int?>("SourceWidth")
                         .HasColumnType("integer");
 
+                    b.Property<string>("TargetResourceArn")
+                        .HasColumnType("text");
+
                     b.Property<Guid>("TenantId")
                         .HasColumnType("uuid");
 

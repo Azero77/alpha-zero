@@ -26,11 +26,10 @@ public enum ResourceType
     Videos,
     Sections,
     Lessons,
-    Quizzes,
+    Assessments,
     Tenants,
     Identity,
     Video,
     Library,
-    Assessments,
     Submissions
 }

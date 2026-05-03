@@ -1,5 +1,6 @@
 using AlphaZero.Modules.VideoUploading.Application;
 using AlphaZero.Modules.VideoUploading.Infrastructure;
+using AlphaZero.Modules.VideoUploading.Infrastructure.Consumers;
 using AlphaZero.Modules.VideoUploading.Infrastructure.Persistance;
 using AlphaZero.Modules.VideoUploading.Infrastructure.Sagas;
 using Autofac;
@@ -39,9 +40,10 @@ public class VideoUploadingModule : AppModule, IVideoUploadingModule
             r.UsePostgres();
             r.ConcurrencyMode = ConcurrencyMode.Optimistic;
         });
-
+         
         // Register local consumers that should run on the in-memory bus with their own scopes
         configuration.AddConsumers(typeof(VideoUploadingModule).Assembly);
         configuration.AddConsumers(typeof(AppDbContext).Assembly);
+        configuration.AddConsumer<FFmpegTranscodingConsumer, FFMpegTrancodingConsumerDefinition>();
     }
 }

@@ -21,9 +21,10 @@
     <PackageReference Include="MassTransit" />
     <PackageReference Include="MassTransit.AmazonSQS" />
     <PackageReference Include="MassTransit.EntityFrameworkCore" />
-    <PackageReference Include="MassTransit.Extensions.DependencyInjection" />
     <PackageReference Include="MassTransit.Newtonsoft" />
-    <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
+	<PackageReference Include="Microsoft.EntityFrameworkCore" />
+
+	  <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
@@ -40,7 +41,6 @@
     <ProjectReference Include="..\aspire\Aspire.Shared\Aspire.Shared.csproj" />
     <ProjectReference Include="..\Modules\Assessments\Presentation\Presentation.csproj" />
     <ProjectReference Include="..\Modules\Identity\Presentation\Presentation.csproj" />
-    <ProjectReference Include="..\Modules\VideoStreaming\Presentation\Presentation.csproj" />
     <ProjectReference Include="..\Modules\VideoUploading\Presentation\Presentation.csproj" />
     <ProjectReference Include="..\Modules\Courses\Presentation\Presentation.csproj" />
     <ProjectReference Include="..\Modules\Library\Presentation\Presentation.csproj" />

@@ -69,14 +69,24 @@ public class S3VideoCdnSyncService : IVideoCdnSyncService
             // 3. Add Custom Thumbnail to Sync if exists
             if (!string.IsNullOrEmpty(customThumbnailKey))
             {
-                _logger.LogInformation("Syncing custom thumbnail {Key} for Video {VideoId}", customThumbnailKey, videoId);
-                copyTasks.Add(_s3Client.CopyObjectAsync(new CopyObjectRequest
+                var inputBucket = _awsResources.InputS3?.BucketName;
+                if (string.IsNullOrEmpty(inputBucket))
                 {
-                    SourceBucket = s3Bucket, // Assumed to be in the same input bucket
-                    SourceKey = customThumbnailKey,
-                    DestinationBucket = destinationBucket,
-                    DestinationKey = $"{s3KeyPrefix.TrimEnd('/')}/thumbnails/custom.jpg" // Renamed for consistency
-                }, cancellationToken));
+                    _logger.LogWarning("Input S3 bucket is not configured. Skipping custom thumbnail sync for Video {VideoId}", videoId);
+                }
+                else
+                {
+                    _logger.LogInformation("Syncing custom thumbnail {Key} for Video {VideoId} from {InputBucket}", 
+                        customThumbnailKey, videoId, inputBucket);
+                    
+                    copyTasks.Add(_s3Client.CopyObjectAsync(new CopyObjectRequest
+                    {
+                        SourceBucket = inputBucket, 
+                        SourceKey = customThumbnailKey,
+                        DestinationBucket = destinationBucket,
+                        DestinationKey = $"{s3KeyPrefix.TrimEnd('/')}/thumbnails/custom.jpg" // Renamed for consistency
+                    }, cancellationToken));
+                }
             }
 
             var copyResults = await Task.WhenAll(copyTasks);
@@ -89,18 +99,24 @@ public class S3VideoCdnSyncService : IVideoCdnSyncService
             }
             _logger.LogInformation("Successfully copied {Count} files in parallel for Video {VideoId}", copyTasks.Count, videoId);
 
-            // 4. Cleanup Source (Only streaming files, maybe keep custom thumbnail for safety or delete it too)
-            var deleteRequest = new DeleteObjectsRequest
+            // 4. Cleanup Source
+            // 4.1 Delete streaming files from Output bucket
+            var deleteOutputRequest = new DeleteObjectsRequest
             {
                 BucketName = s3Bucket,
                 Objects = objectsToSync.Select(o => new KeyVersion { Key = o.Key }).ToList()
             };
-            if (!string.IsNullOrEmpty(customThumbnailKey))
-            {
-                deleteRequest.Objects.Add(new KeyVersion { Key = customThumbnailKey });
-            }
+            await _s3Client.DeleteObjectsAsync(deleteOutputRequest, cancellationToken);
 
-            await _s3Client.DeleteObjectsAsync(deleteRequest, cancellationToken);
+            // 4.2 Delete custom thumbnail from Input bucket if it exists
+            if (!string.IsNullOrEmpty(customThumbnailKey) && !string.IsNullOrEmpty(_awsResources.InputS3?.BucketName))
+            {
+                await _s3Client.DeleteObjectAsync(new DeleteObjectRequest
+                {
+                    BucketName = _awsResources.InputS3.BucketName,
+                    Key = customThumbnailKey
+                }, cancellationToken);
+            }
 
             // 4. Return Relative Path (Frontend will append CDN Domain)
             return $"{s3KeyPrefix.TrimEnd('/')}/master.m3u8";

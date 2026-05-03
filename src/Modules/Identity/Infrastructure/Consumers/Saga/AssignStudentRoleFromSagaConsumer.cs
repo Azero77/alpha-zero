@@ -1,12 +1,12 @@
 using AlphaZero.Modules.Courses.IntegrationEvents;
+using AlphaZero.Modules.Identity.Application;
 using AlphaZero.Modules.Identity.Application.Principals.Commands.AssignPrincipalToUser;
 using MassTransit;
-using MediatR;
 using Microsoft.Extensions.Logging;
 
 namespace AlphaZero.Modules.Identity.Infrastructure.Consumers.Saga;
 
-public class AssignStudentRoleFromSagaConsumer(IMediator mediatr, ILogger<AssignStudentRoleFromSagaConsumer> logger) : IConsumer<AssignStudentRoleFromSagaCommand>
+public class AssignStudentRoleFromSagaConsumer(IIdentityModule identityModule, ILogger<AssignStudentRoleFromSagaConsumer> logger) : IConsumer<AssignStudentRoleFromSagaCommand>
 {
     public async Task Consume(ConsumeContext<AssignStudentRoleFromSagaCommand> context)
     {
@@ -18,7 +18,7 @@ public class AssignStudentRoleFromSagaConsumer(IMediator mediatr, ILogger<Assign
             studentTemplateId, 
             context.Message.Course.ToString());
 
-        var result = await mediatr.Send(command);
+        var result = await identityModule.Send(command);
 
         if (result.IsError)
         {

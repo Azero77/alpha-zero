@@ -20,7 +20,8 @@ public static class Upload
         string? description,
         VideoTranscodingMetehod? transcodingMethod,
         VideoEncryptionMethod? encryptionMethod,
-        bool? generateCustomThumbnailUrl);
+        bool? generateCustomThumbnailUrl,
+        string? targetResourceArn);
     public record Response(
         Guid videoId,
         Guid tenantId,
@@ -28,8 +29,10 @@ public static class Upload
         string preSignedUrl,
         string transcodingMethod,
         string encryptionMethod,
+        Dictionary<string, string> headers,
         string? thumbnailKey = null,
-        string? thumbnailPreSignedUrl = null);
+        string? thumbnailPreSignedUrl = null,
+        Dictionary<string, string>? thumbnailHeaders = null);
 
     public class Endpoint : IEndpoint
     {
@@ -40,7 +43,7 @@ public static class Upload
                .AccessControl("video:Upload", _ => ResourceArn.ForTenant(Guid.Empty));
         }
 
-        private async Task<IResult> Handler(Request request, VideoUploadingModule module)
+        private async Task<IResult> Handler(Request request, VideoUploadingModule module, HttpContext context)
         {
             var transcodingMethod = request.transcodingMethod ?? VideoTranscodingMetehod.FFMPEG;
             var encryptionMethod = request.encryptionMethod ?? VideoEncryptionMethod.ClearKey;
@@ -52,7 +55,8 @@ public static class Upload
                 request.description,
                 transcodingMethod,
                 encryptionMethod,
-                request.generateCustomThumbnailUrl ?? false);
+                request.generateCustomThumbnailUrl ?? false,
+                request.targetResourceArn);
             var response = await module.Send<UploadCommand, ErrorOr<UploadCommandResponse>>(command);
             return response.Match(
                 res => Results.Ok(new Response(
@@ -62,8 +66,10 @@ public static class Upload
                     res.PreSignedUrl,
                     res.TranscodingMethod,
                     res.EncryptionMethod,
+                    res.Headers,
                     res.ThumbnailKey,
-                    res.ThumbnailPreSignedUrl)),
+                    res.ThumbnailPreSignedUrl,
+                    res.ThumbnailHeaders)),
                 errors => errors.ToMinimalResult());
         }
     }

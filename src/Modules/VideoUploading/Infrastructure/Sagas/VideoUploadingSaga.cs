@@ -40,6 +40,7 @@ public class VideoUploadingSaga : MassTransitStateMachine<VideoState>
                     context.Saga.TenantId = context.Message.TenantId;
                     context.Saga.EncryptionMethod = context.Message.EncryptionMethod;
                     context.Saga.CustomThumbnailKey = context.Message.ThumbnailKey;
+                    context.Saga.TargetResourceArn = context.Message.TargetResourceArn;
                 })
                 .TransitionTo(Pending),
             
@@ -47,6 +48,10 @@ public class VideoUploadingSaga : MassTransitStateMachine<VideoState>
                 .Then(context => {
                     context.Saga.Key = context.Message.Key;
                     context.Saga.TenantId = context.Message.TenantId;
+                    if (!string.IsNullOrEmpty(context.Message.TargetResourceArn))
+                    {
+                        context.Saga.TargetResourceArn = context.Message.TargetResourceArn;
+                    }
                 })
                 .Publish(context => new AnalyzeVideoCommand(
                     context.Message.VideoId, 
@@ -58,6 +63,10 @@ public class VideoUploadingSaga : MassTransitStateMachine<VideoState>
                 .Then(context => {
                     context.Saga.Key = context.Message.Key;
                     context.Saga.TenantId = context.Message.TenantId;
+                    if (!string.IsNullOrEmpty(context.Message.TargetResourceArn))
+                    {
+                        context.Saga.TargetResourceArn = context.Message.TargetResourceArn;
+                    }
                 })
                 .Publish(context => new AnalyzeVideoCommand(
                     context.Message.VideoId, 
@@ -110,7 +119,10 @@ public class VideoUploadingSaga : MassTransitStateMachine<VideoState>
         During(Distributing,
             When(VideoCdnSyncCompletedEvent)
                 .Then(context => context.Saga.FinalUrl = context.Message.RelativeUrl)
-                .Publish(context => new VideoPublishedEvent(context.Message.VideoId, context.Message.RelativeUrl))
+                .Publish(context => new VideoPublishedEvent(
+                    context.Message.VideoId, 
+                    context.Message.RelativeUrl,
+                    context.Saga.TargetResourceArn))
                 .TransitionTo(Published)
                 .Finalize());
 
@@ -135,6 +147,7 @@ public class VideoState : SagaStateMachineInstance
     public string? FinalUrl { get; set; }
     public string? EncryptionMethod { get; set; }
     public string? CustomThumbnailKey { get; set; }
+    public string? TargetResourceArn { get; set; }
     public bool IsFailed { get; set; } = false;
     public int Version { get; set; }
 }

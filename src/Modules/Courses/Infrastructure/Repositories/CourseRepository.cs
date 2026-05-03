@@ -38,4 +38,13 @@ public class CourseRepository : BaseRepository<AppDbContext, Course>, ICourseRep
 
         return (courseId, itemInfo.BitIndex);
     }
+
+    public async Task<List<Course>> GetCoursesByResourceIdAsync(Guid resourceId, CancellationToken cancellationToken = default)
+    {
+        return await _context.Courses
+            .Include(c => c.Sections)
+                .ThenInclude(s => s.Items)
+            .Where(c => c.Sections.Any(s => s.Items.Any(i => i.ResourceId == resourceId)))
+            .ToListAsync(cancellationToken);
+    }
 }

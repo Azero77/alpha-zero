@@ -1,4 +1,6 @@
-﻿using Microsoft.AspNetCore.Builder;
+﻿using MassTransit.EntityFrameworkCoreIntegration;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -17,6 +19,10 @@ public static class MigrationRunner
 
         logger.LogInformation("Starting automated database migrations for {ModuleCount} modules...", modules.Count);
 
+        //Run The Orchestration DbContext Migration
+        var orchestrationDbContext = app.Services.GetRequiredService<JobServiceSagaDbContext>();
+
+        await orchestrationDbContext.Database.MigrateAsync();
         foreach (var module in modules)
         {
             var moduleName = module.GetType().Name;

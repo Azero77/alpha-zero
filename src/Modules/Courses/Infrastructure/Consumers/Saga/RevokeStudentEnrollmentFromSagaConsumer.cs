@@ -1,17 +1,16 @@
 using AlphaZero.Modules.Courses.Application.Enrollements.Commands.Deactivate;
 using AlphaZero.Modules.Courses.IntegrationEvents;
 using MassTransit;
-using MediatR;
 using Microsoft.Extensions.Logging;
 
 namespace AlphaZero.Modules.Courses.Infrastructure.Consumers.Saga;
 
-public class RevokeStudentEnrollmentFromSagaConsumer(IMediator mediatr, ILogger<RevokeStudentEnrollmentFromSagaConsumer> logger) : IConsumer<RevokeStudentEnrollmentFromSagaCommand>
+public class RevokeStudentEnrollmentFromSagaConsumer(ICoursesModule coursesModule, ILogger<RevokeStudentEnrollmentFromSagaConsumer> logger) : IConsumer<RevokeStudentEnrollmentFromSagaCommand>
 {
     public async Task Consume(ConsumeContext<RevokeStudentEnrollmentFromSagaCommand> context)
     {
         var command = new DeactivateEnrollmentCommand(context.Message.UserId, context.Message.CourseId);
-        var result = await mediatr.Send(command);
+        var result = await coursesModule.Send(command);
 
         if (result.IsError)
         {

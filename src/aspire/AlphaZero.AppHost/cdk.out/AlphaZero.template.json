@@ -123,6 +123,8 @@
         "x-amz-meta-description",
         "x-amz-meta-videotranscodingmetehod",
         "x-amz-meta-videoencryptionmethod",
+        "x-amz-meta-targetresourcearn",
+        "x-amz-meta-isthumbnail",
         "*"
        ],
        "AllowedMethods": [
@@ -140,7 +142,9 @@
         "x-amz-meta-title",
         "x-amz-meta-description",
         "x-amz-meta-videotranscodingmetehod",
-        "x-amz-meta-videoencryptionmethod"
+        "x-amz-meta-videoencryptionmethod",
+        "x-amz-meta-targetresourcearn",
+        "x-amz-meta-isthumbnail"
        ],
        "MaxAge": 3600
       }

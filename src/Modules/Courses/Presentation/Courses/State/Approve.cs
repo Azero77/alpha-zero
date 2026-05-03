@@ -21,12 +21,13 @@ public class ApproveCourseEndpoint : Endpoint<ApproveCourseRequest>
     {
         _module = module;
     }
-
     public override void Configure()
     {
-        Patch("/courses/{CourseId}/approve");
+        Post("/courses/{CourseId}/approve");
         this.AccessControl("courses:Approve", req => ResourceArn.ForCourse(Guid.Empty, req.CourseId));
-        Description(d => d.WithTags("Courses"));
+        Description(d => d
+            .WithTags("Courses")
+            .Accepts<ApproveCourseRequest>("application/json"));
     }
 
     public override async Task HandleAsync(ApproveCourseRequest req, CancellationToken ct)

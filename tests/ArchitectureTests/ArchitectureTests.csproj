@@ -26,7 +26,6 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\AlphaZero.Shared\AlphaZero.Shared.csproj" />
     <ProjectReference Include="..\..\src\Modules\Courses\Application\Application.csproj" />
-    <ProjectReference Include="..\..\src\Modules\VideoStreaming\Application\Application.csproj" />
     <ProjectReference Include="..\..\src\Modules\VideoUploading\Application\Application.csproj" />
   </ItemGroup>
 

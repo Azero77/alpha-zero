@@ -1,3 +1,4 @@
+using AlphaZero.Modules.Assessments.Application;
 using AlphaZero.Modules.Assessments.Infrastructure;
 using AlphaZero.Modules.Assessments.Infrastructure.Persistence;
 using Autofac;
@@ -7,7 +8,7 @@ using Microsoft.Extensions.Logging;
 
 namespace AlphaZero.Modules.Assessments.Presentation;
 
-public class AssessmentsModule : AppModule
+public class AssessmentsModule : AppModule, IAssessmentsModule
 {
     public override void RegisterGlobal(IServiceCollection globalServices)
     {
@@ -15,6 +16,8 @@ public class AssessmentsModule : AppModule
             globalServices.AddAssessmentsGlobalInfrastructure(Configuration);
         else
             _logger?.LogWarning("Configuration is null in Assessments Module");
+
+        globalServices.AddSingleton<IAssessmentsModule>(this);
     }
 
     public override void RegisterPrivate(IServiceCollection moduleServices, ContainerBuilder builder)

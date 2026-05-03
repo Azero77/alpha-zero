@@ -22,6 +22,7 @@ public interface IModule
     void Initialize(ILifetimeScope scope);
     void ConfigureModuleBus(IBusRegistrationConfigurator configuration);
     IConfiguration? Configuration { get; set; }
+    ILifetimeScope CreateScope();
 }
 
 /// <summary>
@@ -45,20 +46,22 @@ public abstract class AppModule : Module, IModule
         _logger = Scope.Resolve<ILogger<AppModule>>();
     }
 
-    public virtual async Task<TResponse> Send<TRequest, TResponse>(IRequest<TResponse> request, CancellationToken cancellationToken = default) where TRequest : IRequest<TResponse>
+    public ILifetimeScope CreateScope()
     {
         if (Scope is null) throw new InvalidOperationException("Module not initialized. Did you forget to call Initialize()?");
-        
-        using var requestScope = Scope.BeginLifetimeScope();
+        return Scope.BeginLifetimeScope();
+    }
+
+    public virtual async Task<TResponse> Send<TRequest, TResponse>(IRequest<TResponse> request, CancellationToken cancellationToken = default) where TRequest : IRequest<TResponse>
+    {
+        using var requestScope = CreateScope();
         var mediatr = requestScope.Resolve<IMediator>();
         return await mediatr.Send(request, cancellationToken);
     }
 
     public virtual async Task<TResponse> Send<TResponse>(IRequest<TResponse> request, CancellationToken cancellationToken = default)
     {
-        if (Scope is null) throw new InvalidOperationException("Module not initialized. Did you forget to call Initialize()?");
-
-        using var requestScope = Scope.BeginLifetimeScope();
+        using var requestScope = CreateScope();
         var mediatr = requestScope.Resolve<IMediator>();
         return await mediatr.Send(request, cancellationToken);
     }

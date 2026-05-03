@@ -2,6 +2,7 @@ using AlphaZero.Modules.Courses.Application.Repositories;
 using AlphaZero.Modules.Courses.Domain.Aggregates.Courses;
 using ErrorOr;
 using MediatR;
+using System.Text.Json;
 
 namespace AlphaZero.Modules.Courses.Application.Courses.Queries.GetCourse;
 
@@ -25,7 +26,8 @@ public record ItemDto(
     string Type,
     int Order,
     int BitIndex,
-    Guid ResourceId);
+    Guid ResourceId,
+    JsonElement Metadata);
 
 public record GetCourseQuery(Guid CourseId) : IRequest<ErrorOr<CourseDto>>;
 
@@ -59,7 +61,8 @@ public sealed class GetCourseQueryHandler : IRequestHandler<GetCourseQuery, Erro
                     i.GetType().Name.Replace("CourseSection", ""),
                     i.Order,
                     i.BitIndex,
-                    i.ResourceId)).ToList())).ToList());
+                    i.ResourceId,
+                    i.Metadata)).ToList())).ToList());
 
         return dto;
     }

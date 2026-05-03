@@ -12,6 +12,7 @@ using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Npgsql;
 
 namespace AlphaZero.Modules.Assessments.Infrastructure;
 
@@ -21,9 +22,10 @@ public static class DependencyInjection
     {
         DatabaseSettings dbSettings = DatabaseSettings.GetDatabaseSettings(configuration);
 
+        var dataSource = new NpgsqlDataSourceBuilder(dbSettings.ConnectionString).EnableDynamicJson().Build();
         services.AddDbContext<AppDbContext>((sp, opts) =>
         {
-            opts.UseNpgsql(dbSettings.ConnectionString, h =>
+            opts.UseNpgsql(dataSource, h =>
             {
                 h.MigrationsAssembly(typeof(AppDbContext).Assembly.FullName);
                 h.MigrationsHistoryTable("__AssessmentsMigrationHistory", AppDbContext.Schema);

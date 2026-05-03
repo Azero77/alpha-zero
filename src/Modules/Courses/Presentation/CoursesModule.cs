@@ -11,7 +11,7 @@ using Microsoft.Extensions.Logging;
 
 namespace AlphaZero.Modules.Courses.Presentation;
 
-public class CoursesModule : AppModule
+public class CoursesModule : AppModule, ICoursesModule
 {
     public override void RegisterGlobal(IServiceCollection globalServices)
     {
@@ -19,6 +19,8 @@ public class CoursesModule : AppModule
             globalServices.AddCoursesGlobalInfrastructure(Configuration);
         else
             _logger?.LogWarning("Configuration is null in Courses Module");
+
+        globalServices.AddSingleton<ICoursesModule>(this);
     }
 
     public override void RegisterPrivate(IServiceCollection moduleServices, ContainerBuilder builder)
@@ -46,5 +48,6 @@ public class CoursesModule : AppModule
             });
 
         configuration.AddConsumers(typeof(CoursesModule).Assembly);
+        configuration.AddConsumers(typeof(AlphaZero.Modules.Courses.Infrastructure.Consumers.AssessmentMetadataChangedConsumer).Assembly);
     }
 }
