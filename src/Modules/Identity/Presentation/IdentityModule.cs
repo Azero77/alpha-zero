@@ -6,6 +6,7 @@ using MassTransit;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.IdentityModel.Logging;
 
 namespace AlphaZero.Modules.Identity.Presentation;
 
@@ -31,5 +32,6 @@ public class IdentityModule : AppModule, IIdentityModule
 
     public override void ConfigureModuleBus(IBusRegistrationConfigurator configuration)
     {
+        configuration.AddConsumers(typeof(IdentityModule).Assembly);
     }
 }

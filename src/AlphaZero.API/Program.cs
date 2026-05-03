@@ -163,10 +163,10 @@ public class Program
             x.UsingInMemory((context, cfg) =>
             {
                 cfg.ConfigureEndpoints(context);
-                cfg.ServiceInstance(options =>
+               /* cfg.ServiceInstance(options =>
                 {
                     options.ConfigureJobServiceEndpoints();
-                });
+                });*/
             });
             /*x.AddEntityFrameworkOutbox<OrchestrationDbContext>(o =>
             {
