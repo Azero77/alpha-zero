@@ -12,7 +12,7 @@ using System.IO;
 
 namespace AlphaZero.Modules.VideoUploading.Infrastructure.Consumers;
 
-public class FFmpegTranscodingConsumer : IConsumer<ExecuteFFmpegTranscodingCommand>
+public class FFmpegTranscodingConsumer : IJobConsumer<ExecuteFFmpegTranscodingCommand>
 {
     private readonly IAmazonS3 _s3Client;
     private readonly AWSResources _awsResources;
@@ -31,9 +31,9 @@ public class FFmpegTranscodingConsumer : IConsumer<ExecuteFFmpegTranscodingComma
         _logger = logger;
     }
 
-    public async Task Consume(ConsumeContext<ExecuteFFmpegTranscodingCommand> context)
+    public async Task Run(JobContext<ExecuteFFmpegTranscodingCommand> context)
     {
-        var msg = context.Message;
+        var msg = context.Job;
         _logger.LogInformation("[FFmpegConsumer] Starting transcoding for Video {VideoId}", msg.VideoId);
 
         string tempPath = Path.Combine(Path.GetTempPath(), "transcoding", msg.VideoId.ToString());
@@ -75,7 +75,7 @@ public class FFmpegTranscodingConsumer : IConsumer<ExecuteFFmpegTranscodingComma
                     
                     // The first line is the URI in the manifest. 
                     // This MUST match our Key Delivery Service endpoint.
-                    string manifestKeyUri = encParams.KeyUrl ?? $"https://localhost:7016/api/video/keys/{msg.VideoId}";
+                    string manifestKeyUri = encParams.KeyUrl ?? throw new ArgumentException("The Key url in the Encryption Service is not configured , see IVideoEncryption Service Used");
 
                     await File.WriteAllLinesAsync(hlsKeyInfoFile, new[]
                     {
@@ -183,16 +183,15 @@ public class FFmpegTranscodingConsumer : IConsumer<ExecuteFFmpegTranscodingComma
             int crf = r.width >= 1280 ? 21 : 23;
             
             args += $"-map 0:v -map 0:a ";
-            // Bug Fix 3: QVBR equivalent using CRF + maxrate/bufsize
+            // QVBR equivalent using CRF + maxrate/bufsize
             args += $"-c:v:{i} libx264 -crf:{i} {crf} -maxrate:v:{i} {r.bitrate}k -bufsize:v:{i} {r.bitrate * 2}k -preset fast ";
-            // Bug Fix 1: Noise Reduction (hqdn3d) - Keeping as requested
+            // Noise Reduction (hqdn3d) - Keeping as requested
             args += $"-filter:v:{i} \"hqdn3d,scale=w={r.width}:h={r.height}:force_original_aspect_ratio=decrease,pad=ceil(iw/2)*2:ceil(ih/2)*2\" ";
-            // Bug Fix 2: Audio Normalization (loudnorm)
+            // Audio Normalization (loudnorm)
             args += $"-c:a:{i} aac -b:a:{i} 128k -ar:{i} 44100 -filter:a:{i} \"loudnorm=I=-24:LRA=7:tp=-2\" ";
             varStreamMap += $"v:{i},a:{i} ";
         }
 
-        // Bug Fix: FFmpeg HLS muxer does not support encrypted fmp4 segments yet.
         // We fallback to mpegts for encrypted streams to ensure compatibility and success.
         string segmentType = !string.IsNullOrEmpty(keyInfoFile) ? "mpegts" : "fmp4";
 

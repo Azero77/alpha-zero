@@ -3,16 +3,21 @@ using AlphaZero.Modules.VideoUploading.Infrastructure.Sagas;
 using AlphaZero.Shared.Application;
 using AlphaZero.Shared.Authorization;
 using AlphaZero.Shared.Infrastructure;
+using AlphaZero.Shared.Infrastructure.Persistance;
+using AlphaZero.Shared.Infrastructure.SoftDelete;
 using AlphaZero.Shared.Infrastructure.Tenats;
 using Amazon.Extensions.NETCore.Setup;
 using Aspire.Shared;
 using Autofac;
+using Autofac.Core;
 using Autofac.Extensions.DependencyInjection;
 using FastEndpoints;
 using FastEndpoints.Security;
 using FastEndpoints.Swagger;
 using MassTransit;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi;
+using System.Configuration;
 using System.Reflection;
 
 namespace AlphaZero.API;
@@ -66,7 +71,6 @@ public class Program
         await app.RunAsync();
     }
 
-    // EF Core tools (.NET 6+) look for a method that returns WebApplicationBuilder or IHost
     public static WebApplicationBuilder CreateWebApplicationBuilder(string[] args)
     {
         var builder = WebApplication.CreateBuilder(args);
@@ -136,9 +140,28 @@ public class Program
             .Where(a => a.FullName!.StartsWith("AlphaZero"))
             .ToArray();
 
+        builder.Services.AddDbContext<OrchestrationDbContext>((sp, opts) =>
+        {
+            DatabaseSettings dbSettings = DatabaseSettings.GetDatabaseSettings(builder.Configuration);
+
+            opts.UseNpgsql(dbSettings.ConnectionString, h =>
+            {
+                h.MigrationsAssembly(typeof(OrchestrationDbContext).Assembly.FullName);
+                h.MigrationsHistoryTable("__OrchestrationMigrationHistory", OrchestrationDbContext.Schema);
+            });
+            opts.AddInterceptors(sp.GetRequiredService<SoftDeleteInterceptor>());
+        });
+
         builder.Services.AddMassTransit<IModuleBus>(x =>
         {
             x.SetKebabCaseEndpointNameFormatter();
+            x.AddJobSagaStateMachines();
+            x.SetEntityFrameworkSagaRepositoryProvider(r =>
+            {
+                r.ConcurrencyMode = ConcurrencyMode.Pessimistic;
+                r.ExistingDbContext<OrchestrationDbContext>();
+                r.UsePostgres();
+            });
             x.AddConsumers(filter => !filter.Name.Contains("sqs", StringComparison.InvariantCultureIgnoreCase), assemblies);
             foreach (var module in moduleInstances)
             {
