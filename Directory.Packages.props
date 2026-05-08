@@ -23,6 +23,7 @@
     <PackageVersion Include="FastEndpoints.Swagger" Version="8.1.0" />
     <PackageVersion Include="FFMpegCore" Version="5.4.0" />
     <PackageVersion Include="FluentValidation.DependencyInjectionExtensions" Version="12.1.1" />
+    <PackageVersion Include="Keycloak.AuthServices.Aspire.Hosting" Version="0.3.0" />
     <PackageVersion Include="MassTransit" Version="8.5.8" />
     <PackageVersion Include="MassTransit.AmazonSQS" Version="8.5.8" />
     <PackageVersion Include="MassTransit.EntityFrameworkCore" Version="8.5.8" />

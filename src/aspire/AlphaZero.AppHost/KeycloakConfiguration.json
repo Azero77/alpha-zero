@@ -1,0 +1,76 @@
+{
+  "realm": "alpha-zero-realm",
+  "enabled": true,
+
+  "roles": {
+    "realm": [
+      {
+        "name": "admin"
+      },
+      {
+        "name": "user"
+      }
+    ]
+  },
+
+  "users": [
+    {
+      "username": "AdminUser",
+      "enabled": true,
+      "emailVerified": true,
+
+      "credentials": [
+        {
+          "type": "password",
+          "value": "admin123",
+          "temporary": false
+        }
+      ],
+
+      "realmRoles": [
+        "admin"
+      ]
+    },
+
+    {
+      "username": "NormalUser",
+      "enabled": true,
+      "emailVerified": true,
+
+      "credentials": [
+        {
+          "type": "password",
+          "value": "user123",
+          "temporary": false
+        }
+      ],
+
+      "realmRoles": [
+        "user"
+      ]
+    }
+  ],
+
+  "clients": [
+    {
+      "clientId": "myclient",
+
+      "enabled": true,
+
+      "publicClient": true,
+
+      "directAccessGrantsEnabled": true,
+
+      "standardFlowEnabled": true,
+
+      "redirectUris": [
+        "http://localhost:*/*",
+        "https://localhost:*/*"
+      ],
+
+      "webOrigins": [
+        "+"
+      ]
+    }
+  ]
+}

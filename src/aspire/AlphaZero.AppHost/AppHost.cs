@@ -1,4 +1,5 @@
 
+using Amazon.CDK.AWS.AppMesh;
 using Amazon.CDK.AWS.Events;
 using Amazon.CDK.AWS.Events.Targets;
 using Amazon.CDK.AWS.IAM;
@@ -19,7 +20,7 @@ var awsSdkConfig = builder.AddAWSSDKConfig().WithRegion(Amazon.RegionEndpoint.EU
 
 var awscdkStack = builder.AddAWSCDKStack("AlphaZero")
     .WithReference(awsSdkConfig);
-
+#region aws
 
 var mediaConvertRole = new Role((Construct)awscdkStack.Resource.Construct, "AspireMediaConvertServiceRole", new RoleProps()
 {
@@ -138,13 +139,21 @@ var videoProcessedQueue = awscdkStack.AddSQSQueue("mediaconverter-video-processe
 });
 videoProcessedQueue.Resource.Construct.GrantSendMessages(new ServicePrincipal("events.amazonaws.com"));
 mediaConvertRule.AddTarget(new SqsQueue(videoProcessedQueue.Resource.Construct));
-
+#endregion
 var postgres = builder.AddPostgres("postgres")
     .WithImage("postgis/postgis:16-3.5-alpine")
     .WithPgAdmin(cfg => cfg.WithImage("dpage/pgadmin4:snapshot"))
     .WithDataVolume(isReadOnly: false);
-
 var db = postgres.AddDatabase("alphazerodb");
+var keycloakDb = postgres.AddDatabase("idsrvDb");
+var keyCloak = builder.AddKeycloakContainer("idsrv")
+    .WithDataVolume()
+    .WithImport("KeycloakConfiguration.json")
+    .WithPostgresDatabase(keycloakDb)
+    ;
+
+var realm = keyCloak.AddRealm("alpha-zero-realm");
+
 var api = builder.AddProject<Projects.AlphaZero_API>("alphazero-api")
     .WithReference(awsSdkConfig)
     .WithReference(input_s3)
@@ -154,6 +163,8 @@ var api = builder.AddProject<Projects.AlphaZero_API>("alphazero-api")
     .WithReference(db)
     .WaitFor(db)
     .WithReference(videoProcessedQueue)
+    .WithReference(keyCloak)
+    .WithReference(realm)
     .WithEnvironment("AWS__Resources__MediaConvertRoleArn", awscdkStack.GetOutput("MediaConvertRoleArnOutput"))
     .WithEnvironment("AWS__Resources__MediaConvertKeyKMSArn", kmsArn)
     .WithEnvironment("AWS__Resources__CdnDomain" , cdnDomain)
