@@ -147,12 +147,9 @@ var postgres = builder.AddPostgres("postgres")
 var db = postgres.AddDatabase("alphazerodb");
 var keycloakDb = postgres.AddDatabase("idsrvDb");
 var keyCloak = builder.AddKeycloakContainer("idsrv")
-    .WithDataVolume()
     .WithImport("KeycloakConfiguration.json")
     .WithPostgresDatabase(keycloakDb)
     ;
-
-var realm = keyCloak.AddRealm("alpha-zero-realm");
 
 var api = builder.AddProject<Projects.AlphaZero_API>("alphazero-api")
     .WithReference(awsSdkConfig)
@@ -164,7 +161,6 @@ var api = builder.AddProject<Projects.AlphaZero_API>("alphazero-api")
     .WaitFor(db)
     .WithReference(videoProcessedQueue)
     .WithReference(keyCloak)
-    .WithReference(realm)
     .WithEnvironment("AWS__Resources__MediaConvertRoleArn", awscdkStack.GetOutput("MediaConvertRoleArnOutput"))
     .WithEnvironment("AWS__Resources__MediaConvertKeyKMSArn", kmsArn)
     .WithEnvironment("AWS__Resources__CdnDomain" , cdnDomain)

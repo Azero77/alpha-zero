@@ -9,7 +9,10 @@ using FastEndpoints.Swagger;
 using MassTransit;
 using MassTransit.EntityFrameworkCoreIntegration;
 using Microsoft.EntityFrameworkCore;
+using NSwag;
+using NSwag.AspNetCore;
 using System.Reflection;
+using System.Security.Claims;
 
 namespace AlphaZero.API;
 
@@ -45,6 +48,16 @@ public class Program
             }
         })
             .UseSwaggerGen();
+
+        app.UseSwaggerUi(c =>
+        {
+            c.OAuth2Client = new OAuth2ClientSettings()
+            {
+                ClientId = builder.Configuration["Keycloak:ClientId"] ?? "alpha-zero-client",
+                UsePkceWithAuthorizationCodeGrant = true,
+            };
+
+        });
         MapModulesEndpoint(app, moduleTypes);
 
         if (app.Environment.IsDevelopment())
@@ -53,11 +66,16 @@ public class Program
         }
 
         app.UseHttpsRedirection();
+        app.UseAuthentication();
         app.UseAuthorization();
 
         // Run migrations only when NOT in design-time (EF tools)
         // EF tools don't call Main if they find CreateBuilder, but we ensure safety here too.
         await app.RunMigrations(moduleInstances);
+        app.MapGet("users/me", (ClaimsPrincipal principal) =>
+        {
+            return principal.Claims.ToDictionary(c => c.Type, c => c.Value);
+        }).RequireAuthorization();
 
         await app.RunAsync();
     }
@@ -69,11 +87,28 @@ public class Program
         LoadModuleAssemblies();
 
         builder.AddServiceDefaults();
-        builder.Services
-            .AddAuthenticationJwtBearer(s => s.SigningKey = builder.Configuration?["JWT:Key"] ?? "very-secure-key")
-            .AddAuthorization();
+        builder.Services.AddAuthentication(options =>
+        {
+            options.DefaultAuthenticateScheme = Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerDefaults.AuthenticationScheme;
+            options.DefaultChallengeScheme = Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerDefaults.AuthenticationScheme;
+        })
+        .AddJwtBearer(options =>
+        {
+            options.Authority = builder.Configuration["Authentication:Authority"] ?? "http://localhost:8080/realms/alpha-zero";
+            options.Audience = builder.Configuration["Authentication:Audience"] ?? "account";
+            options.RequireHttpsMetadata = false;
+            options.TokenValidationParameters = new Microsoft.IdentityModel.Tokens.TokenValidationParameters
+            {
+                ValidateIssuer = true,
+                ValidIssuer = builder.Configuration["Authentication:Authority"] ?? "http://localhost:8080/realms/alpha-zero",
+                ValidateAudience = true,
+                ValidAudience = builder.Configuration["Authentication:Audience"] ?? "account"
+            };
+        });
         
-        builder.Services.AddSharedInfrastructure(builder.Configuration, builder.Environment);
+        builder.Services.AddAuthorization();
+        
+        builder.Services.AddSharedInfrastructure(builder.Configuration, builder.Environment); 
         builder.Services.AddDatabaseSettings(builder.Configuration);
 
         builder.Services.AddEndpointsApiExplorer();
@@ -85,7 +120,33 @@ public class Program
             o.Assemblies = AppDomain.CurrentDomain.GetAssemblies()
                 .Where(a => a.FullName!.StartsWith("AlphaZero"))
                 .ToList();
-        }).SwaggerDocument();
+        }).SwaggerDocument( o =>
+        {
+            o.DocumentSettings = s =>
+            {
+                s.Title = "Alpha Zero";
+                
+                s.AddAuth("oauth2", new()
+                {
+                    Type = OpenApiSecuritySchemeType.OAuth2,
+                    Flows = new()
+                    {
+                        AuthorizationCode = new()
+                        {
+                            AuthorizationUrl = builder.Configuration["Keycloak:AuthorizationUrl"]!,
+                            TokenUrl = builder.Configuration["Keycloak:TokenUrl"]!,
+                            Scopes = new Dictionary<string, string>
+                            {
+                                ["openid"] = "openid",
+                                ["profile"] = "profile",
+                                ["email"] = "email"
+                            }
+                        }
+                    },
+                    
+                });
+            };
+        });
 
         var moduleInstances = RegisterModules(builder);
 
