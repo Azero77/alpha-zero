@@ -1,0 +1,78 @@
+# Build outputs
+bin/
+obj/
+out/
+artifacts/
+
+# User-specific / IDE
+.vs/
+.vscode/
+.idea/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Logs
+*.log
+logs/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Package management
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# .NET / NuGet
+packages/
+*.nupkg
+*.snupkg
+.nuget/
+
+# Generated / compiled frontend assets
+wwwroot/dist/
+wwwroot/build/
+wwwroot/lib/
+
+# Test results / coverage
+TestResults/
+coverage/
+*.coverage
+*.trx
+
+# Docker
+docker-compose.override.yml
+
+# Environment / secrets
+.env
+.env.*
+appsettings.Development.json
+secrets.json
+
+# Temporary / cache
+*.cache
+*.tmp
+*.temp
+
+# Large static assets (optional)
+*.zip
+*.rar
+*.7z
+*.pdf
+*.mp4
+*.mp3
+
+# AI-irrelevant configs
+*.lock.json
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Terraform / infra (if not needed)
+.terraform/
+
+# Kubernetes generated files
+*.kubeconfig
