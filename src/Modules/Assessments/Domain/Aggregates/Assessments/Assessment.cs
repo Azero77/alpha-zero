@@ -24,7 +24,7 @@ public class Assessment : TenantOwnedAggregate, ISoftDeletable
     public bool IsDeleted { get; private set; }
     public DateTime? OnDeleted { get; private set; }
 
-    private Assessment() { } // For EF Core
+    //private Assessment() { } // For EF Core
 
     private Assessment(Guid id, Guid tenantId, string title, string? description, AssessmentType type, decimal passingScore) 
         : base(id, tenantId)

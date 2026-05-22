@@ -30,6 +30,7 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
     <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" />
+    <PackageReference Include="OpenTelemetry.Api" />
     <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" />
 
 	  <PackageReference Include="Swashbuckle.AspNetCore" />
@@ -41,6 +42,7 @@
     <ProjectReference Include="..\aspire\Aspire.Shared\Aspire.Shared.csproj" />
     <ProjectReference Include="..\Modules\Assessments\Presentation\Presentation.csproj" />
     <ProjectReference Include="..\Modules\Identity\Presentation\Presentation.csproj" />
+    <ProjectReference Include="..\Modules\Tenants\Presentation\Presentation.csproj" />
     <ProjectReference Include="..\Modules\VideoUploading\Presentation\Presentation.csproj" />
     <ProjectReference Include="..\Modules\Courses\Presentation\Presentation.csproj" />
     <ProjectReference Include="..\Modules\Library\Presentation\Presentation.csproj" />
