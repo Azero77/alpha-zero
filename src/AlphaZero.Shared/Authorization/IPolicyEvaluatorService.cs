@@ -8,14 +8,7 @@ namespace AlphaZero.Shared.Authorization;
 /// </summary>
 public interface IPolicyEvaluatorService
 {
-    Task<ErrorOr<Success>> Authorize(
-        Guid id, 
-        Guid tenantId, 
-        string resourcePath, 
-        ResourceType resourceType, 
-        string requiredPermission,
-        string authMethod,
-        Guid? sessionId = null);
+    Task<ErrorOr<Success>> Authorize(AuthorizationContext context);
 }
 
 public enum ResourceType

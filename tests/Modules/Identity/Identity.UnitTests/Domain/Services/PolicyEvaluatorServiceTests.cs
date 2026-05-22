@@ -19,7 +19,6 @@ public class PolicyEvaluatorServiceTests
     
     private static readonly Guid TenantId = Guid.NewGuid();
     private static readonly Guid UserId = Guid.NewGuid();
-    private static readonly Guid SessionId = Guid.NewGuid();
 
     public PolicyEvaluatorServiceTests()
     {
@@ -41,10 +40,6 @@ public class PolicyEvaluatorServiceTests
     {
         // Arrange
         var user = TenantUser.Create(TenantId, "sub-1", "Ali").Value;
-        // Correctly set the active session via Reflection if setter is private
-        user.GetType().GetProperty(nameof(TenantUser.ActiveSessionId))!
-            .SetValue(user, SessionId);
-        
         _userRepository.GetById(user.Id).Returns(Task.FromResult<TenantUser?>(user));
 
         // Use the proper way to create a template since constructor is protected
@@ -65,39 +60,17 @@ public class PolicyEvaluatorServiceTests
             .Returns(Task.FromResult<TenantUserPrinciaplAssignment?>(assignment));
 
         // Act
-        var result = await _evaluator.Authorize(
-            user.Id, 
-            TenantId, 
-            "course/101", 
-            ResourceType.Courses, 
-            "courses:View", 
-            AuthorizationMethod.TenantUser.ToString(), 
-            SessionId);
-
+        var result = await _evaluator.Authorize(new AuthorizationContext()
+        {
+            AuthenticationMethod = AuthenticationMethod.TenantUser.ToString(),
+            Id = user.Id,
+            TenantId = TenantId,
+            RequiredPermission = "courses:View",
+            ResourcePath = "course/101",
+            ResourceType = ResourceType.Courses
+        });
         // Assert
         result.IsError.Should().BeFalse();
-    }
-
-    [Fact]
-    public async Task Authorize_TenantUser_Should_Fail_WhenSessionIdMismatches()
-    {
-        // Arrange
-        var user = TenantUser.Create(TenantId, "sub-1", "Ali").Value;
-        _userRepository.GetById(user.Id).Returns(Task.FromResult<TenantUser?>(user));
-
-        // Act
-        var result = await _evaluator.Authorize(
-            user.Id, 
-            TenantId, 
-            "path", 
-            ResourceType.Courses, 
-            "perm", 
-            AuthorizationMethod.TenantUser.ToString(), 
-            Guid.NewGuid()); // Wrong Session
-
-        // Assert
-        result.IsError.Should().BeTrue();
-        result.FirstError.Type.Should().Be(ErrorType.Unauthorized);
     }
 
     [Fact]
@@ -120,7 +93,7 @@ public class PolicyEvaluatorServiceTests
             "video/1", 
             ResourceType.Videos, 
             "video:Stream", 
-            AuthorizationMethod.Principal.ToString());
+            AuthenticationMethod.Principal.ToString());
 
         // Assert
         result.IsError.Should().BeFalse();

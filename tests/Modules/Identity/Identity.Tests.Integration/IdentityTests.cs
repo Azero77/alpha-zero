@@ -55,8 +55,8 @@ public class IdentityTests : BaseIntegrationTest
             "course/math-101", 
             ResourceType.Courses, 
             "courses:View", 
-            AuthorizationMethod.TenantUser.ToString(), 
-            user.ActiveSessionId);
+            AuthenticationMethod.TenantUser.ToString(), 
+            );
 
         // Assert
         result.IsError.Should().BeFalse();
@@ -91,7 +91,7 @@ public class IdentityTests : BaseIntegrationTest
             "video/1", 
             ResourceType.Videos, 
             "video:Stream", 
-            AuthorizationMethod.Principal.ToString());
+            AuthenticationMethod.Principal.ToString());
 
         // Assert
         result.IsError.Should().BeFalse();

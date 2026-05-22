@@ -56,7 +56,6 @@ public class IAMPreprocessor : IGlobalPreProcessor
             await context.HttpContext.Response.SendForbiddenAsync(ct); return;
         }
 
-        Guid? sessionId = Guid.TryParse(sid, out var sessionGuid) ? sessionGuid : null;
             
         var evaluator = context.HttpContext.RequestServices.GetRequiredService<IPolicyEvaluatorService>();
         var tenantProvider = context.HttpContext.RequestServices.GetRequiredService<ITenantProvider>();
@@ -84,7 +83,15 @@ public class IAMPreprocessor : IGlobalPreProcessor
             // If service name doesn't match ResourceType enum, we might need a fallback or stricter validation
             await context.HttpContext.Response.SendForbiddenAsync(ct); return;
         }
-
+        var authContext = new AuthorizationContext()
+        {
+            AuthenticationMethod = auth_scheme,
+            Id = principalId,
+            TenantId = tenantId,
+            RequiredPermission = requirement.Action,
+            ResourceType = resourceType,
+            ResourcePath = resourceArn.ResourcePath
+        };
         var result = await evaluator.Authorize(
             principalId, 
             tenantId, 
@@ -92,7 +99,7 @@ public class IAMPreprocessor : IGlobalPreProcessor
             resourceType, 
             requirement.Action, 
             auth_scheme, 
-            sessionId);
+            );
 
         if (result.IsError)
         {
@@ -108,8 +115,19 @@ public class IAMDevPreprocessor : IGlobalPreProcessor
     }
 }
 
-public enum AuthorizationMethod
+public enum AuthenticationMethod
 {
     Principal,
     TenantUser
+}
+
+
+public class AuthorizationContext
+{
+    public Guid Id { get; init; }
+    public Guid TenantId { get; init; }
+    public string ResourcePath { get; init; } = string.Empty;
+    public ResourceType ResourceType { get; init; }
+    public string RequiredPermission { get; init; } = string.Empty;
+    public required string AuthenticationMethod { get;init;  } 
 }

@@ -55,7 +55,6 @@ public class TestCurrentTenantUserRepository : ICurrentTenantUserRepository
 {
     public Guid? MockUserId { get; set; } = Guid.Parse("00000000-0000-0000-0000-000000000001");
     public Guid MockIdentityId { get; set; } = Guid.NewGuid();
-    public Guid MockSessionId { get; set; } = Guid.NewGuid();
 
     public Task<TenantUserDTO?> GetCurrentUser()
     {
@@ -64,8 +63,7 @@ public class TestCurrentTenantUserRepository : ICurrentTenantUserRepository
         return Task.FromResult<TenantUserDTO?>(new TenantUserDTO(
             MockUserId.Value,
             MockIdentityId.ToString(),
-            "Test Student",
-            MockSessionId));
+            "Test Student"));
     }
 }
 

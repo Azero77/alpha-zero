@@ -45,7 +45,7 @@ public class LoginPrincipalCommandHandlerTests
 
         _passwordHasher.VerifyPassword(Password, PasswordHash).Returns(true);
 
-        _jwtProvider.GenerateToken(principal.Id, TenantId, Arg.Any<Guid>(), AuthorizationMethod.Principal)
+        _jwtProvider.GenerateToken(principal.Id, TenantId, Arg.Any<Guid>(), AuthenticationMethod.Principal)
             .Returns("token-principal");
 
         var command = new LoginPrincipalCommand(TenantId, Username, Password);

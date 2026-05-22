@@ -21,38 +21,21 @@ public class PolicyEvaluatorService : IPolicyEvaluatorService
     }
 
     public async Task<ErrorOr<Success>> Authorize(
-        Guid id, 
-        Guid tenantId, 
-        string resourcePath, 
-        ResourceType resourceType, 
-        string requiredPermission,
-        string authMethod,
-        Guid? sessionId = null)
+        AuthorizationContext context)
     {
         // 1. Centralized Session Check for TenantUsers
-        if (authMethod.Equals(AuthorizationMethod.TenantUser.ToString(), StringComparison.OrdinalIgnoreCase))
+        if (context.AuthenticationMethod.Equals(AuthenticationMethod.TenantUser.ToString(), StringComparison.OrdinalIgnoreCase))
         {
-            var user = await _userRepository.GetById(id);
+            var user = await _userRepository.GetById(context.Id);
             if (user == null) return Error.Forbidden("User.NotFound");
             
-            if (sessionId.HasValue && user.ActiveSessionId != sessionId.Value)
-                return Error.Unauthorized("Session.Expired", "Access denied. This session has been invalidated by a newer login.");
+            
         }
 
-        var strategy = _strategies.FirstOrDefault(s => s.Method.ToString().Equals(authMethod, StringComparison.OrdinalIgnoreCase));
+        var strategy = _strategies.FirstOrDefault(s => s.Method.ToString().Equals(context.AuthenticationMethod, StringComparison.OrdinalIgnoreCase));
         
         if (strategy == null)
-            return Error.Forbidden("Identity.Auth", $"No strategy found for auth method: {authMethod}");
-
-        var context = new AuthorizationContext
-        {
-            Id = id,
-            TenantId = tenantId,
-            ResourcePath = resourcePath,
-            ResourceType = resourceType,
-            RequiredPermission = requiredPermission,
-            SessionId = sessionId
-        };
+            return Error.Forbidden("Identity.Auth", $"No strategy found for auth method: {context.AuthenticationMethod}");
 
         return await strategy.Authorize(context);
     }
@@ -60,19 +43,10 @@ public class PolicyEvaluatorService : IPolicyEvaluatorService
 
 public interface IAuthorizationStrategy
 {
-    AuthorizationMethod Method { get; }
+    AuthenticationMethod Method { get; }
     Task<ErrorOr<Success>> Authorize(AuthorizationContext context);
 }
 
-public class AuthorizationContext
-{
-    public Guid Id { get; init; }
-    public Guid TenantId { get; init; }
-    public string ResourcePath { get; init; } = string.Empty;
-    public ResourceType ResourceType { get; init; }
-    public string RequiredPermission { get; init; } = string.Empty;
-    public Guid? SessionId { get; init; }
-}
 
 public class TenantUserAuthorizationStrategy : IAuthorizationStrategy
 {
@@ -83,7 +57,7 @@ public class TenantUserAuthorizationStrategy : IAuthorizationStrategy
         _assignmentRepository = assignmentRepository;
     }
 
-    public AuthorizationMethod Method => AuthorizationMethod.TenantUser;
+    public AuthenticationMethod Method => AuthenticationMethod.TenantUser;
 
     public async Task<ErrorOr<Success>> Authorize(AuthorizationContext context)
     {
@@ -125,7 +99,7 @@ public class PrincipalUserAuthorizationStrategy : IAuthorizationStrategy
         _principalRepository = principalRepository;
     }
 
-    public AuthorizationMethod Method => AuthorizationMethod.Principal;
+    public AuthenticationMethod Method => AuthenticationMethod.Principal;
 
     public async Task<ErrorOr<Success>> Authorize(AuthorizationContext context)
     {

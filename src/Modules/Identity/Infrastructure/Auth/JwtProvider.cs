@@ -17,13 +17,12 @@ public class JwtProvider : IJwtProvider
         _configuration = configuration;
     }
 
-    public string GenerateToken(Guid id, Guid tenantId, Guid sessionId, AuthorizationMethod method)
+    public string GenerateToken(Guid id, Guid tenantId, AuthenticationMethod method)
     {
         var claims = new List<Claim>
         {
             new Claim("sub", id.ToString()),
             new Claim("tid", tenantId.ToString()),
-            new Claim("sid", sessionId.ToString()),
             new Claim("auth_method", method.ToString())
         };
 

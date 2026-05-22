@@ -45,16 +45,14 @@ public sealed class LoginPrincipalCommandHandler : IRequestHandler<LoginPrincipa
 
         // Principals in our system don't use ActiveSessionId for enforcement currently, 
         // but we can generate a session ID for the JWT.
-        var sessionId = Guid.NewGuid();
 
         var token = _jwtProvider.GenerateToken(
             principal.Id,
             principal.TenantId,
-            sessionId,
-            AuthorizationMethod.Principal);
+            AuthenticationMethod.Principal);
 
         _logger.LogInformation("Principal {Username} logged into Tenant {TenantId}.", request.Username, request.TenantId);
 
-        return new TokenResponse(token, principal.Id, sessionId);
+        return new TokenResponse(token, principal.Id);
     }
 }
