@@ -105,7 +105,7 @@ public class ManagedPolicy : Entity
         var returnedPolicy = new Policy(Id, Name, tenantId);
         foreach (var statement in Statements)
         {
-            returnedPolicy.AddStatement(new PolicyStatement(statement.Sid, statement.Actions, statement.Effect, new List<ResourcePattern> { ResourcePattern.Create(principalScope).Value }));
+            returnedPolicy.AddStatement(new PolicyStatement(statement.Sid, statement.Actions, statement.Effect, new List<ResourcePattern> { ResourcePattern.Create(principalScope).Value }, statement.Condition));
         }
 
         return returnedPolicy;

@@ -35,11 +35,12 @@ public class PolicyTemplateStatement
     public IConditionNode? Condition { get; private set; }
     private PolicyTemplateStatement() { } // EF and JSON
 
-    public PolicyTemplateStatement(string sid, List<string> actions, bool effect, JsonElement? Condition = null)
+    public PolicyTemplateStatement(string sid, List<string> actions, bool effect, IConditionNode? condition = null)
     {
         Sid = sid;
         Actions = actions;
         Effect = effect;
+        Condition = condition;
     }
 }
 public enum Operator
@@ -65,27 +66,34 @@ public enum Operator
     NotIn
 }
 
+public enum ConditionType
+{
+    And,
+    Or,
+    Not,
+    Statement
+}
 public interface IConditionNode
 {
-    public string Type { get; }
+    public ConditionType Type { get; }
 }
 
 public record ConditionNode(string Property, Operator Operator, JsonElement Value) : IConditionNode
 {
-    public string Type => "statement";
+    public ConditionType Type => ConditionType.Statement;
 }
 
 public record AndNode(List<IConditionNode> Conditions) : IConditionNode
 {
-    public string Type => "and";
+    public ConditionType Type => ConditionType.And;
 }
 
 public record OrNode(List<IConditionNode> Conditions) : IConditionNode
 {
-    public string Type => "or";
+    public ConditionType Type => ConditionType.Or;
 }
 
 public record NotNode(IConditionNode Condition) : IConditionNode
 {
-    public string Type => "not";
+    public ConditionType Type => ConditionType.Not;
 }

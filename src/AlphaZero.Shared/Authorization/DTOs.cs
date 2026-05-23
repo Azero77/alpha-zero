@@ -92,14 +92,7 @@ public class IAMPreprocessor : IGlobalPreProcessor
             ResourceType = resourceType,
             ResourcePath = resourceArn.ResourcePath
         };
-        var result = await evaluator.Authorize(
-            principalId, 
-            tenantId, 
-            resourceArn.ResourcePath, 
-            resourceType, 
-            requirement.Action, 
-            auth_scheme, 
-            );
+        var result = await evaluator.Authorize(authContext);
 
         if (result.IsError)
         {
