@@ -1,5 +1,6 @@
 using AlphaZero.Modules.Identity.Domain.Models;
 using AlphaZero.Modules.Identity.Infrastructure.Models;
+using AlphaZero.Modules.Identity.Infrastructure.Serialization;
 using AlphaZero.Shared.Domain;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
@@ -26,6 +27,12 @@ public class PrincipalTemplateConfiguration : IEntityTypeConfiguration<Principal
 
 public class PrincipalConfiguration : IEntityTypeConfiguration<Principal>
 {
+    private static readonly JsonSerializerOptions _jsonOptions = new()
+    {
+        Converters = { new ConditionNodeJsonConverter(), new ResourcePatternJsonConverter() },
+        PropertyNameCaseInsensitive = true
+    };
+
     public void Configure(EntityTypeBuilder<Principal> builder)
     {
         builder.Property(p => p.Username).IsRequired().HasMaxLength(128);
@@ -48,8 +55,8 @@ public class PrincipalConfiguration : IEntityTypeConfiguration<Principal>
         // JSONB: InlinePolicies (Collection of Policy objects)
         builder.Property(p => p.InlinePolicies)
             .HasConversion(
-                v => JsonSerializer.Serialize(v, (JsonSerializerOptions)null!),
-                v => JsonSerializer.Deserialize<List<Policy>>(v, (JsonSerializerOptions)null!) ?? new List<Policy>(),
+                v => JsonSerializer.Serialize(v, _jsonOptions),
+                v => JsonSerializer.Deserialize<List<Policy>>(v, _jsonOptions) ?? new List<Policy>(),
                 new ValueComparer<IReadOnlyCollection<Policy>>(
                     (c1, c2) => c1!.SequenceEqual(c2!),
                     c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),

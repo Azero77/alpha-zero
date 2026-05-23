@@ -71,6 +71,7 @@ public class TenantUserAuthorizationStrategy : IAuthorizationStrategy
         if (assignment == null) return Error.Forbidden("Access.Denied", "No matching assignment found for this resource.");
 
         var scopePattern = ResourcePattern.Create(assignment.Resource.ToString() + "/*").Value;
+        var conditionEvaluator = new ConditionEvaluatorService(context);
 
         bool isAllowed = false;
         foreach (var managedPolicy in assignment.Principal.ManagedPolicies)
@@ -80,6 +81,12 @@ public class TenantUserAuthorizationStrategy : IAuthorizationStrategy
                 if (statement.Actions.Any(a => AuthorizationHelper.IsActionMatched(context.RequiredPermission, a)) &&
                     scopePattern.IsMatch(targetArn))
                 {
+                    if (statement.Condition is not null)
+                    {
+                        var conditionResult = conditionEvaluator.Evaluate(statement.Condition);
+                        if (conditionResult.IsError) return Error.Forbidden("Access.Denied", "Condition evaluation failed."); //If one condition fails, the whole statement is denied
+                    }
+
                     if (!statement.Effect) return Error.Forbidden("Access.Denied", "Explicit deny in role.");
                     isAllowed = true;
                 }
@@ -110,6 +117,7 @@ public class PrincipalUserAuthorizationStrategy : IAuthorizationStrategy
         if (targetArnResult.IsError) return Error.Forbidden("Resource.Invalid");
         var targetArn = targetArnResult.Value;
 
+        var conditionEvaluator = new ConditionEvaluatorService(context);
         bool isAllowed = false;
 
         // 1. Evaluate Inline Policies
@@ -117,7 +125,7 @@ public class PrincipalUserAuthorizationStrategy : IAuthorizationStrategy
         {
             foreach (var statement in policy.Statements)
             {
-                if (AuthorizationHelper.IsStatementMatch(statement, context.RequiredPermission, targetArn))
+                if (AuthorizationHelper.IsStatementMatch(statement, context.RequiredPermission, targetArn, conditionEvaluator))
                 {
                     if (!statement.Effect) return Error.Forbidden("Access.Denied", "Explicit deny in inline policy.");
                     isAllowed = true;
@@ -132,7 +140,7 @@ public class PrincipalUserAuthorizationStrategy : IAuthorizationStrategy
             var effectivePolicy = managedPolicy.Build(scope, context.TenantId);
             foreach (var statement in effectivePolicy.Statements)
             {
-                if (AuthorizationHelper.IsStatementMatch(statement, context.RequiredPermission, targetArn))
+                if (AuthorizationHelper.IsStatementMatch(statement, context.RequiredPermission, targetArn, conditionEvaluator))
                 {
                     if (!statement.Effect) return Error.Forbidden("Access.Denied", "Explicit deny in managed policy.");
                     isAllowed = true;
@@ -172,14 +180,9 @@ public static class AuthorizationHelper
         
         // Match Action Part
         bool actionMatch = false;
-        if (givenParts[1] == "*")
+        if (givenParts[1] == "*" || givenParts[1].EndsWith("*") && requiredParts[1].StartsWith(givenParts[1].Substring(0, givenParts[1].Length - 1), StringComparison.OrdinalIgnoreCase))
         {
             actionMatch = true;
-        }
-        else if (givenParts[1].EndsWith("*"))
-        {
-            var actionPrefix = givenParts[1].Substring(0, givenParts[1].Length - 1);
-            actionMatch = requiredParts[1].StartsWith(actionPrefix, StringComparison.OrdinalIgnoreCase);
         }
         else
         {
@@ -189,9 +192,18 @@ public static class AuthorizationHelper
         return serviceMatch && actionMatch;
     }
 
-    public static bool IsStatementMatch(PolicyStatement statement, string requiredPermission, ResourceArn targetArn)
+    public static bool IsStatementMatch(PolicyStatement statement, string requiredPermission, ResourceArn targetArn, ConditionEvaluatorService conditionEvaluator)
     {
-        return statement.Actions.Any(a => IsActionMatched(requiredPermission, a)) &&
-               statement.Resources.Any(r => r.IsMatch(targetArn));
+        bool baseMatch = statement.Actions.Any(a => IsActionMatched(requiredPermission, a)) &&
+                         statement.Resources.Any(r => r.IsMatch(targetArn));
+
+        if (!baseMatch) return false;
+
+        if (statement.Condition is not null)
+        {
+            var conditionResult = conditionEvaluator.Evaluate(statement.Condition);
+            return !conditionResult.IsError;
+        }
+        return true;
     }
 }
