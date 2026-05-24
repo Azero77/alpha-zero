@@ -66,8 +66,8 @@ public class Program
         }
 
         app.UseHttpsRedirection();
-        //app.UseAuthentication();
-        //app.UseAuthorization();
+        app.UseAuthentication();
+        app.UseAuthorization();
 
         // Run migrations only when NOT in design-time (EF tools)
         // EF tools don't call Main if they find CreateBuilder, but we ensure safety here too.

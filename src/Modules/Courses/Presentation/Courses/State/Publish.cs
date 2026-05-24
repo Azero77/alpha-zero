@@ -23,7 +23,7 @@ public class PublishCourseEndpoint : Endpoint<PublishCourseRequest>
     }
     public override void Configure()
     {
-        Post("/courses/{CourseId}/publish");
+        Patch("/courses/{CourseId}/publish");
         this.AccessControl("courses:Publish", req => ResourceArn.ForCourse(Guid.Empty, req.CourseId));
         Description(d => d
             .WithTags("Courses")
