@@ -37,7 +37,7 @@ public class LoginAsTenantUserCommandHandlerTests
         _userRepository.GetFirst(Arg.Any<Expression<Func<TenantUser, bool>>>(), Arg.Any<CancellationToken>())
             .Returns(user);
 
-        _jwtProvider.GenerateToken(user.Id, TenantId, Arg.Any<Guid>(), AuthenticationMethod.TenantUser)
+        _jwtProvider.GenerateToken(user.Id, TenantId, AuthenticationMethod.TenantUser)
             .Returns("token-123");
 
         var command = new LoginAsTenantUserCommand(IdentityId, TenantId, "Ali");

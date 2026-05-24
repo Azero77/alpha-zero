@@ -85,15 +85,19 @@ public class PolicyEvaluatorServiceTests
         principal.AddInlinePolicy(policy);
 
         _principalRepository.GetById(principal.Id).Returns(Task.FromResult<Principal?>(principal));
-
+        var context = new AuthorizationContext()
+        {
+            AuthenticationMethod = AuthenticationMethod.Principal.ToString(),
+            Id = principal.Id,
+            TenantId = TenantId,
+            RequiredPermission = "video:Stream",
+            ResourcePath = "video/123",
+            ResourceType = ResourceType.Video
+        };
         // Act
         var result = await _evaluator.Authorize(
-            principal.Id, 
-            TenantId, 
-            "video/1", 
-            ResourceType.Videos, 
-            "video:Stream", 
-            AuthenticationMethod.Principal.ToString());
+            context
+            );
 
         // Assert
         result.IsError.Should().BeFalse();

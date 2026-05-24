@@ -38,9 +38,9 @@ public class EnrollmentTests : BaseIntegrationTest
         await Client.PostAsJsonAsync($"/courses/{courseId}/sections/{sectionId}/lessons", new AddLessonRequest { Title = "L2", VideoId = Guid.NewGuid() });
 
         // Lifecycle
-        await Client.PatchAsJsonAsync($"/courses/{courseId}/review", new { });
-        await Client.PatchAsJsonAsync($"/courses/{courseId}/approve", new { });
-        await Client.PatchAsJsonAsync($"/courses/{courseId}/publish", new { });
+        await Client.PostAsJsonAsync($"/courses/{courseId}/review", new { });
+        await Client.PostAsJsonAsync($"/courses/{courseId}/approve", new { });
+        await Client.PostAsJsonAsync($"/courses/{courseId}/publish", new { });
 
         return courseId;
     }

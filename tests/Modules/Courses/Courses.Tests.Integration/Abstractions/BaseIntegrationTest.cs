@@ -60,7 +60,6 @@ public abstract class BaseIntegrationTest : IAsyncLifetime
             provider.CurrentTenantId = tenantId;
         }
     }
-
     protected async Task ExecuteDbContextAsync(Func<AppDbContext, Task> action)
     {
         // Use the existing test scope so it shares the same TenantProvider state

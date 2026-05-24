@@ -23,7 +23,7 @@ public class SubmitForReviewEndpoint : Endpoint<SubmitForReviewRequest>
     }
     public override void Configure()
     {
-        Post("/courses/{CourseId}/review");
+        Patch("/courses/{CourseId}/review");
         this.AccessControl("courses:Submit", req => ResourceArn.ForCourse(Guid.Empty, req.CourseId));
         Description(d => d
             .WithTags("Courses")

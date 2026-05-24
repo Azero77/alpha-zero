@@ -49,13 +49,17 @@ public class IdentityTests : BaseIntegrationTest
 
         // Act: Evaluate via the Service
         var evaluator = Resolve<IPolicyEvaluatorService>();
+        var context = new AuthorizationContext
+        {
+            Id = user.Id,
+            TenantId = tenantId,
+            RequiredPermission = "courses:View",
+            ResourcePath = $"az:courses:{tenantId}:course/math-101",
+            ResourceType = ResourceType.Courses,
+            AuthenticationMethod = AuthenticationMethod.TenantUser.ToString()
+        };
         var result = await evaluator.Authorize(
-            user.Id, 
-            tenantId, 
-            "course/math-101", 
-            ResourceType.Courses, 
-            "courses:View", 
-            AuthenticationMethod.TenantUser.ToString(), 
+            context
             );
 
         // Assert
@@ -85,13 +89,16 @@ public class IdentityTests : BaseIntegrationTest
 
         // Act
         var evaluator = Resolve<IPolicyEvaluatorService>();
-        var result = await evaluator.Authorize(
-            principal.Id, 
-            tenantId, 
-            "video/1", 
-            ResourceType.Videos, 
-            "video:Stream", 
-            AuthenticationMethod.Principal.ToString());
+        var context = new AuthorizationContext
+        {
+            Id = principal.Id,
+            TenantId = tenantId,
+            RequiredPermission = "video:Stream",
+            ResourcePath = "video/1",
+            ResourceType = ResourceType.Videos,
+            AuthenticationMethod = AuthenticationMethod.Principal.ToString()
+        };
+        var result = await evaluator.Authorize(context);
 
         // Assert
         result.IsError.Should().BeFalse();

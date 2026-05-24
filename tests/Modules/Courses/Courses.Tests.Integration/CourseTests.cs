@@ -178,11 +178,11 @@ public class CourseTests : BaseIntegrationTest
         var sectionId = courseResponse!.Sections.First().Id;
         await Client.PostAsJsonAsync($"/courses/{courseId}/sections/{sectionId}/lessons", new AddLessonRequest { Title = "L1", VideoId = Guid.NewGuid() });
 
-        var submitResp = await Client.PatchAsJsonAsync($"/courses/{courseId}/review", new { });
+        var submitResp = await Client.PostAsJsonAsync($"/courses/{courseId}/review", new { });
         submitResp.StatusCode.Should().Be(HttpStatusCode.NoContent);
 
         // Act
-        var response = await Client.PatchAsJsonAsync($"/courses/{courseId}/reject", new { Reason = "" });
+        var response = await Client.PostAsJsonAsync($"/courses/{courseId}/reject", new { Reason = "" });
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
@@ -206,15 +206,15 @@ public class CourseTests : BaseIntegrationTest
         await Client.PostAsJsonAsync($"/courses/{courseId}/sections/{sectionId}/lessons", new AddLessonRequest { Title = "L1", VideoId = Guid.NewGuid() });
 
         // Act: Submit
-        var submitResp = await Client.PatchAsJsonAsync($"/courses/{courseId}/review", new { });
+        var submitResp = await Client.PostAsJsonAsync($"/courses/{courseId}/review", new { });
         submitResp.StatusCode.Should().Be(HttpStatusCode.NoContent);
 
         // Act: Approve
-        var approveResp = await Client.PatchAsJsonAsync($"/courses/{courseId}/approve", new { });
+        var approveResp = await Client.PostAsJsonAsync($"/courses/{courseId}/approve", new { });
         approveResp.StatusCode.Should().Be(HttpStatusCode.NoContent);
 
         // Act: Publish
-        var publishResp = await Client.PatchAsJsonAsync($"/courses/{courseId}/publish", new { });
+        var publishResp = await Client.PostAsJsonAsync($"/courses/{courseId}/publish", new { });
         publishResp.StatusCode.Should().Be(HttpStatusCode.NoContent);
 
         // Assert

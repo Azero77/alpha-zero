@@ -32,9 +32,9 @@ public class DashboardTests : BaseIntegrationTest
         var sectionId = courseData!.Sections.First().Id;
         await Client.PostAsJsonAsync($"/courses/{courseId}/sections/{sectionId}/lessons", new AddLessonRequest { Title = "L1", VideoId = Guid.NewGuid() });
 
-        await Client.PatchAsJsonAsync($"/courses/{courseId}/review", new { });
-        await Client.PatchAsJsonAsync($"/courses/{courseId}/approve", new { });
-        await Client.PatchAsJsonAsync($"/courses/{courseId}/publish", new { });
+        await Client.PostAsJsonAsync($"/courses/{courseId}/review", new { });
+        await Client.PostAsJsonAsync($"/courses/{courseId}/approve", new { });
+        await Client.PostAsJsonAsync($"/courses/{courseId}/publish", new { });
 
         return courseId;
     }

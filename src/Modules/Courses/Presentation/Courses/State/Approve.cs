@@ -23,7 +23,7 @@ public class ApproveCourseEndpoint : Endpoint<ApproveCourseRequest>
     }
     public override void Configure()
     {
-        Post("/courses/{CourseId}/approve");
+        Patch("/courses/{CourseId}/approve");
         this.AccessControl("courses:Approve", req => ResourceArn.ForCourse(Guid.Empty, req.CourseId));
         Description(d => d
             .WithTags("Courses")

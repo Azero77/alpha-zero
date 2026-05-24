@@ -2,13 +2,13 @@ using AlphaZero.Modules.Identity.Application.Auth.Commands.LoginAsTenantUser;
 using AlphaZero.Modules.Identity.Application.Auth.Commands.LoginPrincipal;
 using AlphaZero.Modules.Identity.Domain.Models;
 using AlphaZero.Modules.Identity.Domain.Repositories;
-using AlphaZero.Shared.Authorization;
 using AlphaZero.Shared.Domain;
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
-using NSubstitute.ReturnsExtensions;
 using System.Linq.Expressions;
+using AlphaZero.Shared.Authorization;
+using NSubstitute.ReturnsExtensions;
 
 namespace AlphaZero.Modules.Identity.UnitTests.Application.Auth;
 
@@ -45,7 +45,7 @@ public class LoginPrincipalCommandHandlerTests
 
         _passwordHasher.VerifyPassword(Password, PasswordHash).Returns(true);
 
-        _jwtProvider.GenerateToken(principal.Id, TenantId, Arg.Any<Guid>(), AuthenticationMethod.Principal)
+        _jwtProvider.GenerateToken(principal.Id, TenantId, AuthenticationMethod.Principal)
             .Returns("token-principal");
 
         var command = new LoginPrincipalCommand(TenantId, Username, Password);

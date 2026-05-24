@@ -6,6 +6,7 @@ using AlphaZero.Shared.Domain;
 using FluentAssertions;
 using Identity.Tests.Integration.Abstractions;
 using System.Text.Json;
+using ErrorOr;
 
 namespace Identity.Tests.Integration;
 
