@@ -15,7 +15,7 @@ This module implements a high-performance, multi-tenant Authorization system ins
 *   **Entity:** `TenantUser` aggregate.
 *   **Identifier:** `TenantUserId` (GUID).
 *   **Link:** Tied to `IdentityId` + `TenantId`.
-*   **Session State:** Owns the `ActiveSessionId` (GUID) used for **Single Device Enforcement**.
+*   **Device State:** Owns the `ActiveDeviceFingerprint` (string) used for **Context-Aware Device Enforcement**.
 *   **Purpose:** The central anchor for all user-specific data within a specific academy (enrollments, progress, etc.).
 
 ### 3. Contextual Identity (The "Identity" - `Principal`)
@@ -75,12 +75,12 @@ The `PolicyEvaluatorService` follows a strict **Hierarchical Evaluation Flow**:
 Used when a student (Person) enters a specific Tenant (Academy).
 1.  User authenticates with Cognito $\rightarrow$ Platform JWT.
 2.  User calls `POST /identity/auth/exchange-tenant-token`.
-3.  Server verifies Cognito `sub`, refreshes `ActiveSessionId` in DB, and issues an **AlphaZero Scoped JWT**.
+3.  Server verifies Cognito `sub`, refreshes `ActiveDeviceFingerprint` in DB, and issues an **AlphaZero Scoped JWT**.
 
 ### 2. IAM Principal Login
 Used for staff or bots with local credentials.
 1.  User calls `POST /identity/auth/login-principal` with `Username`, `Password`, and `TenantId`.
-2.  Server verifies `PasswordHash`, generates a session, and issues a **Scoped JWT** with `auth_method: Principal`.
+2.  Server verifies `PasswordHash` and issues a **Scoped JWT** with `auth_method: Principal`.
 
 ---
 

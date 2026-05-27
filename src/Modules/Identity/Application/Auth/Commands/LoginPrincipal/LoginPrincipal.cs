@@ -43,9 +43,7 @@ public sealed class LoginPrincipalCommandHandler : IRequestHandler<LoginPrincipa
             return Error.Unauthorized("Auth.InvalidCredentials", "Invalid username or password for this tenant.");
         }
 
-        // Principals in our system don't use ActiveSessionId for enforcement currently, 
-        // but we can generate a session ID for the JWT.
-
+        // Principals in our system don't use device-lock enforcement currently.
         var token = _jwtProvider.GenerateToken(
             principal.Id,
             principal.TenantId,

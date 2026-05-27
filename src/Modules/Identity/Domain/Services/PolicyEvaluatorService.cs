@@ -23,15 +23,6 @@ public class PolicyEvaluatorService : IPolicyEvaluatorService
     public async Task<ErrorOr<Success>> Authorize(
         AuthorizationContext context)
     {
-        // 1. Centralized Session Check for TenantUsers
-        if (context.AuthenticationMethod.Equals(AuthenticationMethod.TenantUser.ToString(), StringComparison.OrdinalIgnoreCase))
-        {
-            var user = await _userRepository.GetById(context.Id);
-            if (user == null) return Error.Forbidden("User.NotFound");
-            
-            
-        }
-
         var strategy = _strategies.FirstOrDefault(s => s.Method.ToString().Equals(context.AuthenticationMethod, StringComparison.OrdinalIgnoreCase));
         
         if (strategy == null)

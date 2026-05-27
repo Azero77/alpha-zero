@@ -6,7 +6,7 @@ namespace AlphaZero.Modules.Identity.Domain.Models;
 
 /// <summary>
 /// The central anchor for a User within a Tenant.
-/// Holds the active session state and base tenant info.
+/// Holds the device state and base tenant info for authorization context.
 /// </summary>
 public class TenantUser : AggregateRoot, IDomainTenantOwned
 {

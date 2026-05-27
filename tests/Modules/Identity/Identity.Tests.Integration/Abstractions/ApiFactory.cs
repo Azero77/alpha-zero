@@ -29,9 +29,20 @@ public class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
+        builder.UseEnvironment("Development");
         builder.ConfigureTestServices(services =>
         {
+            services.AddAuthentication(options =>
+            {
+                options.DefaultAuthenticateScheme = "TestScheme";
+                options.DefaultChallengeScheme = "TestScheme";
+            }).AddScheme<Microsoft.AspNetCore.Authentication.AuthenticationSchemeOptions, TestAuthHandler>("TestScheme", options => { });
+
+            services.AddAuthorizationBuilder()
+                .SetDefaultPolicy(new Microsoft.AspNetCore.Authorization.AuthorizationPolicyBuilder("TestScheme").RequireAuthenticatedUser().Build());
+
             services.RemoveAll<ITenantProvider>();
+            services.AddHttpContextAccessor();
             services.AddScoped<ITenantProvider, TestTenantProvider>();
         });
     }
@@ -44,6 +55,25 @@ public class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
 
 public class TestTenantProvider : ITenantProvider
 {
+    private readonly IHttpContextAccessor _httpContextAccessor;
     public Guid? CurrentTenantId { get; set; }
-    public Guid? GetTenant() => CurrentTenantId;
+
+    public TestTenantProvider(IHttpContextAccessor httpContextAccessor)
+    {
+        _httpContextAccessor = httpContextAccessor;
+    }
+
+    public Guid? GetTenant()
+    {
+        var context = _httpContextAccessor.HttpContext;
+        if (context != null && context.Request.Headers.TryGetValue("X-Tenant-Id", out var tenantIdStr))
+        {
+            if (Guid.TryParse(tenantIdStr, out var tenantId))
+            {
+                return tenantId;
+            }
+        }
+
+        return CurrentTenantId;
+    }
 }

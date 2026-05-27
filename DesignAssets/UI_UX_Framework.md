@@ -56,7 +56,7 @@ The system must adapt seamlessly between a high-density **Desktop Web ERP** and 
 8. **Graded Exam Review:** View teacher's red-pen annotations on uploaded photos.
 9. **My Gradebook:** Cumulative scores across all enrolled subjects.
 10. **Library Code Redemption Center:** Batch redemption and history.
-11. **Tenant Profile:** Edit student info, one-session security settings.
+11. **Tenant Profile:** Edit student info, device-lock security settings.
 12. **Public Square:** Global platform-wide community (non-tenant).
 
 ### B. Teacher & Content Production (Academic Domain)

@@ -9,8 +9,8 @@
 
 ## How to handle users logged in many tenants?
 - When a user is logged into multiple tenants, the app should provide a way for the user to switch between tenants. This can be done through a tenant selection interface, where the user can choose which tenant they want to access.
-- for each tenant , the user will have a separate session, and the app should ensure that the user can only access resources that belong to the currently selected tenant. (jwt per tenants)
-- The app should also provide a way for the user to log out of a tenant, which will end the session for that tenant and prevent access to its resources.
+- for each tenant , the user will have a separate authorization context, and the app should ensure that the user can only access resources that belong to the currently selected tenant. (jwt per tenants)
+- The app should also provide a way for the user to log out of a tenant, which will invalidate the authorization context for that tenant and prevent access to its resources.
 
 ## How to handle resources that belong to multiple tenants?
 - Resources can't be shared across tenants unless they are global, if it is a premium content it can't be shared across tenants, if it is a free content it can be shared across tenants but it should be marked as global and it should be accessible to all tenants.

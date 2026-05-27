@@ -21,7 +21,6 @@ public class CourseTests : BaseIntegrationTest
     private async Task<Guid> SeedSubject(Guid tenantId)
     {
         SetTenant(tenantId);
-        SkipAuth();
         var response = await Client.PostAsJsonAsync("/courses/subjects", new CreateSubjectRequest 
         { 
             Name = "Computer Science", 

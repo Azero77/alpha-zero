@@ -54,7 +54,7 @@ public class IdentityTests : BaseIntegrationTest
             Id = user.Id,
             TenantId = tenantId,
             RequiredPermission = "courses:View",
-            ResourcePath = $"az:courses:{tenantId}:course/math-101",
+            ResourcePath = $"course/math-101",
             ResourceType = ResourceType.Courses,
             AuthenticationMethod = AuthenticationMethod.TenantUser.ToString()
         };

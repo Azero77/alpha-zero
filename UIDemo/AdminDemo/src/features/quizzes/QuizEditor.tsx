@@ -341,8 +341,7 @@ export const QuizEditor: React.FC = () => {
              <button className="w-full btn btn-primary h-16 uppercase tracking-[0.3em] font-black text-sm rounded-2xl shadow-xl shadow-primary-500/20 transition-all hover:scale-[1.01] active:scale-[0.99]">
                 Submit Assessment Blueprint
              </button>
-             <p className="text-center text-[10px] font-bold text-slate-400 mt-6 uppercase tracking-widest">Single Session Policy Enforced — Edge Node Verification Ready</p>
-           </div>
+             <p className="text-center text-[10px] font-bold text-slate-400 mt-6 uppercase tracking-widest">Context-Aware Device Enforcement — Edge Node Verification Ready</p>           </div>
         </div>
       )}
     </div>
