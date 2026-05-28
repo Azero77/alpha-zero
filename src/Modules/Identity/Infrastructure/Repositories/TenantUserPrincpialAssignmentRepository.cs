@@ -22,6 +22,6 @@ public class TenantUserPrincpialAssignmentRepository : BaseRepository<AppDbConte
             .Include(a => a.Principal)
                 .ThenInclude(p => p.ManagedPolicies)
             .Include(a => a.TenantUser)
-            .FirstOrDefaultAsync(a => a.TenantUser.Id == tenantUserId && a.Resource == arnResult.Value);
+            .FirstOrDefaultAsync(a => a.TenantUser.Id == tenantUserId && (a.Resource == arnResult.Value || resourceArn.StartsWith(a.Resource.Value)));
     }
 }

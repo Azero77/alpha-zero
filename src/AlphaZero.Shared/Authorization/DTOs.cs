@@ -1,8 +1,10 @@
 using AlphaZero.Shared.Domain;
 using AlphaZero.Shared.Infrastructure.Tenats;
+using ErrorOr;
 using FastEndpoints;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion.Internal;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace AlphaZero.Shared.Authorization;
@@ -34,7 +36,7 @@ public static class EndpointExtensions
     }
 }
 
-public class IAMPreprocessor : IGlobalPreProcessor
+public class IAMPreprocessor(IAuthorizationContextFactory authorizationContextFactory) : IGlobalPreProcessor
 {
     public async Task PreProcessAsync(IPreProcessorContext context, CancellationToken ct)
     {
@@ -44,8 +46,6 @@ public class IAMPreprocessor : IGlobalPreProcessor
 
         var id = context.HttpContext.User.Claims.FirstOrDefault(c => c.Type == "sub")?.Value;
         var auth_scheme = context.HttpContext.User.Claims.FirstOrDefault(c => c.Type == "auth_method")?.Value;
-        var sid = context.HttpContext.User.Claims.FirstOrDefault(c => c.Type == "sid")?.Value;
-
         if (string.IsNullOrEmpty(id) || !Guid.TryParse(id, out var principalId))
         {
             await context.HttpContext.Response.SendForbiddenAsync(ct); return;
@@ -55,7 +55,6 @@ public class IAMPreprocessor : IGlobalPreProcessor
         {
             await context.HttpContext.Response.SendForbiddenAsync(ct); return;
         }
-
             
         var evaluator = context.HttpContext.RequestServices.GetRequiredService<IPolicyEvaluatorService>();
         var tenantProvider = context.HttpContext.RequestServices.GetRequiredService<ITenantProvider>();
@@ -72,6 +71,7 @@ public class IAMPreprocessor : IGlobalPreProcessor
                 await context.HttpContext.Response.SendForbiddenAsync(ct); return;
             }
             tenantId = currentTenant.Value;
+            resourceArn = ResourceArn.Create(resourceArn.Service, tenantId.ToString(), resourceArn.ResourcePath).Value;
         }
         else if (!Guid.TryParse(resourceArn.TenantIdString, out tenantId) && resourceArn.TenantIdString != ResourceArn.GlobalTenant)
         {
@@ -83,16 +83,13 @@ public class IAMPreprocessor : IGlobalPreProcessor
             // If service name doesn't match ResourceType enum, we might need a fallback or stricter validation
             await context.HttpContext.Response.SendForbiddenAsync(ct); return;
         }
-        var authContext = new AuthorizationContext()
+        var authContext = await authorizationContextFactory.Create(resourceArn, Enum.Parse<AuthenticationMethod>(auth_scheme), id);
+
+        if (authContext.IsError)
         {
-            AuthenticationMethod = auth_scheme,
-            Id = principalId,
-            TenantId = tenantId,
-            RequiredPermission = requirement.Action,
-            ResourceType = resourceType,
-            ResourcePath = resourceArn.ResourcePath
-        };
-        var result = await evaluator.Authorize(authContext);
+            await context.HttpContext.Response.SendForbiddenAsync(ct); return;
+        }
+        var result = await evaluator.Authorize(authContext.Value);
 
         if (result.IsError)
         {
@@ -115,12 +112,16 @@ public enum AuthenticationMethod
 }
 
 
-public class AuthorizationContext
+public record AuthorizationContext
 {
     public Guid Id { get; init; }
-    public Guid TenantId { get; init; }
+    public Guid? TenantId { get; init; }
     public string ResourcePath { get; init; } = string.Empty;
     public ResourceType ResourceType { get; init; }
     public string RequiredPermission { get; init; } = string.Empty;
     public required string AuthenticationMethod { get;init;  } 
+    public string? DeviceId { get; init; }
+    public string? Platform { get; init;  }
+
 }
+
