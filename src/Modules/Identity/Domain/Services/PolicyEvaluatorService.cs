@@ -126,9 +126,11 @@ public class PrincipalUserAuthorizationStrategy : IAuthorizationStrategy
 
         // 2. Evaluate Managed Policies
         var scope = principal.PrincipalScope?.Value ?? "az:*";
+        if(context.TenantId is null)
+            return Error.Forbidden("Access.Denied", "TenantId is required for evaluating managed policies.");
         foreach (var managedPolicy in principal.ManagedPolicies)
         {
-            var effectivePolicy = managedPolicy.Build(scope, context.TenantId);
+            var effectivePolicy = managedPolicy.Build(scope, context.TenantId.Value);
             foreach (var statement in effectivePolicy.Statements)
             {
                 if (AuthorizationHelper.IsStatementMatch(statement, context.RequiredPermission, targetArn, conditionEvaluator))

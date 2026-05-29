@@ -33,7 +33,7 @@ public interface IRepository<TEntity>
         bool ascending = true,
         CancellationToken token = default);
 
-    Task<TEntity?> GetById(Guid id);
+    Task<TEntity?> GetById(Guid id, CancellationToken token = default);
 }
 
 public class BaseRepository<TContext, TEntity> : IRepository<TEntity>
@@ -128,10 +128,10 @@ public class BaseRepository<TContext, TEntity> : IRepository<TEntity>
         return new PagedResult<TEntity>(response, count, pageNumber, perPage);
     }
 
-    public async virtual Task<TEntity?> GetById(Guid id)
+    public async virtual Task<TEntity?> GetById(Guid id, CancellationToken token = default)
     {
         return await _context.Set<TEntity>()
-            .FirstOrDefaultAsync(d => d.Id == id);
+            .FirstOrDefaultAsync(d => d.Id == id, token);
 
     }
 
@@ -139,6 +139,6 @@ public class BaseRepository<TContext, TEntity> : IRepository<TEntity>
     {
         return await _context.Set<TEntity>()
             .Where(filter)
-            .ToListAsync();
+            .ToListAsync(token);
     }
 }

@@ -9,6 +9,7 @@ using Amazon.MediaConvert;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Hosting;
 using AlphaZero.Shared.Infrastructure.SoftDelete;
+using Microsoft.Extensions.Caching.Hybrid;
 
 namespace AlphaZero.Shared.Infrastructure;
 
@@ -49,6 +50,18 @@ public static class DependencyInjection
             cfg.RegisterServicesFromAssembly(typeof(DependencyInjection).Assembly);
         });
 
+        services.AddHybridCache(o =>
+        {
+            o = new HybridCacheOptions()
+            {
+                DefaultEntryOptions = new()
+                {
+                    Expiration = TimeSpan.FromMinutes(10),
+                    LocalCacheExpiration = TimeSpan.FromMinutes(5)
+                },
+            };
+        });
+        
         return services;
     }
 

@@ -24,6 +24,7 @@ public class VideoUploadingModule : AppModule, IVideoUploadingModule
             _logger.LogWarning("Configuration is null in VideoUploading Module");
         globalServices.AddSingleton<IVideoUploadingModule>(this);
         globalServices.AddScoped<IResourceTenantResolver, VideoTenantResolver>();
+        globalServices.AddScoped<IResourceTenantResolver, VideosTenantResolver>();
     }
 
     public override void RegisterPrivate(IServiceCollection moduleServices, ContainerBuilder builder)

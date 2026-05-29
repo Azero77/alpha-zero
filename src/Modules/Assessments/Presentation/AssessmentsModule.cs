@@ -1,6 +1,8 @@
 using AlphaZero.Modules.Assessments.Application;
 using AlphaZero.Modules.Assessments.Infrastructure;
 using AlphaZero.Modules.Assessments.Infrastructure.Persistence;
+using AlphaZero.Modules.Assessments.Application.Resolvers;
+using AlphaZero.Shared.Authorization;
 using Autofac;
 using MassTransit;
 using Microsoft.Extensions.DependencyInjection;
@@ -18,6 +20,8 @@ public class AssessmentsModule : AppModule, IAssessmentsModule
             _logger?.LogWarning("Configuration is null in Assessments Module");
 
         globalServices.AddSingleton<IAssessmentsModule>(this);
+        globalServices.AddScoped<IResourceTenantResolver, AssessmentTenantResolver>();
+        globalServices.AddScoped<IResourceTenantResolver, SubmissionTenantResolver>();
     }
 
     public override void RegisterPrivate(IServiceCollection moduleServices, ContainerBuilder builder)

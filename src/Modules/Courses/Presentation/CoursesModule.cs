@@ -25,6 +25,8 @@ public class CoursesModule : AppModule, ICoursesModule
         globalServices.AddSingleton<ICoursesModule>(this);
         globalServices.AddScoped<IResourceTenantResolver, CourseTenantResolver>();
         globalServices.AddScoped<IResourceTenantResolver, SubjectTenantResolver>();
+        globalServices.AddScoped<IResourceTenantResolver, SectionTenantResolver>();
+        globalServices.AddScoped<IResourceTenantResolver, LessonTenantResolver>();
     }
 
     public override void RegisterPrivate(IServiceCollection moduleServices, ContainerBuilder builder)

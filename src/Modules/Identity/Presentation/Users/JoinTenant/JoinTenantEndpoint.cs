@@ -36,7 +36,7 @@ public class JoinTenantEndpoint(IdentityModule module) : Endpoint<JoinTenantRequ
             return;
         }
 
-        var command = new JoinTenantCommand(req.TenantId, identityId, name);
+        var command = new JoinTenantCommand(req.TenantId, identityId, name, "device1","Web");
         var result = await module.Send(command, ct);
 
         if (result.IsError)
