@@ -36,7 +36,7 @@ public static class EndpointExtensions
     }
 }
 
-public class IAMPreprocessor(IAuthorizationContextFactory authorizationContextFactory) : IGlobalPreProcessor
+public class IAMPreprocessor(IAuthorizationContextFactory authorizationContextFactory, IPolicyEvaluatorService evaluator, ITenantProvider tenantProvider) : IGlobalPreProcessor
 {
     public async Task PreProcessAsync(IPreProcessorContext context, CancellationToken ct)
     {
@@ -55,10 +55,6 @@ public class IAMPreprocessor(IAuthorizationContextFactory authorizationContextFa
         {
             await context.HttpContext.Response.SendForbiddenAsync(ct); return;
         }
-            
-        var evaluator = context.HttpContext.RequestServices.GetRequiredService<IPolicyEvaluatorService>();
-        var tenantProvider = context.HttpContext.RequestServices.GetRequiredService<ITenantProvider>();
-
         ResourceArn resourceArn = requirement.resourceArnFactory(context.Request!);
         Guid tenantId;
 
