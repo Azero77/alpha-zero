@@ -2,6 +2,7 @@ using AlphaZero.Shared.Domain;
 using AlphaZero.Shared.Infrastructure.Tenats;
 using ErrorOr;
 using FastEndpoints;
+using MediatR;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion.Internal;
@@ -36,7 +37,7 @@ public static class EndpointExtensions
     }
 }
 
-public class IAMPreprocessor(IAuthorizationContextFactory authorizationContextFactory, IPolicyEvaluatorService evaluator, ITenantProvider tenantProvider) : IGlobalPreProcessor
+public class IAMPreprocessor(IAuthorizationContextFactory authorizationContextFactory, IPolicyEvaluatorService evaluator, ITenantProvider tenantProvider, ISender sender) : IGlobalPreProcessor
 {
     public async Task PreProcessAsync(IPreProcessorContext context, CancellationToken ct)
     {
@@ -57,9 +58,33 @@ public class IAMPreprocessor(IAuthorizationContextFactory authorizationContextFa
         }
         ResourceArn resourceArn = requirement.resourceArnFactory(context.Request!);
         Guid tenantId;
-
-        // If the ARN uses Guid.Empty placeholder, resolve it from the tenant provider
-        if (resourceArn.TenantIdString == Guid.Empty.ToString())
+        var resourceType = resourceArn.ResourceServiceType;
+        if ( resourceType is null)
+        {
+            await context.HttpContext.Response.SendForbiddenAsync(ct); return;
+        }
+        // 1. Handle declarative "Resolve from Resource" (Prevents horizontal breakout)
+        if (resourceArn.TenantIdString == ResourceArn.ResolveTenantFromResource.ToString())
+        {
+            var resourceId = resourceArn.ExtractResourceId();
+            if (resourceId.HasValue)
+            {
+                var actualTenantId = await sender.Send(new GetResourceTenantIdQuery(resourceType.Value, resourceId.Value), ct);
+                if (actualTenantId == null)
+                {
+                    await context.HttpContext.Response.SendForbiddenAsync(ct); return;
+                }
+                tenantId = actualTenantId.Value;
+            }
+            else
+            {
+                // If we can't find a GUID in the path but requested resolution, it's a developer error or invalid request
+                await context.HttpContext.Response.SendForbiddenAsync(ct); return;
+            }
+            resourceArn = ResourceArn.Create(resourceArn.Service, tenantId.ToString(), resourceArn.ResourcePath).Value;
+        }
+        // 2. Handle declarative "Current Session Tenant" (or legacy Guid.Empty)
+        else if (resourceArn.TenantIdString == ResourceArn.CurrentSessionTenant.ToString() || resourceArn.TenantIdString == Guid.Empty.ToString())
         {
             var currentTenant = tenantProvider.GetTenant();
             if (currentTenant == null)
@@ -69,17 +94,14 @@ public class IAMPreprocessor(IAuthorizationContextFactory authorizationContextFa
             tenantId = currentTenant.Value;
             resourceArn = ResourceArn.Create(resourceArn.Service, tenantId.ToString(), resourceArn.ResourcePath).Value;
         }
+        // 3. Handle explicit Tenant ID provided in the ARN
         else if (!Guid.TryParse(resourceArn.TenantIdString, out tenantId) && resourceArn.TenantIdString != ResourceArn.GlobalTenant)
         {
             await context.HttpContext.Response.SendForbiddenAsync(ct); return;
         }
 
-        if (!Enum.TryParse<ResourceType>(resourceArn.Service, true, out var resourceType))
-        {
-            // If service name doesn't match ResourceType enum, we might need a fallback or stricter validation
-            await context.HttpContext.Response.SendForbiddenAsync(ct); return;
-        }
         var authContext = await authorizationContextFactory.Create(resourceArn, Enum.Parse<AuthenticationMethod>(auth_scheme), id);
+
 
         if (authContext.IsError)
         {

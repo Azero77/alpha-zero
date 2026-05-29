@@ -26,7 +26,7 @@ public class AddSectionEndpoint : Endpoint<AddSectionRequest>
     public override void Configure()
     {
         Post("/courses/{CourseId}/sections");
-        this.AccessControl("courses:Edit", req => ResourceArn.ForCourse(Guid.Empty, req.CourseId));
+        this.AccessControl("courses:Edit", req => ResourceArn.ForCourse(ResourceArn.ResolveTenantFromResource, req.CourseId));
         Description(d => d.WithTags("Courses"));
     }
 

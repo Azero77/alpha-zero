@@ -1,5 +1,7 @@
 using AlphaZero.Modules.Identity.Application;
 using AlphaZero.Modules.Identity.Infrastructure;
+using AlphaZero.Modules.Identity.Application.Resolvers;
+using AlphaZero.Shared.Authorization;
 using AlphaZero.Shared.Presentation;
 using Autofac;
 using MassTransit;
@@ -20,6 +22,8 @@ public class IdentityModule : AppModule, IIdentityModule
             _logger?.LogWarning("Configuration is null in Identity Module");
 
         globalServices.AddSingleton<IIdentityModule>(this);
+        globalServices.AddScoped<IResourceTenantResolver, IdentityTenantResolver>();
+        globalServices.AddScoped<IResourceTenantResolver, UserTenantResolver>();
     }
 
     public override void RegisterPrivate(IServiceCollection moduleServices, ContainerBuilder builder)

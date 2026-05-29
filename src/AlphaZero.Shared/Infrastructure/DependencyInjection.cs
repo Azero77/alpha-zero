@@ -44,6 +44,11 @@ public static class DependencyInjection
         services.AddSingleton<IClock, Clock>();
         services.AddHttpContextAccessor();
 
+        services.AddMediatR(cfg =>
+        {
+            cfg.RegisterServicesFromAssembly(typeof(DependencyInjection).Assembly);
+        });
+
         return services;
     }
 

@@ -24,7 +24,7 @@ public class PublishCourseEndpoint : Endpoint<PublishCourseRequest>
     public override void Configure()
     {
         Patch("/courses/{CourseId}/publish");
-        this.AccessControl("courses:Publish", req => ResourceArn.ForCourse(Guid.Empty, req.CourseId));
+        this.AccessControl("courses:Publish", req => ResourceArn.ForCourse(ResourceArn.ResolveTenantFromResource, req.CourseId));
         Description(d => d
             .WithTags("Courses")
             .Accepts<PublishCourseRequest>("application/json"));

@@ -1,5 +1,6 @@
 using AlphaZero.Shared.Authorization;
 using ErrorOr;
+using Microsoft.AspNetCore.Components.Forms;
 using System.Text.RegularExpressions;
 
 namespace AlphaZero.Shared.Domain;
@@ -15,6 +16,11 @@ public class ResourceArn
 
     public const string Prefix = "az";
     public const string GlobalTenant = "global";
+
+    // Special Guids for declarative authorization routing
+    public static readonly Guid CurrentSessionTenant = Guid.Parse("00000000-0000-0000-0000-000000000001");
+    public static readonly Guid ResolveTenantFromResource = Guid.Parse("FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFFF");
+
     public static ResourceArn AppUrn => new ResourceArn("az:global");
     // Strict pattern for concrete ARNs
     private static readonly Regex ConcreteRegex = new(@"^az:(?<service>[a-zA-Z]+):(?<tenantId>[a-zA-Z0-9-]+):(?<resourcePath>[A-Za-z0-9\/\-]+)$", RegexOptions.Compiled);
@@ -64,9 +70,34 @@ public class ResourceArn
 
     public override string ToString() => Value;
 
+    public Guid? ExtractResourceId()
+    {
+        var last = ResourcePath.Split('/').LastOrDefault();
+        return Guid.TryParse(last, out var id) ? id : null;
+    }
+
     public override bool Equals(object? obj) => obj is ResourceArn other && Value == other.Value;
     public override int GetHashCode() => Value.GetHashCode();
+    public ResourceType? ResourceServiceType
+    {
+        get
+        {
+            if (ResourcePath.Contains("/lesson/")) return ResourceType.Lessons;
+            if (ResourcePath.Contains("/section/")) return ResourceType.Sections;
+            if (ResourcePath.Contains("/course/")) return ResourceType.Courses;
+            if (ResourcePath.Contains("/subject/")) return ResourceType.Subjects;
+            if (ResourcePath.Contains("/video/")) return ResourceType.Videos;
+            if (ResourcePath.Contains("/assessment/")) return ResourceType.Assessments;
+            if (ResourcePath.Contains("/submission/")) return ResourceType.Submissions;
+            if (ResourcePath.Contains("/library/")) return ResourceType.Library;
+            if (ResourcePath.Contains("/user/")) return ResourceType.Users;
+            if (Service.Equals("tenants", StringComparison.OrdinalIgnoreCase)) return ResourceType.Tenants;
+            if (Service.Equals("identity", StringComparison.OrdinalIgnoreCase)) return ResourceType.Identity;
 
+            Enum.TryParse<ResourceType>(Service, true, out var result);
+            return result;
+        }
+    }
     // --- Static Factories ---
 
     public static ResourceArn ForTenant(Guid tenantId) => new($"az:tenants:{GlobalTenant}:tenant/{tenantId}");

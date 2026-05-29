@@ -3,6 +3,8 @@ using AlphaZero.Modules.VideoUploading.Infrastructure;
 using AlphaZero.Modules.VideoUploading.Infrastructure.Consumers;
 using AlphaZero.Modules.VideoUploading.Infrastructure.Persistance;
 using AlphaZero.Modules.VideoUploading.Infrastructure.Sagas;
+using AlphaZero.Modules.VideoUploading.Application.Resolvers;
+using AlphaZero.Shared.Authorization;
 using Autofac;
 using MassTransit;
 using MediatR;
@@ -21,6 +23,7 @@ public class VideoUploadingModule : AppModule, IVideoUploadingModule
         else
             _logger.LogWarning("Configuration is null in VideoUploading Module");
         globalServices.AddSingleton<IVideoUploadingModule>(this);
+        globalServices.AddScoped<IResourceTenantResolver, VideoTenantResolver>();
     }
 
     public override void RegisterPrivate(IServiceCollection moduleServices, ContainerBuilder builder)
