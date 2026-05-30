@@ -10,18 +10,13 @@ namespace AlphaZero.Modules.Identity.Domain.Services;
 public class PolicyEvaluatorService : IPolicyEvaluatorService
 {
     private readonly IEnumerable<IAuthorizationStrategy> _strategies;
-    private readonly IRepository<TenantUser> _userRepository;
 
-    public PolicyEvaluatorService(
-        IEnumerable<IAuthorizationStrategy> strategies,
-        IRepository<TenantUser> userRepository)
+    public PolicyEvaluatorService(IEnumerable<IAuthorizationStrategy> strategies)
     {
         _strategies = strategies;
-        _userRepository = userRepository;
     }
 
-    public async Task<ErrorOr<Success>> Authorize(
-        AuthorizationContext context)
+    public async Task<ErrorOr<Success>> Authorize(AuthorizationContext context)
     {
         var strategy = _strategies.FirstOrDefault(s => s.Method.ToString().Equals(context.AuthenticationMethod, StringComparison.OrdinalIgnoreCase));
         
@@ -32,55 +27,33 @@ public class PolicyEvaluatorService : IPolicyEvaluatorService
     }
 }
 
-public interface IAuthorizationStrategy
+public interface IPolicyEvaluationEngine
 {
-    AuthenticationMethod Method { get; }
-    Task<ErrorOr<Success>> Authorize(AuthorizationContext context);
+    ErrorOr<Success> Evaluate(IEnumerable<PolicyStatement> statements, AuthorizationContext context, ResourceArn targetArn);
 }
 
-
-public class TenantUserAuthorizationStrategy : IAuthorizationStrategy
+public class PolicyEvaluationEngine : IPolicyEvaluationEngine
 {
-    private readonly ITenantUserPrincpialAssignmentRepository _assignmentRepository;
+    private readonly IConditionRepository _conditionRepository;
 
-    public TenantUserAuthorizationStrategy(ITenantUserPrincpialAssignmentRepository assignmentRepository)
+    public PolicyEvaluationEngine(IConditionRepository conditionRepository)
     {
-        _assignmentRepository = assignmentRepository;
+        _conditionRepository = conditionRepository;
     }
 
-    public AuthenticationMethod Method => AuthenticationMethod.TenantUser;
-
-    public async Task<ErrorOr<Success>> Authorize(AuthorizationContext context)
+    public ErrorOr<Success> Evaluate(IEnumerable<PolicyStatement> statements, AuthorizationContext context, ResourceArn targetArn)
     {
-        // 1. Construct the Target ARN
-        var targetArnResult = ResourceArn.Create(context.ResourceType.ToString(), context.TenantId.ToString(), context.ResourcePath);
-        if (targetArnResult.IsError) return Error.Forbidden("Resource.Invalid");
-        var targetArn = targetArnResult.Value;
-
-        // 2. Evaluate Scoped Assignments
-        var assignment = await _assignmentRepository.Get(context.Id, targetArn.ToString());
-        if (assignment == null) return Error.Forbidden("Access.Denied", "No matching assignment found for this resource.");
-
-        var scopePattern = ResourcePattern.Create(assignment.Resource.ToString() + "/*").Value;
-        var conditionEvaluator = new ConditionEvaluatorService(context);
-
+        var conditionEvaluator = new ConditionEvaluatorService(context, _conditionRepository);
         bool isAllowed = false;
-        foreach (var managedPolicy in assignment.Principal.ManagedPolicies)
-        {
-            foreach (var statement in managedPolicy.Statements)
-            {
-                if (statement.Actions.Any(a => AuthorizationHelper.IsActionMatched(context.RequiredPermission, a)) &&
-                    scopePattern.IsMatch(targetArn))
-                {
-                    if (statement.Condition is not null)
-                    {
-                        var conditionResult = conditionEvaluator.Evaluate(statement.Condition);
-                        if (conditionResult.IsError) return Error.Forbidden("Access.Denied", "Condition evaluation failed."); //If one condition fails, the whole statement is denied
-                    }
 
-                    if (!statement.Effect) return Error.Forbidden("Access.Denied", "Explicit deny in role.");
-                    isAllowed = true;
-                }
+        foreach (var statement in statements)
+        {
+            if (AuthorizationHelper.IsStatementMatch(statement, context.RequiredPermission, targetArn, conditionEvaluator))
+            {
+                if (!statement.Effect) 
+                    return Error.Forbidden("Access.Denied", "Explicit deny.");
+                
+                isAllowed = true;
             }
         }
 
@@ -88,13 +61,51 @@ public class TenantUserAuthorizationStrategy : IAuthorizationStrategy
     }
 }
 
+public interface IAuthorizationStrategy
+{
+    AuthenticationMethod Method { get; }
+    Task<ErrorOr<Success>> Authorize(AuthorizationContext context);
+}
+
+public class TenantUserAuthorizationStrategy : IAuthorizationStrategy
+{
+    private readonly ITenantUserPrincpialAssignmentRepository _assignmentRepository;
+    private readonly IPolicyEvaluationEngine _evaluationEngine;
+
+    public TenantUserAuthorizationStrategy(
+        ITenantUserPrincpialAssignmentRepository assignmentRepository,
+        IPolicyEvaluationEngine evaluationEngine)
+    {
+        _assignmentRepository = assignmentRepository;
+        _evaluationEngine = evaluationEngine;
+    }
+
+    public AuthenticationMethod Method => AuthenticationMethod.TenantUser;
+
+    public async Task<ErrorOr<Success>> Authorize(AuthorizationContext context)
+    {
+        var targetArnResult = ResourceArn.Create(context.ResourceType.ToString(), context.TenantId.ToString(), context.ResourcePath);
+        if (targetArnResult.IsError) return Error.Forbidden("Resource.Invalid");
+        var targetArn = targetArnResult.Value;
+
+        var assignment = await _assignmentRepository.Get(context.Id, targetArn.ToString());
+        if (assignment == null) return Error.Forbidden("Access.Denied", "No matching assignment found.");
+
+        return _evaluationEngine.Evaluate(assignment.GetEffectiveStatements(), context, targetArn);
+    }
+}
+
 public class PrincipalUserAuthorizationStrategy : IAuthorizationStrategy
 {
     private readonly IPrincipalRepository _principalRepository;
+    private readonly IPolicyEvaluationEngine _evaluationEngine;
 
-    public PrincipalUserAuthorizationStrategy(IPrincipalRepository principalRepository)
+    public PrincipalUserAuthorizationStrategy(
+        IPrincipalRepository principalRepository,
+        IPolicyEvaluationEngine evaluationEngine)
     {
         _principalRepository = principalRepository;
+        _evaluationEngine = evaluationEngine;
     }
 
     public AuthenticationMethod Method => AuthenticationMethod.Principal;
@@ -108,40 +119,9 @@ public class PrincipalUserAuthorizationStrategy : IAuthorizationStrategy
         if (targetArnResult.IsError) return Error.Forbidden("Resource.Invalid");
         var targetArn = targetArnResult.Value;
 
-        var conditionEvaluator = new ConditionEvaluatorService(context);
-        bool isAllowed = false;
+        if (context.TenantId is null) return Error.Forbidden("Access.Denied", "TenantId is required.");
 
-        // 1. Evaluate Inline Policies
-        foreach (var policy in principal.InlinePolicies)
-        {
-            foreach (var statement in policy.Statements)
-            {
-                if (AuthorizationHelper.IsStatementMatch(statement, context.RequiredPermission, targetArn, conditionEvaluator))
-                {
-                    if (!statement.Effect) return Error.Forbidden("Access.Denied", "Explicit deny in inline policy.");
-                    isAllowed = true;
-                }
-            }
-        }
-
-        // 2. Evaluate Managed Policies
-        var scope = principal.PrincipalScope?.Value ?? "az:*";
-        if(context.TenantId is null)
-            return Error.Forbidden("Access.Denied", "TenantId is required for evaluating managed policies.");
-        foreach (var managedPolicy in principal.ManagedPolicies)
-        {
-            var effectivePolicy = managedPolicy.Build(scope, context.TenantId.Value);
-            foreach (var statement in effectivePolicy.Statements)
-            {
-                if (AuthorizationHelper.IsStatementMatch(statement, context.RequiredPermission, targetArn, conditionEvaluator))
-                {
-                    if (!statement.Effect) return Error.Forbidden("Access.Denied", "Explicit deny in managed policy.");
-                    isAllowed = true;
-                }
-            }
-        }
-
-        return isAllowed ? Result.Success : Error.Forbidden("Access.Denied", "Implicit deny.");
+        return _evaluationEngine.Evaluate(principal.GetEffectiveStatements(null, context.TenantId.Value), context, targetArn);
     }
 }
 

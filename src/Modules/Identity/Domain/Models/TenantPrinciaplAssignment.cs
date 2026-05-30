@@ -39,4 +39,9 @@ public class TenantUserPrinciaplAssignment : AggregateRoot, IDomainTenantOwned
         return new TenantUserPrinciaplAssignment(Guid.NewGuid(), tenantId, tenantUser, principal, resource.Value);
     }
 
+    public IEnumerable<PolicyStatement> GetEffectiveStatements()
+    {
+        var assignmentScope = Resource.ToString() + "*";
+        return Principal.GetEffectiveStatements(assignmentScope, TenantId);
+    }
 }

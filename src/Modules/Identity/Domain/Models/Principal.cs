@@ -60,6 +60,14 @@ public class Principal : PrincipalTemplate, IDomainTenantOwned
             _inlinePolicies.Remove(policy);
         }
     }
+
+    public override IEnumerable<PolicyStatement> GetEffectiveStatements(string? scopeOverride, Guid tenantId)
+    {
+        var activeScope = scopeOverride ?? PrincipalScope?.Value ?? "az:*";
+        var statements = base.GetEffectiveStatements(activeScope, tenantId).ToList();
+        statements.AddRange(InlinePolicies.SelectMany(p => p.Statements));
+        return statements;
+    }
 }
 
 public class Policy : TenantOwnedAggregate

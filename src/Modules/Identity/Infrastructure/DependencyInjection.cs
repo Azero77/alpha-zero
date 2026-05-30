@@ -44,6 +44,7 @@ public static class DependencyInjection
         
         services.AddScoped<IAuthorizationStrategy, TenantUserAuthorizationStrategy>();
         services.AddScoped<IAuthorizationStrategy, PrincipalUserAuthorizationStrategy>();
+        services.AddScoped<IPolicyEvaluationEngine, PolicyEvaluationEngine>();
         
         services.AddScoped<IPolicyEvaluatorService, PolicyEvaluatorService>();
         services.AddScoped<PolicyEvaluatorService>();
