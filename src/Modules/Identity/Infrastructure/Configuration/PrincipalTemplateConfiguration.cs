@@ -65,3 +65,14 @@ public class PrincipalConfiguration : IEntityTypeConfiguration<Principal>
             .HasField("_inlinePolicies");
     }
 }
+
+
+public class ConditionDefinitionConfiguration : IEntityTypeConfiguration<ConditionDefinition>
+{
+    public void Configure(EntityTypeBuilder<ConditionDefinition> builder)
+    {
+        builder.HasKey(c => c.Name);
+        builder.Property(c => c.InnerCondition)
+            .HasColumnType("jsonb");
+    }
+}

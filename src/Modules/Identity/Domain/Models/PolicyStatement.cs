@@ -71,7 +71,8 @@ public enum ConditionType
     And,
     Or,
     Not,
-    Statement
+    Statement,
+    Reference,
 }
 public interface IConditionNode
 {
@@ -96,4 +97,10 @@ public record OrNode(List<IConditionNode> Conditions) : IConditionNode
 public record NotNode(IConditionNode Condition) : IConditionNode
 {
     public ConditionType Type => ConditionType.Not;
+}
+
+
+public record ConditionReferenceNode(string ReferenceName) : IConditionNode
+{
+    public ConditionType Type => ConditionType.Reference;
 }

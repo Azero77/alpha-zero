@@ -1,4 +1,5 @@
 using AlphaZero.Modules.Identity.Domain.Models;
+using AlphaZero.Modules.Identity.Domain.Repositories;
 using AlphaZero.Shared.Authorization;
 using ErrorOr;
 using System.Reflection;
@@ -7,7 +8,7 @@ using System.Text.RegularExpressions;
 
 namespace AlphaZero.Modules.Identity.Domain.Services;
 
-public class ConditionEvaluatorService(AuthorizationContext context)
+public class ConditionEvaluatorService(AuthorizationContext context, IConditionRepository conditionRepository)
 {
     public static readonly JsonValueKind[] AllowedKinds = 
     [
@@ -28,8 +29,22 @@ public class ConditionEvaluatorService(AuthorizationContext context)
             ConditionType.Or => EvaluateOr((OrNode)node),
             ConditionType.Not => EvaluateNot((NotNode)node),
             ConditionType.Statement => EvaluateStatement((ConditionNode)node),
+            ConditionType.Reference => EvaluateReference((ConditionReferenceNode)node),
             _ => Error.Unexpected("Condition.UnknownType", $"Unknown condition type: {node.Type}")
         };
+    }
+
+    private ErrorOr<Success> EvaluateReference(ConditionReferenceNode node)
+    {
+        if (string.IsNullOrEmpty(node.ReferenceName))
+            return Error.Validation("Condition.ReferenceNameNullOrEmpty", "Reference name is null or empty");
+
+        var condition = conditionRepository.GetNodeByConditionReferenceName(node.ReferenceName).Result;
+
+        if(condition is null)
+            return Error.NotFound("Condition.NotFound", $"Condition with reference name '{node.ReferenceName}' not found");
+
+        return Evaluate(condition);
     }
 
     private ErrorOr<Success> EvaluateAnd(AndNode node)

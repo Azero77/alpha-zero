@@ -21,6 +21,7 @@ public class AppDbContext : DbContext, ITenantDbContext
     public DbSet<PrincipalPolicyAssignment> PrincipalPolicyAssignments => Set<PrincipalPolicyAssignment>();
     public DbSet<TenantUser> TenantUsers => Set<TenantUser>();
     public DbSet<TenantUserPrinciaplAssignment> TenantPrinciaplAssignments => Set<TenantUserPrinciaplAssignment>();
+    public DbSet<ConditionDefinition> ConditionDefinitions => Set<ConditionDefinition>();
 
     public Guid? TenantId => tenantProvider.GetTenant();
 
