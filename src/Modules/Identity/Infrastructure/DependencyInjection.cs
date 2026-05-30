@@ -2,6 +2,7 @@ using AlphaZero.Modules.Identity.Application.Auth.Commands.LoginAsTenantUser;
 using AlphaZero.Modules.Identity.Domain.Models;
 using AlphaZero.Modules.Identity.Domain.Repositories;
 using AlphaZero.Modules.Identity.Domain.Services;
+using AlphaZero.Modules.Identity.Infrastructure.Models;
 using AlphaZero.Modules.Identity.Infrastructure.Persistance;
 using AlphaZero.Modules.Identity.Infrastructure.Repositories;
 using AlphaZero.Shared.Application;
@@ -50,6 +51,8 @@ public static class DependencyInjection
         services.AddScoped<IPasswordHasher, Auth.PasswordHasher>();
         services.AddScoped<ICurrentTenantUserRepository, Auth.CurrentTenantUserRepository>();
         services.AddScoped<AuthorizationContextFactory>();
+
+        services.AddScoped<IConditionRepository, ConditionRepository>();
     }
 
     public static void AddIdentityPrivateInfrastructure(this IServiceCollection moduleServices, IConfiguration configuration)

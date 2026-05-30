@@ -18,9 +18,10 @@ public class ConditionRepository : IConditionRepository
     private readonly AppDbContext _context;
     private readonly HybridCache _hybridCache;
 
-    public ConditionRepository(AppDbContext context)
+    public ConditionRepository(AppDbContext context, HybridCache hybridCache)
     {
         _context = context;
+        _hybridCache = hybridCache;
     }
 
     public async Task<IConditionNode?> GetNodeByConditionReferenceName(string name)
