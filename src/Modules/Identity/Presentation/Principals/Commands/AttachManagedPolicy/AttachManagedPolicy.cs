@@ -25,6 +25,7 @@ public class AttachManagedPolicyEndpoint : Endpoint<AttachManagedPolicyRequest>
 
     public override void Configure()
     {
+        // This is still valid as it manages the relationship via the application layer
         Post("/identity/principals/{PrincipalId}/policies/managed/{ManagedPolicyId}");
         this.AccessControl("identity:ManagePrincipals", _ => ResourceArn.ForTenant(Guid.Empty));
         Description(d => d.WithTags("Identity"));

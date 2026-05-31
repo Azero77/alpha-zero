@@ -14,8 +14,9 @@ internal class PrincipalDataModel
     public string? PrincipalScopePattern { get; set; }
     public Guid TenantId { get; set; }
 
-    // Navigation for Many-to-Many
+    // Navigation for Many-to-Many via Join Entity
     public List<ManagedPolicy> ManagedPolicies { get; set; } = new();
+    public List<PrincipalPolicyAssignment> PrincipalPolicyAssignments { get; set; } = new();
 
     // Field for JSONB serialization
     public List<InlinePolicy> InlinePolicies { get; set; } = new();

@@ -1,5 +1,5 @@
 using AlphaZero.Modules.Identity.Application.Principals.Commands.AttachInlinePolicy;
-using AlphaZero.Modules.Identity.Domain.Models;
+using AlphaZero.Modules.Identity.Domain.Models.Principals.Policies;
 using AlphaZero.Shared.Authorization;
 using AlphaZero.Shared.Domain;
 using AlphaZero.Shared.Presentation.Extensions;

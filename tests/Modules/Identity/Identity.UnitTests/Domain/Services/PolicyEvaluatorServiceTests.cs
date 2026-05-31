@@ -1,4 +1,6 @@
 using AlphaZero.Modules.Identity.Domain.Models;
+using AlphaZero.Modules.Identity.Domain.Models.Principals;
+using AlphaZero.Modules.Identity.Domain.Models.Principals.Policies;
 using AlphaZero.Modules.Identity.Domain.Repositories;
 using AlphaZero.Modules.Identity.Domain.Services;
 using AlphaZero.Shared.Authorization;
@@ -18,7 +20,6 @@ public class PolicyEvaluatorServiceTests
     private readonly PolicyEvaluatorService _evaluator;
     
     private static readonly Guid TenantId = Guid.NewGuid();
-    private static readonly Guid UserId = Guid.NewGuid();
 
     public PolicyEvaluatorServiceTests()
     {
@@ -44,20 +45,17 @@ public class PolicyEvaluatorServiceTests
         var user = TenantUser.Create(TenantId, "sub-1", "Ali", TenantUserDeviceInfo.Empty).Value;
         _userRepository.GetById(user.Id).Returns(Task.FromResult<TenantUser?>(user));
 
-        // Use the proper way to create a template since constructor is protected
-        var template = new PrincipalTemplate(Guid.NewGuid(), "Student", PrincipalType.Role);
+        var principal = Principal.Create(Guid.NewGuid(), "student-role", "hash", "Student", PrincipalType.Role, null, TenantId).Value;
         
         var managedPolicy = new ManagedPolicy(Guid.NewGuid(), "View", new() 
         { 
-            new PolicyTemplateStatement("S1", new() { "courses:View" }, true) 
+            new ManagedPolicyStatement("S1", new() { "courses:View" }, true) 
         });
         
-        // Add policy to the template
-        template.ManagedPolicies.Add(managedPolicy);
+        principal.AddPolicy(managedPolicy);
 
-        var assignment = TenantUserPrinciaplAssignment.Create(TenantId, user, template, $"az:courses:{TenantId}:course/101").Value;
+        var assignment = TenantUserPrinciaplAssignment.Create(TenantId, user, principal, $"az:courses:{TenantId}:course/101").Value;
         
-        // FIX: Must return Task.FromResult for async methods
         _assignmentRepository.Get(user.Id, Arg.Any<string>())
             .Returns(Task.FromResult<TenantUserPrinciaplAssignment?>(assignment));
 
@@ -79,12 +77,11 @@ public class PolicyEvaluatorServiceTests
     public async Task Authorize_Principal_Should_EvaluateInlinePolicies()
     {
         // Arrange
-        var principalResult = Principal.Create(Guid.NewGuid(), "iam-user-1", PrincipalType.User, TenantId, ResourcePattern.All.Value, "Custom", "hashed-password");
-        var principal = principalResult.Value;
+        var principal = Principal.Create(Guid.NewGuid(), "iam-user-1", "hashed-password", "Custom", PrincipalType.User, "az:*:*:*", TenantId).Value;
         
-        var policy = new Policy(Guid.NewGuid(), "Inline", TenantId);
+        var policy = new InlinePolicy(Guid.NewGuid(), "Inline", TenantId);
         policy.AddStatement(new PolicyStatement("S1", new() { "video:Stream" }, true, new() { ResourcePattern.All }));
-        principal.AddInlinePolicy(policy);
+        principal.AddPolicy(policy);
 
         _principalRepository.GetById(principal.Id).Returns(Task.FromResult<Principal?>(principal));
         var context = new AuthorizationContext()
@@ -94,7 +91,7 @@ public class PolicyEvaluatorServiceTests
             TenantId = TenantId,
             RequiredPermission = "video:Stream",
             ResourcePath = "video/123",
-            ResourceType = ResourceType.Video
+            ResourceType = ResourceType.Videos
         };
         // Act
         var result = await _evaluator.Authorize(

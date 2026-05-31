@@ -1,5 +1,8 @@
 using System.Net.Http.Json;
 using AlphaZero.Modules.Identity.Domain.Models;
+using AlphaZero.Modules.Identity.Domain.Models.Principals;
+using AlphaZero.Modules.Identity.Domain.Models.Principals.Policies;
+using AlphaZero.Modules.Identity.Domain.Repositories;
 using AlphaZero.Modules.Identity.Domain.Services;
 using AlphaZero.Shared.Authorization;
 using AlphaZero.Shared.Domain;
@@ -24,26 +27,32 @@ public class ConditionIntegrationTests : BaseIntegrationTest
         SetTenant(tenantId);
 
         // 1. Create a Managed Policy with a Condition (AndNode)
-        // Condition: ResourcePath must be "course/math-101" AND RequiredPermission must be "courses:View"
         var c1 = new ConditionNode("ResourcePath", Operator.StringEquals, JsonDocument.Parse("\"course/math-101\"").RootElement);
         var c2 = new ConditionNode("RequiredPermission", Operator.StringEquals, JsonDocument.Parse("\"courses:View\"").RootElement);
         var condition = new AndNode(new List<IConditionNode> { c1, c2 });
 
         var managedPolicy = new ManagedPolicy(Guid.NewGuid(), "ConditionalPolicy", new() 
         { 
-            new PolicyTemplateStatement("S1", new() { "courses:View" }, true, condition) 
+            new ManagedPolicyStatement("S1", new() { "courses:View" }, true, condition) 
         });
 
         var user = TenantUser.Create(tenantId, "ali-sub", "Ali", TenantUserDeviceInfo.Empty).Value;
-        var template = new PrincipalTemplate(Guid.NewGuid(), "Student", PrincipalType.Role);
-        template.ManagedPolicies.Add(managedPolicy);
+        var principal = Principal.Create(Guid.NewGuid(), "student-role", "hash", "Student", PrincipalType.Role, null, tenantId).Value;
+        principal.AddPolicy(managedPolicy);
 
-        DbContext.ManagedPolicies.Add(managedPolicy);
-        DbContext.TenantUsers.Add(user);
-        DbContext.PrincipalTemplates.Add(template);
+        var principalRepo = Resolve<IPrincipalRepository>();
+        var managedPolicyRepo = Resolve<IManagedPolicyRepository>();
+
+        managedPolicyRepo.Add(managedPolicy);
         await DbContext.SaveChangesAsync();
 
-        var assignment = TenantUserPrinciaplAssignment.Create(tenantId, user, template, $"az:courses:{tenantId}:course/math-101").Value;
+        principalRepo.Add(principal);
+        await DbContext.SaveChangesAsync();
+
+        DbContext.TenantUsers.Add(user);
+        await DbContext.SaveChangesAsync();
+
+        var assignment = TenantUserPrinciaplAssignment.Create(tenantId, user, principal, $"az:courses:{tenantId}:course/math-101").Value;
         DbContext.TenantPrinciaplAssignments.Add(assignment);
         await DbContext.SaveChangesAsync();
 

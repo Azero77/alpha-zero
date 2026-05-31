@@ -50,7 +50,7 @@ public static class DependencyInjection
         services.AddScoped<IJwtProvider, Auth.JwtProvider>();
         services.AddScoped<IPasswordHasher, Auth.PasswordHasher>();
         services.AddScoped<ICurrentTenantUserRepository, Auth.CurrentTenantUserRepository>();
-        services.AddScoped<AuthorizationContextFactory>();
+        services.AddScoped<IAuthorizationContextFactory,AuthorizationContextFactory>();
 
         services.AddScoped<IConditionRepository, ConditionRepository>();
     }

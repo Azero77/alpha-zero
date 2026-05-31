@@ -48,3 +48,13 @@ internal class PrincipalDataModelConfiguration : IEntityTypeConfiguration<Princi
             .HasColumnType("jsonb");
     }
 }
+
+internal class ConditionDefinitionConfiguration : IEntityTypeConfiguration<ConditionDefinition>
+{
+    public void Configure(EntityTypeBuilder<ConditionDefinition> builder)
+    {
+        builder.HasKey(c => c.Name);
+        builder.Property(c => c.InnerCondition)
+            .HasColumnType("jsonb");
+    }
+}

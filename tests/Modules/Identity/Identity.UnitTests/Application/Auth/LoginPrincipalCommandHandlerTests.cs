@@ -1,6 +1,6 @@
 using AlphaZero.Modules.Identity.Application.Auth.Commands.LoginAsTenantUser;
 using AlphaZero.Modules.Identity.Application.Auth.Commands.LoginPrincipal;
-using AlphaZero.Modules.Identity.Domain.Models;
+using AlphaZero.Modules.Identity.Domain.Models.Principals;
 using AlphaZero.Modules.Identity.Domain.Repositories;
 using AlphaZero.Shared.Domain;
 using FluentAssertions;
@@ -38,7 +38,7 @@ public class LoginPrincipalCommandHandlerTests
     public async Task Handle_Should_ReturnToken_WhenCredentialsAreValid()
     {
         // Arrange
-        var principal = Principal.Create(Guid.NewGuid(), Username, PrincipalType.User, TenantId, null, "IAM User", PasswordHash).Value;
+        var principal = Principal.Create(Guid.NewGuid(), Username, PasswordHash, "IAM User", PrincipalType.User, null, TenantId).Value;
         
         _principalRepository.GetFirst(Arg.Any<Expression<Func<Principal, bool>>>(), Arg.Any<CancellationToken>())
             .Returns(principal );
@@ -80,7 +80,7 @@ public class LoginPrincipalCommandHandlerTests
     public async Task Handle_Should_ReturnUnauthorized_WhenPasswordIsInvalid()
     {
         // Arrange
-        var principal = Principal.Create(Guid.NewGuid(), Username, PrincipalType.User, TenantId, null, "IAM User", PasswordHash).Value;
+        var principal = Principal.Create(Guid.NewGuid(), Username, PasswordHash, "IAM User", PrincipalType.User, null, TenantId).Value;
 
         _principalRepository.GetFirst(Arg.Any<Expression<Func<Principal, bool>>>(), Arg.Any<CancellationToken>())
             .Returns(principal);

@@ -1,5 +1,6 @@
 using AlphaZero.Modules.Identity.Application.Principals.Commands.AssignPrincipalToUser;
 using AlphaZero.Modules.Identity.Domain.Models;
+using AlphaZero.Modules.Identity.Domain.Models.Principals;
 using AlphaZero.Modules.Identity.Domain.Repositories;
 using AlphaZero.Shared.Infrastructure.Repositores;
 using AlphaZero.Shared.Infrastructure.Tenats;
@@ -15,25 +16,25 @@ public class AssignPrincipalToUserCommandHandlerTests
 {
     private readonly ITenantUserPrincpialAssignmentRepository _assignmentRepository;
     private readonly IRepository<TenantUser> _userRepository;
-    private readonly IRepository<PrincipalTemplate> _templateRepository;
+    private readonly IPrincipalRepository _principalRepository;
     private readonly ITenantProvider _tenantProvider;
     private readonly ILogger<AssignPrincipalToUserCommandHandler> _logger;
     private readonly AssignPrincipalToUserCommandHandler _handler;
 
     private static readonly Guid TenantId = Guid.NewGuid();
     private static readonly Guid UserId = Guid.NewGuid();
-    private static readonly Guid TemplateId = Guid.NewGuid();
+    private static readonly Guid PrincipalId = Guid.NewGuid();
     private static readonly string ResourceArn = "az:courses:tenant:course/101";
 
     public AssignPrincipalToUserCommandHandlerTests()
     {
         _assignmentRepository = Substitute.For<ITenantUserPrincpialAssignmentRepository>();
         _userRepository = Substitute.For<IRepository<TenantUser>>();
-        _templateRepository = Substitute.For<IRepository<PrincipalTemplate>>();
+        _principalRepository = Substitute.For<IPrincipalRepository>();
         _tenantProvider = Substitute.For<ITenantProvider>();
         _logger = Substitute.For<ILogger<AssignPrincipalToUserCommandHandler>>();
         _handler = new AssignPrincipalToUserCommandHandler(
-            _assignmentRepository, _userRepository, _templateRepository, _tenantProvider, _logger);
+            _assignmentRepository, _userRepository, _principalRepository, _tenantProvider, _logger);
     }
 
     [Fact]
@@ -45,12 +46,12 @@ public class AssignPrincipalToUserCommandHandlerTests
             .Returns(false);
 
         var user = TenantUser.Create(TenantId, "sub", "Ali", TenantUserDeviceInfo.Empty).Value;
-        var template = new PrincipalTemplate(TemplateId, "Role", PrincipalType.Role);
+        var principal = Principal.Create(PrincipalId, "role", "hash", "Role", PrincipalType.Role, null, TenantId).Value;
 
         _userRepository.GetById(UserId).Returns(user);
-        _templateRepository.GetById(TemplateId).Returns(template);
+        _principalRepository.GetById(PrincipalId).Returns(principal);
 
-        var command = new AssignPrincipalToUserCommand(UserId, TemplateId, ResourceArn);
+        var command = new AssignPrincipalToUserCommand(UserId, PrincipalId, ResourceArn);
 
         // Act
         var result = await _handler.Handle(command, CancellationToken.None);
@@ -58,7 +59,7 @@ public class AssignPrincipalToUserCommandHandlerTests
         // Assert
         result.IsError.Should().BeFalse();
         _assignmentRepository.Received(1).Add(Arg.Is<TenantUserPrinciaplAssignment>(a => 
-            a.TenantUser == user && a.Principal == template && a.Resource.Value == ResourceArn.ToLowerInvariant()));
+            a.TenantUser == user && a.Principal == principal && a.Resource.Value == ResourceArn.ToLowerInvariant()));
     }
 
     [Fact]
@@ -69,7 +70,7 @@ public class AssignPrincipalToUserCommandHandlerTests
         _assignmentRepository.Any(Arg.Any<Expression<Func<TenantUserPrinciaplAssignment, bool>>>(), Arg.Any<CancellationToken>())
             .Returns(true);
 
-        var command = new AssignPrincipalToUserCommand(UserId, TemplateId, ResourceArn);
+        var command = new AssignPrincipalToUserCommand(UserId, PrincipalId, ResourceArn);
 
         // Act
         var result = await _handler.Handle(command, CancellationToken.None);

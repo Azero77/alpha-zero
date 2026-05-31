@@ -1,4 +1,5 @@
 ﻿using AlphaZero.Modules.Identity.Domain.Models;
+using AlphaZero.Modules.Identity.Domain.Models.Principals;
 
 namespace AlphaZero.Modules.Identity.Domain.Repositories;
 

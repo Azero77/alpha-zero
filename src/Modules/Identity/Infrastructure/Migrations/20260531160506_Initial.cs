@@ -1,4 +1,5 @@
 ﻿using System;
+using AlphaZero.Modules.Identity.Domain.Models.Principals;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
@@ -11,6 +12,18 @@ namespace AlphaZero.Modules.Identity.Infrastructure.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.CreateTable(
+                name: "ConditionDefinitions",
+                columns: table => new
+                {
+                    Name = table.Column<string>(type: "text", nullable: false),
+                    InnerCondition = table.Column<IConditionNode>(type: "jsonb", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_ConditionDefinitions", x => x.Name);
+                });
+
             migrationBuilder.CreateTable(
                 name: "ManagedPolicies",
                 columns: table => new
@@ -25,16 +38,21 @@ namespace AlphaZero.Modules.Identity.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "PrincipalTemplates",
+                name: "Principals",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    Name = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
-                    PrincipalType = table.Column<string>(type: "text", nullable: false)
+                    Username = table.Column<string>(type: "character varying(128)", maxLength: 128, nullable: false),
+                    PasswordHash = table.Column<string>(type: "text", nullable: false),
+                    Name = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: false),
+                    PrincipalType = table.Column<string>(type: "text", nullable: false),
+                    PrincipalScopePattern = table.Column<string>(type: "text", nullable: true),
+                    TenantId = table.Column<Guid>(type: "uuid", nullable: false),
+                    InlinePolicies = table.Column<string>(type: "jsonb", nullable: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_PrincipalTemplates", x => x.Id);
+                    table.PrimaryKey("PK_Principals", x => x.Id);
                 });
 
             migrationBuilder.CreateTable(
@@ -44,8 +62,7 @@ namespace AlphaZero.Modules.Identity.Infrastructure.Migrations
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
                     TenantId = table.Column<Guid>(type: "uuid", nullable: false),
                     IdentityId = table.Column<string>(type: "character varying(128)", maxLength: 128, nullable: false),
-                    Name = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: false),
-                    ActiveSessionId = table.Column<Guid>(type: "uuid", nullable: false)
+                    Name = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: false)
                 },
                 constraints: table =>
                 {
@@ -69,33 +86,9 @@ namespace AlphaZero.Modules.Identity.Infrastructure.Migrations
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
-                        name: "FK_PrincipalManagedPolicyAssignments_PrincipalTemplates_Princi~",
+                        name: "FK_PrincipalManagedPolicyAssignments_Principals_PrincipalId",
                         column: x => x.PrincipalId,
-                        principalTable: "PrincipalTemplates",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "Principals",
-                columns: table => new
-                {
-                    Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    Username = table.Column<string>(type: "character varying(128)", maxLength: 128, nullable: false),
-                    PasswordHash = table.Column<string>(type: "text", nullable: false),
-                    PrincipalScopePattern = table.Column<string>(type: "text", nullable: true),
-                    ScopeResourceType = table.Column<string>(type: "text", nullable: true),
-                    ResourceId = table.Column<Guid>(type: "uuid", nullable: true),
-                    TenantId = table.Column<Guid>(type: "uuid", nullable: false),
-                    InlinePolicies = table.Column<string>(type: "jsonb", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_Principals", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_Principals_PrincipalTemplates_Id",
-                        column: x => x.Id,
-                        principalTable: "PrincipalTemplates",
+                        principalTable: "Principals",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
@@ -107,16 +100,16 @@ namespace AlphaZero.Modules.Identity.Infrastructure.Migrations
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
                     TenantId = table.Column<Guid>(type: "uuid", nullable: false),
                     TenantUserId = table.Column<Guid>(type: "uuid", nullable: false),
-                    PrincipalTemplateId = table.Column<Guid>(type: "uuid", nullable: false),
-                    ResourceArn = table.Column<string>(type: "text", nullable: false)
+                    ResourceArn = table.Column<string>(type: "text", nullable: false),
+                    PrincipalId = table.Column<Guid>(type: "uuid", nullable: false)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_TenantPrinciaplAssignments", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_TenantPrinciaplAssignments_PrincipalTemplates_PrincipalTemp~",
-                        column: x => x.PrincipalTemplateId,
-                        principalTable: "PrincipalTemplates",
+                        name: "FK_TenantPrinciaplAssignments_Principals_PrincipalId",
+                        column: x => x.PrincipalId,
+                        principalTable: "Principals",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
@@ -145,9 +138,9 @@ namespace AlphaZero.Modules.Identity.Infrastructure.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
-                name: "IX_TenantPrinciaplAssignments_PrincipalTemplateId",
+                name: "IX_TenantPrinciaplAssignments_PrincipalId",
                 table: "TenantPrinciaplAssignments",
-                column: "PrincipalTemplateId");
+                column: "PrincipalId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_TenantPrinciaplAssignments_TenantId",
@@ -155,9 +148,9 @@ namespace AlphaZero.Modules.Identity.Infrastructure.Migrations
                 column: "TenantId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_TenantPrinciaplAssignments_TenantUserId_PrincipalTemplateId~",
+                name: "IX_TenantPrinciaplAssignments_TenantUserId_PrincipalId_Resourc~",
                 table: "TenantPrinciaplAssignments",
-                columns: new[] { "TenantUserId", "PrincipalTemplateId", "ResourceArn" },
+                columns: new[] { "TenantUserId", "PrincipalId", "ResourceArn" },
                 unique: true);
 
             migrationBuilder.CreateIndex(
@@ -176,10 +169,10 @@ namespace AlphaZero.Modules.Identity.Infrastructure.Migrations
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropTable(
-                name: "PrincipalManagedPolicyAssignments");
+                name: "ConditionDefinitions");
 
             migrationBuilder.DropTable(
-                name: "Principals");
+                name: "PrincipalManagedPolicyAssignments");
 
             migrationBuilder.DropTable(
                 name: "TenantPrinciaplAssignments");
@@ -188,7 +181,7 @@ namespace AlphaZero.Modules.Identity.Infrastructure.Migrations
                 name: "ManagedPolicies");
 
             migrationBuilder.DropTable(
-                name: "PrincipalTemplates");
+                name: "Principals");
 
             migrationBuilder.DropTable(
                 name: "TenantUsers");

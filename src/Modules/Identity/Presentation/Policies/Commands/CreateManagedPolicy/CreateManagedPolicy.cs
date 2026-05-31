@@ -1,5 +1,5 @@
 using AlphaZero.Modules.Identity.Application.Policies.Commands.CreateManagedPolicy;
-using AlphaZero.Modules.Identity.Domain.Models;
+using AlphaZero.Modules.Identity.Domain.Models.Principals.Policies;
 using AlphaZero.Shared.Presentation.Extensions;
 using AlphaZero.Shared.Domain;
 using AlphaZero.Shared.Authorization;
@@ -12,7 +12,7 @@ namespace AlphaZero.Modules.Identity.Presentation.Policies.Commands.CreateManage
 public record CreateManagedPolicyRequest
 {
     public string Name { get; init; } = default!;
-    public List<PolicyTemplateStatement> Statements { get; init; } = new();
+    public List<ManagedPolicyStatement> Statements { get; init; } = new();
 }
 
 public record CreateManagedPolicyResponse(Guid Id);

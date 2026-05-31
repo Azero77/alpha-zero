@@ -58,7 +58,7 @@ public class PrincipalRepository : IPrincipalRepository
         return MapToDomain(dataModel);
     }
 
-    public async Task<Principal?> GetFirst(Expression<Func<Principal, bool>> predicate, CancellationToken token = default)
+    public async Task<Principal?> GetFirst(Expression<Func<Principal?, bool>> predicate, CancellationToken token = default)
     {
         var dataModels = await _context.Principals
             .Include(p => p.ManagedPolicies)
@@ -77,6 +77,7 @@ public class PrincipalRepository : IPrincipalRepository
     {
         var existing = _context.Principals
             .Include(p => p.ManagedPolicies)
+            .Include(p => p.PrincipalPolicyAssignments)
             .FirstOrDefault(p => p.Id == entity.Id);
 
         if (existing != null)
@@ -89,8 +90,31 @@ public class PrincipalRepository : IPrincipalRepository
             existing.TenantId = entity.TenantId;
             existing.InlinePolicies = entity.Policies.OfType<InlinePolicy>().ToList();
             
-            existing.ManagedPolicies.Clear();
-            existing.ManagedPolicies.AddRange(entity.Policies.OfType<ManagedPolicy>());
+            // Sync Managed Policies
+            var currentManagedIds = entity.Policies.OfType<ManagedPolicy>().Select(m => m.Id).ToList();
+            var existingManagedIds = existing.PrincipalPolicyAssignments.Select(a => a.ManagedPolicyId).ToList();
+
+            // Remove detached
+            foreach (var assignment in existing.PrincipalPolicyAssignments.ToList())
+            {
+                if (!currentManagedIds.Contains(assignment.ManagedPolicyId))
+                {
+                    existing.PrincipalPolicyAssignments.Remove(assignment);
+                }
+            }
+
+            // Add new
+            foreach (var managedId in currentManagedIds)
+            {
+                if (!existingManagedIds.Contains(managedId))
+                {
+                    existing.PrincipalPolicyAssignments.Add(new PrincipalPolicyAssignment
+                    {
+                        PrincipalId = existing.Id,
+                        ManagedPolicyId = managedId
+                    });
+                }
+            }
         }
     }
 
@@ -100,7 +124,7 @@ public class PrincipalRepository : IPrincipalRepository
         if (existing != null) _context.Principals.Remove(existing);
     }
 
-    public async Task<bool> Any(Expression<Func<Principal, bool>> predicate, CancellationToken token = default)
+    public async Task<bool> Any(Expression<Func<Principal?, bool>> predicate, CancellationToken token = default)
     {
         var dataModels = await _context.Principals.ToListAsync(token);
         return dataModels.Select(MapToDomain).AsQueryable().Any(predicate);
@@ -138,7 +162,7 @@ public class PrincipalRepository : IPrincipalRepository
 
     private PrincipalDataModel MapToDataModel(Principal entity)
     {
-        return new PrincipalDataModel
+        var dataModel = new PrincipalDataModel
         {
             Id = entity.Id,
             Username = entity.Username,
@@ -147,9 +171,19 @@ public class PrincipalRepository : IPrincipalRepository
             PrincipalType = entity.PrincipalType,
             PrincipalScopePattern = entity.PrincipalScope?.Value,
             TenantId = entity.TenantId,
-            InlinePolicies = entity.Policies.OfType<InlinePolicy>().ToList(),
-            ManagedPolicies = entity.Policies.OfType<ManagedPolicy>().ToList()
+            InlinePolicies = entity.Policies.OfType<InlinePolicy>().ToList()
         };
+
+        foreach (var managed in entity.Policies.OfType<ManagedPolicy>())
+        {
+            dataModel.PrincipalPolicyAssignments.Add(new PrincipalPolicyAssignment
+            {
+                PrincipalId = entity.Id,
+                ManagedPolicyId = managed.Id
+            });
+        }
+
+        return dataModel;
     }
 
     public Task<Principal?> GetById(Guid id) => GetById(id, default);

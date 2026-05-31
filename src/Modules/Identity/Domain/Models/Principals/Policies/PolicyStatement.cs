@@ -1,3 +1,4 @@
+using AlphaZero.Modules.Identity.Domain.Models.Principals;
 using AlphaZero.Shared.Domain;
 
 namespace AlphaZero.Modules.Identity.Domain.Models.Principals.Policies;

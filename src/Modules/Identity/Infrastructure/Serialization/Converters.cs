@@ -1,4 +1,5 @@
 using AlphaZero.Modules.Identity.Domain.Models;
+using AlphaZero.Modules.Identity.Domain.Models.Principals;
 using AlphaZero.Shared.Domain;
 using System;
 using System.Collections.Generic;

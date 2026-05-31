@@ -1,4 +1,5 @@
 ﻿using AlphaZero.Modules.Identity.Domain.Models;
+using AlphaZero.Modules.Identity.Domain.Models.Principals;
 using AlphaZero.Modules.Identity.Domain.Repositories;
 using AlphaZero.Modules.Identity.Infrastructure.Persistance;
 using Microsoft.Extensions.Caching.Hybrid;
