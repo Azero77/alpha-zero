@@ -38,4 +38,9 @@ public class VideoRepository : BaseRepository<AppDbContext, Video>, IVideoReposi
     {
         await _context.Videos.AddAsync(video, cancellationToken);
     }
+
+    public async Task<Video?> GetByIdAsync(Guid id, CancellationToken token = default)
+    {
+        return await _context.Videos.FindAsync(new { Id = id }, token);
+    }
 }

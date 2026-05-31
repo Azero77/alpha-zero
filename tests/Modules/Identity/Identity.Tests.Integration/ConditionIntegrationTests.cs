@@ -34,7 +34,7 @@ public class ConditionIntegrationTests : BaseIntegrationTest
             new PolicyTemplateStatement("S1", new() { "courses:View" }, true, condition) 
         });
 
-        var user = TenantUser.Create(tenantId, "ali-sub", "Ali").Value;
+        var user = TenantUser.Create(tenantId, "ali-sub", "Ali", TenantUserDeviceInfo.Empty).Value;
         var template = new PrincipalTemplate(Guid.NewGuid(), "Student", PrincipalType.Role);
         template.ManagedPolicies.Add(managedPolicy);
 

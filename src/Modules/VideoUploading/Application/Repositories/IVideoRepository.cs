@@ -9,4 +9,6 @@ public interface IVideoRepository : IRepository<Video>
     Task<Video?> GetBySourceKeyAsync(string sourceKey, CancellationToken cancellationToken = default);
     Task<PagedResult<Video>> ListAsync(int page, int perPage, CancellationToken cancellationToken = default);
     Task AddAsync(Video video, CancellationToken cancellationToken = default);
+
+    public Task<Video?> GetByIdAsync(Guid id, CancellationToken token = default);
 }

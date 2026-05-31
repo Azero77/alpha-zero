@@ -8,6 +8,7 @@ using Identity.Tests.Integration.Abstractions;
 using ErrorOr;
 using FluentAssertions;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Xunit;
@@ -76,11 +77,11 @@ public class IAMPreprocessorTests : IClassFixture<SecurityApiFactory>
         {
             var db = scope.ServiceProvider.GetRequiredService<AlphaZero.Modules.Courses.Infrastructure.Persistance.AppDbContext>();
             
-            var subject = AlphaZero.Modules.Courses.Domain.Aggregates.Subject.Subject.Create(tenantA, "Security Subject", "Desc").Value;
+            var subject = AlphaZero.Modules.Courses.Domain.Aggregates.Subject.Subject.Create(Guid.NewGuid(), tenantA, "Security Subject", "Desc").Value;
             db.Subjects.Add(subject);
             await db.SaveChangesAsync();
             
-            var course = AlphaZero.Modules.Courses.Domain.Aggregates.Courses.Course.Create(tenantA, "Secure Course", "Desc", subject.Id).Value;
+            var course = AlphaZero.Modules.Courses.Domain.Aggregates.Courses.Course.Create(Guid.NewGuid(), tenantA, "Secure Course", "Desc", subject.Id).Value;
             db.Courses.Add(course);
             await db.SaveChangesAsync();
             courseId = course.Id;

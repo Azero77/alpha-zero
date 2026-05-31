@@ -2,7 +2,7 @@
 
 namespace AlphaZero.Modules.Identity.Infrastructure.Models;
 
-public class JoiningTenantsPolicies
+public class JoiningTenantPrinicpal
 {
 
     public Guid Id { get; set; }

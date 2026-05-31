@@ -60,11 +60,11 @@ public class PrincipalRepository : BaseRepository<AppDbContext, Principal>, IPri
     {
     }
 
-    public override async Task<Principal?> GetById(Guid id)
+    public override async Task<Principal?> GetById(Guid id, CancellationToken token = default)
     {
         return await _context.Principals
             .Include(t => t.ManagedPolicies)
-            .FirstOrDefaultAsync(p => p.Id == id);
+            .FirstOrDefaultAsync(p => p.Id == id, token);
     }
 
     public async Task<IReadOnlyCollection<Principal>> GetPrincipalsByResourceAsync(Guid resourceId, ResourceType resourceType, CancellationToken ct = default)

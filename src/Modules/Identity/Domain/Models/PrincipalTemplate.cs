@@ -21,3 +21,8 @@ public class PrincipalTemplate : Entity
         return ManagedPolicies.SelectMany(mp => mp.Build(effectiveScope, tenantId).Statements);
     }
 } 
+
+public abstract class PrincipalBaseType : Entity
+{
+    public abstract IEnumerable<PolicyStatement> GetEffectiveStatements(string? scope, Guid tenantId);
+}

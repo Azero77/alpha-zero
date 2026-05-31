@@ -33,7 +33,7 @@ public sealed class DeleteVideoCommandHandler : IRequestHandler<DeleteVideoComma
         }
 
         _logger.LogInformation("Deleting video {VideoId} from database.", video.Id);
-        _videoRepository.Delete(video);
+        _videoRepository.Remove(video);
 
         return Result.Deleted;
     }

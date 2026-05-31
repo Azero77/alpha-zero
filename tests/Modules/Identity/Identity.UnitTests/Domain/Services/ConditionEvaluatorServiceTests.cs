@@ -1,7 +1,9 @@
 using AlphaZero.Modules.Identity.Domain.Models;
+using AlphaZero.Modules.Identity.Domain.Repositories;
 using AlphaZero.Modules.Identity.Domain.Services;
 using AlphaZero.Shared.Authorization;
 using FluentAssertions;
+using NSubstitute;
 using System.Text.Json;
 
 namespace AlphaZero.Modules.Identity.UnitTests.Domain.Services;
@@ -22,7 +24,8 @@ public class ConditionEvaluatorServiceTests
             ResourcePath = "course/101",
             ResourceType = ResourceType.Courses
         };
-        _evaluator = new ConditionEvaluatorService(_context);
+        var conditionRepository = Substitute.For<IConditionRepository>();
+        _evaluator = new ConditionEvaluatorService(_context, conditionRepository);
     }
 
     [Fact]
