@@ -1,4 +1,5 @@
-using AlphaZero.Modules.Identity.Domain.Models;
+using AlphaZero.Modules.Identity.Domain.Models.Principals;
+using AlphaZero.Modules.Identity.Domain.Models.Principals.Policies;
 using AlphaZero.Modules.Identity.Domain.Repositories;
 using AlphaZero.Shared.Authorization;
 using AlphaZero.Shared.Domain;
@@ -91,7 +92,17 @@ public class TenantUserAuthorizationStrategy : IAuthorizationStrategy
         var assignment = await _assignmentRepository.Get(context.Id, targetArn.ToString());
         if (assignment == null) return Error.Forbidden("Access.Denied", "No matching assignment found.");
 
-        return _evaluationEngine.Evaluate(assignment.GetEffectiveStatements(), context, targetArn);
+        var assignmentScope = assignment.Resource.ToString() + "*";
+        var statements = new List<PolicyStatement>();
+
+        foreach (var policy in assignment.Policies)
+        {
+            var statementsResult = policy.GetPolicyStatements(assignmentScope, assignment.TenantId);
+            if (statementsResult.IsError) return statementsResult.Errors;
+            statements.AddRange(statementsResult.Value);
+        }
+
+        return _evaluationEngine.Evaluate(statements, context, targetArn);
     }
 }
 
@@ -121,7 +132,17 @@ public class PrincipalUserAuthorizationStrategy : IAuthorizationStrategy
 
         if (context.TenantId is null) return Error.Forbidden("Access.Denied", "TenantId is required.");
 
-        return _evaluationEngine.Evaluate(principal.GetEffectiveStatements(null, context.TenantId.Value), context, targetArn);
+        var activeScope = principal.PrincipalScope?.Value ?? "az:*";
+        var statements = new List<PolicyStatement>();
+
+        foreach (var policy in principal.Policies)
+        {
+            var statementsResult = policy.GetPolicyStatements(activeScope, context.TenantId.Value);
+            if (statementsResult.IsError) return statementsResult.Errors;
+            statements.AddRange(statementsResult.Value);
+        }
+
+        return _evaluationEngine.Evaluate(statements, context, targetArn);
     }
 }
 
