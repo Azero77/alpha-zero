@@ -22,18 +22,27 @@ public class TenantUserPrincpialAssignmentRepository : BaseRepository<AppDbConte
         var arnResult = ResourceArn.Create(resourceArn);
         if (arnResult.IsError) return null;
 
-        var query = from assignment in _context.TenantPrinciaplAssignments.Include(a => a.TenantUser)
-                    join principalData in _context.Principals.Include(p => p.ManagedPolicies)
-                    on EF.Property<Guid>(assignment, "PrincipalId") equals principalData.Id
-                    where assignment.TenantUser.Id == tenantUserId && 
-                          (assignment.Resource == arnResult.Value || resourceArn.StartsWith(assignment.Resource.Value))
-                    select new { assignment, principalData };
+        // Fetch assignments for the user. We filter by TenantUserId server-side.
+        // For the Resource comparison, since it has a conversion, EF Core might struggle with complex LINQ.
+        // We'll fetch all assignments for the user (usually very few) and filter the rest in memory.
+        var assignments = await _context.TenantPrinciaplAssignments
+            .Include(a => a.TenantUser)
+            .Where(a => a.TenantUser.Id == tenantUserId)
+            .ToListAsync();
 
-        var result = await query.FirstOrDefaultAsync();
+        var matchedAssignment = assignments.FirstOrDefault(a => 
+            a.Resource.Value == arnResult.Value.Value || resourceArn.StartsWith(a.Resource.Value));
 
-        if (result == null) return null;
+        if (matchedAssignment == null) return null;
 
-        return HydrateAssignment(result.assignment, result.principalData);
+        // Join manually with PrincipalDataModel
+        var principalData = await _context.Principals
+            .Include(p => p.ManagedPolicies)
+            .FirstOrDefaultAsync(p => p.Id == matchedAssignment.PrincipalId);
+
+        if (principalData == null) return null;
+
+        return HydrateAssignment(matchedAssignment, principalData);
     }
 
     private TenantUserPrinciaplAssignment HydrateAssignment(TenantUserPrinciaplAssignment assignment, PrincipalDataModel principalData)

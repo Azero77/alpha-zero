@@ -13,6 +13,7 @@ public class TenantUserPrinciaplAssignment : AggregateRoot, IDomainTenantOwned
         TenantId = tenantId;
         TenantUser = tenantUser;
         Principal = principal;
+        PrincipalId = principal.Id;
         Resource = arn;
     }
     private TenantUserPrinciaplAssignment() // ef core
@@ -26,6 +27,7 @@ public class TenantUserPrinciaplAssignment : AggregateRoot, IDomainTenantOwned
 
     public TenantUser TenantUser { get; private set; }
     public Principal Principal { get; private set; }
+    public Guid PrincipalId { get; private set; }
     public ResourceArn Resource { get; private set; }
 
     public IReadOnlyCollection<IPolicy> Policies => Principal.Policies;

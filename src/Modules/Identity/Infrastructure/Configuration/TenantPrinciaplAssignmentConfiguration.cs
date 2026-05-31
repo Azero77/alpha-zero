@@ -18,10 +18,10 @@ public class TenantUserPrinciaplAssignmentConfiguration : IEntityTypeConfigurati
             .HasForeignKey("TenantUserId")
             .OnDelete(DeleteBehavior.Cascade);
 
-        // Map to PrincipalDataModel via shadow property/foreign key
+        // Map to PrincipalDataModel via the PrincipalId property on the Domain model
         builder.HasOne<PrincipalDataModel>()
             .WithMany()
-            .HasForeignKey("PrincipalId")
+            .HasForeignKey(a => a.PrincipalId)
             .OnDelete(DeleteBehavior.Cascade);
 
         builder.Property(a => a.Resource)

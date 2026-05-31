@@ -12,6 +12,7 @@ using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Xunit;
+using Microsoft.EntityFrameworkCore;
 
 namespace Identity.Tests.Integration.Security;
 
@@ -77,6 +78,8 @@ public class IAMPreprocessorTests : IClassFixture<SecurityApiFactory>
         {
             var db = scope.ServiceProvider.GetRequiredService<AlphaZero.Modules.Courses.Infrastructure.Persistance.AppDbContext>();
             
+            await db.Database.MigrateAsync();
+
             var subject = AlphaZero.Modules.Courses.Domain.Aggregates.Subject.Subject.Create(Guid.NewGuid(), tenantA, "Security Subject", "Desc").Value;
             db.Subjects.Add(subject);
             await db.SaveChangesAsync();

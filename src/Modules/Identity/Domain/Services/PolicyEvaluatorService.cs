@@ -92,7 +92,7 @@ public class TenantUserAuthorizationStrategy : IAuthorizationStrategy
         var assignment = await _assignmentRepository.Get(context.Id, targetArn.ToString());
         if (assignment == null) return Error.Forbidden("Access.Denied", "No matching assignment found.");
 
-        var assignmentScope = assignment.Resource.ToString() + "*";
+        var assignmentScope = assignment.Resource.ToString() + "/*";
         var statements = new List<PolicyStatement>();
 
         foreach (var policy in assignment.Policies)
