@@ -10,12 +10,12 @@ public class AssignStudentRoleFromSagaConsumer(IIdentityModule identityModule, I
 {
     public async Task Consume(ConsumeContext<AssignStudentRoleFromSagaCommand> context)
     {
-        // Student Principal Template GUID
-        Guid studentTemplateId = Guid.Parse("00000000-0000-0000-0000-100000000002");
+        // Student Principal GUID
+        Guid studentPrincipalId = Guid.Parse("00000000-0000-0000-0000-100000000002");
         
         var command = new AssignPrincipalToUserCommand(
             context.Message.UserId, 
-            studentTemplateId, 
+            studentPrincipalId, 
             context.Message.Course.ToString());
 
         var result = await identityModule.Send(command);

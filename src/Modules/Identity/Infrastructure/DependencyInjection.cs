@@ -36,7 +36,6 @@ public static class DependencyInjection
         });
 
         //they are public because it is used by fast endpoint middleware in the api scope
-        services.AddScoped<IPolicyRepository, PolicyRepository>();
         services.AddScoped<IManagedPolicyRepository, ManagedPolicyRepository>();
         services.AddScoped<IPrincipalRepository, PrincipalRepository>();
         services.AddScoped<IRepository<TenantUser>,TenantUserRepository>(); 

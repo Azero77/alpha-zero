@@ -20,10 +20,10 @@ public class Principal : AggregateRoot, IDomainTenantOwned
     public ResourcePattern? PrincipalScope { get; private set; }
     public Guid TenantId { get; private set; }
 
-    private List<IPolicy> _policies = new List<IPolicy>();
+    private readonly List<IPolicy> _policies = new();
     public IReadOnlyCollection<IPolicy> Policies => _policies.AsReadOnly();
 
-    private Principal() { } // EF and JSON
+    private Principal() { } 
 
     private Principal(Guid id, string username, string passwordHash, string name, PrincipalType type, ResourcePattern? principalScope, Guid tenantId) : base(id)
     {
@@ -52,9 +52,27 @@ public class Principal : AggregateRoot, IDomainTenantOwned
 
     public void AddPolicy(IPolicy policy)
     {
-        if (!_policies.Contains(policy))
+        if (!_policies.Any(p => p is Entity e && policy is Entity pe && e.Id == pe.Id))
         {
             _policies.Add(policy);
         }
+    }
+
+    public void RemovePolicy(Guid policyId)
+    {
+        var policy = _policies.FirstOrDefault(p => p is Entity e && e.Id == policyId);
+        if (policy is not null)
+        {
+            _policies.Remove(policy);
+        }
+    }
+
+    /// <summary>
+    /// For Repository use only - hydrates the state from the data model
+    /// </summary>
+    public void LoadPolicies(IEnumerable<IPolicy> policies)
+    {
+        _policies.Clear();
+        _policies.AddRange(policies);
     }
 }

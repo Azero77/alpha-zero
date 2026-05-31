@@ -3,7 +3,7 @@ using ErrorOr;
 
 namespace AlphaZero.Modules.Identity.Domain.Models.Principals.Policies;
 
-public class InlinePolicy : IPolicy
+public class InlinePolicy : Entity, IPolicy
 {
     public PolicyType Type => PolicyType.Inline;
     public string Name { get; private set; } = string.Empty;
@@ -14,7 +14,7 @@ public class InlinePolicy : IPolicy
 
     private InlinePolicy() { } // EF and JSON
 
-    public InlinePolicy(string name, Guid tenantId)
+    public InlinePolicy(Guid id, string name, Guid tenantId) : base(id)
     {
         Name = name;
         TenantId = tenantId;

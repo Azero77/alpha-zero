@@ -1,4 +1,5 @@
-using AlphaZero.Modules.Identity.Domain.Models;
+using AlphaZero.Modules.Identity.Domain.Models.Principals;
+using AlphaZero.Modules.Identity.Domain.Models.Principals.Policies;
 using AlphaZero.Modules.Identity.Domain.Repositories;
 using AlphaZero.Shared.Application;
 using AlphaZero.Shared.Infrastructure.Tenats;
@@ -48,7 +49,7 @@ public sealed class AttachInlinePolicyCommandHandler : IRequestHandler<AttachInl
         var principal = await _principalRepository.GetById(request.PrincipalId);
         if (principal is null) return Error.NotFound("Principal.NotFound", "Principal not found.");
 
-        var policy = new Policy(Guid.NewGuid(), request.PolicyName, tenantId.Value);
+        var policy = new InlinePolicy(Guid.NewGuid(), request.PolicyName, tenantId.Value);
         foreach (var statement in request.Statements)
         {
             var result = policy.AddStatement(statement);
@@ -58,7 +59,9 @@ public sealed class AttachInlinePolicyCommandHandler : IRequestHandler<AttachInl
             }
         }
 
-        principal.AddInlinePolicy(policy);
+        principal.AddPolicy(policy);
+        _principalRepository.Update(principal);
+        
         _logger.LogInformation("Inline policy '{PolicyName}' attached to Principal {PrincipalId}.", request.PolicyName, request.PrincipalId);
 
         return Result.Success;

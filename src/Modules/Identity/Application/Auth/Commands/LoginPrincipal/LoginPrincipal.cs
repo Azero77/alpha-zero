@@ -1,5 +1,5 @@
 using AlphaZero.Modules.Identity.Application.Auth.Commands.LoginAsTenantUser;
-using AlphaZero.Modules.Identity.Domain.Models;
+using AlphaZero.Modules.Identity.Domain.Models.Principals;
 using AlphaZero.Modules.Identity.Domain.Repositories;
 using AlphaZero.Shared.Application;
 using AlphaZero.Shared.Authorization;
@@ -43,7 +43,6 @@ public sealed class LoginPrincipalCommandHandler : IRequestHandler<LoginPrincipa
             return Error.Unauthorized("Auth.InvalidCredentials", "Invalid username or password for this tenant.");
         }
 
-        // Principals in our system don't use device-lock enforcement currently.
         var token = _jwtProvider.GenerateToken(
             principal.Id,
             principal.TenantId,

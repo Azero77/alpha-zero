@@ -1,4 +1,4 @@
-using AlphaZero.Modules.Identity.Domain.Models;
+using AlphaZero.Modules.Identity.Domain.Models.Principals;
 using AlphaZero.Modules.Identity.Domain.Repositories;
 using AlphaZero.Shared.Application;
 using AlphaZero.Shared.Authorization;
@@ -15,10 +15,8 @@ public record CreatePrincipalCommand(
     string Username, 
     string Password,
     PrincipalType PrincipalType, 
-    string PrincipalScope, 
-    string Name,
-    Guid? ResourceId = null,
-    ResourceType? ScopeResourceType = null) : ICommand<Guid>;
+    string? PrincipalScope, 
+    string Name) : ICommand<Guid>;
 
 public class CreatePrincipalCommandValidator : AbstractValidator<CreatePrincipalCommand>
 {
@@ -26,7 +24,6 @@ public class CreatePrincipalCommandValidator : AbstractValidator<CreatePrincipal
     {
         RuleFor(x => x.Username).NotEmpty();
         RuleFor(x => x.Password).NotEmpty().MinimumLength(8);
-        RuleFor(x => x.PrincipalScope).NotEmpty();
         RuleFor(x => x.Name).NotEmpty().MaximumLength(200);
     }
 }
@@ -66,13 +63,11 @@ public sealed class CreatePrincipalCommandHandler : IRequestHandler<CreatePrinci
         var principalResult = Principal.Create(
             principalId, 
             request.Username, 
-            request.PrincipalType, 
-            tenantId.Value, 
-            request.PrincipalScope, 
-            request.Name,
             passwordHash,
-            request.ResourceId,
-            request.ScopeResourceType);
+            request.Name,
+            request.PrincipalType, 
+            request.PrincipalScope, 
+            tenantId.Value);
 
         if (principalResult.IsError) return principalResult.Errors;
 

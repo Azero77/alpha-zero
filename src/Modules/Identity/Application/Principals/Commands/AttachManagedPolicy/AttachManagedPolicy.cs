@@ -36,13 +36,15 @@ public sealed class AttachManagedPolicyCommandHandler : IRequestHandler<AttachMa
 
     public async Task<ErrorOr<Success>> Handle(AttachManagedPolicyCommand request, CancellationToken cancellationToken)
     {
-        var principal = await _principalRepository.Any(p => p.Id == request.PrincipalId, cancellationToken);
-        if (!principal) return Error.NotFound("Principal.NotFound", "Principal not found.");
+        var principal = await _principalRepository.GetById(request.PrincipalId);
+        if (principal is null) return Error.NotFound("Principal.NotFound", "Principal not found.");
 
-        var managedPolicy = await _managedPolicyRepository.Any(p => p.Id == request.ManagedPolicyId, cancellationToken);
-        if (!managedPolicy) return Error.NotFound("ManagedPolicy.NotFound", "Managed policy not found.");
+        var managedPolicy = await _managedPolicyRepository.GetById(request.ManagedPolicyId);
+        if (managedPolicy is null) return Error.NotFound("ManagedPolicy.NotFound", "Managed policy not found.");
 
-        await _managedPolicyRepository.AssignPolicyToPrincipal(request.PrincipalId, request.ManagedPolicyId);
+        principal.AddPolicy(managedPolicy);
+        _principalRepository.Update(principal);
+        
         _logger.LogInformation("Managed policy {ManagedPolicyId} attached to Principal {PrincipalId}.", request.ManagedPolicyId, request.PrincipalId);
 
         return Result.Success;

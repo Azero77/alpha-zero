@@ -1,3 +1,4 @@
+using AlphaZero.Modules.Identity.Domain.Models.Principals;
 using AlphaZero.Modules.Identity.Domain.Repositories;
 using AlphaZero.Shared.Application;
 using ErrorOr;
@@ -34,8 +35,10 @@ public sealed class DetachInlinePolicyCommandHandler : IRequestHandler<DetachInl
         var principal = await _principalRepository.GetById(request.PrincipalId);
         if (principal is null) return Error.NotFound("Principal.NotFound", "Principal not found.");
 
-        principal.RemoveInlinePolicy(request.PolicyId);
-        _logger.LogInformation("Inline policy {PolicyId} detached from Principal {PrincipalId}.", request.PolicyId, request.PrincipalId);
+        principal.RemovePolicy(request.PolicyId);
+        _principalRepository.Update(principal);
+        
+        _logger.LogInformation("Policy {PolicyId} detached from Principal {PrincipalId}.", request.PolicyId, request.PrincipalId);
 
         return Result.Success;
     }

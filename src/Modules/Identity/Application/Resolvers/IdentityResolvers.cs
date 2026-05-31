@@ -1,12 +1,12 @@
 using AlphaZero.Modules.Identity.Domain.Models;
+using AlphaZero.Modules.Identity.Domain.Models.Principals;
 using AlphaZero.Modules.Identity.Domain.Repositories;
 using AlphaZero.Shared.Authorization;
 using AlphaZero.Shared.Infrastructure.Repositores;
-using Microsoft.EntityFrameworkCore;
 
 namespace AlphaZero.Modules.Identity.Application.Resolvers;
 
-public class IdentityTenantResolver(IPrincipalRepository principalRepository, IPolicyRepository policyRepository) : IResourceTenantResolver
+public class IdentityTenantResolver(IPrincipalRepository principalRepository) : IResourceTenantResolver
 {
     public ResourceType ResourceType => ResourceType.Identity;
 
@@ -16,9 +16,7 @@ public class IdentityTenantResolver(IPrincipalRepository principalRepository, IP
         var principal = await principalRepository.GetById(resourceId);
         if (principal != null) return principal.TenantId;
 
-        // Check Policies
-        var policy = await policyRepository.GetById(resourceId);
-        return policy?.TenantId;
+        return null;
     }
 }
 

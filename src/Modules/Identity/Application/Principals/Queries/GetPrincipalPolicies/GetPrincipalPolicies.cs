@@ -1,4 +1,4 @@
-using AlphaZero.Modules.Identity.Domain.Models;
+using AlphaZero.Modules.Identity.Domain.Models.Principals.Policies;
 using AlphaZero.Modules.Identity.Domain.Repositories;
 using ErrorOr;
 using MediatR;
@@ -11,19 +11,17 @@ public record PrincipalPoliciesDto(
     List<ManagedPolicyDto> ManagedPolicies);
 
 public record PolicyDto(Guid Id, string Name, List<PolicyStatement> Statements);
-public record ManagedPolicyDto(Guid Id, string Name, List<PolicyTemplateStatement> Statements);
+public record ManagedPolicyDto(Guid Id, string Name, List<ManagedPolicyStatement> Statements);
 
 public record GetPrincipalPoliciesQuery(Guid PrincipalId) : IRequest<ErrorOr<PrincipalPoliciesDto>>;
 
 public sealed class GetPrincipalPoliciesQueryHandler : IRequestHandler<GetPrincipalPoliciesQuery, ErrorOr<PrincipalPoliciesDto>>
 {
     private readonly IPrincipalRepository _principalRepository;
-    private readonly IPolicyRepository _policyRepository;
 
-    public GetPrincipalPoliciesQueryHandler(IPrincipalRepository principalRepository, IPolicyRepository policyRepository)
+    public GetPrincipalPoliciesQueryHandler(IPrincipalRepository principalRepository)
     {
         _principalRepository = principalRepository;
-        _policyRepository = policyRepository;
     }
 
     public async Task<ErrorOr<PrincipalPoliciesDto>> Handle(GetPrincipalPoliciesQuery request, CancellationToken cancellationToken)
@@ -31,13 +29,16 @@ public sealed class GetPrincipalPoliciesQueryHandler : IRequestHandler<GetPrinci
         var principal = await _principalRepository.GetById(request.PrincipalId);
         if (principal is null) return Error.NotFound("Principal.NotFound", "Principal not found.");
 
-        var managedPolicies = principal.ManagedPolicies;
+        var inlinePolicies = principal.Policies
+            .OfType<InlinePolicy>()
+            .Select(p => new PolicyDto(p.Id, p.Name, p.Statements.ToList()))
+            .ToList();
 
-        var dto = new PrincipalPoliciesDto(
-            principal.Id,
-            principal.InlinePolicies.Select(p => new PolicyDto(p.Id, p.Name, p.Statements.ToList())).ToList(),
-            managedPolicies?.Select(m => new ManagedPolicyDto(m.Id, m.Name, m.Statements)).ToList() ?? new List<ManagedPolicyDto>());
+        var managedPolicies = principal.Policies
+            .OfType<ManagedPolicy>()
+            .Select(m => new ManagedPolicyDto(m.Id, m.Name, m.Statements.ToList()))
+            .ToList();
 
-        return dto;
+        return new PrincipalPoliciesDto(principal.Id, inlinePolicies, managedPolicies);
     }
 }

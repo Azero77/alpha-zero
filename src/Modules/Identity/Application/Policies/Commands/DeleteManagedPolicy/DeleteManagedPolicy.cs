@@ -31,10 +31,10 @@ public sealed class DeleteManagedPolicyCommandHandler : IRequestHandler<DeleteMa
     public async Task<ErrorOr<Success>> Handle(DeleteManagedPolicyCommand request, CancellationToken cancellationToken)
     {
         var policy = await _managedPolicyRepository.GetById(request.PolicyId);
-        if (policy is null) return Error.NotFound("ManagedPolicy.NotFound", "Managed policy template not found.");
+        if (policy is null) return Error.NotFound("ManagedPolicy.NotFound", "Managed policy not found.");
 
         _managedPolicyRepository.Remove(policy);
-        _logger.LogInformation("Managed Policy Template {PolicyId} deleted.", request.PolicyId);
+        _logger.LogInformation("Managed Policy {PolicyId} deleted.", request.PolicyId);
 
         return Result.Success;
     }

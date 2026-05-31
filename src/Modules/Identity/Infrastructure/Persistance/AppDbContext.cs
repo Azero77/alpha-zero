@@ -1,5 +1,7 @@
 using System.Reflection;
 using AlphaZero.Modules.Identity.Domain.Models;
+using AlphaZero.Modules.Identity.Domain.Models.Principals;
+using AlphaZero.Modules.Identity.Domain.Models.Principals.Policies;
 using AlphaZero.Modules.Identity.Infrastructure.Models;
 using AlphaZero.Shared.Infrastructure.Database;
 using AlphaZero.Shared.Infrastructure.Tenats;
@@ -15,8 +17,7 @@ public class AppDbContext : DbContext, ITenantDbContext
         this.tenantProvider = tenantProvider;
     }
 
-    public DbSet<Principal> Principals => Set<Principal>();
-    public DbSet<PrincipalTemplate> PrincipalTemplates => Set<PrincipalTemplate>();
+    internal DbSet<PrincipalDataModel> Principals => Set<PrincipalDataModel>();
     public DbSet<ManagedPolicy> ManagedPolicies => Set<ManagedPolicy>();
     public DbSet<PrincipalPolicyAssignment> PrincipalPolicyAssignments => Set<PrincipalPolicyAssignment>();
     public DbSet<TenantUser> TenantUsers => Set<TenantUser>();
@@ -30,18 +31,11 @@ public class AppDbContext : DbContext, ITenantDbContext
         modelBuilder.ApplyConfigurationsFromAssembly(Assembly.GetExecutingAssembly());
         modelBuilder.ApplyAlphaZeroGlobalFilters(this);
 
-        // Ignore JSON-only types to prevent EF from treating them as entities
-        modelBuilder.Ignore<Policy>();
+        // Ignore JSON-only types and Domain types that have separate DataModels
         modelBuilder.Ignore<PolicyStatement>();
-        modelBuilder.Ignore<PolicyTemplateStatement>();
+        modelBuilder.Ignore<ManagedPolicyStatement>();
+        modelBuilder.Ignore<Principal>(); 
 
-        // --- Data Seeding ---
-        var (principals, managedPolicies, assignments) = Seeding.IdentitySeedReader.GetData();
-
-        modelBuilder.Entity<ManagedPolicy>().HasData(managedPolicies);
-        modelBuilder.Entity<PrincipalTemplate>().HasData(principals);
-        modelBuilder.Entity<PrincipalPolicyAssignment>().HasData(assignments);
-        
         base.OnModelCreating(modelBuilder);
     }
 }
