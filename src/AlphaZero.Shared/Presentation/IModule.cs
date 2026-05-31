@@ -98,11 +98,6 @@ public abstract class AppModule : Module, IModule
         using var migrationScope = Scope.BeginLifetimeScope();
         if (migrationScope.Resolve(dbContextType) is DbContext db)
         {
-            /*var pendingMigrations = await db.Database.GetPendingMigrationsAsync();
-            if (pendingMigrations.Any())
-            {
-                await db.Database.MigrateAsync();
-            }*/
             await db.Database.MigrateAsync();
         }
     }

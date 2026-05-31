@@ -133,7 +133,6 @@ public class ResourcePattern
     {
         Value = value.ToLowerInvariant();
     }
-
     public static ErrorOr<ResourcePattern> Create(string value)
     {
         var result = IsValidPattern(value);
@@ -164,6 +163,17 @@ public class ResourcePattern
         }
 
         return match;
+    }
+
+
+    public string Service => GetPart("service");
+    public string TenantIdString => GetPart("tenantId");
+    public string ResourcePath => GetPart("resourcePath");
+
+    private string GetPart(string groupName)
+    {
+        var match = PatternRegex.Match(Value);
+        return match.Success ? match.Groups[groupName].Value : string.Empty;
     }
 
     public static bool IsValidPath(string path)
@@ -230,6 +240,8 @@ public class ResourcePattern
         {
             return false;
         }
+
+        
     }
 
     public static ResourcePattern All => new ResourcePattern("az:*");
