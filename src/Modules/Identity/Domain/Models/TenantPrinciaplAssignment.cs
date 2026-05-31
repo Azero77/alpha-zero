@@ -1,3 +1,5 @@
+using AlphaZero.Modules.Identity.Domain.Models.Principals;
+using AlphaZero.Modules.Identity.Domain.Models.Principals.Policies;
 using AlphaZero.Shared.Domain;
 using ErrorOr;
 
@@ -5,7 +7,7 @@ namespace AlphaZero.Modules.Identity.Domain.Models;
 
 public class TenantUserPrinciaplAssignment : AggregateRoot, IDomainTenantOwned
 {
-    private TenantUserPrinciaplAssignment(Guid id,Guid tenantId, TenantUser tenantUser, PrincipalTemplate principal, ResourceArn arn)
+    private TenantUserPrinciaplAssignment(Guid id, Guid tenantId, TenantUser tenantUser, Principal principal, ResourceArn arn)
         : base(id)
     {
         TenantId = tenantId;
@@ -23,13 +25,17 @@ public class TenantUserPrinciaplAssignment : AggregateRoot, IDomainTenantOwned
     public Guid TenantId { get; private set; }
 
     public TenantUser TenantUser { get; private set; }
-    public PrincipalTemplate Principal { get; private set; }
+    public Principal Principal { get; private set; }
     public ResourceArn Resource { get; private set; }
 
-    
+    public IReadOnlyCollection<IPolicy> Policies => Principal.Policies;
 
-    public static ErrorOr<TenantUserPrinciaplAssignment> Create(Guid tenantId, TenantUser tenantUser, PrincipalTemplate principal, string resourceArn)
+    public static ErrorOr<TenantUserPrinciaplAssignment> Create(Guid tenantId, TenantUser tenantUser, Principal principal, string resourceArn)
     {
+        if (principal.PrincipalScope is not null)
+        {
+            return Error.Validation("Assignment.Principal", "Principal used for assignment must not have a pre-defined scope (PrincipalScope must be null).");
+        }
 
         ErrorOr<ResourceArn> resource = ResourceArn.Create(resourceArn);
         if (resource.IsError)
@@ -37,11 +43,5 @@ public class TenantUserPrinciaplAssignment : AggregateRoot, IDomainTenantOwned
             return resource.Errors;
         }
         return new TenantUserPrinciaplAssignment(Guid.NewGuid(), tenantId, tenantUser, principal, resource.Value);
-    }
-
-    public IEnumerable<PolicyStatement> GetEffectiveStatements()
-    {
-        var assignmentScope = Resource.ToString() + "*";
-        return Principal.GetEffectiveStatements(assignmentScope, TenantId);
     }
 }

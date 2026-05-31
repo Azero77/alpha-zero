@@ -57,21 +57,4 @@ public class Principal : AggregateRoot, IDomainTenantOwned
             _policies.Add(policy);
         }
     }
-
-    public ErrorOr<IReadOnlyCollection<PolicyStatement>> GetEffectiveStatements(string? scope, Guid tenantId)
-    {
-        var activeScope = scope ?? PrincipalScope?.Value ?? "az:*";
-        var result = new List<PolicyStatement>();
-
-        foreach (var policy in _policies)
-        {
-            var statementsResult = policy.GetPolicyStatements(activeScope, tenantId);
-            if (statementsResult.IsError)
-                return statementsResult.Errors;
-            
-            result.AddRange(statementsResult.Value);
-        }
-
-        return result;
-    }
 }
