@@ -20,7 +20,7 @@ public class ListLibrariesEndpoint(LibraryModule module) : Endpoint<ListLibrarie
     public override void Configure()
     {
         Get("/library/libraries");
-        this.AccessControl("library:Audit", _ => ResourceArn.ForTenant(Guid.Empty));
+        this.AccessControl("library:Audit", (req, tenantId) => ResourceArn.ForTenant(tenantId));
         Description(d => d.WithTags("Library Management"));
     }
 

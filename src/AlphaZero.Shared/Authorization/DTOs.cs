@@ -10,28 +10,51 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace AlphaZero.Shared.Authorization;
 
-public record AccessControlRequirement(string Action, Func<object,ResourceArn> resourceArnFactory);
 
+public delegate ResourceArn GlobalResourceArnResolver(object request);
+public delegate ResourceArn TenantScopedResourceArnResolver(object request, Guid TenantId);
+public record GlobalAccessControlRequirement(string Action, GlobalResourceArnResolver resourceArnFactory);
+public record AccessControlWithTenantRequirement(string Action, TenantScopedResourceArnResolver resourceArnFactory);
 
 public static class EndpointExtensions
 {
-    public static void AccessControl<TRequest>(this Endpoint<TRequest> endpoint, string action, Func<TRequest, ResourceArn> resourceArnFactory)
+    public static void AccessControl<TRequest>(this Endpoint<TRequest> endpoint, string action, GlobalResourceArnResolver resourceArnFactory)
         where TRequest : notnull
     {
-        var requirement = new AccessControlRequirement(action, req => resourceArnFactory((TRequest)req));
+        var requirement = new GlobalAccessControlRequirement(action, req => resourceArnFactory((TRequest)req));
         endpoint.Definition.Metadata(requirement);
 
     }
-    public static void AccessControl<TRequest, TResponse>(this Endpoint<TRequest, TResponse> endpoint, string action, Func<TRequest, ResourceArn> resourceArnFactory)
+
+    public static void AccessControl<TRequest, TResponse>(this Endpoint<TRequest, TResponse> endpoint, string action, GlobalResourceArnResolver resourceArnFactory)
         where TRequest : notnull
     {
-        var requirement = new AccessControlRequirement(action, req => resourceArnFactory((TRequest)req));
+        var requirement = new GlobalAccessControlRequirement(action, req => resourceArnFactory((TRequest)req));
+        endpoint.Definition.Metadata(requirement);
+    }
+    public static void AccessControl<TRequest>(this Endpoint<TRequest> endpoint, string action, TenantScopedResourceArnResolver resourceArnFactory)
+        where TRequest : notnull
+    {
+        var requirement = new AccessControlWithTenantRequirement(action, (req, tenantId) => resourceArnFactory((TRequest)req, tenantId));
         endpoint.Definition.Metadata(requirement);
     }
 
+    public static void AccessControl<TRequest, TResponse>(this Endpoint<TRequest,TResponse> endpoint, string action, TenantScopedResourceArnResolver resourceArnFactory)
+        where TRequest : notnull
+    {
+        var requirement = new AccessControlWithTenantRequirement(action, (req, tenantId) => resourceArnFactory((TRequest)req, tenantId));
+        endpoint.Definition.Metadata(requirement);
+    }
     public static RouteHandlerBuilder AccessControl(this RouteHandlerBuilder builder, string action, Func<HttpContext, ResourceArn> resourceArnFactory)
     {
-        var requirement = new AccessControlRequirement(action, req => resourceArnFactory((HttpContext)req));
+        var requirement = new GlobalAccessControlRequirement(action, req => resourceArnFactory((HttpContext)req));
+
+        return builder.WithMetadata(requirement);
+    }
+
+    public static RouteHandlerBuilder AccessControl(this RouteHandlerBuilder builder, string action, Func<HttpContext,Guid, ResourceArn> resourceArnFactory)
+    {
+        var requirement = new AccessControlWithTenantRequirement(action, (req, tenantId) => resourceArnFactory((HttpContext)req, tenantId));
 
         return builder.WithMetadata(requirement);
     }
@@ -41,72 +64,39 @@ public class IAMPreprocessor(IAuthorizationContextFactory authorizationContextFa
 {
     public async Task PreProcessAsync(IPreProcessorContext context, CancellationToken ct)
     {
-        var requirement = context.HttpContext.GetEndpoint()?.Metadata.GetMetadata<AccessControlRequirement>();
-
-        if (requirement is null) return;
+        var globalRequirement = context.HttpContext.GetEndpoint()?.Metadata.GetMetadata<GlobalAccessControlRequirement>();
+        var tenantScopedRequirement = context.HttpContext.GetEndpoint()?.Metadata.GetMetadata<AccessControlWithTenantRequirement>();
+        
+        if (globalRequirement is null && tenantScopedRequirement is null) return;
 
         var id = context.HttpContext.User.Claims.FirstOrDefault(c => c.Type == "sub")?.Value;
         var auth_scheme = context.HttpContext.User.Claims.FirstOrDefault(c => c.Type == "auth_method")?.Value;
-        if (string.IsNullOrEmpty(id) || !Guid.TryParse(id, out var principalId))
+        if (string.IsNullOrEmpty(id) || !Guid.TryParse(id, out var principalId) || string.IsNullOrEmpty(auth_scheme))
         {
             await context.HttpContext.Response.SendForbiddenAsync(ct); return;
         }
 
-        if (string.IsNullOrEmpty(auth_scheme))
+        ResourceArn resourceArn;
+        if (globalRequirement != null)
         {
-            await context.HttpContext.Response.SendForbiddenAsync(ct); return;
+            resourceArn = globalRequirement.resourceArnFactory(context.Request!);
         }
-        ResourceArn resourceArn = requirement.resourceArnFactory(context.Request!);
-        Guid tenantId;
-        var resourceType = resourceArn.ResourceServiceType;
-        if ( resourceType is null)
-        {
-            await context.HttpContext.Response.SendForbiddenAsync(ct); return;
-        }
-        // 1. Handle declarative "Resolve from Resource" (Prevents horizontal breakout)
-        if (resourceArn.TenantIdString == ResourceArn.ResolveTenantFromResource.ToString())
-        {
-            var resourceId = resourceArn.ExtractResourceId();
-            if (resourceId.HasValue)
-            {
-                var actualTenantId = await sender.Send(new GetResourceTenantIdQuery(resourceType.Value, resourceId.Value), ct);
-                if (actualTenantId == null)
-                {
-                    await context.HttpContext.Response.SendForbiddenAsync(ct); return;
-                }
-                tenantId = actualTenantId.Value;
-            }
-            else
-            {
-                // If we can't find a GUID in the path but requested resolution, it's a developer error or invalid request
-                await context.HttpContext.Response.SendForbiddenAsync(ct); return;
-            }
-            resourceArn = ResourceArn.Create(resourceArn.Service, tenantId.ToString(), resourceArn.ResourcePath).Value;
-        }
-        // 2. Handle declarative "Current Session Tenant" (or legacy Guid.Empty)
-        else if (resourceArn.TenantIdString == ResourceArn.CurrentSessionTenant.ToString() || resourceArn.TenantIdString == Guid.Empty.ToString())
+        else
         {
             var currentTenant = tenantProvider.GetTenant();
             if (currentTenant == null)
             {
                 await context.HttpContext.Response.SendForbiddenAsync(ct); return;
             }
-            tenantId = currentTenant.Value;
-            resourceArn = ResourceArn.Create(resourceArn.Service, tenantId.ToString(), resourceArn.ResourcePath).Value;
+            resourceArn = tenantScopedRequirement!.resourceArnFactory(context.Request!, currentTenant.Value);
         }
-        // 3. Handle explicit Tenant ID provided in the ARN
-        else if (!Guid.TryParse(resourceArn.TenantIdString, out tenantId) && resourceArn.TenantIdString != ResourceArn.GlobalTenant)
-        {
-            await context.HttpContext.Response.SendForbiddenAsync(ct); return;
-        }
-
         var authContext = await authorizationContextFactory.Create(resourceArn, Enum.Parse<AuthenticationMethod>(auth_scheme), id);
-
 
         if (authContext.IsError)
         {
             await context.HttpContext.Response.SendForbiddenAsync(ct); return;
         }
+        
         var result = await evaluator.Authorize(authContext.Value);
 
         if (result.IsError)

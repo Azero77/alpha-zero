@@ -25,10 +25,10 @@ public class ListSubmissionsEndpoint(AssessmentsModule module) : Endpoint<ListSu
         
         // If AssessmentId is provided, we check access to that specific assessment.
         // If not, we check for tenant-wide submission view permissions.
-        this.AccessControl("assessments:ViewSubmissions", req => 
+        this.AccessControl("assessments:ViewSubmissions", (req, tenantId) => 
             req.AssessmentId.HasValue 
-                ? ResourceArn.ForAssessment(Guid.Empty, req.AssessmentId.Value) 
-                : ResourceArn.ForTenant(Guid.Empty));
+                ? ResourceArn.ForAssessment(tenantId, req.AssessmentId.Value) 
+                : ResourceArn.ForTenant(tenantId));
 
         Description(d => d
             .WithTags("Submissions")

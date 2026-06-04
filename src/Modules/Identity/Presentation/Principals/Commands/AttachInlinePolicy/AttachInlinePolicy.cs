@@ -28,7 +28,7 @@ public class AttachInlinePolicyEndpoint : Endpoint<AttachInlinePolicyRequest>
     public override void Configure()
     {
         Post("/identity/principals/{PrincipalId}/policies/inline");
-        this.AccessControl("identity:ManagePrincipals", _ => ResourceArn.ForTenant(Guid.Empty));
+        this.AccessControl("identity:ManagePrincipals", (req, tenantId) => ResourceArn.ForTenant(tenantId));
         Description(d => d.WithTags("Identity"));
     }
 

@@ -35,7 +35,7 @@ public class AddAssessmentEndpoint : Endpoint<AddAssessmentRequest>
     public override void Configure()
     {
         Post("/courses/{CourseId}/sections/{SectionId}/assessments");
-        this.AccessControl("courses:Edit", req => ResourceArn.ForCourse(ResourceArn.ResolveTenantFromResource, req.CourseId));
+        this.AccessControl("courses:Edit", (req, tenantId) => ResourceArn.ForCourse(tenantId, req.CourseId));
         Description(d => d.WithTags("Courses"));
     }
 

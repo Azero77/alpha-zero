@@ -32,7 +32,7 @@ public class CreatePrincipalEndpoint : Endpoint<CreatePrincipalRequest, CreatePr
     public override void Configure()
     {
         Post("/identity/principals");
-        this.AccessControl("identity:ManagePrincipals", _ => ResourceArn.ForTenant(Guid.Empty));
+        this.AccessControl("identity:ManagePrincipals", (req, tenantId) => ResourceArn.ForTenant(tenantId));
         Description(d => d.WithTags("Identity"));
     }
 

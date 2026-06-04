@@ -26,7 +26,7 @@ public class DetachManagedPolicyEndpoint : Endpoint<DetachManagedPolicyRequest>
     public override void Configure()
     {
         Delete("/identity/principals/{PrincipalId}/policies/managed/{ManagedPolicyId}");
-        this.AccessControl("identity:ManagePrincipals", _ => ResourceArn.ForTenant(Guid.Empty));
+        this.AccessControl("identity:ManagePrincipals", (req, tenantId) => ResourceArn.ForTenant(tenantId));
         Description(d => d.WithTags("Identity"));
     }
 

@@ -26,7 +26,7 @@ public class RejectCourseEndpoint : Endpoint<RejectCourseRequest>
     public override void Configure()
     {
         Patch("/courses/{CourseId}/reject");
-        this.AccessControl("courses:Reject", req => ResourceArn.ForCourse(ResourceArn.ResolveTenantFromResource, req.CourseId));
+        this.AccessControl("courses:Reject", (req, tenantId) => ResourceArn.ForCourse(tenantId, req.CourseId));
         Description(d => d.WithTags("Courses"));
     }
 

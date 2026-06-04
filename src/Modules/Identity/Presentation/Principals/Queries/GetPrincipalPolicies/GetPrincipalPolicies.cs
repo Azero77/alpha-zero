@@ -22,7 +22,7 @@ public class GetPrincipalPoliciesEndpoint : Endpoint<GetPrincipalPoliciesRequest
     public override void Configure()
     {
         Get("/identity/principals/{PrincipalId}/policies");
-        this.AccessControl("identity:ManagePrincipals", _ => ResourceArn.ForTenant(Guid.Empty));
+        this.AccessControl("identity:ManagePrincipals", (req, tenantId) => ResourceArn.ForTenant(tenantId));
         Description(d => d.WithTags("Identity"));
     }
 

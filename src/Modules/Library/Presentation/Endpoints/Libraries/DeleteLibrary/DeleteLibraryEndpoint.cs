@@ -14,7 +14,7 @@ public class DeleteLibraryEndpoint(LibraryModule module) : Endpoint<DeleteLibrar
     public override void Configure()
     {
         Delete("/library/libraries/{Id}");
-        this.AccessControl("library:Audit", req => ResourceArn.ForLibrary(Guid.Empty, req.Id));
+        this.AccessControl("library:Audit", (req, tenantId) => ResourceArn.ForLibrary(tenantId, req.Id));
         Description(d => d.WithTags("Library Management"));
     }
 

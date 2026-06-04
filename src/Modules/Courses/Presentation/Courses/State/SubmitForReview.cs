@@ -24,7 +24,7 @@ public class SubmitForReviewEndpoint : Endpoint<SubmitForReviewRequest>
     public override void Configure()
     {
         Patch("/courses/{CourseId}/review");
-        this.AccessControl("courses:Submit", req => ResourceArn.ForCourse(ResourceArn.ResolveTenantFromResource, req.CourseId));
+        this.AccessControl("courses:Submit", (req, tenantId) => ResourceArn.ForCourse(tenantId, req.CourseId));
         Description(d => d
             .WithTags("Courses")
             .Accepts<SubmitForReviewRequest>("application/json"));

@@ -27,7 +27,7 @@ public class GetPrincipalsByResourceEndpoint : Endpoint<GetPrincipalsByResourceR
     public override void Configure()
     {
         Get("/identity/resources/{ResourceType}/{ResourceId}/principals");
-        this.AccessControl("identity:ManagePrincipals", _ => ResourceArn.ForTenant(Guid.Empty));
+        this.AccessControl("identity:ManagePrincipals", (req, tenantId) => ResourceArn.ForTenant(tenantId));
         Description(d => d.WithTags("Identity"));
     }
 

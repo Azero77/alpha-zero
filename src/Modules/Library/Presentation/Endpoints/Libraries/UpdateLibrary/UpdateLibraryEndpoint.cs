@@ -20,7 +20,7 @@ public class UpdateLibraryEndpoint(LibraryModule module) : Endpoint<UpdateLibrar
     public override void Configure()
     {
         Patch("/library/libraries/{Id}");
-        this.AccessControl("library:Audit", req => ResourceArn.ForLibrary(Guid.Empty, req.Id));
+        this.AccessControl("library:Audit", (req, tenantId) => ResourceArn.ForLibrary(tenantId, req.Id));
         Description(d => d.WithTags("Library Management"));
     }
 

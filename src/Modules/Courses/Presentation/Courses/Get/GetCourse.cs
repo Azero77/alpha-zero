@@ -57,7 +57,7 @@ public class GetCourseEndpoint : Endpoint<GetCourseRequest, CourseResponse>
     public override void Configure()
     {
         Get("/courses/{Id}");
-        this.AccessControl("courses:View", req => ResourceArn.ForCourse(ResourceArn.ResolveTenantFromResource, req.Id));
+        this.AccessControl("courses:View", (req, tenantId) => ResourceArn.ForCourse(tenantId, req.Id));
         Description(d => d.WithTags("Courses"));
         Summary(new GetCourseSummary());
     }

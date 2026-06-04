@@ -15,7 +15,7 @@ public class DistributeBatchEndpoint(LibraryModule module) : Endpoint<Distribute
     {
         Post("/library/access-codes/batches/{BatchId}/distribute");
         // Distributing batches is an administrative/accountant task
-        this.AccessControl("library:SellCodes", _ => ResourceArn.ForTenant(Guid.Empty));
+        this.AccessControl("library:SellCodes", (req, tenantId) => ResourceArn.ForTenant(tenantId));
         Description(d => d.WithTags("Library"));
     }
 

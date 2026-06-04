@@ -21,7 +21,7 @@ public class CreateLibraryEndpoint(LibraryModule module) : Endpoint<CreateLibrar
     public override void Configure()
     {
         Post("/library/libraries");
-        this.AccessControl("library:Audit", _ => ResourceArn.ForTenant(Guid.Empty)); // Only accountants/admins can create libraries
+        this.AccessControl("library:Audit", (req, tenantId) => ResourceArn.ForTenant(tenantId)); // Only accountants/admins can create libraries
         Description(d => d.WithTags("Library Management"));
     }
 

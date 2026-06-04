@@ -26,7 +26,7 @@ public class ReorderSectionsEndpoint : Endpoint<ReorderSectionsRequest>
     public override void Configure()
     {
         Post("/courses/{CourseId}/sections/reorder");
-        this.AccessControl("courses:Edit", req => ResourceArn.ForCourse(ResourceArn.ResolveTenantFromResource, req.CourseId));
+        this.AccessControl("courses:Edit", (req, tenantId) => ResourceArn.ForCourse(tenantId, req.CourseId));
         Description(d => d.WithTags("Courses"));
     }
 

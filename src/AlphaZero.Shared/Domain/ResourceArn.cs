@@ -16,11 +16,6 @@ public class ResourceArn
 
     public const string Prefix = "az";
     public const string GlobalTenant = "global";
-
-    // Special Guids for declarative authorization routing
-    public static readonly Guid CurrentSessionTenant = Guid.Parse("00000000-0000-0000-0000-000000000001");
-    public static readonly Guid ResolveTenantFromResource = Guid.Parse("FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFFF");
-
     public static ResourceArn AppUrn => new ResourceArn("az:global");
     // Strict pattern for concrete ARNs
     private static readonly Regex ConcreteRegex = new(@"^az:(?<service>[a-zA-Z]+):(?<tenantId>[a-zA-Z0-9-]+):(?<resourcePath>[A-Za-z0-9\/\-]+)$", RegexOptions.Compiled);

@@ -40,8 +40,7 @@ public static class Upload
         {
             app.MapPost("api/video-uploading/upload", Handler)
                .WithTags("Video Uploading")
-               .AccessControl("video:Upload", _ => ResourceArn.ForTenant(Guid.Empty));
-        }
+               .AccessControl("video:Upload", (req, tenantId) => ResourceArn.ForTenant(tenantId));        }
 
         private async Task<IResult> Handler(Request request, VideoUploadingModule module, HttpContext context)
         {

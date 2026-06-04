@@ -28,7 +28,7 @@ public class SubmitAssessmentEndpoint : Endpoint<SubmitAssessmentRequest, Submit
     public override void Configure()
     {
         Post("/assessments/submissions/{SubmissionId}/submit");
-        this.AccessControl("assessments:Submit", req => ResourceArn.ForAssessmentSubmission(Guid.Empty, req.SubmissionId));
+        this.AccessControl("assessments:Submit", (req, tenantId) => ResourceArn.ForAssessmentSubmission(tenantId, req.SubmissionId));
         Description(d => d.WithTags("Assessments"));
     }
 

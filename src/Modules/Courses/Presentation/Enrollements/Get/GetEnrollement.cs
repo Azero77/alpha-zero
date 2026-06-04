@@ -31,7 +31,7 @@ public class GetEnrollementEndpoint : Endpoint<GetEnrollementRequest, Enrollemen
     public override void Configure()
     {
         Get("/courses/enrollments/{Id}");
-        this.AccessControl("enrollments:View", req => ResourceArn.ForEnrollment(Guid.Empty, req.Id));
+        this.AccessControl("enrollments:View", (req, tenantId) => ResourceArn.ForEnrollment(tenantId, req.Id));
         Description(d => d.WithTags("Enrollment"));
     }
 

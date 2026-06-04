@@ -19,7 +19,7 @@ public class VoidCodeEndpoint(LibraryModule module) : Endpoint<VoidCodeRequest>
     {
         Post("/library/access-codes/void");
         // Voiding codes is an administrative task
-        this.AccessControl("library:Audit", _ => ResourceArn.ForTenant(Guid.Empty));
+        this.AccessControl("library:Audit", (req, tenantId) => ResourceArn.ForTenant(tenantId));
         Description(d => d.WithTags("Library"));
     }
 

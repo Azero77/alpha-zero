@@ -26,7 +26,7 @@ public class UpdateAssessmentContentEndpoint : Endpoint<UpdateAssessmentContentR
     public override void Configure()
     {
         Put("/assessments/{AssessmentId}/content");
-        this.AccessControl("assessments:Edit", req => ResourceArn.ForAssessment(Guid.Empty, req.AssessmentId));
+        this.AccessControl("assessments:Edit", (req, tenantId) => ResourceArn.ForAssessment(tenantId, req.AssessmentId));
         Description(d => d.WithTags("Assessments"));
     }
 

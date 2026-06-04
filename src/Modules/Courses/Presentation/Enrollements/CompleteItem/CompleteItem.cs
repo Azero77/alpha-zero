@@ -27,7 +27,7 @@ public class CompleteItemEndpoint : Endpoint<CompleteItemRequest>
     public override void Configure()
     {
         Post("/courses/enrollements/{EnrollmentId}/complete");
-        this.AccessControl("enrollments:Complete", req => ResourceArn.ForEnrollment(Guid.Empty, req.EnrollmentId));
+        this.AccessControl("enrollments:Complete", (req, tenantId) => ResourceArn.ForEnrollment(tenantId, req.EnrollmentId));
         Description(d => d.WithTags("Enrollement"));
     }
 

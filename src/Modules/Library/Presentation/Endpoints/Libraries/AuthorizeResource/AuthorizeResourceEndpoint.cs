@@ -18,7 +18,7 @@ public class AuthorizeResourceEndpoint(LibraryModule module) : Endpoint<Authoriz
     public override void Configure()
     {
         Post("/library/libraries/{Id}/resources");
-        this.AccessControl("library:AttachCourses", req => ResourceArn.ForLibrary(Guid.Empty, req.Id));
+        this.AccessControl("library:AttachCourses", (req, tenantId) => ResourceArn.ForLibrary(tenantId, req.Id));
         Description(d => d.WithTags("Library Management"));
     }
 

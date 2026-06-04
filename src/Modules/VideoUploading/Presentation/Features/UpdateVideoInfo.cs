@@ -20,8 +20,7 @@ public static class UpdateVideoInfo
         {
             app.MapPatch("api/video-uploading/debug/videos/{id:guid}", Handler)
                .WithTags("Video Uploading Debug")
-               .AccessControl("video:Edit", ctx => ResourceArn.ForVideo(Guid.Empty, Guid.Parse(ctx.Request.RouteValues["id"]?.ToString() ?? Guid.Empty.ToString())));
-        }
+               .AccessControl("video:Edit", (ctx, tenantId) => ResourceArn.ForVideo(tenantId, Guid.Parse(ctx.Request.RouteValues["id"]?.ToString() ?? Guid.Empty.ToString())));        }
 
         private async Task<IResult> Handler(Guid id, Request request, VideoUploadingModule module)
         {

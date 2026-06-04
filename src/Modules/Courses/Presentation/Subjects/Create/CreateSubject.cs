@@ -45,7 +45,7 @@ public class CreateSubjectEndpoint : Endpoint<CreateSubjectRequest, CreateSubjec
     public override void Configure()
     {
         Post("/courses/subjects");
-        this.AccessControl("subjects:Create", _ => ResourceArn.ForTenant(ResourceArn.CurrentSessionTenant));
+        this.AccessControl("subjects:Create", (req, tenantId) => ResourceArn.ForTenant(tenantId));
         Description(d => d.WithTags("Subjects"));
         Summary(new CreateSubjectSummary());
     }
