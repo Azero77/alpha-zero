@@ -1,6 +1,4 @@
 using AlphaZero.Modules.Library.Infrastructure;
-using AlphaZero.Modules.Library.Application.Resolvers;
-using AlphaZero.Shared.Authorization;
 using AlphaZero.Shared.Presentation;
 using Autofac;
 using Microsoft.Extensions.DependencyInjection;
@@ -16,8 +14,6 @@ public class LibraryModule : AppModule
             globalServices.AddLibraryGlobalInfrastructure(Configuration);
         else
             _logger?.LogWarning("Configuration is null in Library Module");
-
-        globalServices.AddScoped<IResourceTenantResolver, LibraryTenantResolver>();
     }
 
     public override void RegisterPrivate(IServiceCollection moduleServices, ContainerBuilder builder)

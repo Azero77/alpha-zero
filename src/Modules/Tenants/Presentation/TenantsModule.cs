@@ -1,6 +1,4 @@
 using AlphaZero.Modules.Tenants.Infrastructure;
-using AlphaZero.Modules.Tenants.Application.Resolvers;
-using AlphaZero.Shared.Authorization;
 using AlphaZero.Shared.Presentation;
 using Autofac;
 using Microsoft.Extensions.DependencyInjection;
@@ -16,8 +14,6 @@ public class TenantsModule : AppModule
             globalServices.AddTenantsGlobalInfrastructure(Configuration);
         else
             _logger?.LogWarning("Configuration is null in Tenants Module");
-
-        globalServices.AddScoped<IResourceTenantResolver, TenantResourceResolver>();
     }
 
     public override void RegisterPrivate(IServiceCollection moduleServices, ContainerBuilder builder)

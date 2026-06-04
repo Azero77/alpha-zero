@@ -1,8 +1,6 @@
 ﻿using AlphaZero.Modules.Courses.Infrastructure.Persistance;
 using AlphaZero.Modules.Courses.Infrastructure.Sagas.CourseRedemption;
 using AlphaZero.Modules.Courses.Infrastructure.Sagas.CourseRevocation;
-using AlphaZero.Modules.Courses.Application.Resolvers;
-using AlphaZero.Shared.Authorization;
 using Autofac;
 using Infrastructure;
 using MassTransit;
@@ -23,10 +21,6 @@ public class CoursesModule : AppModule, ICoursesModule
             _logger?.LogWarning("Configuration is null in Courses Module");
 
         globalServices.AddSingleton<ICoursesModule>(this);
-        globalServices.AddScoped<IResourceTenantResolver, CourseTenantResolver>();
-        globalServices.AddScoped<IResourceTenantResolver, SubjectTenantResolver>();
-        globalServices.AddScoped<IResourceTenantResolver, SectionTenantResolver>();
-        globalServices.AddScoped<IResourceTenantResolver, LessonTenantResolver>();
     }
 
     public override void RegisterPrivate(IServiceCollection moduleServices, ContainerBuilder builder)
