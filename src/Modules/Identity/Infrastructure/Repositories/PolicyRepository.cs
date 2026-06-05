@@ -194,4 +194,11 @@ public class TenantUserRepository : BaseRepository<AppDbContext, TenantUser>
     public TenantUserRepository(AppDbContext context) : base(context)
     {
     }
+
+    public override async Task<TenantUser?> GetById(Guid id, CancellationToken token = default)
+    {
+        return await _context.TenantUsers
+            .Include(u => u.Devices)
+            .FirstOrDefaultAsync(u => u.Id == id, token);
+    }
 }

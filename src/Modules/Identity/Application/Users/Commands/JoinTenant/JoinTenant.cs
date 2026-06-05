@@ -44,7 +44,7 @@ public sealed class JoinTenantCommandHandler(
         if (user is null)
         {
             // 2. Create TenantUser
-            var createResult = TenantUser.Create(request.TenantId, request.IdentityId, request.Name, new TenantUserDeviceInfo(request.DeviceId, platform)); //student is locked as soon as the user is created 
+            var createResult = TenantUser.Create(request.TenantId, request.IdentityId, request.Name); 
             if (createResult.IsError) return createResult.Errors;
             
             user = createResult.Value;

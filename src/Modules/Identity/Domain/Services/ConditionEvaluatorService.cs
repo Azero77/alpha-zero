@@ -150,6 +150,8 @@ public class ConditionEvaluatorService(AuthorizationContext context, IConditionR
 
                 Operator.Bool => Convert.ToBoolean(left) == right.GetBoolean(),
 
+                Operator.IsMainDevice => string.Equals(left?.ToString(), context.UserMainDeviceId, StringComparison.OrdinalIgnoreCase),
+
                 Operator.In => right.ValueKind == JsonValueKind.Array && 
                                right.EnumerateArray().Any(item => EvaluateJsonOperator(left, item, Operator.StringEquals).IsError == false),
                 

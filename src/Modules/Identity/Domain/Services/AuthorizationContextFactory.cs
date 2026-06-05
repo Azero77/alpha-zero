@@ -15,7 +15,8 @@ namespace AlphaZero.Modules.Identity.Domain.Services;
 /// </summary>
 public class AuthorizationContextFactory(ICurrentTenantUserRepository currentTenantUserRepository,
     ITenantUserPrincpialAssignmentRepository tenantUserPrincpialAssignmentRepository,
-    IPrincipalRepository principalRepository
+    IPrincipalRepository principalRepository,
+    IDeviceProvider deviceProvider
     ) : IAuthorizationContextFactory
 {
     public async Task<ErrorOr<AuthorizationContext>> Create(ResourceArn arn, AuthenticationMethod authenticationMethod, string id)
@@ -27,7 +28,8 @@ public class AuthorizationContextFactory(ICurrentTenantUserRepository currentTen
             Id = Guid.Parse(id),
             ResourcePath = arn.ResourcePath,
             ResourceType = Enum.Parse<ResourceType>(arn.Service, true),
-            TenantId = Guid.Parse(arn.TenantIdString)
+            TenantId = Guid.Parse(arn.TenantIdString),
+            DeviceId = deviceProvider.GetDeviceId()
         };
         if (AuthenticationMethod.Principal == authenticationMethod)
         {
@@ -61,8 +63,7 @@ public class AuthorizationContextFactory(ICurrentTenantUserRepository currentTen
     {
         AuthorizationContext result = contextInitial with
         {
-            Platform = tenantUserPrinciaplAssignment.TenantUser.DeviceInfo?.platform.ToString(),
-            DeviceId = tenantUserPrinciaplAssignment.TenantUser.DeviceInfo?.DeviceId,
+            UserMainDeviceId = tenantUserPrinciaplAssignment.TenantUser.MainDeviceId?.ToString(),
         };
 
         return result;

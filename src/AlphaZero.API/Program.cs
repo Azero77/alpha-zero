@@ -43,6 +43,7 @@ public class Program
             {
                 c.Endpoints.Configurator = ep =>
                 {
+                    ep.PreProcessor<DeviceSignatureValidatorPreProcessor>(Order.Before);
                     ep.PreProcessor<IAMPreprocessor>(Order.Before);
                 };
             }

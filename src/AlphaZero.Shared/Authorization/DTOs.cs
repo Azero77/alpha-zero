@@ -129,7 +129,7 @@ public record AuthorizationContext
     public string RequiredPermission { get; init; } = string.Empty;
     public required string AuthenticationMethod { get;init;  } 
     public string? DeviceId { get; init; }
+    public string? UserMainDeviceId { get; init; }
     public string? Platform { get; init;  }
-
 }
 
