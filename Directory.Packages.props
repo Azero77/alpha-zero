@@ -48,6 +48,7 @@
     <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="1.15.0" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="1.15.0" />
     <PackageVersion Include="Aspire.Hosting.AppHost" Version="13.2.1" />
+    <PackageVersion Include="Scrutor" Version="7.0.0" />
     <PackageVersion Include="Swashbuckle.AspNetCore.Swagger" Version="10.1.5" />
     <PackageVersion Include="Swashbuckle.AspNetCore" Version="10.1.7" />
     <PackageVersion Include="coverlet.collector" Version="8.0.1" />

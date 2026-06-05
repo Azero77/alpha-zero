@@ -3,13 +3,15 @@ using AlphaZero.Modules.Identity.Domain.Models.Principals;
 using AlphaZero.Modules.Identity.Domain.Repositories;
 using AlphaZero.Shared.Authorization;
 using ErrorOr;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.DependencyInjection;
 using System.Reflection;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 
 namespace AlphaZero.Modules.Identity.Domain.Services;
 
-public class ConditionEvaluatorService(AuthorizationContext context, IConditionRepository conditionRepository)
+public class ConditionEvaluatorService(AuthorizationContext context, IConditionRepository conditionRepository, IEnumerable<IOperationEvaluator> operationEvaluator)
 {
     public static readonly JsonValueKind[] AllowedKinds = 
     [
@@ -19,6 +21,14 @@ public class ConditionEvaluatorService(AuthorizationContext context, IConditionR
         JsonValueKind.False, 
         JsonValueKind.Array
     ];
+
+    private IOperationEvaluator getOperationEvaluator(Operator op)
+    {
+        var evaluator = operationEvaluator.FirstOrDefault(e => e.EvaluatedOperator == op);
+        if (evaluator == null)
+            throw new NotSupportedException($"No evaluator found for operator {op}");
+        return evaluator;
+    }
 
     public ErrorOr<Success> Evaluate(IConditionNode? node)
     {
@@ -150,7 +160,7 @@ public class ConditionEvaluatorService(AuthorizationContext context, IConditionR
 
                 Operator.Bool => Convert.ToBoolean(left) == right.GetBoolean(),
 
-                Operator.IsMainDevice => string.Equals(left?.ToString(), context.UserMainDeviceId, StringComparison.OrdinalIgnoreCase),
+                Operator.IsMainDevice => !getOperationEvaluator(Operator.IsMainDevice).Evaluate(left,right,context).Result.IsError,
 
                 Operator.In => right.ValueKind == JsonValueKind.Array && 
                                right.EnumerateArray().Any(item => EvaluateJsonOperator(left, item, Operator.StringEquals).IsError == false),
@@ -174,5 +184,49 @@ public class ConditionEvaluatorService(AuthorizationContext context, IConditionR
         if (text == null || pattern == null) return false;
         var regexPattern = "^" + Regex.Escape(pattern).Replace("\\*", ".*") + "$";
         return Regex.IsMatch(text, regexPattern, RegexOptions.IgnoreCase);
+    }
+}
+
+
+
+//Some Operators will have the strategy pattern to evaluate the value based on some heavy logic 
+public interface IOperationEvaluator
+{
+    public Operator EvaluatedOperator { get; }
+    public Task<ErrorOr<Success>> Evaluate(object left, JsonElement right, AuthorizationContext context);
+}
+
+public class IsMainDeviceOperationEvaluator(IHttpContextAccessor httpContextAccessor, IDeviceSignatureVerifier verifier, IDeviceProvider deviceProvider) : IOperationEvaluator
+{
+    public Operator EvaluatedOperator => Operator.IsMainDevice;
+    public async Task<ErrorOr<Success>> Evaluate(object left, JsonElement right, AuthorizationContext context)
+    {
+        if(httpContextAccessor is null || httpContextAccessor.HttpContext is null)
+            return Error.Failure("Condition.HttpContextUnavailable", "HttpContext is not available");
+        bool isSameDevice = string.Equals(left?.ToString(), context.UserMainDeviceId, StringComparison.OrdinalIgnoreCase);
+        if (!isSameDevice)
+            return Error.Forbidden("Condition.IsMainDeviceFailed", "The device is not the user's main device");
+
+        //validating the sameDevice is not enough , we need to validate the signature of the httpContext item to get more confidence that the request is coming from the same device, this is to prevent token theft and replay attacks
+        var deviceId = deviceProvider.GetDeviceId();
+        var timestamp = httpContextAccessor.HttpContext.Request.Headers["X-Timestamp"].ToString();
+        var signature = httpContextAccessor.HttpContext.Request.Headers["X-Signature"].ToString();
+
+        if (string.IsNullOrEmpty(deviceId) || string.IsNullOrEmpty(timestamp) || string.IsNullOrEmpty(signature))
+        {
+            return Error.Forbidden("Condition.MissingHeaders", "Required headers are missing", new Dictionary<string, object>()
+            {
+                { "RequiredHeaders", new List<string?>()
+                    {
+                        "X-Device-Id",
+                         "X-Timestamp",
+                         "X-Signature"
+                    }
+                }
+            });
+        }
+
+        var result = await verifier.VerifySignatureAsync(deviceId, timestamp, signature, httpContextAccessor.HttpContext.Request.Path);
+        return result;
     }
 }
