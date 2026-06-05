@@ -22,14 +22,13 @@ public class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
     public async Task InitializeAsync()
     {
         await _dbContainer.StartAsync();
-
-        // Override database settings for all modules to use this test container
-        Environment.SetEnvironmentVariable("DatabaseSettings__ConnectionString", _dbContainer.GetConnectionString());
     }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Development");
+        builder.UseSetting("DatabaseSettings:ConnectionString", _dbContainer.GetConnectionString());
+        
         builder.ConfigureTestServices(services =>
         {
             services.AddAuthentication(options =>

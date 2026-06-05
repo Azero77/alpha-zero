@@ -41,10 +41,6 @@ public static class DependencyInjection
         {
             services.AddScoped<ITenantProvider, HttpTenantProvider>();
         }
-        services.AddScoped<IDeviceProvider, DeviceProvider>();
-        services.AddScoped<IPublicKeyProvider, CachePublicKeyProvider>();
-        services.AddScoped<IDeviceSignatureVerifier, DeviceSignatureVerifier>();
-        services.AddScoped<DeviceSignatureValidatorPreProcessor>();
         // 4. Common Utilities
         services.AddSingleton<IClock, Clock>();
         services.AddHttpContextAccessor();

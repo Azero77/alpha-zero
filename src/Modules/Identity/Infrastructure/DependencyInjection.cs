@@ -2,6 +2,7 @@ using AlphaZero.Modules.Identity.Application.Auth.Commands.LoginAsTenantUser;
 using AlphaZero.Modules.Identity.Domain.Models;
 using AlphaZero.Modules.Identity.Domain.Repositories;
 using AlphaZero.Modules.Identity.Domain.Services;
+using AlphaZero.Modules.Identity.Infrastructure.Auth;
 using AlphaZero.Modules.Identity.Infrastructure.Models;
 using AlphaZero.Modules.Identity.Infrastructure.Persistance;
 using AlphaZero.Modules.Identity.Infrastructure.Repositories;

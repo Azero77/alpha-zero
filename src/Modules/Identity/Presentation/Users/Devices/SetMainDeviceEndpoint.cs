@@ -1,37 +1,44 @@
 using AlphaZero.Modules.Identity.Application.Users.Commands.SetMainDevice;
-using AlphaZero.Shared;
-using AlphaZero.Shared.Presentation;
+using AlphaZero.Shared.Presentation.Extensions;
 using FastEndpoints;
-using MediatR;
-using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Routing;
 
 namespace AlphaZero.Modules.Identity.Presentation.Users.Devices;
 
-public class SetMainDeviceEndpoint : IEndpoint
+public record SetMainDeviceRequest
 {
-    public void MapEndpoint(IEndpointRouteBuilder app)
-    {
-        app.MapPost("identity/users/devices/main", async (SetMainDeviceRequest request, ISender sender, HttpContext httpContext) =>
-        {
-            var userId = httpContext.User.Claims.FirstOrDefault(c => c.Type == "sub")?.Value;
-            if (userId == null) return Results.Unauthorized();
-
-            var command = new SetMainDeviceCommand(
-                Guid.Parse(userId),
-                request.DeviceId);
-
-            var result = await sender.Send(command);
-
-            return result.Match(
-                _ => Results.Ok(),
-                errors => Results.Problem(errors.First().Description));
-        })
-        .WithName("SetMainDevice")
-        .WithTags("Devices")
-        .RequireAuthorization();
-    }
+    public Guid DeviceId { get; init; }
 }
 
-public record SetMainDeviceRequest(Guid DeviceId);
+public class SetMainDeviceEndpoint(IdentityModule module) : Endpoint<SetMainDeviceRequest>
+{
+    public override void Configure()
+    {
+        Post("/identity/users/devices/main");
+        Description(d => d.WithTags("Devices"));
+    }
+
+    public override async Task HandleAsync(SetMainDeviceRequest req, CancellationToken ct)
+    {
+        var userId = User.Claims.FirstOrDefault(c => c.Type == "sub")?.Value;
+        if (string.IsNullOrEmpty(userId))
+        {
+            await Send.UnauthorizedAsync(ct);
+            return;
+        }
+
+        var command = new SetMainDeviceCommand(
+            Guid.Parse(userId),
+            req.DeviceId);
+
+        var result = await module.Send(command, ct);
+
+        if (result.IsError)
+        {
+            await this.SendErrorResponseAsync(result.Errors, ct);
+            return;
+        }
+
+        await Send.NoContentAsync(ct);
+    }
+}

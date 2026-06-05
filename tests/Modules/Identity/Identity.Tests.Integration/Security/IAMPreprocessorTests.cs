@@ -74,6 +74,7 @@ public class IAMPreprocessorTests : IClassFixture<SecurityApiFactory>
     public async Task AddLesson_Should_EvaluateContext_With_SessionTenant()
     {
         // 1. Arrange: Setup Course in Tenant A
+
         var tenantA = Guid.NewGuid();
         var tenantB = Guid.NewGuid();
         var userId = Guid.NewGuid();

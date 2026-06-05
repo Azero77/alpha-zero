@@ -204,11 +204,12 @@ public class IsMainDeviceOperationEvaluator(IHttpContextAccessor httpContextAcce
     public Operator EvaluatedOperator => Operator.IsMainDevice;
     public async Task<ErrorOr<Success>> Evaluate(object left, JsonElement right, AuthorizationContext context)
     {
-        if(httpContextAccessor is null || httpContextAccessor.HttpContext is null)
-            return Error.Failure("Condition.HttpContextUnavailable", "HttpContext is not available");
         bool isSameDevice = string.Equals(left?.ToString(), context.UserMainDeviceId, StringComparison.OrdinalIgnoreCase);
         if (!isSameDevice)
             return Error.Forbidden("Condition.IsMainDeviceFailed", "The device is not the user's main device");
+
+        if(httpContextAccessor is null || httpContextAccessor.HttpContext is null)
+            return Error.Failure("Condition.HttpContextUnavailable", "HttpContext is not available");
 
         //validating the sameDevice is not enough , we need to validate the signature of the httpContext item to get more confidence that the request is coming from the same device, this is to prevent token theft and replay attacks
         var deviceId = deviceProvider.GetDeviceId();
@@ -229,7 +230,7 @@ public class IsMainDeviceOperationEvaluator(IHttpContextAccessor httpContextAcce
             });
         }
 
-        var result = await verifier.VerifySignatureAsync(deviceId, timestamp, signature, httpContextAccessor.HttpContext.Request.Path);
+        var result = await verifier.VerifySignatureAsync(deviceId, timestamp, signature, context.ResourcePath);
         return result;
     }
 }

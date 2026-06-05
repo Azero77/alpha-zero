@@ -9,8 +9,6 @@ public class UserDeviceConfiguration : IEntityTypeConfiguration<UserDevice>
     public void Configure(EntityTypeBuilder<UserDevice> builder)
     {
         builder.HasKey(d => d.Id);
-        builder.Property(d => d.DeviceId).IsRequired(); // Wait, I named it Id in Entity base. 
-        // Oh, UserDevice : Entity, so it has Id.
         
         builder.Property(d => d.DeviceName).HasMaxLength(256);
         builder.Property(d => d.Platform).HasConversion<string>();

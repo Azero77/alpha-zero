@@ -7,7 +7,10 @@ public class PublicKeyProvider(AppDbContext context) : IPublicKeyProvider
 {
     public async Task<string?> GetPublicKeyAsync(string deviceId,CancellationToken token = default)
     {
-        var device = await context.UserDevices.FindAsync(deviceId, token);
+        if (!Guid.TryParse(deviceId, out Guid result))
+            return null;
+        
+        var device = await context.UserDevices.FindAsync(result, token);
         return device?.PublicKey;
     }
 }

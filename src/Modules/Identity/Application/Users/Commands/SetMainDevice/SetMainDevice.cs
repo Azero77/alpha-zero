@@ -1,6 +1,8 @@
+using AlphaZero.Modules.Identity.Domain.Models;
 using AlphaZero.Modules.Identity.Domain.Repositories;
 using AlphaZero.Shared.Application;
 using AlphaZero.Shared.Domain;
+using AlphaZero.Shared.Infrastructure.Repositores;
 using ErrorOr;
 using MediatR;
 
