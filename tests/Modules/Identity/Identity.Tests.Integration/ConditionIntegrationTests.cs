@@ -36,7 +36,7 @@ public class ConditionIntegrationTests : BaseIntegrationTest
             new ManagedPolicyStatement("S1", new() { "courses:View" }, true, condition) 
         });
 
-        var user = TenantUser.Create(tenantId, "ali-sub", "Ali", TenantUserDeviceInfo.Empty).Value;
+        var user = TenantUser.Create(tenantId, "ali-sub", "Ali").Value;
         var principal = Principal.Create(Guid.NewGuid(), "student-role", "hash", "Student", PrincipalType.Role, null, tenantId).Value;
         principal.AddPolicy(managedPolicy);
 

@@ -32,7 +32,7 @@ public class LoginAsTenantUserCommandHandlerTests
     public async Task Handle_Should_ReturnToken_WhenUserIsEnrolled()
     {
         // Arrange
-        var user = TenantUser.Create(TenantId, IdentityId, "Ali", TenantUserDeviceInfo.Empty).Value;
+        var user = TenantUser.Create(TenantId, IdentityId, "Ali").Value;
 
         _userRepository.GetFirst(Arg.Any<Expression<Func<TenantUser, bool>>>(), Arg.Any<CancellationToken>())
             .Returns(user);

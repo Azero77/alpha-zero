@@ -99,7 +99,7 @@ public class IAMPreprocessorTests : IClassFixture<SecurityApiFactory>
             courseId = course.Id;
 
             // Seed User and Assignment in Tenant B (the acting tenant)
-            var user = TenantUser.Create(tenantB, userId.ToString(), "Test User", TenantUserDeviceInfo.Empty).Value;
+            var user = TenantUser.Create(tenantB, userId.ToString(), "Test User").Value;
             tenantUserId = user.Id;
             identityDb.TenantUsers.Add(user);
 

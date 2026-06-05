@@ -45,7 +45,7 @@ public class AssignPrincipalToUserCommandHandlerTests
         _assignmentRepository.Any(Arg.Any<Expression<Func<TenantUserPrinciaplAssignment, bool>>>(), Arg.Any<CancellationToken>())
             .Returns(false);
 
-        var user = TenantUser.Create(TenantId, "sub", "Ali", TenantUserDeviceInfo.Empty).Value;
+        var user = TenantUser.Create(TenantId, "sub", "Ali").Value;
         var principal = Principal.Create(PrincipalId, "role", "hash", "Role", PrincipalType.Role, null, TenantId).Value;
 
         _userRepository.GetById(UserId).Returns(user);

@@ -26,30 +26,31 @@ public class ConditionEvaluatorServiceTests
             ResourceType = ResourceType.Courses
         };
         var conditionRepository = Substitute.For<IConditionRepository>();
-        _evaluator = new ConditionEvaluatorService(_context, conditionRepository);
+        var operationEvaluators = Enumerable.Empty<IOperationEvaluator>();
+        _evaluator = new ConditionEvaluatorService(conditionRepository, operationEvaluators);
     }
 
     [Fact]
-    public void Evaluate_StringEquals_ShouldReturnSuccess_WhenMatch()
+    public async Task Evaluate_StringEquals_ShouldReturnSuccess_WhenMatch()
     {
         // Arrange
         var condition = new ConditionNode("ResourcePath", Operator.StringEquals, JsonDocument.Parse("\"course/101\"").RootElement);
 
         // Act
-        var result = _evaluator.Evaluate(condition);
+        var result = await _evaluator.Evaluate(condition, _context);
 
         // Assert
         result.IsError.Should().BeFalse();
     }
 
     [Fact]
-    public void Evaluate_StringEquals_ShouldReturnError_WhenNoMatch()
+    public async Task Evaluate_StringEquals_ShouldReturnError_WhenNoMatch()
     {
         // Arrange
         var condition = new ConditionNode("ResourcePath", Operator.StringEquals, JsonDocument.Parse("\"course/102\"").RootElement);
 
         // Act
-        var result = _evaluator.Evaluate(condition);
+        var result = await _evaluator.Evaluate(condition, _context);
 
         // Assert
         result.IsError.Should().BeTrue();
@@ -57,21 +58,21 @@ public class ConditionEvaluatorServiceTests
     }
 
     [Fact]
-    public void Evaluate_NumericEquals_ShouldReturnSuccess_WhenMatch()
+    public async Task Evaluate_NumericEquals_ShouldReturnSuccess_WhenMatch()
     {
         // Arrange
         // We use ResourceType which is an enum (int)
         var condition = new ConditionNode("ResourceType", Operator.NumericEquals, JsonDocument.Parse("0").RootElement); // Courses = 0
 
         // Act
-        var result = _evaluator.Evaluate(condition);
+        var result = await _evaluator.Evaluate(condition, _context);
 
         // Assert
         result.IsError.Should().BeFalse();
     }
 
     [Fact]
-    public void Evaluate_AndNode_ShouldReturnSuccess_WhenAllMatch()
+    public async Task Evaluate_AndNode_ShouldReturnSuccess_WhenAllMatch()
     {
         // Arrange
         var c1 = new ConditionNode("ResourcePath", Operator.StringEquals, JsonDocument.Parse("\"course/101\"").RootElement);
@@ -79,14 +80,14 @@ public class ConditionEvaluatorServiceTests
         var andNode = new AndNode(new List<IConditionNode> { c1, c2 });
 
         // Act
-        var result = _evaluator.Evaluate(andNode);
+        var result = await _evaluator.Evaluate(andNode, _context);
 
         // Assert
         result.IsError.Should().BeFalse();
     }
 
     [Fact]
-    public void Evaluate_OrNode_ShouldReturnSuccess_WhenOneMatches()
+    public async Task Evaluate_OrNode_ShouldReturnSuccess_WhenOneMatches()
     {
         // Arrange
         var c1 = new ConditionNode("ResourcePath", Operator.StringEquals, JsonDocument.Parse("\"WRONG\"").RootElement);
@@ -94,48 +95,48 @@ public class ConditionEvaluatorServiceTests
         var orNode = new OrNode(new List<IConditionNode> { c1, c2 });
 
         // Act
-        var result = _evaluator.Evaluate(orNode);
+        var result = await _evaluator.Evaluate(orNode, _context);
 
         // Assert
         result.IsError.Should().BeFalse();
     }
 
     [Fact]
-    public void Evaluate_NotNode_ShouldReturnSuccess_WhenConditionFails()
+    public async Task Evaluate_NotNode_ShouldReturnSuccess_WhenConditionFails()
     {
         // Arrange
         var c1 = new ConditionNode("ResourcePath", Operator.StringEquals, JsonDocument.Parse("\"WRONG\"").RootElement);
         var notNode = new NotNode(c1);
 
         // Act
-        var result = _evaluator.Evaluate(notNode);
+        var result = await _evaluator.Evaluate(notNode, _context);
 
         // Assert
         result.IsError.Should().BeFalse();
     }
 
     [Fact]
-    public void Evaluate_VariableReference_ShouldReturnSuccess_WhenMatch()
+    public async Task Evaluate_VariableReference_ShouldReturnSuccess_WhenMatch()
     {
         // Arrange
         // We compare ResourcePath with itself using a variable reference
         var condition = new ConditionNode("ResourcePath", Operator.StringEquals, JsonDocument.Parse("\"$ResourcePath\"").RootElement);
 
         // Act
-        var result = _evaluator.Evaluate(condition);
+        var result = await _evaluator.Evaluate(condition, _context);
 
         // Assert
         result.IsError.Should().BeFalse();
     }
     
     [Fact]
-    public void Evaluate_InOperator_ShouldReturnSuccess_WhenValueInArray()
+    public async Task Evaluate_InOperator_ShouldReturnSuccess_WhenValueInArray()
     {
         // Arrange
         var condition = new ConditionNode("ResourcePath", Operator.In, JsonDocument.Parse("[\"course/100\", \"course/101\", \"course/102\"]").RootElement);
 
         // Act
-        var result = _evaluator.Evaluate(condition);
+        var result = await _evaluator.Evaluate(condition, _context);
 
         // Assert
         result.IsError.Should().BeFalse();
