@@ -47,7 +47,9 @@ public static class DependencyInjection
         
         services.AddScoped<IPolicyEvaluatorService, PolicyEvaluatorService>();
         services.AddScoped<PolicyEvaluatorService>();
+        services.AddScoped<ConditionEvaluatorService>();
         services.AddScoped<IJwtProvider, Auth.JwtProvider>();
+        services.AddScoped<IDeviceProvider, Auth.DeviceProvider>();
         services.AddScoped<IPasswordHasher, Auth.PasswordHasher>();
         services.AddScoped<ICurrentTenantUserRepository, Auth.CurrentTenantUserRepository>();
         services.AddScoped<IAuthorizationContextFactory,AuthorizationContextFactory>();

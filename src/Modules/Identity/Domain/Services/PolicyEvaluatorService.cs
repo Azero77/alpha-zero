@@ -30,26 +30,18 @@ public class PolicyEvaluatorService : IPolicyEvaluatorService
 
 public interface IPolicyEvaluationEngine
 {
-    ErrorOr<Success> Evaluate(IEnumerable<PolicyStatement> statements, AuthorizationContext context, ResourceArn targetArn);
+    Task<ErrorOr<Success>> Evaluate(IEnumerable<PolicyStatement> statements, AuthorizationContext context, ResourceArn targetArn);
 }
 
-public class PolicyEvaluationEngine : IPolicyEvaluationEngine
+public class PolicyEvaluationEngine(ConditionEvaluatorService conditionEvaluator) : IPolicyEvaluationEngine
 {
-    private readonly IConditionRepository _conditionRepository;
-
-    public PolicyEvaluationEngine(IConditionRepository conditionRepository)
+    public async Task<ErrorOr<Success>> Evaluate(IEnumerable<PolicyStatement> statements, AuthorizationContext context, ResourceArn targetArn)
     {
-        _conditionRepository = conditionRepository;
-    }
-
-    public ErrorOr<Success> Evaluate(IEnumerable<PolicyStatement> statements, AuthorizationContext context, ResourceArn targetArn)
-    {
-        var conditionEvaluator = new ConditionEvaluatorService(context, _conditionRepository);
         bool isAllowed = false;
 
         foreach (var statement in statements)
         {
-            if (AuthorizationHelper.IsStatementMatch(statement, context.RequiredPermission, targetArn, conditionEvaluator))
+            if (await AuthorizationHelper.IsStatementMatch(statement, context.RequiredPermission, targetArn, conditionEvaluator, context))
             {
                 if (!statement.Effect) 
                     return Error.Forbidden("Access.Denied", "Explicit deny.");
@@ -102,7 +94,7 @@ public class TenantUserAuthorizationStrategy : IAuthorizationStrategy
             statements.AddRange(statementsResult.Value);
         }
 
-        return _evaluationEngine.Evaluate(statements, context, targetArn);
+        return await _evaluationEngine.Evaluate(statements, context, targetArn);
     }
 }
 
@@ -142,7 +134,7 @@ public class PrincipalUserAuthorizationStrategy : IAuthorizationStrategy
             statements.AddRange(statementsResult.Value);
         }
 
-        return _evaluationEngine.Evaluate(statements, context, targetArn);
+        return await _evaluationEngine.Evaluate(statements, context, targetArn);
     }
 }
 
@@ -186,7 +178,7 @@ public static class AuthorizationHelper
         return serviceMatch && actionMatch;
     }
 
-    public static bool IsStatementMatch(PolicyStatement statement, string requiredPermission, ResourceArn targetArn, ConditionEvaluatorService conditionEvaluator)
+    public static async Task<bool> IsStatementMatch(PolicyStatement statement, string requiredPermission, ResourceArn targetArn, ConditionEvaluatorService conditionEvaluator, AuthorizationContext context)
     {
         bool baseMatch = statement.Actions.Any(a => IsActionMatched(requiredPermission, a)) &&
                          statement.Resources.Any(r => r.IsMatch(targetArn));
@@ -195,7 +187,7 @@ public static class AuthorizationHelper
 
         if (statement.Condition is not null)
         {
-            var conditionResult = conditionEvaluator.Evaluate(statement.Condition);
+            var conditionResult = await conditionEvaluator.Evaluate(statement.Condition, context);
             return !conditionResult.IsError;
         }
         return true;

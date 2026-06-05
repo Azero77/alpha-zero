@@ -11,7 +11,7 @@ using System.Text.RegularExpressions;
 
 namespace AlphaZero.Modules.Identity.Domain.Services;
 
-public class ConditionEvaluatorService(AuthorizationContext context, IConditionRepository conditionRepository, IEnumerable<IOperationEvaluator> operationEvaluator)
+public class ConditionEvaluatorService(IConditionRepository conditionRepository, IEnumerable<IOperationEvaluator> operationEvaluator)
 {
     public static readonly JsonValueKind[] AllowedKinds = 
     [
@@ -30,63 +30,63 @@ public class ConditionEvaluatorService(AuthorizationContext context, IConditionR
         return evaluator;
     }
 
-    public ErrorOr<Success> Evaluate(IConditionNode? node)
+    public async Task<ErrorOr<Success>> Evaluate(IConditionNode? node, AuthorizationContext context)
     {
         if (node == null) return Result.Success;
 
         return node.Type switch
         {
-            ConditionType.And => EvaluateAnd((AndNode)node),
-            ConditionType.Or => EvaluateOr((OrNode)node),
-            ConditionType.Not => EvaluateNot((NotNode)node),
-            ConditionType.Statement => EvaluateStatement((ConditionNode)node),
-            ConditionType.Reference => EvaluateReference((ConditionReferenceNode)node),
+            ConditionType.And => await EvaluateAnd((AndNode)node, context),
+            ConditionType.Or => await EvaluateOr((OrNode)node, context),
+            ConditionType.Not => await EvaluateNot((NotNode)node, context),
+            ConditionType.Statement => await EvaluateStatement((ConditionNode)node, context),
+            ConditionType.Reference => await EvaluateReference((ConditionReferenceNode)node, context),
             _ => Error.Unexpected("Condition.UnknownType", $"Unknown condition type: {node.Type}")
         };
     }
 
-    private ErrorOr<Success> EvaluateReference(ConditionReferenceNode node)
+    private async Task<ErrorOr<Success>> EvaluateReference(ConditionReferenceNode node, AuthorizationContext context)
     {
         if (string.IsNullOrEmpty(node.ReferenceName))
             return Error.Validation("Condition.ReferenceNameNullOrEmpty", "Reference name is null or empty");
 
-        var condition = conditionRepository.GetNodeByConditionReferenceName(node.ReferenceName).Result;
+        var condition = await conditionRepository.GetNodeByConditionReferenceName(node.ReferenceName);
 
         if(condition is null)
             return Error.NotFound("Condition.NotFound", $"Condition with reference name '{node.ReferenceName}' not found");
 
-        return Evaluate(condition);
+        return await Evaluate(condition, context);
     }
 
-    private ErrorOr<Success> EvaluateAnd(AndNode node)
+    private async Task<ErrorOr<Success>> EvaluateAnd(AndNode node, AuthorizationContext context)
     {
         foreach (var condition in node.Conditions)
         {
-            var result = Evaluate(condition);
+            var result = await Evaluate(condition, context);
             if (result.IsError) return result;
         }
         return Result.Success;
     }
 
-    private ErrorOr<Success> EvaluateOr(OrNode node)
+    private async Task<ErrorOr<Success>> EvaluateOr(OrNode node, AuthorizationContext context)
     {
         List<Error> errors = [];
         foreach (var condition in node.Conditions)
         {
-            var result = Evaluate(condition);
+            var result = await Evaluate(condition, context);
             if (!result.IsError) return Result.Success;
             errors.AddRange(result.Errors);
         }
         return errors.Count > 0 ? errors : Error.Conflict("Condition.NotMet", "None of the OR conditions were met");
     }
 
-    private ErrorOr<Success> EvaluateNot(NotNode node)
+    private async Task<ErrorOr<Success>> EvaluateNot(NotNode node, AuthorizationContext context)
     {
-        var result = Evaluate(node.Condition);
+        var result = await Evaluate(node.Condition, context);
         return result.IsError ? Result.Success : Error.Conflict("Condition.NotMet", "NOT condition failed");
     }
 
-    public ErrorOr<Success> EvaluateStatement(ConditionNode condition)
+    public async Task<ErrorOr<Success>> EvaluateStatement(ConditionNode condition, AuthorizationContext context)
     {
         var property = typeof(AuthorizationContext).GetProperty(condition.Property, BindingFlags.IgnoreCase | BindingFlags.Public | BindingFlags.Instance);
         if (property == null) 
@@ -118,7 +118,7 @@ public class ConditionEvaluatorService(AuthorizationContext context, IConditionR
         if (!AllowedKinds.Contains(condition.Value.ValueKind))
             return Error.Validation("Condition.InvalidValueKind", $"JsonValueKind {condition.Value.ValueKind} is not supported");
 
-        return EvaluateJsonOperator(propertyValue, condition.Value, condition.Operator);
+        return await EvaluateJsonOperator(propertyValue, condition.Value, condition.Operator, context);
     }
 
     private ErrorOr<Success> EvaluateOperator(object left, object right, Operator op)
@@ -133,10 +133,15 @@ public class ConditionEvaluatorService(AuthorizationContext context, IConditionR
         };
         return isMatch ? Result.Success : Error.Conflict("Condition.NotMet");
     }
-    private ErrorOr<Success> EvaluateJsonOperator(object left, JsonElement right, Operator op)
+    private async Task<ErrorOr<Success>> EvaluateJsonOperator(object left, JsonElement right, Operator op, AuthorizationContext context)
     {
         try
         {
+            if (op == Operator.IsMainDevice)
+            {
+                return await getOperationEvaluator(Operator.IsMainDevice).Evaluate(left, right, context);
+            }
+
             bool isMatch = op switch
             {
                 Operator.StringEquals => string.Equals(left.ToString(), right.GetString(), StringComparison.OrdinalIgnoreCase),
@@ -160,13 +165,11 @@ public class ConditionEvaluatorService(AuthorizationContext context, IConditionR
 
                 Operator.Bool => Convert.ToBoolean(left) == right.GetBoolean(),
 
-                Operator.IsMainDevice => !getOperationEvaluator(Operator.IsMainDevice).Evaluate(left,right,context).Result.IsError,
-
                 Operator.In => right.ValueKind == JsonValueKind.Array && 
-                               right.EnumerateArray().Any(item => EvaluateJsonOperator(left, item, Operator.StringEquals).IsError == false),
+                               right.EnumerateArray().Any(item => EvaluateJsonOperator(left, item, Operator.StringEquals, context).Result.IsError == false),
                 
                 Operator.NotIn => right.ValueKind == JsonValueKind.Array && 
-                                  !right.EnumerateArray().Any(item => EvaluateJsonOperator(left, item, Operator.StringEquals).IsError == false),
+                                  !right.EnumerateArray().Any(item => EvaluateJsonOperator(left, item, Operator.StringEquals, context).Result.IsError == false),
 
                 _ => throw new NotSupportedException($"Operator {op} is not supported.")
             };
