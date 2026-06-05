@@ -1,5 +1,5 @@
 using AlphaZero.Modules.Identity.Application.Principals.Commands.CreatePrincipal;
-using AlphaZero.Modules.Identity.Domain.Models;
+using AlphaZero.Modules.Identity.Domain.Models.Principals;
 using AlphaZero.Shared.Authorization;
 using AlphaZero.Shared.Domain;
 using AlphaZero.Shared.Presentation.Extensions;
@@ -14,10 +14,8 @@ public record CreatePrincipalRequest
     public string Username { get; init; } = default!;
     public string Password { get; init; } = default!;
     public PrincipalType PrincipalType { get; init; }
-    public string PrincipalScope { get; init; } = default!;
+    public string? PrincipalScope { get; init; }
     public string Name { get; init; } = default!;
-    public Guid? ResourceId { get; init; }
-    public ResourceType? ScopeResourceType { get; init; }
 }
 
 public record CreatePrincipalResponse(Guid Id);
@@ -34,13 +32,13 @@ public class CreatePrincipalEndpoint : Endpoint<CreatePrincipalRequest, CreatePr
     public override void Configure()
     {
         Post("/identity/principals");
-        this.AccessControl("identity:ManagePrincipals", _ => ResourceArn.ForTenant(Guid.Empty));
+        this.AccessControl("identity:ManagePrincipals", (req, tenantId) => ResourceArn.ForTenant(tenantId));
         Description(d => d.WithTags("Identity"));
     }
 
     public override async Task HandleAsync(CreatePrincipalRequest req, CancellationToken ct)
     {
-        var command = new CreatePrincipalCommand(req.Username, req.Password, req.PrincipalType, req.PrincipalScope, req.Name, req.ResourceId, req.ScopeResourceType);
+        var command = new CreatePrincipalCommand(req.Username, req.Password, req.PrincipalType, req.PrincipalScope, req.Name);
         var result = await _module.Send(command, ct);
 
         if (result.IsError)

@@ -21,7 +21,7 @@ public class GenerateAdminCodeEndpoint(LibraryModule module) : Endpoint<Generate
     {
         Post("/library/admin/access-codes/generate-single");
         // Restricted to Administrators/Accountants at the tenant level
-        this.AccessControl("library:Audit", _ => ResourceArn.ForTenant(Guid.Empty));
+        this.AccessControl("library:Audit", (req, tenantId) => ResourceArn.ForTenant(tenantId));
         Description(d => d.WithTags("Library Management"));
     }
 

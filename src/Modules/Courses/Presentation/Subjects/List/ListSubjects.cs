@@ -28,7 +28,7 @@ public class ListSubjectsEndpoint : Endpoint<ListSubjectsRequest, PagedResult<Su
     public override void Configure()
     {
         Get("/courses/subjects");
-        this.AccessControl("subjects:List", _ => ResourceArn.ForTenant(Guid.Empty));
+        this.AccessControl("subjects:List", (req, tenantId) => ResourceArn.ForTenant(tenantId));
         Description(d => d.WithTags("Subjects"));
     }
 

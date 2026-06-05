@@ -11,8 +11,8 @@ public class PrincipalPolicyAssignmentConfiguration : IEntityTypeConfiguration<P
         builder.ToTable("PrincipalManagedPolicyAssignments");
         builder.HasKey(a => new { a.PrincipalId, a.ManagedPolicyId });
 
-        builder.HasOne(a => a.Principal)
-               .WithMany()
+        builder.HasOne<PrincipalDataModel>()
+               .WithMany(p => p.PrincipalPolicyAssignments)
                .HasForeignKey(a => a.PrincipalId)
                .OnDelete(DeleteBehavior.Cascade);
 

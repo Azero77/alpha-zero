@@ -1,23 +1,16 @@
 using AlphaZero.Modules.VideoUploading.Application.Repositories;
 using AlphaZero.Modules.VideoUploading.Domain.Models;
 using AlphaZero.Modules.VideoUploading.Infrastructure.Persistance;
+using AlphaZero.Shared.Infrastructure.Repositores;
 using AlphaZero.Shared.Queries;
 using Microsoft.EntityFrameworkCore;
 
 namespace AlphaZero.Modules.VideoUploading.Infrastructure.Repositories;
 
-public class VideoRepository : IVideoRepository
+public class VideoRepository : BaseRepository<AppDbContext, Video>, IVideoRepository
 {
-    private readonly AppDbContext _context;
-
-    public VideoRepository(AppDbContext context)
+    public VideoRepository(AppDbContext context) : base(context)
     {
-        _context = context;
-    }
-
-    public async Task<Video?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
-    {
-        return await _context.Videos.FirstOrDefaultAsync(v => v.Id == id, cancellationToken);
     }
 
     public async Task<Video?> GetBySourceKeyAsync(string sourceKey, CancellationToken cancellationToken = default)
@@ -46,13 +39,8 @@ public class VideoRepository : IVideoRepository
         await _context.Videos.AddAsync(video, cancellationToken);
     }
 
-    public void Update(Video video)
+    public async Task<Video?> GetByIdAsync(Guid id, CancellationToken token = default)
     {
-        _context.Videos.Update(video);
-    }
-
-    public void Delete(Video video)
-    {
-        _context.Videos.Remove(video);
+        return await _context.Videos.FindAsync(new { Id = id }, token);
     }
 }

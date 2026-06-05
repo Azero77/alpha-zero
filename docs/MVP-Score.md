@@ -10,7 +10,7 @@ the app at its mvp should:
 
 5- the ability for teachers to track their students progress and see his courses statistics.
 
-6- Accounts can only be activated in one place at a time, so if a student logs in on a new device, the old session will be terminated.
+6- Context-Aware Device Enforcement: Support for locking accounts to specific devices, enforced through authorization policies and fingerprinting.
 
 
 Phase 1:

@@ -9,7 +9,7 @@ namespace AlphaZero.Modules.Identity.Application.Principals.Commands.RemovePrinc
 
 public record RemovePrincipalFromUserCommand(
     Guid TenantUserId,
-    Guid PrincipalTemplateId,
+    Guid PrincipalId,
     string ResourceArn) : ICommand<Success>;
 
 public sealed class RemovePrincipalFromUserCommandHandler(
@@ -20,15 +20,14 @@ public sealed class RemovePrincipalFromUserCommandHandler(
     {
         var assignment = await repository.Get(request.TenantUserId, request.ResourceArn);
         
-        // Ensure it's the right principal template too
-        if (assignment == null || assignment.Principal.Id != request.PrincipalTemplateId)
+        if (assignment == null || assignment.Principal.Id != request.PrincipalId)
         {
             return Error.NotFound("Assignment.NotFound", "Principal assignment not found for this user, resource, and role.");
         }
 
         repository.Remove(assignment);
-        logger.LogWarning("Principal {TemplateId} removed from User {UserId} for Resource {ResourceArn}.", 
-            request.PrincipalTemplateId, request.TenantUserId, request.ResourceArn);
+        logger.LogWarning("Principal {PrincipalId} removed from User {UserId} for Resource {ResourceArn}.", 
+            request.PrincipalId, request.TenantUserId, request.ResourceArn);
 
         return Result.Success;
     }

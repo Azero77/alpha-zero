@@ -13,7 +13,7 @@
 ## 🧠 Core Technical Constraints
 - **Progress Tracking:** Completion logic MUST use **Bitmasking** (`VARBIT`) to minimize DB footprint and payload size.
 - **Video Streaming:** Serverless pipeline (Upload -> S3 -> SQS -> MediaConvert -> HLS/Dash).
-- **Security:** One active session per student. Logging in on a new device MUST terminate previous sessions.
+- **Security:** Context-aware device enforcement. Users can be locked to specific devices, and authorization policies can enforce fingerprint matching (e.g., `LoggedInDeviceFingerprint == RequestDeviceFingerprint`).
 - **Offline Economy:** Physical "Library Codes" are the primary payment/unlock mechanism.
 
 ## 🛠️ Implementation Standards

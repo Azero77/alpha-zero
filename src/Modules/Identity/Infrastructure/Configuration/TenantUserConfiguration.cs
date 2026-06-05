@@ -12,7 +12,6 @@ public class TenantUserConfiguration : IEntityTypeConfiguration<TenantUser>
         builder.HasIndex(u => new { u.IdentityId, u.TenantId }).IsUnique();
         
         builder.Property(u => u.Name).HasMaxLength(256);
-        builder.Property(u => u.ActiveSessionId).IsRequired();
         builder.Property(u => u.TenantId).IsRequired();
     }
 }

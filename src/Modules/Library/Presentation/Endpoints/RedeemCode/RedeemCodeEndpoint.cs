@@ -25,7 +25,7 @@ public class RedeemCodeEndpoint : Endpoint<RedeemCodeRequest>
     {
         Post("/library/redeem");
         // Redemption requires permission to enroll in courses at the tenant level
-        this.AccessControl("courses:Enroll", _ => ResourceArn.ForTenant(Guid.Empty));
+        this.AccessControl("courses:Enroll", (req, tenantId) => ResourceArn.ForTenant(tenantId));
         Description(d => d.WithTags("Library"));
     }
 

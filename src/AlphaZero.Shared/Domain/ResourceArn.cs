@@ -1,5 +1,6 @@
 using AlphaZero.Shared.Authorization;
 using ErrorOr;
+using Microsoft.AspNetCore.Components.Forms;
 using System.Text.RegularExpressions;
 
 namespace AlphaZero.Shared.Domain;
@@ -64,9 +65,34 @@ public class ResourceArn
 
     public override string ToString() => Value;
 
+    public Guid? ExtractResourceId()
+    {
+        var last = ResourcePath.Split('/').LastOrDefault();
+        return Guid.TryParse(last, out var id) ? id : null;
+    }
+
     public override bool Equals(object? obj) => obj is ResourceArn other && Value == other.Value;
     public override int GetHashCode() => Value.GetHashCode();
+    public ResourceType? ResourceServiceType
+    {
+        get
+        {
+            if (ResourcePath.Contains("/lesson/")) return ResourceType.Lessons;
+            if (ResourcePath.Contains("/section/")) return ResourceType.Sections;
+            if (ResourcePath.Contains("/course/")) return ResourceType.Courses;
+            if (ResourcePath.Contains("/subject/")) return ResourceType.Subjects;
+            if (ResourcePath.Contains("/video/")) return ResourceType.Videos;
+            if (ResourcePath.Contains("/assessment/")) return ResourceType.Assessments;
+            if (ResourcePath.Contains("/submission/")) return ResourceType.Submissions;
+            if (ResourcePath.Contains("/library/")) return ResourceType.Library;
+            if (ResourcePath.Contains("/user/")) return ResourceType.Users;
+            if (Service.Equals("tenants", StringComparison.OrdinalIgnoreCase)) return ResourceType.Tenants;
+            if (Service.Equals("identity", StringComparison.OrdinalIgnoreCase)) return ResourceType.Identity;
 
+            Enum.TryParse<ResourceType>(Service, true, out var result);
+            return result;
+        }
+    }
     // --- Static Factories ---
 
     public static ResourceArn ForTenant(Guid tenantId) => new($"az:tenants:{GlobalTenant}:tenant/{tenantId}");
@@ -102,7 +128,6 @@ public class ResourcePattern
     {
         Value = value.ToLowerInvariant();
     }
-
     public static ErrorOr<ResourcePattern> Create(string value)
     {
         var result = IsValidPattern(value);
@@ -133,6 +158,17 @@ public class ResourcePattern
         }
 
         return match;
+    }
+
+
+    public string Service => GetPart("service");
+    public string TenantIdString => GetPart("tenantId");
+    public string ResourcePath => GetPart("resourcePath");
+
+    private string GetPart(string groupName)
+    {
+        var match = PatternRegex.Match(Value);
+        return match.Success ? match.Groups[groupName].Value : string.Empty;
     }
 
     public static bool IsValidPath(string path)
@@ -199,6 +235,8 @@ public class ResourcePattern
         {
             return false;
         }
+
+        
     }
 
     public static ResourcePattern All => new ResourcePattern("az:*");

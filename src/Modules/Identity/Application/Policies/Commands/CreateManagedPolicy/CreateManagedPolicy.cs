@@ -1,4 +1,4 @@
-using AlphaZero.Modules.Identity.Domain.Models;
+using AlphaZero.Modules.Identity.Domain.Models.Principals.Policies;
 using AlphaZero.Modules.Identity.Domain.Repositories;
 using AlphaZero.Shared.Application;
 using ErrorOr;
@@ -10,7 +10,7 @@ namespace AlphaZero.Modules.Identity.Application.Policies.Commands.CreateManaged
 
 public record CreateManagedPolicyCommand(
     string Name,
-    List<PolicyTemplateStatement> Statements) : ICommand<Guid>;
+    List<ManagedPolicyStatement> Statements) : ICommand<Guid>;
 
 public class CreateManagedPolicyCommandValidator : AbstractValidator<CreateManagedPolicyCommand>
 {
@@ -44,7 +44,7 @@ public sealed class CreateManagedPolicyCommandHandler : IRequestHandler<CreateMa
         var managedPolicy = new ManagedPolicy(policyId, request.Name, request.Statements);
 
         _managedPolicyRepository.Add(managedPolicy);
-        _logger.LogInformation("Managed Policy Template '{PolicyName}' created with ID {PolicyId}.", request.Name, policyId);
+        _logger.LogInformation("Managed Policy '{PolicyName}' created with ID {PolicyId}.", request.Name, policyId);
 
         return policyId;
     }

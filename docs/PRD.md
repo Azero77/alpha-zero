@@ -72,7 +72,7 @@ To empower educational institutions by bridging the gap between traditional teac
 *   **Caching:** Offline video caching support in the mobile (Flutter) app.
 
 ### 🛡️ Security & Integrity
-*   **Session Control:** One active session per student. Logging in on a new device MUST terminate the previous session immediately.
+*   **Context-Aware Device Enforcement:** Support for locking users to specific devices. Authorization policies can enforce that students access specific content (e.g., courses) only from their registered `LoggedInDeviceFingerprint`.
 *   **Data Separation:** Row-level security or strict filtering by `TenantId` across all tables.
 *   **Audit Logs:** Immutable logs for all code redemptions and enrollment deactivations.
 

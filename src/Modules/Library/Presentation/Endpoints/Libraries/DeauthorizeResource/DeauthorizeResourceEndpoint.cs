@@ -18,7 +18,7 @@ public class DeauthorizeResourceEndpoint(LibraryModule module) : Endpoint<Deauth
     public override void Configure()
     {
         Delete("/library/libraries/{Id}/resources");
-        this.AccessControl("library:AttachCourses", req => ResourceArn.ForLibrary(Guid.Empty, req.Id));
+        this.AccessControl("library:AttachCourses", (req, tenantId) => ResourceArn.ForLibrary(tenantId, req.Id));
         Description(d => d.WithTags("Library Management"));
     }
 

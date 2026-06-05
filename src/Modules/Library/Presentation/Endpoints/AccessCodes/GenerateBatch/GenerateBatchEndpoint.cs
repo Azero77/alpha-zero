@@ -30,7 +30,7 @@ public class GenerateBatchEndpoint : Endpoint<GenerateBatchRequest, GenerateBatc
     public override void Configure()
     {
         Post("/library/libraries/{LibraryId}/access-codes/generate");
-        this.AccessControl("library:GenerateCodes", req => ResourceArn.ForLibrary(Guid.Empty, req.LibraryId));
+        this.AccessControl("library:GenerateCodes", (req, tenantId) => ResourceArn.ForLibrary(tenantId, req.LibraryId));
         Description(d => d.WithTags("Library"));
     }
 

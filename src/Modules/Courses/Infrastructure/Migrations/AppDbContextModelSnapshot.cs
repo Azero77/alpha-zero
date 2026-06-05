@@ -104,7 +104,7 @@ namespace AlphaZero.Modules.Courses.Infrastructure.Migrations
                     b.HasIndex("TenantId")
                         .HasFilter("\"IsDeleted\" = FALSE");
 
-                    b.ToTable("CourseSection", "Courses");
+                    b.ToTable("CourseSections", "Courses");
                 });
 
             modelBuilder.Entity("AlphaZero.Modules.Courses.Domain.Aggregates.Courses.CourseSectionItem", b =>

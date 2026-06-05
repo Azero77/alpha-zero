@@ -1,4 +1,5 @@
 using AlphaZero.Modules.Identity.Domain.Models;
+using AlphaZero.Modules.Identity.Infrastructure.Models;
 using AlphaZero.Shared.Domain;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -9,15 +10,18 @@ public class TenantUserPrinciaplAssignmentConfiguration : IEntityTypeConfigurati
 {
     public void Configure(EntityTypeBuilder<TenantUserPrinciaplAssignment> builder)
     {
+        builder.ToTable("TenantPrinciaplAssignments");
+        builder.HasKey(a => a.Id);
 
         builder.HasOne(a => a.TenantUser)
             .WithMany()
             .HasForeignKey("TenantUserId")
             .OnDelete(DeleteBehavior.Cascade);
 
-        builder.HasOne(a => a.Principal)
+        // Map to PrincipalDataModel via the PrincipalId property on the Domain model
+        builder.HasOne<PrincipalDataModel>()
             .WithMany()
-            .HasForeignKey("PrincipalTemplateId")
+            .HasForeignKey(a => a.PrincipalId)
             .OnDelete(DeleteBehavior.Cascade);
 
         builder.Property(a => a.Resource)
@@ -29,6 +33,6 @@ public class TenantUserPrinciaplAssignmentConfiguration : IEntityTypeConfigurati
 
         builder.Property(a => a.TenantId).IsRequired();
         
-        builder.HasIndex("TenantUserId", "PrincipalTemplateId", "Resource").IsUnique();
+        builder.HasIndex("TenantUserId", "PrincipalId", "Resource").IsUnique();
     }
 }

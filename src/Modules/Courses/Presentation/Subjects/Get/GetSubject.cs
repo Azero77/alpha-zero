@@ -25,7 +25,7 @@ public class GetSubjectEndpoint : Endpoint<GetSubjectRequest, SubjectDto>
     public override void Configure()
     {
         Get("/courses/subjects/{id}");
-        this.AccessControl("subjects:View", req => ResourceArn.ForSubject(Guid.Empty, req.Id));
+        this.AccessControl("subjects:View", (req, tenantId) => ResourceArn.ForSubject(tenantId, req.Id));
         Description(d => d.WithTags("Subjects"));
     }
 

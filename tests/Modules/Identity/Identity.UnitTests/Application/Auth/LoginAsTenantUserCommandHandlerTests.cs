@@ -32,13 +32,12 @@ public class LoginAsTenantUserCommandHandlerTests
     public async Task Handle_Should_ReturnToken_WhenUserIsEnrolled()
     {
         // Arrange
-        var user = TenantUser.Create(TenantId, IdentityId, "Ali").Value;
-        var initialSessionId = user.ActiveSessionId;
+        var user = TenantUser.Create(TenantId, IdentityId, "Ali", TenantUserDeviceInfo.Empty).Value;
 
         _userRepository.GetFirst(Arg.Any<Expression<Func<TenantUser, bool>>>(), Arg.Any<CancellationToken>())
             .Returns(user);
 
-        _jwtProvider.GenerateToken(user.Id, TenantId, Arg.Any<Guid>(), AuthorizationMethod.TenantUser)
+        _jwtProvider.GenerateToken(user.Id, TenantId, AuthenticationMethod.TenantUser)
             .Returns("token-123");
 
         var command = new LoginAsTenantUserCommand(IdentityId, TenantId, "Ali");
@@ -50,9 +49,7 @@ public class LoginAsTenantUserCommandHandlerTests
         result.IsError.Should().BeFalse();
         result.Value.Token.Should().Be("token-123");
         result.Value.TenantUserId.Should().Be(user.Id);
-        result.Value.SessionId.Should().NotBe(initialSessionId);
         
-        _userRepository.Received(1).Update(Arg.Is<TenantUser>(u => u.ActiveSessionId == result.Value.SessionId));
     }
 
     [Fact]

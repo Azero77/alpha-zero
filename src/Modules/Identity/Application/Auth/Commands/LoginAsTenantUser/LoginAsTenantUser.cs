@@ -16,7 +16,7 @@ public record LoginAsTenantUserCommand(
     Guid TenantId,
     string UserName) : ICommand<TokenResponse>;
 
-public record TokenResponse(string Token, Guid TenantUserId, Guid SessionId);
+public record TokenResponse(string Token, Guid TenantUserId);
 
 public sealed class LoginAsTenantUserCommandHandler : IRequestHandler<LoginAsTenantUserCommand, ErrorOr<TokenResponse>>
 {
@@ -47,25 +47,22 @@ public sealed class LoginAsTenantUserCommandHandler : IRequestHandler<LoginAsTen
              return Error.Forbidden("Auth.NotEnrolled", "User is not a member of this tenant.");
         }
 
-        // 2. Refresh Session (Invalidates other devices)
-        var sessionId = user.RefreshSession();
         _userRepository.Update(user);
 
         // 3. Generate Scoped JWT
         var token = _jwtProvider.GenerateToken(
             user.Id, 
             user.TenantId, 
-            sessionId, 
-            AuthorizationMethod.TenantUser);
+            AuthenticationMethod.TenantUser);
 
         _logger.LogInformation("Identity {IdentityId} logged into Tenant {TenantId} as User {UserId}.", 
             request.IdentityId, request.TenantId, user.Id);
 
-        return new TokenResponse(token, user.Id, sessionId);
+        return new TokenResponse(token, user.Id);
     }
 }
 
 public interface IJwtProvider
 {
-    string GenerateToken(Guid id, Guid tenantId, Guid sessionId, AuthorizationMethod method);
+    string GenerateToken(Guid id, Guid tenantId, AuthenticationMethod method);
 }

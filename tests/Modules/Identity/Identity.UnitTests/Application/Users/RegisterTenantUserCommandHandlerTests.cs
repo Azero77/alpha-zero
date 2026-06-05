@@ -36,7 +36,7 @@ public class RegisterTenantUserCommandHandlerTests
         _userRepository.Any(Arg.Any<Expression<Func<TenantUser, bool>>>(), Arg.Any<CancellationToken>())
             .Returns(false);
 
-        var command = new RegisterTenantUserCommand(IdentityId, "Ali");
+        var command = new RegisterTenantUserCommand(IdentityId, "Ali", TenantUserDeviceInfo.Empty);
 
         // Act
         var result = await _handler.Handle(command, CancellationToken.None);
@@ -54,7 +54,7 @@ public class RegisterTenantUserCommandHandlerTests
         _userRepository.Any(Arg.Any<Expression<Func<TenantUser, bool>>>(), Arg.Any<CancellationToken>())
             .Returns(true);
 
-        var command = new RegisterTenantUserCommand(IdentityId, "Ali");
+        var command = new RegisterTenantUserCommand(IdentityId, "Ali", TenantUserDeviceInfo.Empty);
 
         // Act
         var result = await _handler.Handle(command, CancellationToken.None);

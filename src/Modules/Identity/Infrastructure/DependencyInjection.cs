@@ -2,6 +2,7 @@ using AlphaZero.Modules.Identity.Application.Auth.Commands.LoginAsTenantUser;
 using AlphaZero.Modules.Identity.Domain.Models;
 using AlphaZero.Modules.Identity.Domain.Repositories;
 using AlphaZero.Modules.Identity.Domain.Services;
+using AlphaZero.Modules.Identity.Infrastructure.Models;
 using AlphaZero.Modules.Identity.Infrastructure.Persistance;
 using AlphaZero.Modules.Identity.Infrastructure.Repositories;
 using AlphaZero.Shared.Application;
@@ -35,7 +36,6 @@ public static class DependencyInjection
         });
 
         //they are public because it is used by fast endpoint middleware in the api scope
-        services.AddScoped<IPolicyRepository, PolicyRepository>();
         services.AddScoped<IManagedPolicyRepository, ManagedPolicyRepository>();
         services.AddScoped<IPrincipalRepository, PrincipalRepository>();
         services.AddScoped<IRepository<TenantUser>,TenantUserRepository>(); 
@@ -43,12 +43,16 @@ public static class DependencyInjection
         
         services.AddScoped<IAuthorizationStrategy, TenantUserAuthorizationStrategy>();
         services.AddScoped<IAuthorizationStrategy, PrincipalUserAuthorizationStrategy>();
+        services.AddScoped<IPolicyEvaluationEngine, PolicyEvaluationEngine>();
         
         services.AddScoped<IPolicyEvaluatorService, PolicyEvaluatorService>();
         services.AddScoped<PolicyEvaluatorService>();
         services.AddScoped<IJwtProvider, Auth.JwtProvider>();
         services.AddScoped<IPasswordHasher, Auth.PasswordHasher>();
         services.AddScoped<ICurrentTenantUserRepository, Auth.CurrentTenantUserRepository>();
+        services.AddScoped<IAuthorizationContextFactory,AuthorizationContextFactory>();
+
+        services.AddScoped<IConditionRepository, ConditionRepository>();
     }
 
     public static void AddIdentityPrivateInfrastructure(this IServiceCollection moduleServices, IConfiguration configuration)

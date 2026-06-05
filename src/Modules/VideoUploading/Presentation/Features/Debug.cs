@@ -72,7 +72,7 @@ public static class Debug
         {
             app.MapGet("api/video-uploading/debug/videos", Handler)
                .WithTags("Video Uploading Debug")
-               .AccessControl("video:List", _ => ResourceArn.ForTenant(Guid.Empty));
+               .AccessControl("video:List", (req, tenantId) => ResourceArn.ForTenant(tenantId));
         }
 
         private async Task<IResult> Handler(int? page, int? perPage, VideoUploadingModule module, AWSResources resources)
@@ -95,7 +95,7 @@ public static class Debug
         {
             app.MapGet("api/video-uploading/debug/videos/{id:guid}", Handler)
                .WithTags("Video Uploading Debug")
-               .AccessControl("video:View", ctx => ResourceArn.ForVideo(Guid.Empty, Guid.Parse(ctx.Request.RouteValues["id"]?.ToString() ?? Guid.Empty.ToString())));
+               .AccessControl("video:View", (ctx, tenantId) => ResourceArn.ForVideo(tenantId, Guid.Parse(ctx.Request.RouteValues["id"]?.ToString() ?? Guid.Empty.ToString())));
         }
 
         private async Task<IResult> Handler(Guid id, VideoUploadingModule module, AWSResources resources)
@@ -114,7 +114,7 @@ public static class Debug
         {
             app.MapGet("api/video-uploading/debug/videos/{id:guid}/state", Handler)
                .WithTags("Video Uploading Debug")
-               .AccessControl("video:View", ctx => ResourceArn.ForVideo(Guid.Empty, Guid.Parse(ctx.Request.RouteValues["id"]?.ToString() ?? Guid.Empty.ToString())));
+               .AccessControl("video:View", (ctx, tenantId) => ResourceArn.ForVideo(tenantId, Guid.Parse(ctx.Request.RouteValues["id"]?.ToString() ?? Guid.Empty.ToString())));
         }
 
         private async Task<IResult> Handler(Guid id, VideoUploadingModule module)

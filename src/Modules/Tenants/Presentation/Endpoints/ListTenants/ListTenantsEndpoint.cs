@@ -21,7 +21,7 @@ public class ListTenantsEndpoint(TenantsModule module) : Endpoint<ListTenantsReq
     public override void Configure()
     {
         Get("/tenants");
-        this.AccessControl("tenants:Manage", _ => ResourceArn.ForTenant(Guid.Empty));
+        this.AccessControl("tenants:Manage", req => ResourceArn.ForTenant(Guid.Empty));
         Description(d => d.WithTags("Tenants"));
     }
 

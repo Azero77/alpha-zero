@@ -34,11 +34,11 @@ public sealed class GetSubmissionsQueryHandler(ISubmissionRepository repository)
         var result = await repository.Get(
             request.Page,
             request.PerPage,
-            s => s.SubmittedAt, // Default sort by SubmittedAt (descending check needed)
             s => (request.AssessmentId == null || s.AssessmentId == request.AssessmentId) &&
                  (statusFilter == null || s.Status == statusFilter) &&
                  s.Status != SubmissionStatus.InProgress, // Teachers only see submitted/under-review/graded
-            isDescending: true, // Order by time of submit (newest first)
+            s => s.SubmittedAt, // Default sort by SubmittedAt (descending check needed)
+            ascending: false, // Order by time of submit (newest first)
             token: cancellationToken);
 
         var dtos = result.Items.Select(s => new SubmissionSummaryDto(

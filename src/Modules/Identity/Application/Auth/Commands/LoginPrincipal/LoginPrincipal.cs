@@ -1,5 +1,5 @@
 using AlphaZero.Modules.Identity.Application.Auth.Commands.LoginAsTenantUser;
-using AlphaZero.Modules.Identity.Domain.Models;
+using AlphaZero.Modules.Identity.Domain.Models.Principals;
 using AlphaZero.Modules.Identity.Domain.Repositories;
 using AlphaZero.Shared.Application;
 using AlphaZero.Shared.Authorization;
@@ -43,18 +43,13 @@ public sealed class LoginPrincipalCommandHandler : IRequestHandler<LoginPrincipa
             return Error.Unauthorized("Auth.InvalidCredentials", "Invalid username or password for this tenant.");
         }
 
-        // Principals in our system don't use ActiveSessionId for enforcement currently, 
-        // but we can generate a session ID for the JWT.
-        var sessionId = Guid.NewGuid();
-
         var token = _jwtProvider.GenerateToken(
             principal.Id,
             principal.TenantId,
-            sessionId,
-            AuthorizationMethod.Principal);
+            AuthenticationMethod.Principal);
 
         _logger.LogInformation("Principal {Username} logged into Tenant {TenantId}.", request.Username, request.TenantId);
 
-        return new TokenResponse(token, principal.Id, sessionId);
+        return new TokenResponse(token, principal.Id);
     }
 }

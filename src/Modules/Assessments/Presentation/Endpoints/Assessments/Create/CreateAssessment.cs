@@ -32,7 +32,7 @@ public class CreateAssessmentEndpoint : Endpoint<CreateAssessmentRequest, Create
     public override void Configure()
     {
         Post("/assessments");
-        this.AccessControl("assessments:Create", _ => ResourceArn.ForTenant(Guid.Empty));
+        this.AccessControl("assessments:Create", (req, tenantId) => ResourceArn.ForTenant(tenantId));
         Description(d => d.WithTags("Assessments"));
     }
 

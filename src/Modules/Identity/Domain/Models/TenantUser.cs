@@ -6,39 +6,46 @@ namespace AlphaZero.Modules.Identity.Domain.Models;
 
 /// <summary>
 /// The central anchor for a User within a Tenant.
-/// Holds the active session state and base tenant info.
+/// Holds the device state and base tenant info for authorization context.
 /// </summary>
 public class TenantUser : AggregateRoot, IDomainTenantOwned
 {
     public Guid TenantId { get; private set; }
     public string IdentityId { get; private set; } = string.Empty; // The 'sub' from Cognito JWT
     public string Name { get; private set; } = string.Empty;
+    public TenantUserDeviceInfo DeviceInfo;
     
-    // The "Single Device" enforcer
-    public Guid ActiveSessionId { get; private set; }
-
     private TenantUser() { } // EF Core
 
-    private TenantUser(Guid id, Guid tenantId, string identityId, string name) : base(id)
+    private TenantUser(Guid id, Guid tenantId, string identityId, string name, TenantUserDeviceInfo deviceInfo) : base(id)
     {
         TenantId = tenantId;
         IdentityId = identityId;
         Name = name;
-        ActiveSessionId = Guid.NewGuid();
+        DeviceInfo = deviceInfo;
     }
 
-    public static ErrorOr<TenantUser> Create(Guid tenantId, string identityId, string name)
+    public static ErrorOr<TenantUser> Create(Guid tenantId, string identityId, string name, TenantUserDeviceInfo deviceInfo)
     {
         if (string.IsNullOrWhiteSpace(identityId)) return Error.Validation("User.IdentityId", "Identity ID is required.");
-        return new TenantUser(Guid.NewGuid(), tenantId, identityId, name);
+        return new TenantUser(Guid.NewGuid(), tenantId, identityId, name, deviceInfo);
     }
 
-    /// <summary>
-    /// Called during login/exchange to invalidate all other device sessions.
-    /// </summary>
-    public Guid RefreshSession()
+    public void LockUser()
     {
-        ActiveSessionId = Guid.NewGuid();
-        return ActiveSessionId;
+        DeviceInfo = DeviceInfo with { IsLocked  = true };
     }
 }
+
+public record TenantUserDeviceInfo(string DeviceId,DevicePlatform platform, bool IsLocked = false)
+{
+    public static TenantUserDeviceInfo Empty => new(string.Empty, DevicePlatform.Web, false);
+}
+
+public enum DevicePlatform
+{
+    Web,
+    Android,
+    Ios
+}
+

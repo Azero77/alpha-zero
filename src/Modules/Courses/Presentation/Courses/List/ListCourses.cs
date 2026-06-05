@@ -38,7 +38,7 @@ public class ListCoursesEndpoint : Endpoint<ListCoursesRequest, PagedResult<Cour
     public override void Configure()
     {
         Get("/courses");
-        this.AccessControl("courses:View", _ => ResourceArn.Create("az:courses:*").Value);
+        this.AccessControl("courses:View", (req, tenantId) => ResourceArn.Create("courses", tenantId.ToString(), "*").Value);
         Description(d => d.WithTags("Courses"));
         Summary(new ListCoursesSummary());
     }

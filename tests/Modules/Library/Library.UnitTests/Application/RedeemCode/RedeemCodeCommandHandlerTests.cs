@@ -48,7 +48,7 @@ public class RedeemCodeCommandHandlerTests
         _passwordHasher.HashPassword(rawCode).Returns(hash);
         _repository.GetByHashAsync(hash, Arg.Any<CancellationToken>()).Returns(accessCode);
         _tenantProvider.GetTenant().Returns(TenantId);
-        _currentUserRepository.GetCurrentUser().Returns(new TenantUserDTO(UserId, Guid.NewGuid().ToString(),"User",Guid.NewGuid()));
+        _currentUserRepository.GetCurrentUser().Returns(new TenantUserDTO(UserId, Guid.NewGuid().ToString(),"User"));
         
         var strategy = Substitute.For<IRedemptionStrategy>();
         _strategyFactory.GetStrategy("strategy").Returns(strategy);

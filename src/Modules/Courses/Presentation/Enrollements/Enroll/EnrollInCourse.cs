@@ -46,7 +46,7 @@ public class EnrollInCourseEndpoint : Endpoint<EnrollInCourseRequest, EnrollInCo
     public override void Configure()
     {
         Post("/courses/enroll");
-        this.AccessControl("courses:Enroll", req => ResourceArn.ForCourse(Guid.Empty, req.CourseId));
+        this.AccessControl("courses:Enroll", (req, tenantId) => ResourceArn.ForCourse(tenantId, req.CourseId));
         Description(d => d.WithTags("Enrollment"));
         Summary(new EnrollInCourseSummary());
     }

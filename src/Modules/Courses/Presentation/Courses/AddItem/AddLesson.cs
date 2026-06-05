@@ -27,7 +27,7 @@ public class AddLessonEndpoint : Endpoint<AddLessonRequest>
     public override void Configure()
     {
         Post("/courses/{CourseId}/sections/{SectionId}/lessons");
-        this.AccessControl("courses:Edit", req => ResourceArn.ForCourse(Guid.Empty, req.CourseId));
+        this.AccessControl("courses:Edit", (req, tenantId) => ResourceArn.ForCourse(tenantId, req.CourseId));
         Description(d => d.WithTags("Courses"));
     }
 

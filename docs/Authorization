@@ -17,7 +17,7 @@ To maintain a clean separation of concerns, identity is managed across three dis
 *   **Entity:** `TenantUser` (Primary identity record inside a specific Tenant).
 *   **Link:** Tied to `IdentityId` + `TenantId`.
 *   **Core Properties:**
-    *   `ActiveSessionId`: A GUID updated on every login.
+    *   `ActiveDeviceFingerprint`: A string representing the device fingerprint for context enforcement.
     *   `TenantWidePermissions`: Base roles like "TenantAdmin" or generic school access.
 *   **Purpose:** The central anchor for all permissions within a specific academy.
 
@@ -33,7 +33,7 @@ To maintain a clean separation of concerns, identity is managed across three dis
 
 | Table | Purpose | Key Columns |
 | :--- | :--- | :--- |
-| **`TenantUsers`** | The Anchor Identity | `Id`, `IdentityId`, `TenantId`, `ActiveSessionId` |
+| **`TenantUsers`** | The Anchor Identity | `Id`, `IdentityId`, `TenantId`, `ActiveDeviceFingerprint` |
 | **`TenantRoles`** | Role Templates | `Id`, `Name`, `TenantId` (or global) |
 | **`ManagedPolicies`**| Permission Lists | `Id`, `Name`, `Statements (JSONB)` |
 | **`ScopedRoleAssignments`** | Contextual Links | `TenantUserId`, `TenantRoleId`, `Scope (ARN Pattern)` |
@@ -47,7 +47,7 @@ Evaluation happens at runtime inside the `IPolicyEvaluatorService` and is optimi
 
 ### 1. The "Effective Policy" Builder
 When a request hits an endpoint (e.g., `video:Stream` on `course/101/video/5`):
-1.  **Session Validation:** Extracts `sid` from JWT. Compares against `TenantUser.ActiveSessionId`. If they mismatch, the request is rejected (**Single Session Enforcement**).
+1.  **Device Validation:** Compares `RequestDeviceFingerprint` from the context against `TenantUser.ActiveDeviceFingerprint` via policy conditions (**Context-Aware Device Enforcement**).
 2.  **Role Expansion:** Finds all `ScopedRoleAssignments` where the `Scope` matches the requested resource.
 3.  **Variable Injection:** Takes the `ManagedPolicies` attached to the roles and replaces placeholders (like `${Scope}`) with the actual assignment scope.
 4.  **Custom Principal Check:** Loads any resource-specific `Principal` overrides for that specific user.
@@ -56,10 +56,10 @@ When a request hits an endpoint (e.g., `video:Stream` on `course/101/video/5`):
 ### 2. Caching Strategy (Redis)
 To ensure the `IAMPreprocessor` stays under **5ms**, we cache the **Authorized Context**:
 *   **Key:** `auth_ctx:{TenantId}:{IdentityId}`
-*   **Value:** `{ ActiveSessionId, List<EffectivePermissions> }`
+*   **Value:** `{ ActiveDeviceFingerprint, List<EffectivePermissions> }`
 *   **Invalidation:** The cache is cleared whenever:
     *   A student enrolls in a new course (New Scoped Assignment).
-    *   A student logs in (New `ActiveSessionId`).
+    *   A student registers a new device (`ActiveDeviceFingerprint` changes).
     *   A Role's Managed Policy is updated.
 
 ---

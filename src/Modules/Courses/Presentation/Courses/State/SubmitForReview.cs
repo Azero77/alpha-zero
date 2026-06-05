@@ -23,8 +23,8 @@ public class SubmitForReviewEndpoint : Endpoint<SubmitForReviewRequest>
     }
     public override void Configure()
     {
-        Post("/courses/{CourseId}/review");
-        this.AccessControl("courses:Submit", req => ResourceArn.ForCourse(Guid.Empty, req.CourseId));
+        Patch("/courses/{CourseId}/review");
+        this.AccessControl("courses:Submit", (req, tenantId) => ResourceArn.ForCourse(tenantId, req.CourseId));
         Description(d => d
             .WithTags("Courses")
             .Accepts<SubmitForReviewRequest>("application/json"));

@@ -32,19 +32,10 @@ public class CurrentTenantUserRepository(
             return null;
         }
 
-        // 3. Single Session Enforcement:
-        // Extract 'sid' from JWT and compare with the current ActiveSessionId in DB
-        var sidClaim = user.FindFirst("sid")?.Value;
-        if (string.IsNullOrEmpty(sidClaim) || !Guid.TryParse(sidClaim, out var sessionId) || tenantUser.ActiveSessionId != sessionId)
-        {
-            // If the sid in the token doesn't match the DB, the session has been invalidated (e.g., login on new device)
-            return null;
-        }
 
         return new TenantUserDTO(
             tenantUser.Id,
             tenantUser.IdentityId,
-            tenantUser.Name,
-            tenantUser.ActiveSessionId);
+            tenantUser.Name);
     }
 }
