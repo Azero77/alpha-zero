@@ -13,6 +13,10 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Xunit;
 using Microsoft.EntityFrameworkCore;
+using AlphaZero.Modules.Identity.Domain.Models;
+using AlphaZero.Modules.Identity.Domain.Models.Principals;
+using AlphaZero.Modules.Identity.Infrastructure.Models;
+using AlphaZero.Modules.Identity.Domain.Repositories;
 
 namespace Identity.Tests.Integration.Security;
 
@@ -67,33 +71,57 @@ public class IAMPreprocessorTests : IClassFixture<SecurityApiFactory>
     }
 
     [Fact]
-    public async Task AddLesson_Should_ResolveCorrectTenant_From_Resource()
+    public async Task AddLesson_Should_EvaluateContext_With_SessionTenant()
     {
         // 1. Arrange: Setup Course in Tenant A
         var tenantA = Guid.NewGuid();
         var tenantB = Guid.NewGuid();
+        var userId = Guid.NewGuid();
         
         Guid courseId;
+        Guid tenantUserId;
         using (var scope = _factory.Services.CreateScope())
         {
-            var db = scope.ServiceProvider.GetRequiredService<AlphaZero.Modules.Courses.Infrastructure.Persistance.AppDbContext>();
+            var coursesDb = scope.ServiceProvider.GetRequiredService<AlphaZero.Modules.Courses.Infrastructure.Persistance.AppDbContext>();
+            var identityDb = scope.ServiceProvider.GetRequiredService<AlphaZero.Modules.Identity.Infrastructure.Persistance.AppDbContext>();
             
-            await db.Database.MigrateAsync();
+            await coursesDb.Database.MigrateAsync();
+            await identityDb.Database.MigrateAsync();
 
+            // Seed Course in Tenant A
             var subject = AlphaZero.Modules.Courses.Domain.Aggregates.Subject.Subject.Create(Guid.NewGuid(), tenantA, "Security Subject", "Desc").Value;
-            db.Subjects.Add(subject);
-            await db.SaveChangesAsync();
+            coursesDb.Subjects.Add(subject);
+            await coursesDb.SaveChangesAsync();
             
             var course = AlphaZero.Modules.Courses.Domain.Aggregates.Courses.Course.Create(Guid.NewGuid(), tenantA, "Secure Course", "Desc", subject.Id).Value;
-            db.Courses.Add(course);
-            await db.SaveChangesAsync();
+            coursesDb.Courses.Add(course);
+            await coursesDb.SaveChangesAsync();
             courseId = course.Id;
+
+            // Seed User and Assignment in Tenant B (the acting tenant)
+            var user = TenantUser.Create(tenantB, userId.ToString(), "Test User", TenantUserDeviceInfo.Empty).Value;
+            tenantUserId = user.Id;
+            identityDb.TenantUsers.Add(user);
+
+            var principal = Principal.Create(Guid.NewGuid(), "test-role", "hash", "Custom", PrincipalType.User, null, tenantB).Value;
+            var principalRepo = scope.ServiceProvider.GetRequiredService<IPrincipalRepository>();
+            principalRepo.Add(principal);
+
+            var assignment = TenantUserPrinciaplAssignment.Create(tenantB, user, principal, $"az:courses:{tenantB}:course/{course.Id}").Value;
+            identityDb.TenantPrinciaplAssignments.Add(assignment);
+
+            await identityDb.SaveChangesAsync();
         }
 
         // 2. Act: Attempt to add lesson to Tenant A's course while acting as User in Tenant B
         _client.DefaultRequestHeaders.Remove("X-Tenant-Id");
         _client.DefaultRequestHeaders.Add("X-Tenant-Id", tenantB.ToString());
         
+        // We set the auth claim headers that TestAuthHandler uses.
+        // We use user.Id because CurrentTenantUserRepository searches by primary key.
+        _client.DefaultRequestHeaders.Remove("X-Test-User-Id");
+        _client.DefaultRequestHeaders.Add("X-Test-User-Id", tenantUserId.ToString());
+
         // We set evaluator to return Forbidden to simulate horizontal breakout prevention
         _factory.Evaluator.ResultToReturn = Error.Forbidden("Access.Denied", "Cannot access cross-tenant resource");
 
@@ -110,11 +138,10 @@ public class IAMPreprocessorTests : IClassFixture<SecurityApiFactory>
         // 3. Assert
         response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
         
-        // Verify that the evaluator was called with Tenant A's ID!
-        // This is the CRITICAL part of the test: even though the user is in Tenant B,
-        // the IAMPreprocessor correctly resolved that the resource belongs to Tenant A.
+        // Verify that the evaluator was called with Tenant B's ID (the session tenant)
+        // because we no longer resolve the resource tenant from the database in the preprocessor.
         _factory.Evaluator.LastContext.Should().NotBeNull();
-        _factory.Evaluator.LastContext!.TenantId.Should().Be(tenantA);
+        _factory.Evaluator.LastContext!.TenantId.Should().Be(tenantB);
         _factory.Evaluator.LastContext.ResourceType.Should().Be(ResourceType.Courses);
     }
 }

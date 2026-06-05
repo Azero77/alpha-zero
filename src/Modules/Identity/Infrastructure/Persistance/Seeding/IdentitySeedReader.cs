@@ -36,7 +36,7 @@ public static class IdentitySeedReader
         {
             var id = Guid.Parse(p!["Id"]!.GetValue<string>());
             var name = p["Name"]?.GetValue<string>() ?? "";
-            var type = Enum.Parse<PrincipalType>(p["PrincipalType"]?.GetValue<string>() ?? "User");
+            var type = Enum.Parse<PrincipalType>(p["PrincipalType"]?.GetValue<string>() ?? "User", true);
             // Seeding global principals (roles) for now with null tenant and null scope
             var principalResult = Principal.Create(id, name.ToLowerInvariant(), "system-role", name, type, null, Guid.Empty);
             

@@ -17,7 +17,7 @@ public class AppDbContext : DbContext, ITenantDbContext
         this.tenantProvider = tenantProvider;
     }
 
-    internal DbSet<PrincipalDataModel> Principals => Set<PrincipalDataModel>();
+    public DbSet<PrincipalDataModel> Principals => Set<PrincipalDataModel>();
     public DbSet<ManagedPolicy> ManagedPolicies => Set<ManagedPolicy>();
     public DbSet<PrincipalPolicyAssignment> PrincipalPolicyAssignments => Set<PrincipalPolicyAssignment>();
     public DbSet<TenantUser> TenantUsers => Set<TenantUser>();

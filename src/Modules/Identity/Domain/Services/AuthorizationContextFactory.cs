@@ -26,7 +26,7 @@ public class AuthorizationContextFactory(ICurrentTenantUserRepository currentTen
             AuthenticationMethod = authenticationMethod.ToString(),
             Id = Guid.Parse(id),
             ResourcePath = arn.ResourcePath,
-            ResourceType = Enum.Parse<ResourceType>(arn.Service),
+            ResourceType = Enum.Parse<ResourceType>(arn.Service, true),
             TenantId = Guid.Parse(arn.TenantIdString)
         };
         if (AuthenticationMethod.Principal == authenticationMethod)
@@ -39,7 +39,7 @@ public class AuthorizationContextFactory(ICurrentTenantUserRepository currentTen
         else if (AuthenticationMethod.TenantUser == authenticationMethod)
         {
             var tenantUser = await currentTenantUserRepository.GetCurrentUser();
-            if (tenantUser is null || tenantUser.UserId.ToString() == id)
+            if (tenantUser is null || tenantUser.UserId.ToString() != id)
             {
                 return Error.NotFound();
             }
@@ -61,8 +61,8 @@ public class AuthorizationContextFactory(ICurrentTenantUserRepository currentTen
     {
         AuthorizationContext result = contextInitial with
         {
-            Platform = tenantUserPrinciaplAssignment.TenantUser.DeviceInfo.platform.ToString(),
-            DeviceId = tenantUserPrinciaplAssignment.TenantUser.DeviceInfo.DeviceId,
+            Platform = tenantUserPrinciaplAssignment.TenantUser.DeviceInfo?.platform.ToString(),
+            DeviceId = tenantUserPrinciaplAssignment.TenantUser.DeviceInfo?.DeviceId,
         };
 
         return result;

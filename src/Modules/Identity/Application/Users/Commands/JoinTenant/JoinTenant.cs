@@ -39,7 +39,7 @@ public sealed class JoinTenantCommandHandler(
     {
         // 1. Check if already registered
         var user = await userRepository.GetFirst(u => u.IdentityId == request.IdentityId && u.TenantId == request.TenantId, cancellationToken);
-        var platform = Enum.Parse<DevicePlatform>(request.DevicePlatform);
+        var platform = Enum.Parse<DevicePlatform>(request.DevicePlatform, true);
 
         if (user is null)
         {

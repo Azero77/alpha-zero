@@ -4,7 +4,7 @@ using AlphaZero.Shared.Domain;
 
 namespace AlphaZero.Modules.Identity.Infrastructure.Models;
 
-internal class PrincipalDataModel
+public class PrincipalDataModel
 {
     public Guid Id { get; set; }
     public string Username { get; set; } = string.Empty;

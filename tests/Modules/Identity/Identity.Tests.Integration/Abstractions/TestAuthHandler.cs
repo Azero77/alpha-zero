@@ -20,8 +20,6 @@ public class TestAuthHandler : AuthenticationHandler<AuthenticationSchemeOptions
     {
         var claims = new List<Claim>
         {
-            new Claim(ClaimTypes.NameIdentifier, Guid.NewGuid().ToString()),
-            new Claim("sub", Guid.NewGuid().ToString()),
             new Claim("auth_method", "TenantUser"),
             new Claim("sid", Guid.NewGuid().ToString())
         };
@@ -30,6 +28,12 @@ public class TestAuthHandler : AuthenticationHandler<AuthenticationSchemeOptions
         {
             claims.Add(new Claim("sub", userId.ToString()));
             claims.Add(new Claim(ClaimTypes.NameIdentifier, userId.ToString()));
+        }
+        else
+        {
+            var randomId = Guid.NewGuid().ToString();
+            claims.Add(new Claim("sub", randomId));
+            claims.Add(new Claim(ClaimTypes.NameIdentifier, randomId));
         }
 
         var identity = new ClaimsIdentity(claims, "TestScheme");

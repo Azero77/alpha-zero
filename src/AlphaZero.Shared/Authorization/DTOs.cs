@@ -18,7 +18,7 @@ public record AccessControlWithTenantRequirement(string Action, TenantScopedReso
 
 public static class EndpointExtensions
 {
-    public static void AccessControl<TRequest>(this Endpoint<TRequest> endpoint, string action, GlobalResourceArnResolver resourceArnFactory)
+    public static void AccessControl<TRequest>(this Endpoint<TRequest> endpoint, string action, Func<TRequest, ResourceArn> resourceArnFactory)
         where TRequest : notnull
     {
         var requirement = new GlobalAccessControlRequirement(action, req => resourceArnFactory((TRequest)req));
@@ -26,20 +26,20 @@ public static class EndpointExtensions
 
     }
 
-    public static void AccessControl<TRequest, TResponse>(this Endpoint<TRequest, TResponse> endpoint, string action, GlobalResourceArnResolver resourceArnFactory)
+    public static void AccessControl<TRequest, TResponse>(this Endpoint<TRequest, TResponse> endpoint, string action, Func<TRequest, ResourceArn> resourceArnFactory)
         where TRequest : notnull
     {
         var requirement = new GlobalAccessControlRequirement(action, req => resourceArnFactory((TRequest)req));
         endpoint.Definition.Metadata(requirement);
     }
-    public static void AccessControl<TRequest>(this Endpoint<TRequest> endpoint, string action, TenantScopedResourceArnResolver resourceArnFactory)
+    public static void AccessControl<TRequest>(this Endpoint<TRequest> endpoint, string action, Func<TRequest, Guid, ResourceArn> resourceArnFactory)
         where TRequest : notnull
     {
         var requirement = new AccessControlWithTenantRequirement(action, (req, tenantId) => resourceArnFactory((TRequest)req, tenantId));
         endpoint.Definition.Metadata(requirement);
     }
 
-    public static void AccessControl<TRequest, TResponse>(this Endpoint<TRequest,TResponse> endpoint, string action, TenantScopedResourceArnResolver resourceArnFactory)
+    public static void AccessControl<TRequest, TResponse>(this Endpoint<TRequest,TResponse> endpoint, string action, Func<TRequest, Guid, ResourceArn> resourceArnFactory)
         where TRequest : notnull
     {
         var requirement = new AccessControlWithTenantRequirement(action, (req, tenantId) => resourceArnFactory((TRequest)req, tenantId));
@@ -90,7 +90,7 @@ public class IAMPreprocessor(IAuthorizationContextFactory authorizationContextFa
             }
             resourceArn = tenantScopedRequirement!.resourceArnFactory(context.Request!, currentTenant.Value);
         }
-        var authContext = await authorizationContextFactory.Create(resourceArn, Enum.Parse<AuthenticationMethod>(auth_scheme), id);
+        var authContext = await authorizationContextFactory.Create(resourceArn, Enum.Parse<AuthenticationMethod>(auth_scheme, true), id);
 
         if (authContext.IsError)
         {
