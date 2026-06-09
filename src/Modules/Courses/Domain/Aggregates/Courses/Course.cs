@@ -1,4 +1,4 @@
-﻿using AlphaZero.Modules.Courses.Domain.Events;
+using AlphaZero.Modules.Courses.Domain.Events;
 using AlphaZero.Shared.Domain;
 using AlphaZero.Shared.Infrastructure.Tenats;
 using ErrorOr;
@@ -40,23 +40,16 @@ public class Course : TenantOwnedAggregate, ISoftDeletable
         _sections.Add(section);
     }
 
-    public ErrorOr<Success> AddLesson(Guid sectionId, string title, Guid videoId, JsonElement metadata)
+    public ErrorOr<Success> AddCurriculumItem(Guid sectionId, string title, string mainType, ResourceArn primaryResourceArn, JsonElement metadata)
     {
         var section = _sections.FirstOrDefault(s => s.Id == sectionId);
         if (section == null) return Error.NotFound("Course.Section", "Section not found.");
 
-        var lesson = new CourseSectionLesson(Guid.NewGuid(), TenantId, title, videoId, section.Items.Count, NextAvailableBitIndex++, metadata);
-        section.AddItem(lesson);
-        return Result.Success;
-    }
+        var item = new CurriculumItem(Guid.NewGuid(), TenantId, sectionId, title, section.Items.Count, NextAvailableBitIndex++, mainType);
+        var result = item.AddResource(primaryResourceArn, "Primary", metadata);
+        if (result.IsError) return result.Errors;
 
-    public ErrorOr<Success> AddAssessment(Guid sectionId, string title, Guid assessmentId, JsonElement metadata)
-    {
-        var section = _sections.FirstOrDefault(s => s.Id == sectionId);
-        if (section == null) return Error.NotFound("Course.Section", "Section not found.");
-
-        var assessment = new CourseSectionAssessment(Guid.NewGuid(), TenantId, title, assessmentId, section.Items.Count, NextAvailableBitIndex++, metadata);
-        section.AddItem(assessment);
+        section.AddItem(item);
         return Result.Success;
     }
 
@@ -146,28 +139,24 @@ public class Course : TenantOwnedAggregate, ISoftDeletable
     }
     
 
-    public ErrorOr<Success> LinkResourceToItem(Guid itemId, Guid resourceId)
+    public ErrorOr<Success> LinkResourceToItem(Guid itemId, ResourceArn resourceArn, string type, JsonElement metadata)
     {
-        var selectedItems = _sections.SelectMany(s => s.Items)
-            .Where(i => i.Id == itemId)
-            .Select(i =>
-            {
-                i.UpdateResource(resourceId);
-                return i;
-            });
+        var item = _sections.SelectMany(s => s.Items).FirstOrDefault(i => i.Id == itemId);
+        if (item == null) return Error.NotFound("Course.Item", "Item not found in this course.");
 
-        if (!selectedItems.Any())
-            return Error.NotFound("Course.Item", "Item not found in this course.");
-
-        return Result.Success;
+        return item.AddResource(resourceArn, type, metadata);
     }
 
     public void UpdateResourceMetadata(Guid resourceId, JsonElement metadata)
     {
-        var items = _sections.SelectMany(s => s.Items).Where(i => i.ResourceId == resourceId);
-        foreach (var item in items)
+        var resourceIdStr = resourceId.ToString().ToLowerInvariant();
+        var resources = _sections.SelectMany(s => s.Items)
+            .SelectMany(i => i.Resources)
+            .Where(r => r.Arn.Value.Contains(resourceIdStr));
+
+        foreach (var resource in resources)
         {
-            item.SetMetadata(metadata);
+            resource.UpdateMetadata(metadata);
         }
     }
 }

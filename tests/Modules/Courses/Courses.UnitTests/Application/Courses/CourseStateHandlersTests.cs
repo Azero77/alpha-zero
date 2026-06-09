@@ -1,6 +1,7 @@
 using AlphaZero.Modules.Courses.Application.Courses.Commands.State;
 using AlphaZero.Modules.Courses.Application.Repositories;
 using AlphaZero.Modules.Courses.Domain.Aggregates.Courses;
+using AlphaZero.Shared.Domain;
 using ErrorOr;
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
@@ -68,7 +69,7 @@ public class CourseStateHandlersTests
         var subjectId = Guid.NewGuid();
         var course = Course.Create(Guid.NewGuid(), tenantId, "Title", "Desc", subjectId).Value;
         course.AddSection("S1");
-        course.AddLesson(course.Sections.First().Id, "L1", Guid.NewGuid(), JsonElement.Parse("{}"));
+        course.AddCurriculumItem(course.Sections.First().Id, "L1", "Video", ResourceArn.ForVideo(tenantId, Guid.NewGuid()), JsonElement.Parse("{}"));
         course.SubmitForReview(); // Now UnderReview
 
         _courseRepository.GetByIdWithSectionsAsync(course.Id, Arg.Any<CancellationToken>()).Returns(course);
@@ -90,7 +91,7 @@ public class CourseStateHandlersTests
         var subjectId = Guid.NewGuid();
         var course = Course.Create(Guid.NewGuid(), tenantId, "Title", "Desc", subjectId).Value;
         course.AddSection("S1");
-        course.AddLesson(course.Sections.First().Id, "L1", Guid.NewGuid(), JsonElement.Parse("{}"));
+        course.AddCurriculumItem(course.Sections.First().Id, "L1", "Video", ResourceArn.ForVideo(tenantId, Guid.NewGuid()), JsonElement.Parse("{}"));
         course.SubmitForReview();
 
         _courseRepository.GetByIdWithSectionsAsync(course.Id, Arg.Any<CancellationToken>()).Returns(course);

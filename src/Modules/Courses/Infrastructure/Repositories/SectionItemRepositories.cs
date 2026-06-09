@@ -9,6 +9,6 @@ public class SectionRepository(AppDbContext context) : BaseRepository<AppDbConte
 {
 }
 
-public class ItemRepository(AppDbContext context) : BaseRepository<AppDbContext, CourseSectionItem>(context), IItemRepository
+public class CurriculumItemRepository(AppDbContext context) : BaseRepository<AppDbContext, CurriculumItem>(context), ICurriculumItemRepository
 {
 }

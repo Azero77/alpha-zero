@@ -24,5 +24,6 @@ public enum ResourceType
     Identity,
     Video,
     Library,
-    Submissions
+    Submissions,
+    Documents
 }

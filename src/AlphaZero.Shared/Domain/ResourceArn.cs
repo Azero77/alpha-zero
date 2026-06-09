@@ -84,6 +84,7 @@ public class ResourceArn
             if (ResourcePath.Contains("/video/")) return ResourceType.Videos;
             if (ResourcePath.Contains("/assessment/")) return ResourceType.Assessments;
             if (ResourcePath.Contains("/submission/")) return ResourceType.Submissions;
+            if (ResourcePath.Contains("/document/")) return ResourceType.Documents;
             if (ResourcePath.Contains("/library/")) return ResourceType.Library;
             if (ResourcePath.Contains("/user/")) return ResourceType.Users;
             if (Service.Equals("tenants", StringComparison.OrdinalIgnoreCase)) return ResourceType.Tenants;
@@ -111,6 +112,8 @@ public class ResourceArn
     public static ResourceArn ForAccessCode(Guid tenantId, Guid codeId) => new($"az:library:{tenantId}:code/{codeId}");
     public static ResourceArn ForAssessment(Guid tenantId, Guid assessmentId) => new($"az:assessments:{tenantId}:assessment/{assessmentId}");
     public static ResourceArn ForAssessmentSubmission(Guid tenantId, Guid submissionId) => new($"az:assessments:{tenantId}:submission/{submissionId}");
+    public static ResourceArn ForDocument(Guid tenantId, Guid documentId) => new($"az:documents:{tenantId}:document/{documentId}");
+    public static ResourceArn ForInlineResource(Guid tenantId, Guid resourceId) => new($"az:courses:{tenantId}:inline/{resourceId}");
 }
 /// <summary>
 /// Represents a permission scope pattern.

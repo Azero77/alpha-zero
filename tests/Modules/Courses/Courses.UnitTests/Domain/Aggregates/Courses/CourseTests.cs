@@ -1,5 +1,6 @@
 using AlphaZero.Modules.Courses.Domain.Aggregates.Courses;
 using AlphaZero.Modules.Courses.Domain.Events;
+using AlphaZero.Shared.Domain;
 using FluentAssertions;
 using System.Text.Json;
 
@@ -41,7 +42,7 @@ public class CourseTests : DomainTest
         // Arrange
         var course = Course.Create(Guid.NewGuid(), TenantId, "Title", null, SubjectId).Value;
         course.AddSection("Section 1");
-        course.AddLesson(course.Sections.First().Id, "Lesson 1", Guid.NewGuid(), JsonElement.Parse("{}"));
+        course.AddCurriculumItem(course.Sections.First().Id, "Lesson 1", "Video", ResourceArn.ForVideo(TenantId, Guid.NewGuid()), JsonElement.Parse("{}"));
         course.SubmitForReview();
         course.Approve();
 
@@ -61,7 +62,7 @@ public class CourseTests : DomainTest
         var course = Course.Create(Guid.NewGuid(), TenantId, "Title", null, SubjectId).Value;
         course.AddSection("S1");
         course.AddSection("S2");
-        course.AddLesson(course.Sections.First().Id, "L1", Guid.NewGuid(), JsonElement.Parse("{}"));
+        course.AddCurriculumItem(course.Sections.First().Id, "L1", "Video", ResourceArn.ForVideo(TenantId, Guid.NewGuid()), JsonElement.Parse("{}"));
         course.SubmitForReview();
         course.Approve();
         course.Publish();

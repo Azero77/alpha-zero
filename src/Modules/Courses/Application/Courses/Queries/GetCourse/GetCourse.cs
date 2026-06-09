@@ -23,10 +23,15 @@ public record SectionDto(
 public record ItemDto(
     Guid Id,
     string Title,
-    string Type,
+    string Type, // Populated with MainType (e.g. "Video", "Quiz")
     int Order,
     int BitIndex,
-    Guid ResourceId,
+    List<ResourceDto> Resources); // Ordered by ResourceDto.Order
+
+public record ResourceDto(
+    string Arn,
+    string Type, // "Primary" or "Auxiliary"
+    int Order,
     JsonElement Metadata);
 
 public record GetCourseQuery(Guid CourseId) : IRequest<ErrorOr<CourseDto>>;
@@ -58,11 +63,14 @@ public sealed class GetCourseQueryHandler : IRequestHandler<GetCourseQuery, Erro
                 s.Items.OrderBy(i => i.Order).Select(i => new ItemDto(
                     i.Id,
                     i.Title,
-                    i.GetType().Name.Replace("CourseSection", ""),
+                    i.MainType,
                     i.Order,
                     i.BitIndex,
-                    i.ResourceId,
-                    i.Metadata)).ToList())).ToList());
+                    i.Resources.OrderBy(r => r.Order).Select(r => new ResourceDto(
+                        r.Arn.Value,
+                        r.Type,
+                        r.Order,
+                        r.Metadata)).ToList())).ToList())).ToList());
 
         return dto;
     }

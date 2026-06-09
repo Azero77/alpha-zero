@@ -31,7 +31,12 @@ public record ItemResponse(
     string Type,
     int Order,
     int BitIndex,
-    Guid ResourceId,
+    List<ResourceResponse> Resources);
+
+public record ResourceResponse(
+    string Arn,
+    string Type,
+    int Order,
     JsonElement Metadata);
 
 public class GetCourseSummary : Summary<GetCourseEndpoint>
@@ -89,8 +94,11 @@ public class GetCourseEndpoint : Endpoint<GetCourseRequest, CourseResponse>
                     i.Type,
                     i.Order,
                     i.BitIndex,
-                    i.ResourceId,
-                    i.Metadata)).ToList())).ToList());
+                    i.Resources.OrderBy(r => r.Order).Select(r => new ResourceResponse(
+                        r.Arn,
+                        r.Type,
+                        r.Order,
+                        r.Metadata)).ToList())).ToList())).ToList());
 
         await Send.OkAsync(response, ct);
     }

@@ -1,6 +1,7 @@
 using AlphaZero.Modules.Assessments.IntegrationEvents;
 using AlphaZero.Modules.Courses.Application.Repositories;
 using AlphaZero.Shared.Application;
+using AlphaZero.Shared.Domain;
 using ErrorOr;
 using FluentValidation;
 using MediatR;
@@ -42,8 +43,9 @@ public sealed class AddAssessmentCommandHandler : IRequestHandler<AddAssessmentC
         var assementCreateReponse = await _assessmentService.AddAssessment(request.AssessmentRequest);
         if (assementCreateReponse.IsError) return assementCreateReponse.Errors;
 
+        var assessmentArn = ResourceArn.ForAssessment(course.TenantId, assementCreateReponse.Value.AssessmentId);
         var metadata = JsonSerializer.SerializeToElement(request.AssessmentRequest);
-        var result = course.AddAssessment(request.SectionId, request.Title, assementCreateReponse.Value.AssessmentId, metadata);
+        var result = course.AddCurriculumItem(request.SectionId, request.Title, "Quiz", assessmentArn, metadata);
         if (result.IsError) return result.Errors;
 
         _logger.LogInformation("Assessment '{Title}' added to Section {SectionId} in Course {CourseId}.", request.Title, request.SectionId, request.CourseId);
