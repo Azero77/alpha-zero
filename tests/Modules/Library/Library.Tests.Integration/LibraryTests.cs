@@ -17,7 +17,7 @@ public class LibraryTests(ApiFactory factory) : BaseIntegrationTest(factory)
         // 1. Arrange: Setup Tenant
         var tenantId = Guid.NewGuid();
         SetTenant(tenantId);
-        var courseArn = $"az:courses:{tenantId}:course/math-101";
+        var courseArn = $"az:course:{tenantId}:course/math-101";
 
         // 2. Act: Create Library
         var createReq = new CreateLibraryRequest 

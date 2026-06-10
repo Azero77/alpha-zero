@@ -53,7 +53,7 @@ public class IdentityTests : BaseIntegrationTest
         await DbContext.SaveChangesAsync();
 
         // Create Assignment (Enrollment)
-        var assignment = TenantUserPrinciaplAssignment.Create(tenantId, user, principal, $"az:courses:{tenantId}:course/math-101").Value;
+        var assignment = TenantUserPrinciaplAssignment.Create(tenantId, user, principal, $"az:course:{tenantId}:course/math-101").Value;
         DbContext.TenantPrinciaplAssignments.Add(assignment);
         await DbContext.SaveChangesAsync();
 
@@ -65,7 +65,7 @@ public class IdentityTests : BaseIntegrationTest
             TenantId = tenantId,
             RequiredPermission = "courses:View",
             ResourcePath = $"course/math-101",
-            ResourceType = ResourceType.Courses,
+            ResourceType = "course",
             AuthenticationMethod = AuthenticationMethod.TenantUser.ToString()
         };
         var result = await evaluator.Authorize(context);
@@ -104,7 +104,7 @@ public class IdentityTests : BaseIntegrationTest
             TenantId = tenantId,
             RequiredPermission = "video:Stream",
             ResourcePath = "video/1",
-            ResourceType = ResourceType.Videos,
+            ResourceType = "video",
             AuthenticationMethod = AuthenticationMethod.Principal.ToString()
         };
         var result = await evaluator.Authorize(context);

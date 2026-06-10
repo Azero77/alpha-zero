@@ -12,18 +12,18 @@ public class ResourceArnTests
     public void Create_Should_Succeed_ForValidStrictArn()
     {
         // Act
-        var result = ResourceArn.Create("courses", TenantId.ToString(), $"course/{CourseId}");
+        var result = ResourceArn.Create("course", TenantId.ToString(), $"course/{CourseId}");
 
         // Assert
         result.IsError.Should().BeFalse();
-        result.Value.ToString().Should().Be($"az:courses:{TenantId.ToString().ToLowerInvariant()}:course/{CourseId}");
+        result.Value.ToString().Should().Be($"az:course:{TenantId.ToString().ToLowerInvariant()}:course/{CourseId}");
     }
 
     [Fact]
     public void Create_Should_Fail_IfArnContainsWildcard()
     {
         // Act
-        var result = ResourceArn.Create("courses", TenantId.ToString(), "course/*");
+        var result = ResourceArn.Create("course", TenantId.ToString(), "course/*");
 
         // Assert
         result.IsError.Should().BeTrue();
@@ -34,8 +34,8 @@ public class ResourceArnTests
     public void ResourcePattern_Should_MatchCorrectArn()
     {
         // Arrange
-        var arn = ResourceArn.Create("courses", TenantId.ToString(), $"course/{CourseId}").Value;
-        var pattern = ResourcePattern.Create($"az:courses:{TenantId}:course/*").Value;
+        var arn = ResourceArn.Create("course", TenantId.ToString(), $"course/{CourseId}").Value;
+        var pattern = ResourcePattern.Create($"az:course:{TenantId}:course/*").Value;
 
         // Act & Assert
         pattern.IsMatch(arn).Should().BeTrue();
@@ -45,7 +45,7 @@ public class ResourceArnTests
     public void ResourcePattern_Should_Match_AzStar()
     {
         // Arrange
-        var arn = ResourceArn.Create("courses", TenantId.ToString(), $"course/{CourseId}").Value;
+        var arn = ResourceArn.Create("course", TenantId.ToString(), $"course/{CourseId}").Value;
         var pattern = ResourcePattern.All;
 
         // Act & Assert
@@ -56,7 +56,7 @@ public class ResourceArnTests
     public void ResourcePattern_Should_Match_ServiceWildcard()
     {
         // Arrange
-        var arn = ResourceArn.Create("courses", TenantId.ToString(), $"course/{CourseId}").Value;
+        var arn = ResourceArn.Create("course", TenantId.ToString(), $"course/{CourseId}").Value;
         var pattern = ResourcePattern.Create($"az:*:*").Value;
 
         // Act & Assert
@@ -68,7 +68,7 @@ public class ResourceArnTests
     {
         // Arrange
         var arn = ResourceArn.ForUser(Guid.NewGuid()); // global tenant
-        var pattern = ResourcePattern.Create("az:identity:global:user/*").Value;
+        var pattern = ResourcePattern.Create("az:user:global:user/*").Value;
 
         // Act & Assert
         pattern.IsMatch(arn).Should().BeTrue();
@@ -79,8 +79,8 @@ public class ResourceArnTests
     {
         // Arrange
         var courseId = Guid.NewGuid();
-        var arn = ResourceArn.Create("courses", TenantId.ToString(), $"course/{courseId}").Value;
-        var pattern = ResourcePattern.Create($"az:courses:{TenantId}:course/{{courseId}}").Value;
+        var arn = ResourceArn.Create("course", TenantId.ToString(), $"course/{courseId}").Value;
+        var pattern = ResourcePattern.Create($"az:course:{TenantId}:course/{{courseId}}").Value;
 
         // Act & Assert
         pattern.IsMatch(arn).Should().BeTrue();
@@ -90,8 +90,8 @@ public class ResourceArnTests
     public void ResourcePattern_Should_NotMatch_IfPathSegmentDifferent_WithPlaceholders()
     {
         // Arrange
-        var arn = ResourceArn.Create("courses", TenantId.ToString(), $"subject/{Guid.NewGuid()}").Value;
-        var pattern = ResourcePattern.Create($"az:courses:{TenantId}:course/{{courseId}}").Value;
+        var arn = ResourceArn.Create("course", TenantId.ToString(), $"subject/{Guid.NewGuid()}").Value;
+        var pattern = ResourcePattern.Create($"az:course:{TenantId}:course/{{courseId}}").Value;
 
         // Act & Assert
         pattern.IsMatch(arn).Should().BeFalse();
@@ -101,8 +101,8 @@ public class ResourceArnTests
     public void ResourcePattern_Should_NotMatchDifferentTenant()
     {
         // Arrange
-        var arn = ResourceArn.Create("courses", Guid.NewGuid().ToString(), $"course/{CourseId}").Value;
-        var pattern = ResourcePattern.Create($"az:courses:{TenantId}:course/*").Value;
+        var arn = ResourceArn.Create("course", Guid.NewGuid().ToString(), $"course/{CourseId}").Value;
+        var pattern = ResourcePattern.Create($"az:course:{TenantId}:course/*").Value;
 
         // Act & Assert
         pattern.IsMatch(arn).Should().BeFalse();

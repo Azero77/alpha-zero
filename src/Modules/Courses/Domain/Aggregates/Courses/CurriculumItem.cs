@@ -105,10 +105,10 @@ public class CurriculumItem : TenantOwnedEntity, ISoftDeletable
         return mainType.ToLowerInvariant() switch
         {
             "video" => "video",
-            "quiz" => "assessments",
-            "assessment" => "assessments",
-            "document" => "documents",
-            "inline" => "courses",
+            "quiz" => "assessment",
+            "assessment" => "assessment",
+            "document" => "document",
+            "inline" => "inline",
             _ => mainType.ToLowerInvariant()
         };
     }

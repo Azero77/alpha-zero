@@ -8,7 +8,7 @@ namespace Library.UnitTests.Domain;
 public class AccessCodeTests
 {
     private static readonly Guid TenantId = Guid.NewGuid();
-    private static readonly ResourceArn TargetResource = ResourceArn.Create("az:courses:tenant:course/101").Value;
+    private static readonly ResourceArn TargetResource = ResourceArn.Create("az:course:tenant:course/101").Value;
     private static readonly JsonDocument Metadata = JsonDocument.Parse("{}");
 
     [Fact]

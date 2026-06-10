@@ -27,7 +27,7 @@ public class AuthorizationContextFactory(ICurrentTenantUserRepository currentTen
             AuthenticationMethod = authenticationMethod.ToString(),
             Id = Guid.Parse(id),
             ResourcePath = arn.ResourcePath,
-            ResourceType = Enum.Parse<ResourceType>(arn.Service, true),
+            ResourceType = arn.Service,
             TenantId = Guid.Parse(arn.TenantIdString),
             DeviceId = deviceProvider.GetDeviceId()
         };
