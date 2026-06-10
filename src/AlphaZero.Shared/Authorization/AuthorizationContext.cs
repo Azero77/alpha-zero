@@ -11,5 +11,6 @@ public record AuthorizationContext
     public string? DeviceId { get; init; }
     public string? UserMainDeviceId { get; init; }
     public string? Platform { get; init;  }
+    public string? IpAddress { get; init; }
 }
 

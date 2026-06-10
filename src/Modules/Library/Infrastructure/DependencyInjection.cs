@@ -37,6 +37,7 @@ public static class DependencyInjection
     {
         services.AddScoped<IAccessCodeRepository, AccessCodeRepository>();
         services.AddScoped<ILibraryRepository, LibraryRepository>();
+        services.AddScoped<IRedemptionAuditLogRepository, RedemptionAuditLogRepository>();
         services.AddScoped<IRedemptionStrategyFactory, StrategyFactory>();
         
         // Register Redemption Strategies (ACLs)
