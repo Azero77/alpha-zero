@@ -71,7 +71,7 @@ public class DeviceLockingTests : BaseIntegrationTest
         principalRepo.Add(principal);
         await DbContext.SaveChangesAsync();
 
-        var assignment = TenantUserPrinciaplAssignment.Create(tenantId, user, principal, $"az:courses:{tenantId}:course/locked-101").Value;
+        var assignment = TenantUserPrinciaplAssignment.Create(tenantId, user, principal, $"az:course:{tenantId}:course/locked-101").Value;
         DbContext.TenantPrinciaplAssignments.Add(assignment);
         await DbContext.SaveChangesAsync();
 
@@ -97,7 +97,7 @@ public class DeviceLockingTests : BaseIntegrationTest
             Id = user.Id,
             TenantId = tenantId,
             ResourcePath = path,
-            ResourceType = ResourceType.Courses,
+            ResourceType = "course",
             RequiredPermission = "courses:View",
             AuthenticationMethod = AuthenticationMethod.TenantUser.ToString(),
             DeviceId = registeredDevice.Id.ToString(),
@@ -141,7 +141,7 @@ public class DeviceLockingTests : BaseIntegrationTest
         Resolve<IManagedPolicyRepository>().Add(managedPolicy);
         Resolve<IPrincipalRepository>().Add(principal);
         
-        var assignment = TenantUserPrinciaplAssignment.Create(tenantId, user, principal, $"az:courses:{tenantId}:course/locked-202").Value;
+        var assignment = TenantUserPrinciaplAssignment.Create(tenantId, user, principal, $"az:course:{tenantId}:course/locked-202").Value;
         DbContext.TenantPrinciaplAssignments.Add(assignment);
         await DbContext.SaveChangesAsync();
 
@@ -152,7 +152,7 @@ public class DeviceLockingTests : BaseIntegrationTest
             Id = user.Id,
             TenantId = tenantId,
             ResourcePath = "course/locked-202",
-            ResourceType = ResourceType.Courses,
+            ResourceType = "course",
             RequiredPermission = "courses:View",
             AuthenticationMethod = AuthenticationMethod.TenantUser.ToString(),
             DeviceId = secondaryId.ToString(),
@@ -197,7 +197,7 @@ public class DeviceLockingTests : BaseIntegrationTest
             Id = principal.Id,
             TenantId = tenantId,
             ResourcePath = "admin/tools",
-            ResourceType = ResourceType.Identity,
+            ResourceType = "principal",
             RequiredPermission = "identity:Admin",
             AuthenticationMethod = AuthenticationMethod.Principal.ToString(),
             DeviceId = Guid.NewGuid().ToString(),
@@ -236,7 +236,7 @@ public class DeviceLockingTests : BaseIntegrationTest
         Resolve<IManagedPolicyRepository>().Add(managedPolicy);
         Resolve<IPrincipalRepository>().Add(principal);
         
-        var assignment = TenantUserPrinciaplAssignment.Create(tenantId, user, principal, $"az:courses:{tenantId}:course/locked-303").Value;
+        var assignment = TenantUserPrinciaplAssignment.Create(tenantId, user, principal, $"az:course:{tenantId}:course/locked-303").Value;
         DbContext.TenantPrinciaplAssignments.Add(assignment);
         await DbContext.SaveChangesAsync();
 
@@ -257,7 +257,7 @@ public class DeviceLockingTests : BaseIntegrationTest
             Id = user.Id,
             TenantId = tenantId,
             ResourcePath = "course/locked-303",
-            ResourceType = ResourceType.Courses,
+            ResourceType = "course",
             RequiredPermission = "courses:View",
             AuthenticationMethod = AuthenticationMethod.TenantUser.ToString(),
             DeviceId = registeredDevice.Id.ToString(),

@@ -13,7 +13,7 @@ public record PrincipalDto(
     PrincipalType PrincipalType,
     string? PrincipalScopeUrn);
 
-public record GetPrincipalsByResourceQuery(Guid ResourceId, ResourceType ResourceType) : IRequest<ErrorOr<List<PrincipalDto>>>;
+public record GetPrincipalsByResourceQuery(Guid ResourceId, string ResourceType) : IRequest<ErrorOr<List<PrincipalDto>>>;
 
 public sealed class GetPrincipalsByResourceQueryHandler : IRequestHandler<GetPrincipalsByResourceQuery, ErrorOr<List<PrincipalDto>>>
 {

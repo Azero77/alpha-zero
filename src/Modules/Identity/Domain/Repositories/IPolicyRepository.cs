@@ -15,7 +15,7 @@ public interface IManagedPolicyRepository : IRepository<ManagedPolicy>
 
 public interface IPrincipalRepository
 {
-    Task<IReadOnlyCollection<Principal>> GetPrincipalsByResourceAsync(Guid resourceId, ResourceType resourceType, CancellationToken ct = default);
+    Task<IReadOnlyCollection<Principal>> GetPrincipalsByResourceAsync(Guid resourceId, string resourceType, CancellationToken ct = default);
 
     Task<Principal?> GetById(Guid id, CancellationToken token = default);
     Task<Principal?> GetFirst(Expression<Func<Principal?, bool>> predicate, CancellationToken token = default);

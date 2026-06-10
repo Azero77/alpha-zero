@@ -119,21 +119,23 @@ public static class ResourceArnHelper
     // Generic dispatcher (optional)
     // -------------------------------
 
-    public static Guid GetResource(this ResourceArn arn, ResourceType resourceType)
+    public static Guid GetResource(this ResourceArn arn, string resourceType)
     {
-        return resourceType switch
+        return resourceType.ToLowerInvariant() switch
         {
-            ResourceType.Tenants => arn.GetTenantId(),
-            ResourceType.Users => arn.GetUserId(),
-            ResourceType.Subjects => arn.GetSubjectId(),
-            ResourceType.Courses=> arn.GetCourseId(),
-            ResourceType.Sections => arn.GetSectionId(),
-            ResourceType.Lessons => arn.GetLessonId(),
-            ResourceType.Assessments => arn.GetAssessmentId(),
-            //ResourceType.Enrollment => arn.GetEnrollmentId(),
-            ResourceType.Video => arn.GetVideoId(),
-            ResourceType.Library => arn.GetLibraryId(),
-            //ResourceType.AccessCode => arn.GetAccessCodeId(),
+            "tenant" or "tenants" => arn.GetTenantId(),
+            "user" or "users" => arn.GetUserId(),
+            "subject" or "subjects" => arn.GetSubjectId(),
+            "course" or "courses" => arn.GetCourseId(),
+            "section" or "sections" => arn.GetSectionId(),
+            "lesson" or "lessons" => arn.GetLessonId(),
+            "assessment" or "assessments" => arn.GetAssessmentId(),
+            "enrollment" or "enrollments" => arn.GetEnrollmentId(),
+            "video" or "videos" => arn.GetVideoId(),
+            "library" or "libraries" => arn.GetLibraryId(),
+            "code" or "accesscode" => arn.GetAccessCodeId(),
+            "principal" or "principals" => arn.GetPrincipalId(),
+            "policy" or "policies" => arn.GetPolicyId(),
             _ => throw new NotSupportedException($"Unsupported resource type: {resourceType}")
         };
     }

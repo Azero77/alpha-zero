@@ -108,7 +108,7 @@ public class IAMPreprocessorTests : IClassFixture<SecurityApiFactory>
             var principalRepo = scope.ServiceProvider.GetRequiredService<IPrincipalRepository>();
             principalRepo.Add(principal);
 
-            var assignment = TenantUserPrinciaplAssignment.Create(tenantB, user, principal, $"az:courses:{tenantB}:course/{course.Id}").Value;
+            var assignment = TenantUserPrinciaplAssignment.Create(tenantB, user, principal, $"az:course:{tenantB}:course/{course.Id}").Value;
             identityDb.TenantPrinciaplAssignments.Add(assignment);
 
             await identityDb.SaveChangesAsync();
@@ -143,6 +143,6 @@ public class IAMPreprocessorTests : IClassFixture<SecurityApiFactory>
         // because we no longer resolve the resource tenant from the database in the preprocessor.
         _factory.Evaluator.LastContext.Should().NotBeNull();
         _factory.Evaluator.LastContext!.TenantId.Should().Be(tenantB);
-        _factory.Evaluator.LastContext.ResourceType.Should().Be(ResourceType.Courses);
+        _factory.Evaluator.LastContext.ResourceType.Should().Be("course");
     }
 }

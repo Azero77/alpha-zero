@@ -56,7 +56,7 @@ public class PolicyEvaluatorServiceTests
         
         principal.AddPolicy(managedPolicy);
 
-        var assignment = TenantUserPrinciaplAssignment.Create(TenantId, user, principal, $"az:courses:{TenantId}:course/101").Value;
+        var assignment = TenantUserPrinciaplAssignment.Create(TenantId, user, principal, $"az:course:{TenantId}:course/101").Value;
         
         _assignmentRepository.Get(user.Id, Arg.Any<string>())
             .Returns(Task.FromResult<TenantUserPrinciaplAssignment?>(assignment));
@@ -69,7 +69,7 @@ public class PolicyEvaluatorServiceTests
             TenantId = TenantId,
             RequiredPermission = "courses:View",
             ResourcePath = "course/101",
-            ResourceType = ResourceType.Courses
+            ResourceType = "course"
         });
         // Assert
         result.IsError.Should().BeFalse();
@@ -93,7 +93,7 @@ public class PolicyEvaluatorServiceTests
             TenantId = TenantId,
             RequiredPermission = "video:Stream",
             ResourcePath = "video/123",
-            ResourceType = ResourceType.Videos
+            ResourceType = "video"
         };
         // Act
         var result = await _evaluator.Authorize(

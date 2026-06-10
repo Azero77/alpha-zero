@@ -7,6 +7,6 @@ public interface ISectionRepository : IRepository<CourseSection>
 {
 }
 
-public interface IItemRepository : IRepository<CourseSectionItem>
+public interface ICurriculumItemRepository : IRepository<CurriculumItem>
 {
 }

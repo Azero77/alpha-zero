@@ -10,19 +10,3 @@ public interface IPolicyEvaluatorService
 {
     Task<ErrorOr<Success>> Authorize(AuthorizationContext context);
 }
-
-public enum ResourceType
-{
-    Courses,
-    Subjects,
-    Users,
-    Videos,
-    Sections,
-    Lessons,
-    Assessments,
-    Tenants,
-    Identity,
-    Video,
-    Library,
-    Submissions
-}

@@ -42,7 +42,7 @@ public class RedeemCodeCommandHandlerTests
         // Arrange
         var rawCode = "CODE-123";
         var hash = "hashed";
-        var targetArn = ResourceArn.Create("az:courses:tenant:course/101").Value;
+        var targetArn = ResourceArn.Create("az:course:tenant:course/101").Value;
         var accessCode = AccessCode.Mint(hash, TenantId, null, "strategy", targetArn, JsonDocument.Parse("{}"));
 
         _passwordHasher.HashPassword(rawCode).Returns(hash);
@@ -68,7 +68,7 @@ public class RedeemCodeCommandHandlerTests
     public async Task Handle_Should_ReturnForbidden_WhenTenantMismatch()
     {
         // Arrange
-        var accessCode = AccessCode.Mint("h", TenantId, null, "s", ResourceArn.Create("az:courses:tenant:course/101").Value, JsonDocument.Parse("{}"));
+        var accessCode = AccessCode.Mint("h", TenantId, null, "s", ResourceArn.Create("az:course:tenant:course/101").Value, JsonDocument.Parse("{}"));
         _repository.GetByHashAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(accessCode);
         _tenantProvider.GetTenant().Returns(Guid.NewGuid()); // Different tenant
 

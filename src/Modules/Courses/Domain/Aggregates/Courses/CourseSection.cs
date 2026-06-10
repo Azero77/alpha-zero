@@ -1,4 +1,4 @@
-﻿using AlphaZero.Shared.Domain;
+using AlphaZero.Shared.Domain;
 using AlphaZero.Shared.Infrastructure.Tenats;
 using ErrorOr;
 
@@ -9,8 +9,8 @@ public class CourseSection : TenantOwnedEntity, ISoftDeletable
     public string Title { get; private set; }
     public int Order { get; private set; }
     public Guid CourseId { get; private set; }
-    public IReadOnlyCollection<CourseSectionItem> Items => _items.AsReadOnly();
-    private readonly List<CourseSectionItem> _items = new();
+    public IReadOnlyCollection<CurriculumItem> Items => _items.AsReadOnly();
+    private readonly List<CurriculumItem> _items = new();
     public bool IsDeleted { get; private set; }
 
     public DateTime? OnDeleted { get; private set; } = null;
@@ -27,7 +27,7 @@ public class CourseSection : TenantOwnedEntity, ISoftDeletable
         return new CourseSection(Guid.NewGuid(), tenantId, title, order, courseId);
     }
 
-    internal void AddItem(CourseSectionItem item)
+    internal void AddItem(CurriculumItem item)
     {
         _items.Add(item);
     }

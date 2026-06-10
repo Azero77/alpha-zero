@@ -25,7 +25,7 @@ public class LibraryTests
     {
         // Arrange
         var library = AlphaZero.Modules.Library.Domain.Library.Create("B1", "A1", "123", TenantId);
-        var arn = ResourceArn.Create("az:courses:tenant:course/math-101").Value;
+        var arn = ResourceArn.Create("az:course:tenant:course/math-101").Value;
 
         // Act
         var result = library.AuthorizeResource(arn);
@@ -40,7 +40,7 @@ public class LibraryTests
     {
         // Arrange
         var library = AlphaZero.Modules.Library.Domain.Library.Create("B1", "A1", "123", TenantId);
-        var arn = ResourceArn.Create("az:courses:tenant:course/math-101").Value;
+        var arn = ResourceArn.Create("az:course:tenant:course/math-101").Value;
         library.AuthorizeResource(arn);
 
         // Act

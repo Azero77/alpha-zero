@@ -52,7 +52,7 @@ public class ConditionIntegrationTests : BaseIntegrationTest
         DbContext.TenantUsers.Add(user);
         await DbContext.SaveChangesAsync();
 
-        var assignment = TenantUserPrinciaplAssignment.Create(tenantId, user, principal, $"az:courses:{tenantId}:course/math-101").Value;
+        var assignment = TenantUserPrinciaplAssignment.Create(tenantId, user, principal, $"az:course:{tenantId}:course/math-101").Value;
         DbContext.TenantPrinciaplAssignments.Add(assignment);
         await DbContext.SaveChangesAsync();
 
@@ -64,7 +64,7 @@ public class ConditionIntegrationTests : BaseIntegrationTest
             Id = user.Id,
             TenantId = tenantId,
             ResourcePath = "course/math-101",
-            ResourceType = ResourceType.Courses,
+            ResourceType = "course",
             RequiredPermission = "courses:View",
             AuthenticationMethod = AuthenticationMethod.TenantUser.ToString()
         });
@@ -75,7 +75,7 @@ public class ConditionIntegrationTests : BaseIntegrationTest
             Id = user.Id,
             TenantId = tenantId,
             ResourcePath = "course/history-101",
-            ResourceType = ResourceType.Courses,
+            ResourceType = "course",
             RequiredPermission = "courses:View",
             AuthenticationMethod = AuthenticationMethod.TenantUser.ToString()
         });

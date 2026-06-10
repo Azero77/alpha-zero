@@ -1,6 +1,7 @@
 using AlphaZero.Modules.Courses.Application.Repositories;
 using AlphaZero.Modules.VideoUploading.IntegrationEvents;
 using AlphaZero.Shared.Application;
+using AlphaZero.Shared.Domain;
 using ErrorOr;
 using FluentValidation;
 using MassTransit;
@@ -86,19 +87,20 @@ public sealed class AddLessonCommandHandler : IRequestHandler<AddLessonCommand, 
             }
         }
 
+        var videoArn = ResourceArn.ForVideo(course.TenantId, request.VideoId);
+
         // If LessonId is provided, we are linking/updating an existing slot
         if (request.LessonId.HasValue)
         {
-            var linkResult = course.LinkResourceToItem(request.LessonId.Value, request.VideoId);
+            var linkResult = course.LinkResourceToItem(request.LessonId.Value, videoArn, "Primary", metadata.Value);
             if (linkResult.IsError) return linkResult.Errors;
 
-            course.UpdateResourceMetadata(request.VideoId, metadata.Value);
             _logger.LogInformation("Lesson {LessonId} updated with Video {VideoId} in Course {CourseId}.", request.LessonId, request.VideoId, request.CourseId);
         }
         else
         {
             // Otherwise, we are adding a brand new lesson item
-            var result = course.AddLesson(request.SectionId, request.Title, request.VideoId, metadata.Value);
+            var result = course.AddCurriculumItem(request.SectionId, request.Title, "Video", videoArn, metadata.Value);
             if (result.IsError) return result.Errors;
             _logger.LogInformation("New Lesson '{Title}' added to Section {SectionId} in Course {CourseId}.", request.Title, request.SectionId, request.CourseId);
         }

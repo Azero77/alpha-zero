@@ -42,11 +42,6 @@ public class ResourceArn
         if (resourcePath.Contains("*"))
             return Error.Validation("Identity.Application", "ResourceArn cannot contain wildcards. Use ResourcePattern for scopes");
 
-        if (!Enum.TryParse<ResourceType>(service, ignoreCase: true, result: out _))
-        {
-            return Error.Validation("Identity.Application", "Invalid service");
-        }
-
         return new ResourceArn($"{Prefix}:{service}:{tenantId}:{resourcePath}");
     }
 
@@ -73,44 +68,26 @@ public class ResourceArn
 
     public override bool Equals(object? obj) => obj is ResourceArn other && Value == other.Value;
     public override int GetHashCode() => Value.GetHashCode();
-    public ResourceType? ResourceServiceType
-    {
-        get
-        {
-            if (ResourcePath.Contains("/lesson/")) return ResourceType.Lessons;
-            if (ResourcePath.Contains("/section/")) return ResourceType.Sections;
-            if (ResourcePath.Contains("/course/")) return ResourceType.Courses;
-            if (ResourcePath.Contains("/subject/")) return ResourceType.Subjects;
-            if (ResourcePath.Contains("/video/")) return ResourceType.Videos;
-            if (ResourcePath.Contains("/assessment/")) return ResourceType.Assessments;
-            if (ResourcePath.Contains("/submission/")) return ResourceType.Submissions;
-            if (ResourcePath.Contains("/library/")) return ResourceType.Library;
-            if (ResourcePath.Contains("/user/")) return ResourceType.Users;
-            if (Service.Equals("tenants", StringComparison.OrdinalIgnoreCase)) return ResourceType.Tenants;
-            if (Service.Equals("identity", StringComparison.OrdinalIgnoreCase)) return ResourceType.Identity;
-
-            Enum.TryParse<ResourceType>(Service, true, out var result);
-            return result;
-        }
-    }
     // --- Static Factories ---
 
-    public static ResourceArn ForTenant(Guid tenantId) => new($"az:tenants:{GlobalTenant}:tenant/{tenantId}");
-    public static ResourceArn ForUser(Guid userId) => new($"az:identity:{GlobalTenant}:user/{userId}");
-    public static ResourceArn ForPrincipal(Guid tenantId, Guid principalId) => new($"az:identity:{tenantId}:principal/{principalId}");
-    public static ResourceArn ForPolicy(Guid tenantId, Guid policyId) => new($"az:identity:{tenantId}:policy/{policyId}");
-    public static ResourceArn ForSubject(Guid tenantId, Guid subjectId) => new($"az:courses:{tenantId}:subject/{subjectId}");
-    public static ResourceArn ForCourse(Guid tenantId, Guid courseId) => new($"az:courses:{tenantId}:course/{courseId}");
-    public static ResourceArn ForSection(Guid tenantId, Guid courseId, Guid sectionId) => new($"az:courses:{tenantId}:course/{courseId}/section/{sectionId}");
-    public static ResourceArn ForLesson(Guid tenantId, Guid courseId, Guid sectionId, Guid lessonId) => new($"az:courses:{tenantId}:course/{courseId}/section/{sectionId}/lesson/{lessonId}");
-    public static ResourceArn ForAssessment(Guid tenantId, Guid courseId, Guid sectionId, Guid assessmentId) => new($"az:courses:{tenantId}:course/{courseId}/section/{sectionId}/assessment/{assessmentId}");
-    public static ResourceArn ForEnrollment(Guid tenantId, Guid enrollmentId) => new($"az:courses:{tenantId}:enrollment/{enrollmentId}");
+    public static ResourceArn ForTenant(Guid tenantId) => new($"az:tenant:{GlobalTenant}:tenant/{tenantId}");
+    public static ResourceArn ForUser(Guid userId) => new($"az:user:{GlobalTenant}:user/{userId}");
+    public static ResourceArn ForPrincipal(Guid tenantId, Guid principalId) => new($"az:principal:{tenantId}:principal/{principalId}");
+    public static ResourceArn ForPolicy(Guid tenantId, Guid policyId) => new($"az:policy:{tenantId}:policy/{policyId}");
+    public static ResourceArn ForSubject(Guid tenantId, Guid subjectId) => new($"az:subject:{tenantId}:subject/{subjectId}");
+    public static ResourceArn ForCourse(Guid tenantId, Guid courseId) => new($"az:course:{tenantId}:course/{courseId}");
+    public static ResourceArn ForSection(Guid tenantId, Guid courseId, Guid sectionId) => new($"az:section:{tenantId}:course/{courseId}/section/{sectionId}");
+    public static ResourceArn ForLesson(Guid tenantId, Guid courseId, Guid sectionId, Guid lessonId) => new($"az:lesson:{tenantId}:course/{courseId}/section/{sectionId}/lesson/{lessonId}");
+    public static ResourceArn ForAssessment(Guid tenantId, Guid courseId, Guid sectionId, Guid assessmentId) => new($"az:assessment:{tenantId}:course/{courseId}/section/{sectionId}/assessment/{assessmentId}");
+    public static ResourceArn ForEnrollment(Guid tenantId, Guid enrollmentId) => new($"az:enrollment:{tenantId}:enrollment/{enrollmentId}");
     public static ResourceArn ForVideo(Guid tenantId, Guid videoId) => new($"az:video:{tenantId}:video/{videoId}");
-    public static ResourceArn ForCourseVideo(Guid tenantId, Guid videoId,Guid courseId) => new($"az:video:{tenantId}:course/{courseId}/video/{videoId}");
+    public static ResourceArn ForCourseVideo(Guid tenantId, Guid videoId,Guid courseId) => new($"az:coursevideo:{tenantId}:course/{courseId}/video/{videoId}");
     public static ResourceArn ForLibrary(Guid tenantId, Guid libraryId) => new($"az:library:{tenantId}:library/{libraryId}");
-    public static ResourceArn ForAccessCode(Guid tenantId, Guid codeId) => new($"az:library:{tenantId}:code/{codeId}");
-    public static ResourceArn ForAssessment(Guid tenantId, Guid assessmentId) => new($"az:assessments:{tenantId}:assessment/{assessmentId}");
-    public static ResourceArn ForAssessmentSubmission(Guid tenantId, Guid submissionId) => new($"az:assessments:{tenantId}:submission/{submissionId}");
+    public static ResourceArn ForAccessCode(Guid tenantId, Guid codeId) => new($"az:accesscode:{tenantId}:code/{codeId}");
+    public static ResourceArn ForAssessment(Guid tenantId, Guid assessmentId) => new($"az:assessment:{tenantId}:assessment/{assessmentId}");
+    public static ResourceArn ForAssessmentSubmission(Guid tenantId, Guid submissionId) => new($"az:submission:{tenantId}:submission/{submissionId}");
+    public static ResourceArn ForDocument(Guid tenantId, Guid documentId) => new($"az:document:{tenantId}:document/{documentId}");
+    public static ResourceArn ForInlineResource(Guid tenantId, Guid resourceId) => new($"az:inline:{tenantId}:inline/{resourceId}");
 }
 /// <summary>
 /// Represents a permission scope pattern.

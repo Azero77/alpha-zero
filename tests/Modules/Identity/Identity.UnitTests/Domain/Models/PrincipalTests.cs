@@ -16,7 +16,7 @@ public class PrincipalTests
     public void Create_Should_Succeed_WithValidUrn()
     {
         // Arrange
-        var scope = $"az:courses:{TenantId}:course/101";
+        var scope = $"az:course:{TenantId}:course/101";
 
         // Act
         var result = Principal.Create(Guid.NewGuid(), Username, PasswordHash, "Test Principal", PrincipalType.User, scope, TenantId);

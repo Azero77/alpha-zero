@@ -24,7 +24,7 @@ public class AutoLinkVideoToCourseConsumer : IConsumer<VideoPublishedEvent>
         if (string.IsNullOrEmpty(msg.TargetResourceArn)) return;
 
         var arnResult = ResourceArn.Create(msg.TargetResourceArn);
-        if (arnResult.IsError || arnResult.Value.Service != "courses") return;
+        if (arnResult.IsError || arnResult.Value.Service != "course") return;
 
         var pathParts = arnResult.Value.ResourcePath.Split('/');
         

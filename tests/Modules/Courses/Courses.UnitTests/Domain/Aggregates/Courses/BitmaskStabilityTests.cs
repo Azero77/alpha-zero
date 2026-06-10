@@ -1,4 +1,5 @@
 using AlphaZero.Modules.Courses.Domain.Aggregates.Courses;
+using AlphaZero.Shared.Domain;
 using FluentAssertions;
 using System.Text.Json;
 using Xunit;
@@ -19,9 +20,9 @@ public class BitmaskStabilityTests
         var sectionId = course.Sections.First().Id;
 
         // Act
-        course.AddLesson(sectionId, "Lesson 1", Guid.NewGuid(), JsonElement.Parse("{}"));
-        course.AddAssessment(sectionId, "Assessment 1", Guid.NewGuid(), JsonElement.Parse("{}"));
-        course.AddLesson(sectionId, "Lesson 2", Guid.NewGuid(), JsonElement.Parse("{}"));
+        course.AddCurriculumItem(sectionId, "Lesson 1", "Video", ResourceArn.ForVideo(TenantId, Guid.NewGuid()), JsonElement.Parse("{}"));
+        course.AddCurriculumItem(sectionId, "Assessment 1", "Quiz", ResourceArn.ForAssessment(TenantId, Guid.NewGuid()), JsonElement.Parse("{}"));
+        course.AddCurriculumItem(sectionId, "Lesson 2", "Video", ResourceArn.ForVideo(TenantId, Guid.NewGuid()), JsonElement.Parse("{}"));
 
         // Assert
         var items = course.Sections.First().Items.ToList();
@@ -38,8 +39,8 @@ public class BitmaskStabilityTests
         var course = Course.Create(Guid.NewGuid(), TenantId, "Architecture 101", null, SubjectId).Value;
         course.AddSection("Section 1");
         var sectionId = course.Sections.First().Id;
-        course.AddLesson(sectionId, "Lesson 1", Guid.NewGuid(), JsonElement.Parse("{}"));
-        course.AddLesson(sectionId, "Lesson 2", Guid.NewGuid(), JsonElement.Parse("{}"));
+        course.AddCurriculumItem(sectionId, "Lesson 1", "Video", ResourceArn.ForVideo(TenantId, Guid.NewGuid()), JsonElement.Parse("{}"));
+        course.AddCurriculumItem(sectionId, "Lesson 2", "Video", ResourceArn.ForVideo(TenantId, Guid.NewGuid()), JsonElement.Parse("{}"));
         
         var l1 = course.Sections.First().Items.First(i => i.Title == "Lesson 1");
         var l2 = course.Sections.First().Items.First(i => i.Title == "Lesson 2");
@@ -64,7 +65,7 @@ public class BitmaskStabilityTests
         var course = Course.Create(Guid.NewGuid(), TenantId, "Architecture 101", null, SubjectId).Value;
         course.AddSection("S1");
         var s1Id = course.Sections.First().Id;
-        course.AddLesson(s1Id, "L1", Guid.NewGuid(), JsonElement.Parse("{}"));
+        course.AddCurriculumItem(s1Id, "L1", "Video", ResourceArn.ForVideo(TenantId, Guid.NewGuid()), JsonElement.Parse("{}"));
         
         var l1 = course.Sections.First().Items.First();
         l1.BitIndex.Should().Be(0);
@@ -72,7 +73,7 @@ public class BitmaskStabilityTests
         // Act
         course.AddSection("S2");
         var s2Id = course.Sections.Last().Id;
-        course.AddLesson(s2Id, "L2", Guid.NewGuid(), JsonElement.Parse("{}"));
+        course.AddCurriculumItem(s2Id, "L2", "Video", ResourceArn.ForVideo(TenantId, Guid.NewGuid()), JsonElement.Parse("{}"));
 
         // Assert
         l1.BitIndex.Should().Be(0);

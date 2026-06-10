@@ -22,10 +22,11 @@ public class CourseRepository : BaseRepository<AppDbContext, Course>, ICourseRep
 
     public async Task<(Guid CourseId, int BitIndex)?> GetItemBitIndexByResourceIdAsync(Guid resourceId, CancellationToken cancellationToken = default)
     {
+        var resourceIdStr = resourceId.ToString().ToLowerInvariant();
         var itemInfo = await _context.Courses
             .SelectMany(c => c.Sections)
             .SelectMany(s => s.Items)
-            .Where(i => i.ResourceId == resourceId)
+            .Where(i => i.Resources.Any(r => EF.Property<string>(r, "Arn").Contains(resourceIdStr)))
             .Select(i => new { i.SectionId, i.BitIndex })
             .FirstOrDefaultAsync(cancellationToken);
 
@@ -41,10 +42,11 @@ public class CourseRepository : BaseRepository<AppDbContext, Course>, ICourseRep
 
     public async Task<List<Course>> GetCoursesByResourceIdAsync(Guid resourceId, CancellationToken cancellationToken = default)
     {
+        var resourceIdStr = resourceId.ToString().ToLowerInvariant();
         return await _context.Courses
             .Include(c => c.Sections)
                 .ThenInclude(s => s.Items)
-            .Where(c => c.Sections.Any(s => s.Items.Any(i => i.ResourceId == resourceId)))
+            .Where(c => c.Sections.Any(s => s.Items.Any(i => i.Resources.Any(r => EF.Property<string>(r, "Arn").Contains(resourceIdStr)))))
             .ToListAsync(cancellationToken);
     }
 }

@@ -24,7 +24,7 @@ public class AssignPrincipalToUserCommandHandlerTests
     private static readonly Guid TenantId = Guid.NewGuid();
     private static readonly Guid UserId = Guid.NewGuid();
     private static readonly Guid PrincipalId = Guid.NewGuid();
-    private static readonly string ResourceArn = "az:courses:tenant:course/101";
+    private static readonly string ResourceArn = "az:course:tenant:course/101";
 
     public AssignPrincipalToUserCommandHandlerTests()
     {

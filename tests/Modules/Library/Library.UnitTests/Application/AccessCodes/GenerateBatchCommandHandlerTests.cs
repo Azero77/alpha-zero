@@ -40,7 +40,7 @@ public class GenerateBatchCommandHandlerTests
     public async Task Handle_Should_GenerateCodes_WhenLibraryIsAuthorized()
     {
         // Arrange
-        var resourceArn = "az:courses:tenant:course/101";
+        var resourceArn = "az:course:tenant:course/101";
         var library = AlphaZero.Modules.Library.Domain.Library.Create("L1", "A1", "123", TenantId);
         library.AuthorizeResource(ResourceArn.Create(resourceArn).Value);
 
@@ -63,7 +63,7 @@ public class GenerateBatchCommandHandlerTests
     public async Task Handle_Should_ReturnForbidden_WhenLibraryNotAuthorizedForResource()
     {
         // Arrange
-        var resourceArn = "az:courses:tenant:course/forbidden";
+        var resourceArn = "az:course:tenant:course/forbidden";
         var library = AlphaZero.Modules.Library.Domain.Library.Create("L1", "A1", "123", TenantId);
 
         _tenantProvider.GetTenant().Returns(TenantId);

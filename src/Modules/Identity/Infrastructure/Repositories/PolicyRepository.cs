@@ -130,7 +130,7 @@ public class PrincipalRepository : IPrincipalRepository
         return dataModels.Select(MapToDomain).AsQueryable().Any(predicate);
     }
 
-    public async Task<IReadOnlyCollection<Principal>> GetPrincipalsByResourceAsync(Guid resourceId, ResourceType resourceType, CancellationToken ct = default)
+    public async Task<IReadOnlyCollection<Principal>> GetPrincipalsByResourceAsync(Guid resourceId, string resourceType, CancellationToken ct = default)
     {
         return new List<Principal>();
     }

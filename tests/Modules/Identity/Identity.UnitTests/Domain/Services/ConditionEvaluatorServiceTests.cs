@@ -23,7 +23,7 @@ public class ConditionEvaluatorServiceTests
             AuthenticationMethod = "Principal",
             RequiredPermission = "courses:View",
             ResourcePath = "course/101",
-            ResourceType = ResourceType.Courses
+            ResourceType = "course"
         };
         var conditionRepository = Substitute.For<IConditionRepository>();
         var operationEvaluators = Enumerable.Empty<IOperationEvaluator>();
@@ -58,11 +58,10 @@ public class ConditionEvaluatorServiceTests
     }
 
     [Fact]
-    public async Task Evaluate_NumericEquals_ShouldReturnSuccess_WhenMatch()
+    public async Task Evaluate_StringEquals_ResourceType_ShouldReturnSuccess_WhenMatch()
     {
         // Arrange
-        // We use ResourceType which is an enum (int)
-        var condition = new ConditionNode("ResourceType", Operator.NumericEquals, JsonDocument.Parse("0").RootElement); // Courses = 0
+        var condition = new ConditionNode("ResourceType", Operator.StringEquals, JsonDocument.Parse("\"course\"").RootElement);
 
         // Act
         var result = await _evaluator.Evaluate(condition, _context);

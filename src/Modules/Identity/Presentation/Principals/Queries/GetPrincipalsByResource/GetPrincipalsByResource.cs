@@ -11,7 +11,7 @@ namespace AlphaZero.Modules.Identity.Presentation.Principals.Queries.GetPrincipa
 
 public record GetPrincipalsByResourceRequest 
 { 
-    public ResourceType ResourceType { get; init; }
+    public string ResourceType { get; init; } = string.Empty;
     public Guid ResourceId { get; init; } 
 }
 
