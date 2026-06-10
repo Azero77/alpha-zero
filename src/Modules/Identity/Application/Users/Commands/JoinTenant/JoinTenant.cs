@@ -16,9 +16,7 @@ namespace AlphaZero.Modules.Identity.Application.Users.Commands.JoinTenant;
 public record JoinTenantCommand(
     Guid TenantId,
     string IdentityId,
-    string Name,
-    string DeviceId, 
-    string DevicePlatform) : ICommand<Guid>;
+    string Name) : ICommand<Guid>;
 
 public class JoinTenantCommandValidator : AbstractValidator<JoinTenantCommand>
 {
@@ -27,7 +25,6 @@ public class JoinTenantCommandValidator : AbstractValidator<JoinTenantCommand>
         RuleFor(x => x.TenantId).NotEmpty();
         RuleFor(x => x.IdentityId).NotEmpty();
         RuleFor(x => x.Name).NotEmpty().MaximumLength(256);
-        RuleFor(x => x.DevicePlatform).IsEnumName(typeof(DevicePlatform),caseSensitive : false);
     }
 }
 
@@ -39,12 +36,10 @@ public sealed class JoinTenantCommandHandler(
     {
         // 1. Check if already registered
         var user = await userRepository.GetFirst(u => u.IdentityId == request.IdentityId && u.TenantId == request.TenantId, cancellationToken);
-        var platform = Enum.Parse<DevicePlatform>(request.DevicePlatform, true);
-
         if (user is null)
         {
             // 2. Create TenantUser
-            var createResult = TenantUser.Create(request.TenantId, request.IdentityId, request.Name, new TenantUserDeviceInfo(request.DeviceId, platform)); //student is locked as soon as the user is created 
+            var createResult = TenantUser.Create(request.TenantId, request.IdentityId, request.Name); 
             if (createResult.IsError) return createResult.Errors;
             
             user = createResult.Value;

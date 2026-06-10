@@ -28,7 +28,7 @@ public class IdentityTests : BaseIntegrationTest
         var tenantId = Guid.NewGuid();
         SetTenant(tenantId);
         
-        var user = TenantUser.Create(tenantId, "ali-sub", "Ali", new TenantUserDeviceInfo("Device1", DevicePlatform.Web)).Value;
+        var user = TenantUser.Create(tenantId, "ali-sub", "Ali").Value;
         
         var principal = Principal.Create(Guid.NewGuid(), "student-role", "hash", "Student", PrincipalType.Role, null, tenantId).Value;
         var managedPolicy = new ManagedPolicy(Guid.NewGuid(), "StudentBase", new() 
@@ -84,7 +84,7 @@ public class IdentityTests : BaseIntegrationTest
         var hasher = Resolve<IPasswordHasher>();
         var passwordHash = hasher.HashPassword("secure-password");
 
-        var user = TenantUser.Create(tenantId, "ali-sub", "Ali",new TenantUserDeviceInfo("Device1",DevicePlatform.Web)).Value;
+        var user = TenantUser.Create(tenantId, "ali-sub", "Ali").Value;
 
         var principal = Principal.Create(Guid.NewGuid(), "ali-principal", passwordHash, "Custom", PrincipalType.User, "az:*:*:*", tenantId).Value;
         var policy = new InlinePolicy(Guid.NewGuid(), "Inline", tenantId);

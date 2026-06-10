@@ -21,7 +21,9 @@ public class TestAuthHandler : AuthenticationHandler<AuthenticationSchemeOptions
         var claims = new List<Claim>
         {
             new Claim("auth_method", "TenantUser"),
-            new Claim("sid", Guid.NewGuid().ToString())
+            new Claim("sid", Guid.NewGuid().ToString()),
+            new Claim("identity_id", "test-identity"),
+            new Claim("name", "Test User")
         };
 
         if (Context.Request.Headers.TryGetValue("X-Test-User-Id", out var userId))

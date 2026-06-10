@@ -57,6 +57,12 @@ namespace AlphaZero.Modules.Identity.Infrastructure.Migrations
                         .HasMaxLength(128)
                         .HasColumnType("character varying(128)");
 
+                    b.Property<DateTime?>("LastMainDeviceSwitchDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("MainDeviceId")
+                        .HasColumnType("uuid");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(256)
@@ -105,6 +111,38 @@ namespace AlphaZero.Modules.Identity.Infrastructure.Migrations
                         .IsUnique();
 
                     b.ToTable("TenantPrinciaplAssignments", (string)null);
+                });
+
+            modelBuilder.Entity("AlphaZero.Modules.Identity.Domain.Models.UserDevice", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("DeviceName")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<string>("Platform")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("PublicKey")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("RegisteredAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("TenantUserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantUserId");
+
+                    b.ToTable("UserDevices");
                 });
 
             modelBuilder.Entity("AlphaZero.Modules.Identity.Infrastructure.Models.ConditionDefinition", b =>
@@ -195,6 +233,15 @@ namespace AlphaZero.Modules.Identity.Infrastructure.Migrations
                     b.Navigation("TenantUser");
                 });
 
+            modelBuilder.Entity("AlphaZero.Modules.Identity.Domain.Models.UserDevice", b =>
+                {
+                    b.HasOne("AlphaZero.Modules.Identity.Domain.Models.TenantUser", null)
+                        .WithMany("Devices")
+                        .HasForeignKey("TenantUserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("AlphaZero.Modules.Identity.Infrastructure.Models.PrincipalPolicyAssignment", b =>
                 {
                     b.HasOne("AlphaZero.Modules.Identity.Domain.Models.Principals.Policies.ManagedPolicy", "ManagedPolicy")
@@ -210,6 +257,11 @@ namespace AlphaZero.Modules.Identity.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("ManagedPolicy");
+                });
+
+            modelBuilder.Entity("AlphaZero.Modules.Identity.Domain.Models.TenantUser", b =>
+                {
+                    b.Navigation("Devices");
                 });
 
             modelBuilder.Entity("AlphaZero.Modules.Identity.Infrastructure.Models.PrincipalDataModel", b =>

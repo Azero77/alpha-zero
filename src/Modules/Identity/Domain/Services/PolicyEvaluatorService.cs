@@ -30,26 +30,32 @@ public class PolicyEvaluatorService : IPolicyEvaluatorService
 
 public interface IPolicyEvaluationEngine
 {
-    ErrorOr<Success> Evaluate(IEnumerable<PolicyStatement> statements, AuthorizationContext context, ResourceArn targetArn);
+    Task<ErrorOr<Success>> Evaluate(IEnumerable<PolicyStatement> statements, AuthorizationContext context, ResourceArn targetArn);
 }
 
-public class PolicyEvaluationEngine : IPolicyEvaluationEngine
+public class PolicyEvaluationEngine(ConditionEvaluatorService conditionEvaluator) : IPolicyEvaluationEngine
 {
-    private readonly IConditionRepository _conditionRepository;
-
-    public PolicyEvaluationEngine(IConditionRepository conditionRepository)
+    public async Task<ErrorOr<Success>> Evaluate(IEnumerable<PolicyStatement> statements, AuthorizationContext context, ResourceArn targetArn)
     {
-        _conditionRepository = conditionRepository;
-    }
-
-    public ErrorOr<Success> Evaluate(IEnumerable<PolicyStatement> statements, AuthorizationContext context, ResourceArn targetArn)
-    {
-        var conditionEvaluator = new ConditionEvaluatorService(context, _conditionRepository);
         bool isAllowed = false;
+        List<Error> conditionErrors = new();
 
         foreach (var statement in statements)
         {
-            if (AuthorizationHelper.IsStatementMatch(statement, context.RequiredPermission, targetArn, conditionEvaluator))
+            var matchResult = await AuthorizationHelper.IsStatementMatch(statement, context.RequiredPermission, targetArn, conditionEvaluator, context);
+            
+            if (matchResult.IsError)
+            {
+                // If it's a DENY statement and condition fails, it's NOT a deny.
+                // If it's an ALLOW statement and condition fails, we record why it failed.
+                if (statement.Effect)
+                {
+                    conditionErrors.AddRange(matchResult.Errors);
+                }
+                continue;
+            }
+
+            if (matchResult.Value)
             {
                 if (!statement.Effect) 
                     return Error.Forbidden("Access.Denied", "Explicit deny.");
@@ -58,7 +64,12 @@ public class PolicyEvaluationEngine : IPolicyEvaluationEngine
             }
         }
 
-        return isAllowed ? Result.Success : Error.Forbidden("Access.Denied", "Implicit deny.");
+        if (isAllowed) return Result.Success;
+
+        // If we have specific condition errors (like Main Device mismatch), return them.
+        if (conditionErrors.Any()) return conditionErrors;
+
+        return Error.Forbidden("Access.Denied", "Implicit deny.");
     }
 }
 
@@ -102,7 +113,7 @@ public class TenantUserAuthorizationStrategy : IAuthorizationStrategy
             statements.AddRange(statementsResult.Value);
         }
 
-        return _evaluationEngine.Evaluate(statements, context, targetArn);
+        return await _evaluationEngine.Evaluate(statements, context, targetArn);
     }
 }
 
@@ -142,7 +153,7 @@ public class PrincipalUserAuthorizationStrategy : IAuthorizationStrategy
             statements.AddRange(statementsResult.Value);
         }
 
-        return _evaluationEngine.Evaluate(statements, context, targetArn);
+        return await _evaluationEngine.Evaluate(statements, context, targetArn);
     }
 }
 
@@ -186,7 +197,7 @@ public static class AuthorizationHelper
         return serviceMatch && actionMatch;
     }
 
-    public static bool IsStatementMatch(PolicyStatement statement, string requiredPermission, ResourceArn targetArn, ConditionEvaluatorService conditionEvaluator)
+    public static async Task<ErrorOr<bool>> IsStatementMatch(PolicyStatement statement, string requiredPermission, ResourceArn targetArn, ConditionEvaluatorService conditionEvaluator, AuthorizationContext context)
     {
         bool baseMatch = statement.Actions.Any(a => IsActionMatched(requiredPermission, a)) &&
                          statement.Resources.Any(r => r.IsMatch(targetArn));
@@ -195,8 +206,11 @@ public static class AuthorizationHelper
 
         if (statement.Condition is not null)
         {
-            var conditionResult = conditionEvaluator.Evaluate(statement.Condition);
-            return !conditionResult.IsError;
+            var conditionResult = await conditionEvaluator.Evaluate(statement.Condition, context);
+            if (conditionResult.IsError)
+            {
+                return conditionResult.Errors;
+            }
         }
         return true;
     }

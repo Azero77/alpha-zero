@@ -36,6 +36,7 @@
 		
 	  <PackageReference Include="FastEndpoints" />
 		<PackageReference Include="AWSSDK.SQS" />
+		<PackageReference Include="Scrutor" />
 		<PackageReference Include="Z.EntityFramework.Plus.EFCore" />
 
 	</ItemGroup>

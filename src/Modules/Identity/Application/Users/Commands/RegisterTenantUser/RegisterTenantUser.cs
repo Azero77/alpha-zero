@@ -11,8 +11,7 @@ namespace AlphaZero.Modules.Identity.Application.Users.Commands.RegisterTenantUs
 
 public record RegisterTenantUserCommand(
     string IdentityId,
-    string Name, 
-    TenantUserDeviceInfo info) : ICommand<Guid>;
+    string Name) : ICommand<Guid>;
 
 public class RegisterTenantUserCommandValidator : AbstractValidator<RegisterTenantUserCommand>
 {
@@ -50,7 +49,7 @@ public sealed class RegisterTenantUserCommandHandler : IRequestHandler<RegisterT
             return Error.Conflict("User.AlreadyRegistered", "This identity is already registered in this tenant.");
         }
 
-        var result = TenantUser.Create(tenantId.Value, request.IdentityId, request.Name, request.info);
+        var result = TenantUser.Create(tenantId.Value, request.IdentityId, request.Name);
         if (result.IsError) return result.Errors;
 
         _userRepository.Add(result.Value);

@@ -74,6 +74,7 @@ public class IAMPreprocessorTests : IClassFixture<SecurityApiFactory>
     public async Task AddLesson_Should_EvaluateContext_With_SessionTenant()
     {
         // 1. Arrange: Setup Course in Tenant A
+
         var tenantA = Guid.NewGuid();
         var tenantB = Guid.NewGuid();
         var userId = Guid.NewGuid();
@@ -99,7 +100,7 @@ public class IAMPreprocessorTests : IClassFixture<SecurityApiFactory>
             courseId = course.Id;
 
             // Seed User and Assignment in Tenant B (the acting tenant)
-            var user = TenantUser.Create(tenantB, userId.ToString(), "Test User", TenantUserDeviceInfo.Empty).Value;
+            var user = TenantUser.Create(tenantB, userId.ToString(), "Test User").Value;
             tenantUserId = user.Id;
             identityDb.TenantUsers.Add(user);
 

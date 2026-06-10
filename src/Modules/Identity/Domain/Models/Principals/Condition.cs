@@ -21,7 +21,8 @@ public enum Operator
     DateGreaterThanEquals,
     Bool,
     In,
-    NotIn
+    NotIn,
+    IsMainDevice
 }
 
 public enum ConditionType

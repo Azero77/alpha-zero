@@ -27,7 +27,9 @@ public class PolicyEvaluatorServiceTests
         _assignmentRepository = Substitute.For<ITenantUserPrincpialAssignmentRepository>();
         _userRepository = Substitute.For<IRepository<TenantUser>>();
         var conditionRepository = Substitute.For<IConditionRepository>();
-        var evaluationEngine = new PolicyEvaluationEngine(conditionRepository);
+        var operationEvaluators = Enumerable.Empty<IOperationEvaluator>();
+        var conditionEvaluator = new ConditionEvaluatorService(conditionRepository, operationEvaluators);
+        var evaluationEngine = new PolicyEvaluationEngine(conditionEvaluator);
 
         var strategies = new List<IAuthorizationStrategy>
         {
@@ -42,7 +44,7 @@ public class PolicyEvaluatorServiceTests
     public async Task Authorize_TenantUser_Should_Succeed_WhenValidAssignmentExists()
     {
         // Arrange
-        var user = TenantUser.Create(TenantId, "sub-1", "Ali", TenantUserDeviceInfo.Empty).Value;
+        var user = TenantUser.Create(TenantId, "sub-1", "Ali").Value;
         _userRepository.GetById(user.Id).Returns(Task.FromResult<TenantUser?>(user));
 
         var principal = Principal.Create(Guid.NewGuid(), "student-role", "hash", "Student", PrincipalType.Role, null, TenantId).Value;

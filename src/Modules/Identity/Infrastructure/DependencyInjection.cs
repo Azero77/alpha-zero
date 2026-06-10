@@ -2,6 +2,7 @@ using AlphaZero.Modules.Identity.Application.Auth.Commands.LoginAsTenantUser;
 using AlphaZero.Modules.Identity.Domain.Models;
 using AlphaZero.Modules.Identity.Domain.Repositories;
 using AlphaZero.Modules.Identity.Domain.Services;
+using AlphaZero.Modules.Identity.Infrastructure.Auth;
 using AlphaZero.Modules.Identity.Infrastructure.Models;
 using AlphaZero.Modules.Identity.Infrastructure.Persistance;
 using AlphaZero.Modules.Identity.Infrastructure.Repositories;
@@ -47,11 +48,19 @@ public static class DependencyInjection
         
         services.AddScoped<IPolicyEvaluatorService, PolicyEvaluatorService>();
         services.AddScoped<PolicyEvaluatorService>();
+        services.AddScoped<ConditionEvaluatorService>();
         services.AddScoped<IJwtProvider, Auth.JwtProvider>();
+        services.AddScoped<IDeviceProvider, Auth.DeviceProvider>();
         services.AddScoped<IPasswordHasher, Auth.PasswordHasher>();
         services.AddScoped<ICurrentTenantUserRepository, Auth.CurrentTenantUserRepository>();
         services.AddScoped<IAuthorizationContextFactory,AuthorizationContextFactory>();
-
+        services.AddScoped<IDeviceSignatureVerifier,  DeviceSignatureVerifier>();
+        services.AddScoped<IPublicKeyProvider, PublicKeyProvider>();
+        services.Decorate<IPublicKeyProvider, CachePublicKeyProvider>();
+        services.Scan(scan => scan.FromAssemblyOf<IOperationEvaluator>()
+        .AddClasses(classes => classes.AssignableTo<IOperationEvaluator>())
+        .AsImplementedInterfaces()
+        .WithScopedLifetime());
         services.AddScoped<IConditionRepository, ConditionRepository>();
     }
 

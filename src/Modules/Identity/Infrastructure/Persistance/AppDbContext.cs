@@ -21,6 +21,7 @@ public class AppDbContext : DbContext, ITenantDbContext
     public DbSet<ManagedPolicy> ManagedPolicies => Set<ManagedPolicy>();
     public DbSet<PrincipalPolicyAssignment> PrincipalPolicyAssignments => Set<PrincipalPolicyAssignment>();
     public DbSet<TenantUser> TenantUsers => Set<TenantUser>();
+    public DbSet<UserDevice> UserDevices => Set<UserDevice>();
     public DbSet<TenantUserPrinciaplAssignment> TenantPrinciaplAssignments => Set<TenantUserPrinciaplAssignment>();
     public DbSet<ConditionDefinition> ConditionDefinitions => Set<ConditionDefinition>();
 
