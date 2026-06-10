@@ -35,7 +35,7 @@ public class ListAssessmentsEndpoint : Endpoint<ListAssessmentsRequest, PagedRes
     public override void Configure()
     {
         Get("/assessments");
-        AllowAnonymous(); // Following the user's preference for this demo
+        AllowAnonymous(); // Following the user's preference for this demo (WARNING)
         Description(d => d.WithTags("Assessments"));
         Summary(new ListAssessmentsSummary());
     }

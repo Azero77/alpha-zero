@@ -11,6 +11,7 @@ namespace Library.UnitTests.Application.RedeemCode;
 public class RedeemCodeCommandHandlerTests
 {
     private readonly IAccessCodeRepository _repository;
+    private readonly IRedemptionAuditLogRepository _auditLogRepository;
     private readonly IRedemptionStrategyFactory _strategyFactory;
     private readonly ITenantProvider _tenantProvider;
     private readonly ICurrentTenantUserRepository _currentUserRepository;
@@ -23,6 +24,7 @@ public class RedeemCodeCommandHandlerTests
     public RedeemCodeCommandHandlerTests()
     {
         _repository = Substitute.For<IAccessCodeRepository>();
+        _auditLogRepository = Substitute.For<IRedemptionAuditLogRepository>();
         _strategyFactory = Substitute.For<IRedemptionStrategyFactory>();
         _tenantProvider = Substitute.For<ITenantProvider>();
         _currentUserRepository = Substitute.For<ICurrentTenantUserRepository>();
@@ -30,6 +32,7 @@ public class RedeemCodeCommandHandlerTests
 
         _handler = new RedeemCodeCommandHandler(
             _repository,
+            _auditLogRepository,
             _strategyFactory,
             _tenantProvider,
             _currentUserRepository,
@@ -53,7 +56,7 @@ public class RedeemCodeCommandHandlerTests
         var strategy = Substitute.For<IRedemptionStrategy>();
         _strategyFactory.GetStrategy("strategy").Returns(strategy);
 
-        var command = new RedeemCodeCommand(rawCode);
+        var command = new RedeemCodeCommand(rawCode, "127.0.0.1", "fingerprint");
 
         // Act
         var result = await _handler.Handle(command, CancellationToken.None);
@@ -62,6 +65,12 @@ public class RedeemCodeCommandHandlerTests
         result.IsError.Should().BeFalse();
         accessCode.Status.Should().Be(AccessCodeStatus.Redeemed);
         await strategy.Received(1).ExecuteAsync(UserId, accessCode.Id, targetArn, Arg.Any<JsonElement>());
+        await _auditLogRepository.Received(1).AddAsync(
+            Arg.Is<RedemptionAuditLog>(log => 
+                log.AccessCodeId == accessCode.Id && 
+                log.IpAddress == "127.0.0.1" && 
+                log.DeviceFingerprint == "fingerprint"), 
+            Arg.Any<CancellationToken>());
     }
 
     [Fact]

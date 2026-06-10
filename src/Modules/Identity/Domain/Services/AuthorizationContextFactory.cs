@@ -4,6 +4,7 @@ using AlphaZero.Modules.Identity.Domain.Repositories;
 using AlphaZero.Shared.Authorization;
 using AlphaZero.Shared.Domain;
 using ErrorOr;
+using Microsoft.AspNetCore.Http;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -16,9 +17,11 @@ namespace AlphaZero.Modules.Identity.Domain.Services;
 public class AuthorizationContextFactory(ICurrentTenantUserRepository currentTenantUserRepository,
     ITenantUserPrincpialAssignmentRepository tenantUserPrincpialAssignmentRepository,
     IPrincipalRepository principalRepository,
-    IDeviceProvider deviceProvider
+    IDeviceProvider deviceProvider,
+    IHttpContextAccessor accessor
     ) : IAuthorizationContextFactory
 {
+    public AuthorizationContext? CurrentAuthorizationContext { get; private set; } = null;
     public async Task<ErrorOr<AuthorizationContext>> Create(ResourceArn arn, AuthenticationMethod authenticationMethod, string id)
     {
 
@@ -29,7 +32,8 @@ public class AuthorizationContextFactory(ICurrentTenantUserRepository currentTen
             ResourcePath = arn.ResourcePath,
             ResourceType = arn.Service,
             TenantId = Guid.Parse(arn.TenantIdString),
-            DeviceId = deviceProvider.GetDeviceId()
+            DeviceId = deviceProvider.GetDeviceId(),
+            IpAddress = accessor?.HttpContext?.Connection.RemoteIpAddress?.ToString()
         };
         if (AuthenticationMethod.Principal == authenticationMethod)
         {
@@ -49,7 +53,10 @@ public class AuthorizationContextFactory(ICurrentTenantUserRepository currentTen
             var assignment = await tenantUserPrincpialAssignmentRepository.Get(tenantUser.UserId, arn.Value);
             if (assignment is null)
                 return Error.Forbidden();
-            return Create(arn, assignment, context);
+            var result =  Create(arn, assignment, context);
+            if (!result.IsError)
+                CurrentAuthorizationContext = result.Value;
+            return result;
         }
         return Error.Forbidden();
     }
@@ -69,3 +76,5 @@ public class AuthorizationContextFactory(ICurrentTenantUserRepository currentTen
         return result;
     }
 }
+
+
