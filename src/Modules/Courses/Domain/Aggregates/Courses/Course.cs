@@ -16,6 +16,10 @@ public class Course : TenantOwnedAggregate, ISoftDeletable
 
     public IReadOnlyCollection<CourseSection> Sections => _sections.AsReadOnly();
     private readonly List<CourseSection> _sections = new();
+    
+    public IReadOnlyCollection<CoursePlan> Plans => _plans.AsReadOnly();
+    private readonly List<CoursePlan> _plans = new();
+
     public bool IsDeleted { get; private set; }
     public DateTime? OnDeleted { get; private set; }
 
@@ -38,6 +42,43 @@ public class Course : TenantOwnedAggregate, ISoftDeletable
     {
         var section = CourseSection.Create(TenantId, title, _sections.Count,this.Id);
         _sections.Add(section);
+    }
+
+    public ErrorOr<CoursePlan> AddPlan(string name, Guid principalId)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+            return Error.Validation("Course.PlanName", "Plan name is required.");
+        
+        if (_plans.Any(p => string.Equals(p.Name, name, StringComparison.OrdinalIgnoreCase)))
+            return Error.Conflict("Course.PlanExists", $"A plan with name '{name}' already exists.");
+
+        var plan = CoursePlan.Create(Id, name, principalId);
+        _plans.Add(plan);
+        return plan;
+    }
+
+    public ErrorOr<Success> UpdatePlan(Guid planId, string name, Guid principalId)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+            return Error.Validation("Course.PlanName", "Plan name is required.");
+
+        var plan = _plans.FirstOrDefault(p => p.Id == planId);
+        if (plan == null) return Error.NotFound("Course.Plan", "Plan not found.");
+
+        if (_plans.Any(p => p.Id != planId && string.Equals(p.Name, name, StringComparison.OrdinalIgnoreCase)))
+            return Error.Conflict("Course.PlanExists", $"A plan with name '{name}' already exists.");
+
+        plan.Update(name, principalId);
+        return Result.Success;
+    }
+
+    public ErrorOr<Success> RemovePlan(Guid planId)
+    {
+        var plan = _plans.FirstOrDefault(p => p.Id == planId);
+        if (plan == null) return Error.NotFound("Course.Plan", "Plan not found.");
+
+        _plans.Remove(plan);
+        return Result.Success;
     }
 
     public ErrorOr<Success> AddCurriculumItem(Guid sectionId, string title, string mainType, ResourceArn primaryResourceArn, JsonElement metadata)
@@ -107,6 +148,9 @@ public class Course : TenantOwnedAggregate, ISoftDeletable
     {
         if (Status != CourseStatus.Approved) 
             return Error.Conflict("Course.Status", "Only approved courses can be published.");
+            
+        if (_plans.Count == 0)
+            return Error.Validation("Course.NoPlans", "Course must have at least one plan before it can be published.");
         
         Status = CourseStatus.Published;
         AddDomainEvent(new CoursePublishedDomainEvent(Id));

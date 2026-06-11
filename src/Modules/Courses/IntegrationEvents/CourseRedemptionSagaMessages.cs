@@ -7,15 +7,17 @@ public record EnrollStudentFromSagaCommand(
     Guid CorrelationId,
     Guid UserId,
     Guid CourseId,
+    string Plan,
     ResourceArn Resource);
 
 public record AssignStudentRoleFromSagaCommand(
     Guid CorrelationId,
     Guid UserId,
-    ResourceArn Course);
+    ResourceArn Course,
+    Guid PrincipalId);
 
 // Events published by consumers to notify the Saga
-public record StudentEnrolledFromSagaEvent(Guid CorrelationId);
+public record StudentEnrolledFromSagaEvent(Guid CorrelationId, Guid PrincipalId);
 public record StudentRoleAssignedFromSagaEvent(Guid CorrelationId);
 
 // Failure events

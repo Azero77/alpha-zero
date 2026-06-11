@@ -9,4 +9,13 @@ public interface ICourseRepository : IRepository<Course>
     Task<Course?> GetByIdWithSectionsAsync(Guid id, CancellationToken cancellationToken = default);
     Task<(Guid CourseId, int BitIndex)?> GetItemBitIndexByResourceIdAsync(Guid resourceId, CancellationToken cancellationToken = default);
     Task<List<Course>> GetCoursesByResourceIdAsync(Guid resourceId, CancellationToken cancellationToken = default);
+
+
+    /// <summary>
+    /// Get Course With Sections, Items and Resources for a given courseId
+    /// </summary>
+    /// <param name="courseId"></param>
+    /// <returns></returns>
+    /// 
+    Task<Course?> GetCourseAsync(Guid courseId);
 }

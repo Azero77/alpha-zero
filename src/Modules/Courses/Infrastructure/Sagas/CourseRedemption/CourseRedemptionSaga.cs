@@ -37,6 +37,7 @@ public class CourseRedemptionSaga : MassTransitStateMachine<CourseRedemptionStat
                     context.Saga.CorrelationId,
                     context.Saga.UserId,
                     context.Message.Resource.GetCourseId(),
+                    context.Saga.Plan,
                     context.Message.Resource))
         );
 
@@ -51,7 +52,8 @@ public class CourseRedemptionSaga : MassTransitStateMachine<CourseRedemptionStat
                 .Send(context => new AssignStudentRoleFromSagaCommand(
                     context.Saga.CorrelationId,
                     context.Saga.UserId,
-                    ResourceArn.Create(context.Saga.CourseArn).Value))
+                    ResourceArn.Create(context.Saga.CourseArn).Value,
+                    context.Message.PrincipalId))
         );
 
         During(Authorizing,
