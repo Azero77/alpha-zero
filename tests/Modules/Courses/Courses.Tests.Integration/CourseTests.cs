@@ -4,6 +4,7 @@ using AlphaZero.Modules.Courses.Presentation.Courses.AddItem;
 using AlphaZero.Modules.Courses.Presentation.Courses.AddSection;
 using AlphaZero.Modules.Courses.Presentation.Courses.Create;
 using AlphaZero.Modules.Courses.Presentation.Courses.Get;
+using AlphaZero.Modules.Courses.Presentation.Courses.Plans.AddPlan;
 using AlphaZero.Modules.Courses.Presentation.Courses.Reorder.Sections;
 using AlphaZero.Modules.Courses.Presentation.Subjects.Create;
 using Courses.Tests.Integration.Abstractions;
@@ -212,6 +213,14 @@ public class CourseTests : BaseIntegrationTest
         // Act: Approve
         var approveResp = await Client.PatchAsJsonAsync($"/courses/{courseId}/approve", new { });
         approveResp.StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+        // Act: Add Plan (Required for publishing)
+        var addPlanResp = await Client.PostAsJsonAsync($"/courses/{courseId}/plans", new AddPlanRequest 
+        { 
+            Name = "Standard", 
+            PrincipalId = Guid.NewGuid() 
+        });
+        addPlanResp.StatusCode.Should().Be(HttpStatusCode.OK);
 
         // Act: Publish
         var publishResp = await Client.PatchAsJsonAsync($"/courses/{courseId}/publish", new { });

@@ -32,46 +32,66 @@ public sealed class CourseStateHandlers :
 
     public async Task<ErrorOr<Success>> Handle(SubmitCourseForReviewCommand request, CancellationToken cancellationToken)
     {
-        var course = await _courseRepository.GetByIdWithSectionsAsync(request.CourseId, cancellationToken);
+        var course = await _courseRepository.GetCourseAsync(request.CourseId, cancellationToken);
         if (course is null) return Error.NotFound("Course.NotFound", "Course not found.");
         var result = course.SubmitForReview();
-        if (!result.IsError) _logger.LogInformation("Course {CourseId} submitted for review.", request.CourseId);
+        if (!result.IsError)
+        {
+             _courseRepository.Update(course);
+            _logger.LogInformation("Course {CourseId} submitted for review.", request.CourseId);
+        }
         return result;
     }
 
     public async Task<ErrorOr<Success>> Handle(ApproveCourseCommand request, CancellationToken cancellationToken)
     {
-        var course = await _courseRepository.GetByIdWithSectionsAsync(request.CourseId, cancellationToken);
+        var course = await _courseRepository.GetCourseAsync(request.CourseId, cancellationToken);
         if (course is null) return Error.NotFound("Course.NotFound", "Course not found.");
         var result = course.Approve();
-        if (!result.IsError) _logger.LogInformation("Course {CourseId} approved.", request.CourseId);
+        if (!result.IsError)
+        {
+            _courseRepository.Update(course);
+            _logger.LogInformation("Course {CourseId} approved.", request.CourseId);
+        }
         return result;
     }
 
     public async Task<ErrorOr<Success>> Handle(RejectCourseCommand request, CancellationToken cancellationToken)
     {
-        var course = await _courseRepository.GetByIdWithSectionsAsync(request.CourseId, cancellationToken);
+        var course = await _courseRepository.GetCourseAsync(request.CourseId, cancellationToken);
         if (course is null) return Error.NotFound("Course.NotFound", "Course not found.");
         var result = course.Reject(request.Reason);
-        if (!result.IsError) _logger.LogInformation("Course {CourseId} rejected. Reason: {Reason}", request.CourseId, request.Reason);
+        if (!result.IsError)
+        {
+            _courseRepository.Update(course);
+            _logger.LogInformation("Course {CourseId} rejected. Reason: {Reason}", request.CourseId, request.Reason);
+        }
         return result;
     }
 
     public async Task<ErrorOr<Success>> Handle(PublishCourseCommand request, CancellationToken cancellationToken)
     {
-        var course = await _courseRepository.GetByIdWithSectionsAsync(request.CourseId, cancellationToken);
+        var course = await _courseRepository.GetCourseAsync(request.CourseId, cancellationToken);
         if (course is null) return Error.NotFound("Course.NotFound", "Course not found.");
         var result = course.Publish();
-        if (!result.IsError) _logger.LogInformation("Course {CourseId} published.", request.CourseId);
+        if (!result.IsError)
+        {
+            _courseRepository.Update(course);
+            _logger.LogInformation("Course {CourseId} published.", request.CourseId);
+        }
         return result;
     }
 
     public async Task<ErrorOr<Success>> Handle(ArchiveCourseCommand request, CancellationToken cancellationToken)
     {
-        var course = await _courseRepository.GetByIdWithSectionsAsync(request.CourseId, cancellationToken);
+        var course = await _courseRepository.GetCourseAsync(request.CourseId, cancellationToken);
         if (course is null) return Error.NotFound("Course.NotFound", "Course not found.");
         var result = course.Archive();
-        if (!result.IsError) _logger.LogInformation("Course {CourseId} archived.", request.CourseId);
+        if (!result.IsError)
+        {
+            _courseRepository.Update(course);
+            _logger.LogInformation("Course {CourseId} archived.", request.CourseId);
+        }
         return result;
     }
 }

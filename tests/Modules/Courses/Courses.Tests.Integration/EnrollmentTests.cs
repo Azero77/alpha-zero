@@ -4,6 +4,7 @@ using AlphaZero.Modules.Courses.Presentation.Courses.AddItem;
 using AlphaZero.Modules.Courses.Presentation.Courses.AddSection;
 using AlphaZero.Modules.Courses.Presentation.Courses.Create;
 using AlphaZero.Modules.Courses.Presentation.Courses.Get;
+using AlphaZero.Modules.Courses.Presentation.Courses.Plans.AddPlan;
 using AlphaZero.Modules.Courses.Presentation.Enrollements.Enroll;
 using AlphaZero.Modules.Courses.Presentation.Enrollements.Get;
 using AlphaZero.Modules.Courses.Presentation.Subjects.Create;
@@ -40,6 +41,7 @@ public class EnrollmentTests : BaseIntegrationTest
         // Lifecycle
         await Client.PatchAsJsonAsync($"/courses/{courseId}/review", new { });
         await Client.PatchAsJsonAsync($"/courses/{courseId}/approve", new { });
+        await Client.PostAsJsonAsync($"/courses/{courseId}/plans", new AddPlanRequest { Name = "Standard", PrincipalId = Guid.NewGuid() });
         await Client.PatchAsJsonAsync($"/courses/{courseId}/publish", new { });
 
         return courseId;

@@ -49,13 +49,13 @@ public class CourseRepository : BaseRepository<AppDbContext, Course>, ICourseRep
             .Where(c => c.Sections.Any(s => s.Items.Any(i => i.Resources.Any(r => EF.Property<string>(r, "Arn").Contains(resourceIdStr)))))
             .ToListAsync(cancellationToken);
     }
-    public async Task<Course?> GetCourseAsync(Guid courseId)
+    public async Task<Course?> GetCourseAsync(Guid courseId, CancellationToken token =default)
     {
         return await _context.Courses
             .Include(c => c.Sections)
             .ThenInclude(c => c.Items)
             .ThenInclude(item => item.Resources)
             .Include(c => c.Plans)
-            .FirstOrDefaultAsync(c => c.Id == courseId);
+            .FirstOrDefaultAsync(c => c.Id == courseId, token);
     }
 }

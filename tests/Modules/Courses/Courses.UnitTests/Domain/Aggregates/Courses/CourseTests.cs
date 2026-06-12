@@ -37,12 +37,31 @@ public class CourseTests : DomainTest
     }
 
     [Fact]
-    public void Publish_Should_RaiseDomainEvent_WhenApproved()
+    public void Publish_Should_Fail_WhenNoPlans()
     {
         // Arrange
         var course = Course.Create(Guid.NewGuid(), TenantId, "Title", null, SubjectId).Value;
         course.AddSection("Section 1");
         course.AddCurriculumItem(course.Sections.First().Id, "Lesson 1", "Video", ResourceArn.ForVideo(TenantId, Guid.NewGuid()), JsonElement.Parse("{}"));
+        course.SubmitForReview();
+        course.Approve();
+
+        // Act
+        var result = course.Publish();
+
+        // Assert
+        result.IsError.Should().BeTrue();
+        result.FirstError.Code.Should().Be("Course.NoPlans");
+    }
+
+    [Fact]
+    public void Publish_Should_RaiseDomainEvent_WhenApprovedAndHasPlan()
+    {
+        // Arrange
+        var course = Course.Create(Guid.NewGuid(), TenantId, "Title", null, SubjectId).Value;
+        course.AddSection("Section 1");
+        course.AddCurriculumItem(course.Sections.First().Id, "Lesson 1", "Video", ResourceArn.ForVideo(TenantId, Guid.NewGuid()), JsonElement.Parse("{}"));
+        course.AddPlan("Standard", Guid.NewGuid());
         course.SubmitForReview();
         course.Approve();
 
@@ -63,6 +82,7 @@ public class CourseTests : DomainTest
         course.AddSection("S1");
         course.AddSection("S2");
         course.AddCurriculumItem(course.Sections.First().Id, "L1", "Video", ResourceArn.ForVideo(TenantId, Guid.NewGuid()), JsonElement.Parse("{}"));
+        course.AddPlan("Standard", Guid.NewGuid());
         course.SubmitForReview();
         course.Approve();
         course.Publish();

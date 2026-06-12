@@ -17,5 +17,5 @@ public interface ICourseRepository : IRepository<Course>
     /// <param name="courseId"></param>
     /// <returns></returns>
     /// 
-    Task<Course?> GetCourseAsync(Guid courseId);
+    Task<Course?> GetCourseAsync(Guid courseId, CancellationToken cancellationToken = default);
 }

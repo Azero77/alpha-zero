@@ -1,5 +1,6 @@
 using AlphaZero.Modules.Library.Application.RedeemCode;
 using AlphaZero.Modules.Library.Domain;
+using AlphaZero.Shared.Authorization;
 using AlphaZero.Shared.Domain;
 using AlphaZero.Shared.Infrastructure.Tenats;
 using FluentAssertions;
@@ -17,6 +18,7 @@ public class RedeemCodeCommandHandlerTests
     private readonly ICurrentTenantUserRepository _currentUserRepository;
     private readonly IPasswordHasher _passwordHasher;
     private readonly RedeemCodeCommandHandler _handler;
+    private readonly IAuthorizationContextFactory _authorizationContextFactory;
 
     private static readonly Guid TenantId = Guid.NewGuid();
     private static readonly Guid UserId = Guid.NewGuid();
@@ -29,6 +31,7 @@ public class RedeemCodeCommandHandlerTests
         _tenantProvider = Substitute.For<ITenantProvider>();
         _currentUserRepository = Substitute.For<ICurrentTenantUserRepository>();
         _passwordHasher = Substitute.For<IPasswordHasher>();
+        _authorizationContextFactory = Substitute.For<IAuthorizationContextFactory>();
 
         _handler = new RedeemCodeCommandHandler(
             _repository,
@@ -36,7 +39,9 @@ public class RedeemCodeCommandHandlerTests
             _strategyFactory,
             _tenantProvider,
             _currentUserRepository,
-            _passwordHasher);
+            _passwordHasher,
+            _authorizationContextFactory
+            );
     }
 
     [Fact]
@@ -52,11 +57,23 @@ public class RedeemCodeCommandHandlerTests
         _repository.GetByHashAsync(hash, Arg.Any<CancellationToken>()).Returns(accessCode);
         _tenantProvider.GetTenant().Returns(TenantId);
         _currentUserRepository.GetCurrentUser().Returns(new TenantUserDTO(UserId, Guid.NewGuid().ToString(),"User"));
-        
+        _authorizationContextFactory.CurrentAuthorizationContext.Returns(new AuthorizationContext()
+        {
+            AuthenticationMethod = AuthenticationMethod.TenantUser.ToString(),
+            IpAddress = "127.0.0.1",
+            DeviceId = "fingerprint"
+        });
+        _authorizationContextFactory.Create(targetArn,AuthenticationMethod.Principal, UserId.ToString()).Returns(new AuthorizationContext()
+        {
+            AuthenticationMethod = AuthenticationMethod.Principal.ToString(),
+            IpAddress = "127.0.0.1",
+            DeviceId = "fingerprint"
+        });
+
         var strategy = Substitute.For<IRedemptionStrategy>();
         _strategyFactory.GetStrategy("strategy").Returns(strategy);
 
-        var command = new RedeemCodeCommand(rawCode, "127.0.0.1", "fingerprint");
+        var command = new RedeemCodeCommand(rawCode);
 
         // Act
         var result = await _handler.Handle(command, CancellationToken.None);
