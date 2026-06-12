@@ -81,7 +81,7 @@ namespace AlphaZero.Modules.Identity.Infrastructure.Migrations
                     b.ToTable("TenantUsers");
                 });
 
-            modelBuilder.Entity("AlphaZero.Modules.Identity.Domain.Models.TenantUserPrinciaplAssignment", b =>
+            modelBuilder.Entity("AlphaZero.Modules.Identity.Domain.Models.TenantUserPrincipalAssignment", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -110,7 +110,7 @@ namespace AlphaZero.Modules.Identity.Infrastructure.Migrations
                     b.HasIndex("TenantUserId", "PrincipalId", "Resource")
                         .IsUnique();
 
-                    b.ToTable("TenantPrinciaplAssignments", (string)null);
+                    b.ToTable("TenantPrincipalAssignments", (string)null);
                 });
 
             modelBuilder.Entity("AlphaZero.Modules.Identity.Domain.Models.UserDevice", b =>
@@ -216,7 +216,7 @@ namespace AlphaZero.Modules.Identity.Infrastructure.Migrations
                     b.ToTable("PrincipalManagedPolicyAssignments", (string)null);
                 });
 
-            modelBuilder.Entity("AlphaZero.Modules.Identity.Domain.Models.TenantUserPrinciaplAssignment", b =>
+            modelBuilder.Entity("AlphaZero.Modules.Identity.Domain.Models.TenantUserPrincipalAssignment", b =>
                 {
                     b.HasOne("AlphaZero.Modules.Identity.Infrastructure.Models.PrincipalDataModel", null)
                         .WithMany()

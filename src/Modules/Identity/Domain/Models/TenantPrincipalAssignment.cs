@@ -5,9 +5,9 @@ using ErrorOr;
 
 namespace AlphaZero.Modules.Identity.Domain.Models;
 
-public class TenantUserPrinciaplAssignment : AggregateRoot, IDomainTenantOwned
+public class TenantUserPrincipalAssignment : AggregateRoot, IDomainTenantOwned
 {
-    private TenantUserPrinciaplAssignment(Guid id, Guid tenantId, TenantUser tenantUser, Principal principal, ResourceArn arn)
+    private TenantUserPrincipalAssignment(Guid id, Guid tenantId, TenantUser tenantUser, Principal principal, ResourceArn arn)
         : base(id)
     {
         TenantId = tenantId;
@@ -16,7 +16,7 @@ public class TenantUserPrinciaplAssignment : AggregateRoot, IDomainTenantOwned
         PrincipalId = principal.Id;
         Resource = arn;
     }
-    private TenantUserPrinciaplAssignment() // ef core
+    private TenantUserPrincipalAssignment() // ef core
     {
     }
     //for example, a student in a course can have a principal assignment with the scope of that course, and another assignment with the scope of another course, both with the same role principal but different scopes, this allows for more flexible and fine-grained access control.
@@ -32,7 +32,7 @@ public class TenantUserPrinciaplAssignment : AggregateRoot, IDomainTenantOwned
 
     public IReadOnlyCollection<IPolicy> Policies => Principal.Policies;
 
-    public static ErrorOr<TenantUserPrinciaplAssignment> Create(Guid tenantId, TenantUser tenantUser, Principal principal, string resourceArn)
+    public static ErrorOr<TenantUserPrincipalAssignment> Create(Guid tenantId, TenantUser tenantUser, Principal principal, string resourceArn)
     {
         if (principal.PrincipalScope is not null)
         {
@@ -44,6 +44,6 @@ public class TenantUserPrinciaplAssignment : AggregateRoot, IDomainTenantOwned
         {
             return resource.Errors;
         }
-        return new TenantUserPrinciaplAssignment(Guid.NewGuid(), tenantId, tenantUser, principal, resource.Value);
+        return new TenantUserPrincipalAssignment(Guid.NewGuid(), tenantId, tenantUser, principal, resource.Value);
     }
 }

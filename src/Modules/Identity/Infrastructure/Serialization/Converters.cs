@@ -46,9 +46,22 @@ public class ConditionNodeJsonConverter : JsonConverter<IConditionNode>
         if (!root.TryGetProperty("Type", out var typeProp))
             throw new JsonException("Condition node must have a 'Type' property.");
 
-        var typeStr = typeProp.GetString();
-        if (!Enum.TryParse<ConditionType>(typeStr, true, out var conditionType))
-            throw new JsonException($"Unknown condition type: {typeStr}");
+        ConditionType conditionType;
+        if (typeProp.ValueKind == JsonValueKind.Number)
+        {
+            var typeVal = typeProp.GetInt32();
+            conditionType = (ConditionType)typeVal;
+        }
+        else if (typeProp.ValueKind == JsonValueKind.String)
+        {
+            var typeStr = typeProp.GetString();
+            if (!Enum.TryParse<ConditionType>(typeStr, true, out conditionType))
+                throw new JsonException($"Unknown condition type: {typeStr}");
+        }
+        else
+        {
+            throw new JsonException("Condition node 'Type' property must be a string or number.");
+        }
 
         return conditionType switch
         {

@@ -71,8 +71,8 @@ public class DeviceLockingTests : BaseIntegrationTest
         principalRepo.Add(principal);
         await DbContext.SaveChangesAsync();
 
-        var assignment = TenantUserPrinciaplAssignment.Create(tenantId, user, principal, $"az:course:{tenantId}:course/locked-101").Value;
-        DbContext.TenantPrinciaplAssignments.Add(assignment);
+        var assignment = TenantUserPrincipalAssignment.Create(tenantId, user, principal, $"az:course:{tenantId}:course/locked-101").Value;
+        DbContext.TenantPrincipalAssignments.Add(assignment);
         await DbContext.SaveChangesAsync();
 
         var evaluator = Resolve<IPolicyEvaluatorService>();
@@ -141,8 +141,8 @@ public class DeviceLockingTests : BaseIntegrationTest
         Resolve<IManagedPolicyRepository>().Add(managedPolicy);
         Resolve<IPrincipalRepository>().Add(principal);
         
-        var assignment = TenantUserPrinciaplAssignment.Create(tenantId, user, principal, $"az:course:{tenantId}:course/locked-202").Value;
-        DbContext.TenantPrinciaplAssignments.Add(assignment);
+        var assignment = TenantUserPrincipalAssignment.Create(tenantId, user, principal, $"az:course:{tenantId}:course/locked-202").Value;
+        DbContext.TenantPrincipalAssignments.Add(assignment);
         await DbContext.SaveChangesAsync();
 
         var evaluator = Resolve<IPolicyEvaluatorService>();
@@ -236,8 +236,8 @@ public class DeviceLockingTests : BaseIntegrationTest
         Resolve<IManagedPolicyRepository>().Add(managedPolicy);
         Resolve<IPrincipalRepository>().Add(principal);
         
-        var assignment = TenantUserPrinciaplAssignment.Create(tenantId, user, principal, $"az:course:{tenantId}:course/locked-303").Value;
-        DbContext.TenantPrinciaplAssignments.Add(assignment);
+        var assignment = TenantUserPrincipalAssignment.Create(tenantId, user, principal, $"az:course:{tenantId}:course/locked-303").Value;
+        DbContext.TenantPrincipalAssignments.Add(assignment);
         await DbContext.SaveChangesAsync();
 
         var evaluator = Resolve<IPolicyEvaluatorService>();

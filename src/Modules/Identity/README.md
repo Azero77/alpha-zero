@@ -22,7 +22,7 @@ This module implements a high-performance, multi-tenant Authorization system ins
 *   **Entity:** `Principal` (inherits from `PrincipalTemplate`).
 *   **Types:** 
     *   **IAM Principal:** A sub-identity with local `Username`/`PasswordHash` (e.g., a "Library Accountant" bot or staff account).
-    *   **Role Template:** A static template (e.g., "Student") assigned to `TenantUsers` via `TenantUserPrinciaplAssignment`.
+    *   **Role Template:** A static template (e.g., "Student") assigned to `TenantUsers` via `TenantUserPrincipalAssignment`.
 
 ---
 

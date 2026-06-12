@@ -4,6 +4,7 @@ using AlphaZero.Modules.Identity.Domain.Repositories;
 using AlphaZero.Shared.Application;
 using AlphaZero.Shared.Infrastructure.Repositores;
 using AlphaZero.Shared.Infrastructure.Tenats;
+using Microsoft.Extensions.Caching.Hybrid;
 using ErrorOr;
 using FluentValidation;
 using MediatR;
@@ -28,23 +29,26 @@ public class AssignPrincipalToUserCommandValidator : AbstractValidator<AssignPri
 
 public sealed class AssignPrincipalToUserCommandHandler : IRequestHandler<AssignPrincipalToUserCommand, ErrorOr<Guid>>
 {
-    private readonly ITenantUserPrincpialAssignmentRepository _assignmentRepository;
+    private readonly ITenantUserPrincipalAssignmentRepository _assignmentRepository;
     private readonly IRepository<TenantUser> _userRepository;
     private readonly IPrincipalRepository _principalRepository;
     private readonly ITenantProvider _tenantProvider;
+    private readonly HybridCache _cache;
     private readonly ILogger<AssignPrincipalToUserCommandHandler> _logger;
 
     public AssignPrincipalToUserCommandHandler(
-        ITenantUserPrincpialAssignmentRepository assignmentRepository,
+        ITenantUserPrincipalAssignmentRepository assignmentRepository,
         IRepository<TenantUser> userRepository,
         IPrincipalRepository principalRepository,
         ITenantProvider tenantProvider,
+        HybridCache cache,
         ILogger<AssignPrincipalToUserCommandHandler> logger)
     {
         _assignmentRepository = assignmentRepository;
         _userRepository = userRepository;
         _principalRepository = principalRepository;
         _tenantProvider = tenantProvider;
+        _cache = cache;
         _logger = logger;
     }
 
@@ -68,10 +72,14 @@ public sealed class AssignPrincipalToUserCommandHandler : IRequestHandler<Assign
         var principal = await _principalRepository.GetById(request.PrincipalId);
         if (principal is null) return Error.NotFound("Principal.NotFound", "Principal not found.");
 
-        var result = TenantUserPrinciaplAssignment.Create(tenantId.Value, user, principal, request.ResourceArn);
+        var result = TenantUserPrincipalAssignment.Create(tenantId.Value, user, principal, request.ResourceArn);
         if (result.IsError) return result.Errors;
 
         _assignmentRepository.Add(result.Value);
+        
+        // Evict cache to ensure permissions take effect immediately
+        await _cache.RemoveAsync($"auth_assignments:{request.TenantUserId}", cancellationToken);
+
         _logger.LogInformation("Principal {PrincipalId} assigned to User {UserId} for Resource {ResourceArn} in Tenant {TenantId}.", 
             request.PrincipalId, request.TenantUserId, request.ResourceArn, tenantId.Value);
 

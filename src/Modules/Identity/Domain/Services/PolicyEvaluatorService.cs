@@ -1,9 +1,11 @@
+using AlphaZero.Modules.Identity.Domain.Models;
 using AlphaZero.Modules.Identity.Domain.Models.Principals;
 using AlphaZero.Modules.Identity.Domain.Models.Principals.Policies;
 using AlphaZero.Modules.Identity.Domain.Repositories;
 using AlphaZero.Shared.Authorization;
 using AlphaZero.Shared.Domain;
 using AlphaZero.Shared.Infrastructure.Repositores;
+using Microsoft.Extensions.Caching.Hybrid;
 using ErrorOr;
 
 namespace AlphaZero.Modules.Identity.Domain.Services;
@@ -81,11 +83,11 @@ public interface IAuthorizationStrategy
 
 public class TenantUserAuthorizationStrategy : IAuthorizationStrategy
 {
-    private readonly ITenantUserPrincpialAssignmentRepository _assignmentRepository;
+    private readonly ITenantUserPrincipalAssignmentRepository _assignmentRepository;
     private readonly IPolicyEvaluationEngine _evaluationEngine;
 
     public TenantUserAuthorizationStrategy(
-        ITenantUserPrincpialAssignmentRepository assignmentRepository,
+        ITenantUserPrincipalAssignmentRepository assignmentRepository,
         IPolicyEvaluationEngine evaluationEngine)
     {
         _assignmentRepository = assignmentRepository;
@@ -100,17 +102,21 @@ public class TenantUserAuthorizationStrategy : IAuthorizationStrategy
         if (targetArnResult.IsError) return Error.Forbidden("Resource.Invalid");
         var targetArn = targetArnResult.Value;
 
-        var assignment = await _assignmentRepository.Get(context.Id, targetArn.ToString());
-        if (assignment == null) return Error.Forbidden("Access.Denied", "No matching assignment found.");
+        var assignments = await _assignmentRepository.GetActiveAssignments(context.Id, targetArn.ToString());
 
-        var assignmentScope = assignment.Resource.ToString() + "/*";
+        if (assignments == null || !assignments.Any())
+            return Error.Forbidden("Access.Denied", "No matching assignments found.");
+
         var statements = new List<PolicyStatement>();
-
-        foreach (var policy in assignment.Policies)
+        foreach (var assignment in assignments)
         {
-            var statementsResult = policy.GetPolicyStatements(assignmentScope, assignment.TenantId);
-            if (statementsResult.IsError) return statementsResult.Errors;
-            statements.AddRange(statementsResult.Value);
+            var assignmentScope = $"az:*:{assignment.TenantId}:{assignment.Resource.ResourcePath}/*";
+            foreach (var policy in assignment.Policies)
+            {
+                var statementsResult = policy.GetPolicyStatements(assignmentScope, assignment.TenantId);
+                if (statementsResult.IsError) continue;
+                statements.AddRange(statementsResult.Value);
+            }
         }
 
         return await _evaluationEngine.Evaluate(statements, context, targetArn);

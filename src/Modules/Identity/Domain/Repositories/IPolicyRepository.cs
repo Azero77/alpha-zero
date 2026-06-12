@@ -26,7 +26,7 @@ public interface IPrincipalRepository
 }
 
 
-public interface ITenantUserPrincpialAssignmentRepository : IRepository<TenantUserPrinciaplAssignment>
+public interface ITenantUserPrincipalAssignmentRepository : IRepository<TenantUserPrincipalAssignment>
 {
-    Task<TenantUserPrinciaplAssignment?> Get(Guid tenantUserId, string resourceArn);
+    Task<List<TenantUserPrincipalAssignment>> GetActiveAssignments(Guid tenantUserId, string? resourceArn = null);
 }

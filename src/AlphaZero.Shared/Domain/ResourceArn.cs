@@ -190,7 +190,8 @@ public class ResourcePattern
         if (pResourcePath.EndsWith("*"))
         {
             var prefix = pResourcePath.TrimEnd('*', '/');
-            return arn.ResourcePath.StartsWith(prefix, StringComparison.OrdinalIgnoreCase);
+            return arn.ResourcePath.Equals(prefix, StringComparison.OrdinalIgnoreCase) ||
+                   arn.ResourcePath.StartsWith(prefix + "/", StringComparison.OrdinalIgnoreCase);
         }
 
         // Handle placeholders in the pattern (e.g., az:courses:*:course/{courseId})

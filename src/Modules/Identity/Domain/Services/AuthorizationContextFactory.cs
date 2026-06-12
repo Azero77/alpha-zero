@@ -1,4 +1,4 @@
-﻿using AlphaZero.Modules.Identity.Domain.Models;
+using AlphaZero.Modules.Identity.Domain.Models;
 using AlphaZero.Modules.Identity.Domain.Models.Principals;
 using AlphaZero.Modules.Identity.Domain.Repositories;
 using AlphaZero.Shared.Authorization;
@@ -15,7 +15,7 @@ namespace AlphaZero.Modules.Identity.Domain.Services;
 /// Provides methods for creating authorization contexts used to evaluate user permissions within the application.
 /// </summary>
 public class AuthorizationContextFactory(ICurrentTenantUserRepository currentTenantUserRepository,
-    ITenantUserPrincpialAssignmentRepository tenantUserPrincpialAssignmentRepository,
+    ITenantUserPrincipalAssignmentRepository tenantUserPrincipalAssignmentRepository,
     IPrincipalRepository principalRepository,
     IDeviceProvider deviceProvider,
     IHttpContextAccessor accessor
@@ -50,10 +50,10 @@ public class AuthorizationContextFactory(ICurrentTenantUserRepository currentTen
                 return Error.NotFound();
             }
 
-            var assignment = await tenantUserPrincpialAssignmentRepository.Get(tenantUser.UserId, arn.Value);
-            if (assignment is null)
+            var assignments = await tenantUserPrincipalAssignmentRepository.GetActiveAssignments(tenantUser.UserId, arn.Value);
+            if (assignments is null || !assignments.Any())
                 return Error.Forbidden();
-            var result =  Create(arn, assignment, context);
+            var result =  Create(arn, assignments.First(), context);
             if (!result.IsError)
                 CurrentAuthorizationContext = result.Value;
             return result;
@@ -66,11 +66,11 @@ public class AuthorizationContextFactory(ICurrentTenantUserRepository currentTen
     {
         return contextInitial;
     }
-    public ErrorOr<AuthorizationContext> Create(ResourceArn arn, TenantUserPrinciaplAssignment tenantUserPrinciaplAssignment, AuthorizationContext contextInitial)
+    public ErrorOr<AuthorizationContext> Create(ResourceArn arn, TenantUserPrincipalAssignment tenantUserPrincipalAssignment, AuthorizationContext contextInitial)
     {
         AuthorizationContext result = contextInitial with
         {
-            UserMainDeviceId = tenantUserPrinciaplAssignment.TenantUser.MainDeviceId?.ToString(),
+            UserMainDeviceId = tenantUserPrincipalAssignment.TenantUser.MainDeviceId?.ToString(),
         };
 
         return result;

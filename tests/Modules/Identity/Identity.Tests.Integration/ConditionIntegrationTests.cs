@@ -52,8 +52,8 @@ public class ConditionIntegrationTests : BaseIntegrationTest
         DbContext.TenantUsers.Add(user);
         await DbContext.SaveChangesAsync();
 
-        var assignment = TenantUserPrinciaplAssignment.Create(tenantId, user, principal, $"az:course:{tenantId}:course/math-101").Value;
-        DbContext.TenantPrinciaplAssignments.Add(assignment);
+        var assignment = TenantUserPrincipalAssignment.Create(tenantId, user, principal, $"az:course:{tenantId}:course/math-101").Value;
+        DbContext.TenantPrincipalAssignments.Add(assignment);
         await DbContext.SaveChangesAsync();
 
         var evaluator = Resolve<IPolicyEvaluatorService>();

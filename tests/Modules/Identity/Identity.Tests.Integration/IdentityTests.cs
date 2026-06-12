@@ -53,8 +53,8 @@ public class IdentityTests : BaseIntegrationTest
         await DbContext.SaveChangesAsync();
 
         // Create Assignment (Enrollment)
-        var assignment = TenantUserPrinciaplAssignment.Create(tenantId, user, principal, $"az:course:{tenantId}:course/math-101").Value;
-        DbContext.TenantPrinciaplAssignments.Add(assignment);
+        var assignment = TenantUserPrincipalAssignment.Create(tenantId, user, principal, $"az:course:{tenantId}:course/math-101").Value;
+        DbContext.TenantPrincipalAssignments.Add(assignment);
         await DbContext.SaveChangesAsync();
 
         // Act: Evaluate via the Service

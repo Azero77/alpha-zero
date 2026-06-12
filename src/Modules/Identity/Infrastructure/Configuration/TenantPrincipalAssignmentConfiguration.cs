@@ -6,11 +6,11 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace AlphaZero.Modules.Identity.Infrastructure.Configuration;
 
-public class TenantUserPrinciaplAssignmentConfiguration : IEntityTypeConfiguration<TenantUserPrinciaplAssignment>
+public class TenantUserPrincipalAssignmentConfiguration : IEntityTypeConfiguration<TenantUserPrincipalAssignment>
 {
-    public void Configure(EntityTypeBuilder<TenantUserPrinciaplAssignment> builder)
+    public void Configure(EntityTypeBuilder<TenantUserPrincipalAssignment> builder)
     {
-        builder.ToTable("TenantPrinciaplAssignments");
+        builder.ToTable("TenantPrincipalAssignments");
         builder.HasKey(a => a.Id);
 
         builder.HasOne(a => a.TenantUser)
