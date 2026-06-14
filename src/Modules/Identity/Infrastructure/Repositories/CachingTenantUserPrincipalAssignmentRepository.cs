@@ -14,12 +14,23 @@ using System.Linq.Expressions;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
+using static Amazon.S3.Util.S3EventNotification;
 
 namespace AlphaZero.Modules.Identity.Infrastructure.Repositories;
 
-public class CachingTenantUserPrincipalAssignmentRepository : CachingRepository<AppDbContext, TenantUserPrincipalAssignment, TenantUserPrincipalAssignmentRepository>
+public class CachingTenantUserPrincipalAssignmentRepository : CachingRepository<AppDbContext, TenantUserPrincipalAssignment, TenantUserPrincipalAssignmentRepository>, ITenantUserPrincipalAssignmentRepository
 {
-    public CachingTenantUserPrincipalAssignmentRepository(AppDbContext context, BaseRepository<AppDbContext, TenantUserPrincipalAssignment> innerRepository, HybridCache cache) : base(context, innerRepository, cache)
+    public CachingTenantUserPrincipalAssignmentRepository(AppDbContext context, TenantUserPrincipalAssignmentRepository innerRepository, HybridCache cache) : base(context, innerRepository, cache)
     {
+    }
+
+    public async Task<TenantUserPrincipalAssignment?> GetActiveAssignment(Guid tenantUserId, string? resourceArn = null, CancellationToken ct = default)
+    {
+        string key = $"tenant_user_assignments:{tenantUserId}:{resourceArn}";
+        return await _cache.GetOrCreateAsync(
+            key: key,
+            async token => await _innerRepository.GetActiveAssignment(tenantUserId, resourceArn),
+            cancellationToken: ct
+            );
     }
 }

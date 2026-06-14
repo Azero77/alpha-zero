@@ -11,9 +11,9 @@ public class CachingRepository<TContext, TEntity, TDecoratedRepository> : BaseRe
     where TEntity : Entity
     where TDecoratedRepository : IRepository<TEntity>
 {
-    protected readonly BaseRepository<TContext, TEntity> _innerRepository;
+    protected readonly TDecoratedRepository _innerRepository;
     protected readonly HybridCache _cache;
-    public CachingRepository(TContext context, BaseRepository<TContext, TEntity> innerRepository, HybridCache cache) : base(context)
+    public CachingRepository(TContext context, TDecoratedRepository innerRepository, HybridCache cache) : base(context)
     {
         _innerRepository = innerRepository;
         _cache = cache;

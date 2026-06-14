@@ -47,4 +47,15 @@ public class TenantUserPrincipalAssignment : AggregateRoot, IDomainTenantOwned
         }
         return new TenantUserPrincipalAssignment(Guid.NewGuid(), tenantId, tenantUser, principal, resource.Value, createdAt);
     }
+
+    public ErrorOr<Success> AttachPrincipal(Principal principal)
+    { 
+        if (principal.PrincipalScope is not null)
+        {
+            return Error.Validation("Assignment.Principal", "Principal used for assignment must not have a pre-defined scope (PrincipalScope must be null).");
+        }
+        Principal = principal;
+        PrincipalId = principal.Id;
+        return Result.Success;
+     }
 }

@@ -19,9 +19,7 @@ public sealed class RemovePrincipalFromUserCommandHandler(
 {
     public async Task<ErrorOr<Success>> Handle(RemovePrincipalFromUserCommand request, CancellationToken cancellationToken)
     {
-        var assignments = await repository.GetActiveAssignment(request.TenantUserId, request.ResourceArn);
-        var assignment = assignments.FirstOrDefault(a => a.PrincipalId == request.PrincipalId && 
-                                                          a.Resource.Value == request.ResourceArn.ToLowerInvariant());
+        var assignment = await repository.GetActiveAssignment(request.TenantUserId, request.ResourceArn, cancellationToken);
         
         if (assignment == null)
         {

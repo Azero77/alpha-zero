@@ -22,7 +22,7 @@ public class AuthorizationContextFactory(ICurrentTenantUserRepository currentTen
     ) : IAuthorizationContextFactory
 {
     public AuthorizationContext? CurrentAuthorizationContext { get; private set; } = null;
-    public async Task<ErrorOr<AuthorizationContext>> Create(string requiredPermission,ResourceArn arn, AuthenticationMethod authenticationMethod, string id)
+    public async Task<ErrorOr<AuthorizationContext>> Create(string requiredPermission,ResourceArn arn, AuthenticationMethod authenticationMethod, string id, CancellationToken cancellationToken)
     {
 
         var context = new AuthorizationContext()
@@ -51,10 +51,10 @@ public class AuthorizationContextFactory(ICurrentTenantUserRepository currentTen
                 return Error.NotFound();
             }
 
-            var assignments = await tenantUserPrincipalAssignmentRepository.GetActiveAssignment(tenantUser.UserId, arn.Value);
-            if (assignments is null || !assignments.Any())
+            var assignment = await tenantUserPrincipalAssignmentRepository.GetActiveAssignment(tenantUser.UserId, arn.Value, cancellationToken);
+            if (assignment is null)
                 return Error.Forbidden();
-            var result =  Create(arn, assignments.First(), context);
+            var result =  Create(arn, assignment, context);
             if (!result.IsError)
                 CurrentAuthorizationContext = result.Value;
             return result;

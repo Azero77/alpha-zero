@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using AlphaZero.Modules.Identity.Domain.Models.Principals;
 using Microsoft.EntityFrameworkCore.Migrations;
 
@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace AlphaZero.Modules.Identity.Infrastructure.Migrations
 {
     /// <inheritdoc />
-    public partial class Initial : Migration
+    public partial class Init : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -62,7 +62,9 @@ namespace AlphaZero.Modules.Identity.Infrastructure.Migrations
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
                     TenantId = table.Column<Guid>(type: "uuid", nullable: false),
                     IdentityId = table.Column<string>(type: "character varying(128)", maxLength: 128, nullable: false),
-                    Name = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: false)
+                    Name = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: false),
+                    MainDeviceId = table.Column<Guid>(type: "uuid", nullable: true),
+                    LastMainDeviceSwitchDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -100,8 +102,9 @@ namespace AlphaZero.Modules.Identity.Infrastructure.Migrations
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
                     TenantId = table.Column<Guid>(type: "uuid", nullable: false),
                     TenantUserId = table.Column<Guid>(type: "uuid", nullable: false),
+                    PrincipalId = table.Column<Guid>(type: "uuid", nullable: false),
                     ResourceArn = table.Column<string>(type: "text", nullable: false),
-                    PrincipalId = table.Column<Guid>(type: "uuid", nullable: false)
+                    TimeCreated = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -114,6 +117,28 @@ namespace AlphaZero.Modules.Identity.Infrastructure.Migrations
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
                         name: "FK_TenantPrincipalAssignments_TenantUsers_TenantUserId",
+                        column: x => x.TenantUserId,
+                        principalTable: "TenantUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "UserDevices",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    TenantUserId = table.Column<Guid>(type: "uuid", nullable: false),
+                    DeviceName = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: false),
+                    Platform = table.Column<string>(type: "text", nullable: false),
+                    PublicKey = table.Column<string>(type: "text", nullable: false),
+                    RegisteredAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_UserDevices", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_UserDevices_TenantUsers_TenantUserId",
                         column: x => x.TenantUserId,
                         principalTable: "TenantUsers",
                         principalColumn: "Id",
@@ -163,6 +188,11 @@ namespace AlphaZero.Modules.Identity.Infrastructure.Migrations
                 name: "IX_TenantUsers_TenantId",
                 table: "TenantUsers",
                 column: "TenantId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_UserDevices_TenantUserId",
+                table: "UserDevices",
+                column: "TenantUserId");
         }
 
         /// <inheritdoc />
@@ -176,6 +206,9 @@ namespace AlphaZero.Modules.Identity.Infrastructure.Migrations
 
             migrationBuilder.DropTable(
                 name: "TenantPrincipalAssignments");
+
+            migrationBuilder.DropTable(
+                name: "UserDevices");
 
             migrationBuilder.DropTable(
                 name: "ManagedPolicies");

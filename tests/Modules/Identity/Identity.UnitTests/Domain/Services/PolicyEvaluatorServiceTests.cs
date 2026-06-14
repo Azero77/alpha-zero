@@ -57,10 +57,10 @@ public class PolicyEvaluatorServiceTests
         
         principal.AddPolicy(managedPolicy);
 
-        var assignment = TenantUserPrincipalAssignment.Create(TenantId, user, principal, $"az:course:{TenantId}:course/101").Value;
+        var assignment = TenantUserPrincipalAssignment.Create(TenantId, user, principal, $"az:course:{TenantId}:course/101", DateTime.UtcNow).Value;
         
         _assignmentRepository.GetActiveAssignment(user.Id, Arg.Any<string>())
-            .Returns(Task.FromResult(new List<TenantUserPrincipalAssignment> { assignment }));
+            .Returns(Task.FromResult<TenantUserPrincipalAssignment?>(assignment));
 
         // Act
         var result = await _evaluator.Authorize(new AuthorizationContext()

@@ -10,6 +10,7 @@ using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
 using System.Linq.Expressions;
+using AlphaZero.Shared.Domain;
 
 namespace AlphaZero.Modules.Identity.UnitTests.Application.Principals;
 
@@ -35,7 +36,7 @@ public class AssignPrincipalToUserCommandHandlerTests
         _tenantProvider = Substitute.For<ITenantProvider>();
         _logger = Substitute.For<ILogger<AssignPrincipalToUserCommandHandler>>();
         _handler = new AssignPrincipalToUserCommandHandler(
-            _assignmentRepository, _userRepository, _principalRepository, _tenantProvider, new FakeHybridCache(), _logger);
+            _assignmentRepository, _userRepository, _principalRepository, _tenantProvider, _logger,new Clock());
     }
 
     [Fact]

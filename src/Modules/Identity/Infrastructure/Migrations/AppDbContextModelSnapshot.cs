@@ -101,6 +101,9 @@ namespace AlphaZero.Modules.Identity.Infrastructure.Migrations
                     b.Property<Guid>("TenantUserId")
                         .HasColumnType("uuid");
 
+                    b.Property<DateTime>("TimeCreated")
+                        .HasColumnType("timestamp with time zone");
+
                     b.HasKey("Id");
 
                     b.HasIndex("PrincipalId");
