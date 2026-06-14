@@ -6,12 +6,13 @@ using System.Text.Json;
 
 namespace AlphaZero.Shared.Infrastructure.Repositores;
 
-public class CachingRepository<TContext, TEntity> : BaseRepository<TContext, TEntity>
+public class CachingRepository<TContext, TEntity, TDecoratedRepository> : BaseRepository<TContext, TEntity>
     where TContext : DbContext
     where TEntity : Entity
+    where TDecoratedRepository : IRepository<TEntity>
 {
-    private readonly BaseRepository<TContext, TEntity> _innerRepository;
-    private readonly HybridCache _cache;
+    protected readonly BaseRepository<TContext, TEntity> _innerRepository;
+    protected readonly HybridCache _cache;
     public CachingRepository(TContext context, BaseRepository<TContext, TEntity> innerRepository, HybridCache cache) : base(context)
     {
         _innerRepository = innerRepository;

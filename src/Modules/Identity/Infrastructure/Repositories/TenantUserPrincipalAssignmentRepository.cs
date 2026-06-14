@@ -6,6 +6,8 @@ using AlphaZero.Modules.Identity.Infrastructure.Models;
 using AlphaZero.Modules.Identity.Infrastructure.Persistance;
 using AlphaZero.Shared.Domain;
 using AlphaZero.Shared.Infrastructure.Repositores;
+using MassTransit.Serialization;
+using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.EntityFrameworkCore;
 using System.Reflection;
 
@@ -17,71 +19,24 @@ public class TenantUserPrincipalAssignmentRepository : BaseRepository<AppDbConte
     {
     }
 
-    public async Task<List<TenantUserPrincipalAssignment>> GetActiveAssignments(Guid tenantUserId, string? resourceArn = null)
+    public async Task<TenantUserPrincipalAssignment?> GetActiveAssignment(Guid tenantUserId, string? resourceArn = null)
     {
-        var assignments = await _context.TenantPrincipalAssignments
-            .Include(a => a.TenantUser)
-            .Where(a => a.TenantUser.Id == tenantUserId)
-            .ToListAsync();
-
-        List<TenantUserPrincipalAssignment> matchedAssignments;
-        if (string.IsNullOrEmpty(resourceArn) || resourceArn == "*")
-        {
-            matchedAssignments = assignments;
-        }
-        else
-        {
-            var arnResult = ResourceArn.Create(resourceArn);
-            if (arnResult.IsError) return new List<TenantUserPrincipalAssignment>();
-            var targetArn = arnResult.Value;
-
-            matchedAssignments = assignments.Where(a => 
-                a.Resource.TenantIdString.Equals(targetArn.TenantIdString, StringComparison.OrdinalIgnoreCase) &&
-                (targetArn.ResourcePath.Equals(a.Resource.ResourcePath, StringComparison.OrdinalIgnoreCase) ||
-                 targetArn.ResourcePath.StartsWith(a.Resource.ResourcePath + "/", StringComparison.OrdinalIgnoreCase)))
-                .ToList();
-        }
-
-        var resultList = new List<TenantUserPrincipalAssignment>();
-        foreach (var matched in matchedAssignments)
-        {
-            var principalData = await _context.Principals
-                .Include(p => p.ManagedPolicies)
-                .FirstOrDefaultAsync(p => p.Id == matched.PrincipalId);
-
-            if (principalData != null)
-            {
-                resultList.Add(HydrateAssignment(matched, principalData));
-            }
-        }
-
-        return resultList;
+        //the resource will be az:{serviceType}:{tenantId}:{resourcePath}
+        // we will see if any record in the database matched to check if the requested resourceArn is contained inside the Record
+        //lets say there is a course with az:course:TenantA:course/math101
+        //and the resource that needs a permission to pass is a video inside it like az:video:TenantA:course/math101/section/SectionA/Item/ItemB/videoA
+        //because course/math101 is contained inside the requested arn it will evaluate to true because the video is contained inside the course
+        //if multiple assignments to the same user for the requested resource was found, we will get the latest one for it
+        if(resourceArn is null)
+            return await _context.TenantPrincipalAssignments.FirstOrDefaultAsync(s => s.TenantUser.Id == tenantUserId);
+        var path = ResourceArn.Create(resourceArn).Value.ResourcePath;
+        return await _context.TenantPrincipalAssignments
+            .AsNoTracking()
+            .Where(tpa => EF.Functions.Like(path,$"{tpa.Resource.ResourcePath}/%") || path == tpa.Resource.ResourcePath)
+            .OrderByDescending(tpa => tpa.TimeCreated)
+            .FirstOrDefaultAsync();
+        
     }
 
-    private TenantUserPrincipalAssignment HydrateAssignment(TenantUserPrincipalAssignment assignment, PrincipalDataModel principalData)
-    {
-        var principalResult = Principal.Create(
-            principalData.Id,
-            principalData.Username,
-            principalData.PasswordHash,
-            principalData.Name,
-            principalData.PrincipalType,
-            principalData.PrincipalScopePattern,
-            principalData.TenantId);
-
-        if (principalResult.IsError) return assignment;
-
-        var principal = principalResult.Value;
-        
-        var allPolicies = principalData.InlinePolicies.Cast<IPolicy>()
-            .Concat(principalData.ManagedPolicies.Cast<IPolicy>());
-        
-        principal.LoadPolicies(allPolicies);
-
-        // Use reflection to set the private Principal property
-        var principalField = typeof(TenantUserPrincipalAssignment).GetProperty("Principal", BindingFlags.Public | BindingFlags.Instance);
-        principalField?.SetValue(assignment, principal);
-
-        return assignment;
-    }
+    
 }

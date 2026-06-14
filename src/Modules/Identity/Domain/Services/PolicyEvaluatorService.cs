@@ -102,21 +102,20 @@ public class TenantUserAuthorizationStrategy : IAuthorizationStrategy
         if (targetArnResult.IsError) return Error.Forbidden("Resource.Invalid");
         var targetArn = targetArnResult.Value;
 
-        var assignments = await _assignmentRepository.GetActiveAssignments(context.Id, targetArn.ToString());
+        //there is only one assignment for the user in the resource scope which is the latest , (can't be a teacher and a student in the same course);
+        var assignment = await _assignmentRepository.GetActiveAssignment(context.Id, targetArn.ToString());
 
-        if (assignments == null || !assignments.Any())
+        if (assignment is null)
             return Error.Forbidden("Access.Denied", "No matching assignments found.");
 
         var statements = new List<PolicyStatement>();
-        foreach (var assignment in assignments)
+        string scope = $"az:*:{assignment.TenantId}:{assignment.Resource.ResourcePath}/*"; //resource path is arn not a pattern so we must include /* in the end 
+        
+        foreach (var policy in assignment.Policies)
         {
-            var assignmentScope = $"az:*:{assignment.TenantId}:{assignment.Resource.ResourcePath}/*";
-            foreach (var policy in assignment.Policies)
-            {
-                var statementsResult = policy.GetPolicyStatements(assignmentScope, assignment.TenantId);
-                if (statementsResult.IsError) continue;
-                statements.AddRange(statementsResult.Value);
-            }
+            var statementsResult = policy.GetPolicyStatements(scope, assignment.TenantId);
+            if (statementsResult.IsError) continue;
+            statements.AddRange(statementsResult.Value);
         }
 
         return await _evaluationEngine.Evaluate(statements, context, targetArn);

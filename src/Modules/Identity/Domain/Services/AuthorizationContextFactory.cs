@@ -51,7 +51,7 @@ public class AuthorizationContextFactory(ICurrentTenantUserRepository currentTen
                 return Error.NotFound();
             }
 
-            var assignments = await tenantUserPrincipalAssignmentRepository.GetActiveAssignments(tenantUser.UserId, arn.Value);
+            var assignments = await tenantUserPrincipalAssignmentRepository.GetActiveAssignment(tenantUser.UserId, arn.Value);
             if (assignments is null || !assignments.Any())
                 return Error.Forbidden();
             var result =  Create(arn, assignments.First(), context);

@@ -28,5 +28,11 @@ public interface IPrincipalRepository
 
 public interface ITenantUserPrincipalAssignmentRepository : IRepository<TenantUserPrincipalAssignment>
 {
-    Task<List<TenantUserPrincipalAssignment>> GetActiveAssignments(Guid tenantUserId, string? resourceArn = null);
+    /// <summary>
+    /// Return the latest Assignment to the user, and all assignments before it will be ignored 
+    /// </summary>
+    /// <param name="tenantUserId"></param>
+    /// <param name="resourceArn"></param>
+    /// <returns></returns>
+    Task<TenantUserPrincipalAssignment?> GetActiveAssignment(Guid tenantUserId, string? resourceArn = null);
 }

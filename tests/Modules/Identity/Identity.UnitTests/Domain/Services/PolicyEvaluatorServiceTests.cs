@@ -59,7 +59,7 @@ public class PolicyEvaluatorServiceTests
 
         var assignment = TenantUserPrincipalAssignment.Create(TenantId, user, principal, $"az:course:{TenantId}:course/101").Value;
         
-        _assignmentRepository.GetActiveAssignments(user.Id, Arg.Any<string>())
+        _assignmentRepository.GetActiveAssignment(user.Id, Arg.Any<string>())
             .Returns(Task.FromResult(new List<TenantUserPrincipalAssignment> { assignment }));
 
         // Act
