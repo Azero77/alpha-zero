@@ -90,19 +90,14 @@ public class IAMPreprocessor(IAuthorizationContextFactory authorizationContextFa
             }
             resourceArn = tenantScopedRequirement!.resourceArnFactory(context.Request!, currentTenant.Value);
         }
-        var authContextResult = await authorizationContextFactory.Create(resourceArn, Enum.Parse<AuthenticationMethod>(auth_scheme, true), id);
+        string permission = globalRequirement!.Action ?? tenantScopedRequirement!.Action;
+        var authContext = await authorizationContextFactory.Create(permission, resourceArn, Enum.Parse<AuthenticationMethod>(auth_scheme, true), id);
 
-        if (authContextResult.IsError)
+        if (authContext.IsError)
         {
             await context.HttpContext.Response.SendForbiddenAsync(ct); return;
         }
-
-        var authContext = authContextResult.Value with
-        {
-            RequiredPermission = globalRequirement?.Action ?? tenantScopedRequirement!.Action
-        };
-        
-        var result = await evaluator.Authorize(authContext);
+        var result = await evaluator.Authorize(authContext.Value);
 
         if (result.IsError)
         {

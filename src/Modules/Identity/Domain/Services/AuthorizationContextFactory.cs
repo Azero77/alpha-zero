@@ -22,7 +22,7 @@ public class AuthorizationContextFactory(ICurrentTenantUserRepository currentTen
     ) : IAuthorizationContextFactory
 {
     public AuthorizationContext? CurrentAuthorizationContext { get; private set; } = null;
-    public async Task<ErrorOr<AuthorizationContext>> Create(ResourceArn arn, AuthenticationMethod authenticationMethod, string id)
+    public async Task<ErrorOr<AuthorizationContext>> Create(string requiredPermission,ResourceArn arn, AuthenticationMethod authenticationMethod, string id)
     {
 
         var context = new AuthorizationContext()
@@ -33,7 +33,8 @@ public class AuthorizationContextFactory(ICurrentTenantUserRepository currentTen
             ResourceType = arn.Service,
             TenantId = Guid.Parse(arn.TenantIdString),
             DeviceId = deviceProvider.GetDeviceId(),
-            IpAddress = accessor?.HttpContext?.Connection.RemoteIpAddress?.ToString()
+            IpAddress = accessor?.HttpContext?.Connection.RemoteIpAddress?.ToString(),
+            RequiredPermission = requiredPermission
         };
         if (AuthenticationMethod.Principal == authenticationMethod)
         {

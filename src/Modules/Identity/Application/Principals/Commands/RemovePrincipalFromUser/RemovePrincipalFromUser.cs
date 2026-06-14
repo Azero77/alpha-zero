@@ -15,7 +15,6 @@ public record RemovePrincipalFromUserCommand(
 
 public sealed class RemovePrincipalFromUserCommandHandler(
     ITenantUserPrincipalAssignmentRepository repository,
-    HybridCache cache,
     ILogger<RemovePrincipalFromUserCommandHandler> logger) : IRequestHandler<RemovePrincipalFromUserCommand, ErrorOr<Success>>
 {
     public async Task<ErrorOr<Success>> Handle(RemovePrincipalFromUserCommand request, CancellationToken cancellationToken)
@@ -30,9 +29,6 @@ public sealed class RemovePrincipalFromUserCommandHandler(
         }
 
         repository.Remove(assignment);
-
-        // Evict cache to ensure permissions take effect immediately
-        await cache.RemoveAsync($"auth_assignments:{request.TenantUserId}", cancellationToken);
 
         logger.LogWarning("Principal {PrincipalId} removed from User {UserId} for Resource {ResourceArn}.", 
             request.PrincipalId, request.TenantUserId, request.ResourceArn);

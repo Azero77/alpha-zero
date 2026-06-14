@@ -33,7 +33,6 @@ public sealed class AssignPrincipalToUserCommandHandler : IRequestHandler<Assign
     private readonly IRepository<TenantUser> _userRepository;
     private readonly IPrincipalRepository _principalRepository;
     private readonly ITenantProvider _tenantProvider;
-    private readonly HybridCache _cache;
     private readonly ILogger<AssignPrincipalToUserCommandHandler> _logger;
 
     public AssignPrincipalToUserCommandHandler(
@@ -41,14 +40,12 @@ public sealed class AssignPrincipalToUserCommandHandler : IRequestHandler<Assign
         IRepository<TenantUser> userRepository,
         IPrincipalRepository principalRepository,
         ITenantProvider tenantProvider,
-        HybridCache cache,
         ILogger<AssignPrincipalToUserCommandHandler> logger)
     {
         _assignmentRepository = assignmentRepository;
         _userRepository = userRepository;
         _principalRepository = principalRepository;
         _tenantProvider = tenantProvider;
-        _cache = cache;
         _logger = logger;
     }
 
@@ -76,9 +73,6 @@ public sealed class AssignPrincipalToUserCommandHandler : IRequestHandler<Assign
         if (result.IsError) return result.Errors;
 
         _assignmentRepository.Add(result.Value);
-        
-        // Evict cache to ensure permissions take effect immediately
-        await _cache.RemoveAsync($"auth_assignments:{request.TenantUserId}", cancellationToken);
 
         _logger.LogInformation("Principal {PrincipalId} assigned to User {UserId} for Resource {ResourceArn} in Tenant {TenantId}.", 
             request.PrincipalId, request.TenantUserId, request.ResourceArn, tenantId.Value);

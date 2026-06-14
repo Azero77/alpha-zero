@@ -7,6 +7,6 @@ namespace AlphaZero.Shared.Authorization
     {
         AuthorizationContext? CurrentAuthorizationContext { get; }
 
-        Task<ErrorOr<AuthorizationContext>> Create(ResourceArn arn, AuthenticationMethod authenticationMethod, string id);
+        Task<ErrorOr<AuthorizationContext>> Create(string requiredPermission,ResourceArn arn, AuthenticationMethod authenticationMethod, string id);
     }
 }
