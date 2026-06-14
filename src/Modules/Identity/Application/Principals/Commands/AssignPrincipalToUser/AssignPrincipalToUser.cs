@@ -9,6 +9,7 @@ using ErrorOr;
 using FluentValidation;
 using MediatR;
 using Microsoft.Extensions.Logging;
+using AlphaZero.Shared.Domain;
 
 namespace AlphaZero.Modules.Identity.Application.Principals.Commands.AssignPrincipalToUser;
 
@@ -34,19 +35,21 @@ public sealed class AssignPrincipalToUserCommandHandler : IRequestHandler<Assign
     private readonly IPrincipalRepository _principalRepository;
     private readonly ITenantProvider _tenantProvider;
     private readonly ILogger<AssignPrincipalToUserCommandHandler> _logger;
-
+    private readonly IClock _clock;
     public AssignPrincipalToUserCommandHandler(
         ITenantUserPrincipalAssignmentRepository assignmentRepository,
         IRepository<TenantUser> userRepository,
         IPrincipalRepository principalRepository,
         ITenantProvider tenantProvider,
-        ILogger<AssignPrincipalToUserCommandHandler> logger)
+        ILogger<AssignPrincipalToUserCommandHandler> logger,
+        IClock clock)
     {
         _assignmentRepository = assignmentRepository;
         _userRepository = userRepository;
         _principalRepository = principalRepository;
         _tenantProvider = tenantProvider;
         _logger = logger;
+        _clock = clock;
     }
 
     public async Task<ErrorOr<Guid>> Handle(AssignPrincipalToUserCommand request, CancellationToken cancellationToken)
@@ -69,7 +72,7 @@ public sealed class AssignPrincipalToUserCommandHandler : IRequestHandler<Assign
         var principal = await _principalRepository.GetById(request.PrincipalId);
         if (principal is null) return Error.NotFound("Principal.NotFound", "Principal not found.");
 
-        var result = TenantUserPrincipalAssignment.Create(tenantId.Value, user, principal, request.ResourceArn);
+        var result = TenantUserPrincipalAssignment.Create(tenantId.Value, user, principal, request.ResourceArn, _clock.Now);
         if (result.IsError) return result.Errors;
 
         _assignmentRepository.Add(result.Value);

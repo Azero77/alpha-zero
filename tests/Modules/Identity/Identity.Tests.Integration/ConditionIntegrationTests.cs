@@ -12,7 +12,6 @@ using System.Text.Json;
 using ErrorOr;
 
 namespace Identity.Tests.Integration;
-
 public class ConditionIntegrationTests : BaseIntegrationTest
 {
     public ConditionIntegrationTests(ApiFactory factory) : base(factory)
@@ -52,7 +51,7 @@ public class ConditionIntegrationTests : BaseIntegrationTest
         DbContext.TenantUsers.Add(user);
         await DbContext.SaveChangesAsync();
 
-        var assignment = TenantUserPrincipalAssignment.Create(tenantId, user, principal, $"az:course:{tenantId}:course/math-101").Value;
+        var assignment = TenantUserPrincipalAssignment.Create(tenantId, user, principal, $"az:course:{tenantId}:course/math-101",DateTime.UtcNow).Value;
         DbContext.TenantPrincipalAssignments.Add(assignment);
         await DbContext.SaveChangesAsync();
 

@@ -108,7 +108,7 @@ public class IAMPreprocessorTests : IClassFixture<SecurityApiFactory>
             var principalRepo = scope.ServiceProvider.GetRequiredService<IPrincipalRepository>();
             principalRepo.Add(principal);
 
-            var assignment = TenantUserPrincipalAssignment.Create(tenantB, user, principal, $"az:course:{tenantB}:course/{course.Id}").Value;
+            var assignment = TenantUserPrincipalAssignment.Create(tenantB, user, principal, $"az:course:{tenantB}:course/{course.Id}",DateTime.UtcNow).Value;
             identityDb.TenantPrincipalAssignments.Add(assignment);
 
             await identityDb.SaveChangesAsync();

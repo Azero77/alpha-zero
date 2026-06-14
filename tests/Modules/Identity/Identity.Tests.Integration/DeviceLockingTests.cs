@@ -71,7 +71,7 @@ public class DeviceLockingTests : BaseIntegrationTest
         principalRepo.Add(principal);
         await DbContext.SaveChangesAsync();
 
-        var assignment = TenantUserPrincipalAssignment.Create(tenantId, user, principal, $"az:course:{tenantId}:course/locked-101").Value;
+        var assignment = TenantUserPrincipalAssignment.Create(tenantId, user, principal, $"az:course:{tenantId}:course/locked-101", DateTime.UtcNow).Value;
         DbContext.TenantPrincipalAssignments.Add(assignment);
         await DbContext.SaveChangesAsync();
 
@@ -141,7 +141,7 @@ public class DeviceLockingTests : BaseIntegrationTest
         Resolve<IManagedPolicyRepository>().Add(managedPolicy);
         Resolve<IPrincipalRepository>().Add(principal);
         
-        var assignment = TenantUserPrincipalAssignment.Create(tenantId, user, principal, $"az:course:{tenantId}:course/locked-202").Value;
+        var assignment = TenantUserPrincipalAssignment.Create(tenantId, user, principal, $"az:course:{tenantId}:course/locked-202", DateTime.UtcNow).Value;
         DbContext.TenantPrincipalAssignments.Add(assignment);
         await DbContext.SaveChangesAsync();
 
@@ -236,7 +236,7 @@ public class DeviceLockingTests : BaseIntegrationTest
         Resolve<IManagedPolicyRepository>().Add(managedPolicy);
         Resolve<IPrincipalRepository>().Add(principal);
         
-        var assignment = TenantUserPrincipalAssignment.Create(tenantId, user, principal, $"az:course:{tenantId}:course/locked-303").Value;
+        var assignment = TenantUserPrincipalAssignment.Create(tenantId, user, principal, $"az:course:{tenantId}:course/locked-303", DateTime.UtcNow).Value;
         DbContext.TenantPrincipalAssignments.Add(assignment);
         await DbContext.SaveChangesAsync();
 

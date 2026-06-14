@@ -7,7 +7,7 @@ namespace AlphaZero.Modules.Identity.Domain.Models;
 
 public class TenantUserPrincipalAssignment : AggregateRoot, IDomainTenantOwned
 {
-    private TenantUserPrincipalAssignment(Guid id, Guid tenantId, TenantUser tenantUser, Principal principal, ResourceArn arn)
+    private TenantUserPrincipalAssignment(Guid id, Guid tenantId, TenantUser tenantUser, Principal principal, ResourceArn arn, DateTime createdAt)
         : base(id)
     {
         TenantId = tenantId;
@@ -15,6 +15,7 @@ public class TenantUserPrincipalAssignment : AggregateRoot, IDomainTenantOwned
         Principal = principal;
         PrincipalId = principal.Id;
         Resource = arn;
+        TimeCreated = createdAt;
     }
     private TenantUserPrincipalAssignment() // ef core
     {
@@ -29,10 +30,10 @@ public class TenantUserPrincipalAssignment : AggregateRoot, IDomainTenantOwned
     public Principal Principal { get; private set; }
     public Guid PrincipalId { get; private set; }
     public ResourceArn Resource { get; private set; }
-
+    public DateTime TimeCreated { get; private set; }
     public IReadOnlyCollection<IPolicy> Policies => Principal.Policies;
 
-    public static ErrorOr<TenantUserPrincipalAssignment> Create(Guid tenantId, TenantUser tenantUser, Principal principal, string resourceArn)
+    public static ErrorOr<TenantUserPrincipalAssignment> Create(Guid tenantId, TenantUser tenantUser, Principal principal, string resourceArn, DateTime createdAt)
     {
         if (principal.PrincipalScope is not null)
         {
@@ -44,6 +45,6 @@ public class TenantUserPrincipalAssignment : AggregateRoot, IDomainTenantOwned
         {
             return resource.Errors;
         }
-        return new TenantUserPrincipalAssignment(Guid.NewGuid(), tenantId, tenantUser, principal, resource.Value);
+        return new TenantUserPrincipalAssignment(Guid.NewGuid(), tenantId, tenantUser, principal, resource.Value, createdAt);
     }
 }
