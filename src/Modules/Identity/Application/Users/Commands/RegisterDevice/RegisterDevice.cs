@@ -18,7 +18,8 @@ public record RegisterDeviceCommand(
 public class RegisterDeviceCommandHandler(
     IRepository<TenantUser> userRepository,
     IClock clock,
-    HybridCache cache) : IRequestHandler<RegisterDeviceCommand, ErrorOr<Guid>>
+    HybridCache cache,
+    Microsoft.Extensions.Caching.Memory.IMemoryCache memoryCache) : IRequestHandler<RegisterDeviceCommand, ErrorOr<Guid>>
 {
     public async Task<ErrorOr<Guid>> Handle(RegisterDeviceCommand request, CancellationToken cancellationToken)
     {
@@ -37,6 +38,9 @@ public class RegisterDeviceCommandHandler(
             new HybridCacheEntryOptions { Expiration = TimeSpan.FromHours(24) },
             cancellationToken: cancellationToken
         );
+
+        // Also invalidate the user's assignments cache because MainDeviceId might have changed
+        memoryCache.Remove($"user_assignments:{request.TenantUserId}");
 
         return device.Id;
     }

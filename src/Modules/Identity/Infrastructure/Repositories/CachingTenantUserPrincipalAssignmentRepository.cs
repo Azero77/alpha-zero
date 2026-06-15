@@ -1,30 +1,40 @@
 using AlphaZero.Modules.Identity.Domain.Models;
-using AlphaZero.Modules.Identity.Domain.Models.Principals;
-using AlphaZero.Modules.Identity.Domain.Models.Principals.Policies;
 using AlphaZero.Modules.Identity.Domain.Repositories;
 using AlphaZero.Modules.Identity.Infrastructure.Persistance;
 using AlphaZero.Shared.Domain;
-using AlphaZero.Shared.Infrastructure.Repositores;
-using AlphaZero.Shared.Queries;
-using Microsoft.Extensions.Caching.Hybrid;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Linq.Expressions;
-using System.Reflection;
-using System.Threading;
-using System.Threading.Tasks;
-using static Amazon.S3.Util.S3EventNotification;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace AlphaZero.Modules.Identity.Infrastructure.Repositories;
 
-public class CachingTenantUserPrincipalAssignmentRepository : CachingRepository<AppDbContext, TenantUserPrincipalAssignment, TenantUserPrincipalAssignmentRepository>, ITenantUserPrincipalAssignmentRepository
+public class CachingTenantUserPrincipalAssignmentRepository : TenantUserPrincipalAssignmentRepository
 {
-    public CachingTenantUserPrincipalAssignmentRepository(AppDbContext context, TenantUserPrincipalAssignmentRepository innerRepository, HybridCache cache) : base(context, innerRepository, cache)
+    private readonly IMemoryCache _cache;
+
+    public CachingTenantUserPrincipalAssignmentRepository(AppDbContext context, IPrincipalRepository principalRepository, IMemoryCache cache) 
+        : base(context, principalRepository)
     {
+        _cache = cache;
     }
 
-    public async Task<TenantUserPrincipalAssignment?> GetActiveAssignment(Guid tenantUserId, string? resourceArn = null, CancellationToken ct = default)
+    public override async Task<TenantUserPrincipalAssignment?> GetActiveAssignment(Guid tenantUserId, string? resourceArn = null, CancellationToken ct = default)
     {
+        var cacheKey = $"user_assignments:{tenantUserId}";
+        var assignments = await _cache.GetOrCreateAsync(cacheKey, async entry =>
+        {
+            entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(30);
+            return await GetAllAssignmentsEagerAsync(tenantUserId, ct);
+        });
+
+        if (assignments is null || !assignments.Any()) return null;
+
+        if (resourceArn is null)
+            return assignments.FirstOrDefault();
+
+        var path = ResourceArn.Create(resourceArn).Value.ResourcePath;
+        
+        return assignments
+           .Where(a => a.Resource.IsRequestedPathContainedInResource(path))
+           .OrderByDescending(a => a.TimeCreated)
+           .FirstOrDefault();
     }
 }

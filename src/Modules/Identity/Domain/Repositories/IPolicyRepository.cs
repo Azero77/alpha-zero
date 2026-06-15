@@ -35,4 +35,5 @@ public interface ITenantUserPrincipalAssignmentRepository : IRepository<TenantUs
     /// <param name="resourceArn"></param>
     /// <returns></returns>
     Task<TenantUserPrincipalAssignment?> GetActiveAssignment(Guid tenantUserId, string? resourceArn = null, CancellationToken ct = default);
+    Task<IReadOnlyList<TenantUserPrincipalAssignment>> GetAllAssignmentsEagerAsync(Guid tenantUserId, CancellationToken ct = default);
 }

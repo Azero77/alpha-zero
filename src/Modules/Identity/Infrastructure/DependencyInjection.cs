@@ -20,7 +20,6 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Caching.Hybrid;
 using AlphaZero.Modules.Identity.Domain.Models.Principals;
-using AlphaZero.Modules.Identity.Infrastructure.Serialization;
 
 namespace AlphaZero.Modules.Identity.Infrastructure;
 
@@ -44,8 +43,7 @@ public static class DependencyInjection
         services.AddScoped<IManagedPolicyRepository, ManagedPolicyRepository>();
         services.AddScoped<IPrincipalRepository, PrincipalRepository>();
         services.AddScoped<IRepository<TenantUser>,TenantUserRepository>(); 
-        services.AddScoped<ITenantUserPrincipalAssignmentRepository, TenantUserPrincipalAssignmentRepository>();
-        services.Decorate<ITenantUserPrincipalAssignmentRepository, CachingTenantUserPrincipalAssignmentRepository>();
+        services.AddScoped<ITenantUserPrincipalAssignmentRepository, CachingTenantUserPrincipalAssignmentRepository>();
         
         services.AddScoped<IAuthorizationStrategy, TenantUserAuthorizationStrategy>();
         services.AddScoped<IAuthorizationStrategy, PrincipalUserAuthorizationStrategy>();
@@ -61,8 +59,8 @@ public static class DependencyInjection
         services.AddScoped<IAuthorizationContextFactory,AuthorizationContextFactory>();
         services.AddScoped<IDeviceSignatureVerifier,  DeviceSignatureVerifier>();
         services.AddScoped<IPublicKeyProvider, PublicKeyProvider>();
+        services.AddMemoryCache();
         services.Decorate<IPublicKeyProvider, CachePublicKeyProvider>();
-        services.AddSingleton<IHybridCacheSerializer<List<CachedUserAssignmentDto>>, CachedUserAssignmentSerializer>();
         services.Scan(scan => scan.FromAssemblyOf<IOperationEvaluator>()
         .AddClasses(classes => classes.AssignableTo<IOperationEvaluator>())
         .AsImplementedInterfaces()

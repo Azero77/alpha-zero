@@ -21,7 +21,7 @@ public class TenantUserPrincipalAssignmentRepository : BaseRepository<AppDbConte
         _principalRepository = principalRepository;
     }
 
-    public async Task<TenantUserPrincipalAssignment?> GetActiveAssignment(Guid tenantUserId, string? resourceArn = null, CancellationToken token = default)
+    public virtual async Task<TenantUserPrincipalAssignment?> GetActiveAssignment(Guid tenantUserId, string? resourceArn = null, CancellationToken token = default)
     {
         //the resource will be az:{serviceType}:{tenantId}:{resourcePath}
         // we will see if any record in the database matched to check if the requested resourceArn is contained inside the Record
@@ -55,5 +55,21 @@ public class TenantUserPrincipalAssignmentRepository : BaseRepository<AppDbConte
 
     }
 
+    public async Task<IReadOnlyList<TenantUserPrincipalAssignment>> GetAllAssignmentsEagerAsync(Guid tenantUserId, CancellationToken token = default)
+    {
+        var assignments = await _context.TenantPrincipalAssignments
+            .AsNoTracking()
+            .Include(s => s.TenantUser)
+            .Where(t => t.TenantUser.Id == tenantUserId)
+            .ToListAsync(token);
 
+        foreach(var assignment in assignments)
+        {
+            var principal = await _principalRepository.GetById(assignment.PrincipalId, token);
+            if (principal != null)
+                assignment.AttachPrincipal(principal);
+        }
+
+        return assignments;
+    }
 }

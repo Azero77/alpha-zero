@@ -15,6 +15,7 @@ public record RemovePrincipalFromUserCommand(
 
 public sealed class RemovePrincipalFromUserCommandHandler(
     ITenantUserPrincipalAssignmentRepository repository,
+    Microsoft.Extensions.Caching.Memory.IMemoryCache cache,
     ILogger<RemovePrincipalFromUserCommandHandler> logger) : IRequestHandler<RemovePrincipalFromUserCommand, ErrorOr<Success>>
 {
     public async Task<ErrorOr<Success>> Handle(RemovePrincipalFromUserCommand request, CancellationToken cancellationToken)
@@ -30,6 +31,8 @@ public sealed class RemovePrincipalFromUserCommandHandler(
 
         logger.LogWarning("Principal {PrincipalId} removed from User {UserId} for Resource {ResourceArn}.", 
             request.PrincipalId, request.TenantUserId, request.ResourceArn);
+
+        cache.Remove($"user_assignments:{request.TenantUserId}");
 
         return Result.Success;
     }
