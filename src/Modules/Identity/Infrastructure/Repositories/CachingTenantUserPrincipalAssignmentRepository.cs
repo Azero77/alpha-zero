@@ -26,11 +26,5 @@ public class CachingTenantUserPrincipalAssignmentRepository : CachingRepository<
 
     public async Task<TenantUserPrincipalAssignment?> GetActiveAssignment(Guid tenantUserId, string? resourceArn = null, CancellationToken ct = default)
     {
-        string key = $"tenant_user_assignments:{tenantUserId}:{resourceArn}";
-        return await _cache.GetOrCreateAsync(
-            key: key,
-            async token => await _innerRepository.GetActiveAssignment(tenantUserId, resourceArn),
-            cancellationToken: ct
-            );
     }
 }

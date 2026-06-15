@@ -38,10 +38,7 @@ public class AuthorizationContextFactory(ICurrentTenantUserRepository currentTen
         };
         if (AuthenticationMethod.Principal == authenticationMethod)
         {
-            var principalResult = await principalRepository.GetById(Guid.Parse(id));
-            if (principalResult is null)
-                return Error.NotFound();
-            return Create(arn, principalResult, context);
+            return Create(arn, context);
         }
         else if (AuthenticationMethod.TenantUser == authenticationMethod)
         {
@@ -63,7 +60,7 @@ public class AuthorizationContextFactory(ICurrentTenantUserRepository currentTen
     }
 
 
-    public ErrorOr<AuthorizationContext> Create(ResourceArn arn, Principal principal, AuthorizationContext contextInitial)
+    public ErrorOr<AuthorizationContext> Create(ResourceArn arn, AuthorizationContext contextInitial)
     {
         return contextInitial;
     }

@@ -35,6 +35,7 @@ public class TenantUserPrincipalAssignmentRepository : BaseRepository<AppDbConte
         var path = ResourceArn.Create(resourceArn).Value.ResourcePath;
         var assignmentsForUser = await _context.TenantPrincipalAssignments
             .AsNoTracking()
+            .Include(s => s.TenantUser)
             .Where(t => t.TenantUser.Id == tenantUserId)
             .ToListAsync(token);
 
