@@ -36,7 +36,7 @@ public class AssignPrincipalToUserCommandHandlerTests
         _tenantProvider = Substitute.For<ITenantProvider>();
         _logger = Substitute.For<ILogger<AssignPrincipalToUserCommandHandler>>();
         _handler = new AssignPrincipalToUserCommandHandler(
-            _assignmentRepository, _userRepository, _principalRepository, _tenantProvider, _logger,new Clock(), Substitute.For<Microsoft.Extensions.Caching.Memory.IMemoryCache>());
+            _assignmentRepository, _userRepository, _principalRepository, _tenantProvider, _logger,new Clock());
     }
 
     [Fact]

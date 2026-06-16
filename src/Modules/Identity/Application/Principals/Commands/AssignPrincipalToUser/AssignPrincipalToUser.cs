@@ -36,7 +36,6 @@ public sealed class AssignPrincipalToUserCommandHandler : IRequestHandler<Assign
     private readonly ITenantProvider _tenantProvider;
     private readonly ILogger<AssignPrincipalToUserCommandHandler> _logger;
     private readonly IClock _clock;
-    private readonly Microsoft.Extensions.Caching.Memory.IMemoryCache _cache;
 
     public AssignPrincipalToUserCommandHandler(
         ITenantUserPrincipalAssignmentRepository assignmentRepository,
@@ -44,8 +43,8 @@ public sealed class AssignPrincipalToUserCommandHandler : IRequestHandler<Assign
         IPrincipalRepository principalRepository,
         ITenantProvider tenantProvider,
         ILogger<AssignPrincipalToUserCommandHandler> logger,
-        IClock clock,
-        Microsoft.Extensions.Caching.Memory.IMemoryCache cache)
+        IClock clock
+        )
     {
         _assignmentRepository = assignmentRepository;
         _userRepository = userRepository;
@@ -53,7 +52,6 @@ public sealed class AssignPrincipalToUserCommandHandler : IRequestHandler<Assign
         _tenantProvider = tenantProvider;
         _logger = logger;
         _clock = clock;
-        _cache = cache;
     }
 
     public async Task<ErrorOr<Guid>> Handle(AssignPrincipalToUserCommand request, CancellationToken cancellationToken)
@@ -83,8 +81,6 @@ public sealed class AssignPrincipalToUserCommandHandler : IRequestHandler<Assign
 
         _logger.LogInformation("Principal {PrincipalId} assigned to User {UserId} for Resource {ResourceArn} in Tenant {TenantId}.", 
             request.PrincipalId, request.TenantUserId, request.ResourceArn, tenantId.Value);
-
-        _cache.Remove($"user_assignments:{request.TenantUserId}");
 
         return result.Value.Id;
     }

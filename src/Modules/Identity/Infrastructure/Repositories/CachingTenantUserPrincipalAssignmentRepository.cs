@@ -9,10 +9,16 @@ namespace AlphaZero.Modules.Identity.Infrastructure.Repositories;
 public class CachingTenantUserPrincipalAssignmentRepository : TenantUserPrincipalAssignmentRepository
 {
     private readonly IMemoryCache _cache;
+    private readonly ITenantUserPrincipalAssignmentRepository _inner;
 
-    public CachingTenantUserPrincipalAssignmentRepository(AppDbContext context, IPrincipalRepository principalRepository, IMemoryCache cache) 
+    public CachingTenantUserPrincipalAssignmentRepository(
+        AppDbContext context, 
+        IPrincipalRepository principalRepository, 
+        ITenantUserPrincipalAssignmentRepository inner,
+        IMemoryCache cache) 
         : base(context, principalRepository)
     {
+        _inner = inner;
         _cache = cache;
     }
 
@@ -22,7 +28,7 @@ public class CachingTenantUserPrincipalAssignmentRepository : TenantUserPrincipa
         var assignments = await _cache.GetOrCreateAsync(cacheKey, async entry =>
         {
             entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(30);
-            return await GetAllAssignmentsEagerAsync(tenantUserId, ct);
+            return await _inner.GetAllAssignmentsEagerAsync(tenantUserId, ct);
         });
 
         if (assignments is null || !assignments.Any()) return null;
@@ -36,5 +42,17 @@ public class CachingTenantUserPrincipalAssignmentRepository : TenantUserPrincipa
            .Where(a => a.Resource.IsRequestedPathContainedInResource(path))
            .OrderByDescending(a => a.TimeCreated)
            .FirstOrDefault();
+    }
+
+    public override void Add(TenantUserPrincipalAssignment entity)
+    {
+        _inner.Add(entity);
+        _cache.Remove($"user_assignments:{entity.TenantUser.Id}");
+    }
+
+    public override void Remove(TenantUserPrincipalAssignment entity)
+    {
+        _inner.Remove(entity);
+        _cache.Remove($"user_assignments:{entity.TenantUser.Id}");
     }
 }

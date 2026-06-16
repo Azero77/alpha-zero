@@ -1,6 +1,7 @@
 using AlphaZero.Modules.Identity.Domain.Models;
 using AlphaZero.Modules.Identity.Domain.Repositories;
 using AlphaZero.Shared.Application;
+using AlphaZero.Shared.Authorization;
 using AlphaZero.Shared.Domain;
 using AlphaZero.Shared.Infrastructure.Repositores;
 using ErrorOr;
@@ -18,8 +19,7 @@ public record RegisterDeviceCommand(
 public class RegisterDeviceCommandHandler(
     IRepository<TenantUser> userRepository,
     IClock clock,
-    HybridCache cache,
-    Microsoft.Extensions.Caching.Memory.IMemoryCache memoryCache) : IRequestHandler<RegisterDeviceCommand, ErrorOr<Guid>>
+    IPublicKeyProvider publicKeyProvider) : IRequestHandler<RegisterDeviceCommand, ErrorOr<Guid>>
 {
     public async Task<ErrorOr<Guid>> Handle(RegisterDeviceCommand request, CancellationToken cancellationToken)
     {
@@ -31,17 +31,8 @@ public class RegisterDeviceCommandHandler(
 
         var device = user.Devices.Last(); // Newly added device
 
-        // Populate the cache for the signature validator
-        await cache.SetAsync(
-            $"device_pubkey:{device.Id}",
-            device.PublicKey,
-            new HybridCacheEntryOptions { Expiration = TimeSpan.FromHours(24) },
-            cancellationToken: cancellationToken
-        );
-
-        // Also invalidate the user's assignments cache because MainDeviceId might have changed
-        memoryCache.Remove($"user_assignments:{request.TenantUserId}");
-
+        //evict cache
+        await publicKeyProvider.SetNewDevicePublicKey(request.TenantUserId.ToString(), device.Id.ToString(), device.PublicKey, cancellationToken);
         return device.Id;
     }
 }
