@@ -10,4 +10,5 @@ public interface IDeviceSignatureVerifier
 public interface IPublicKeyProvider
 {
     Task<string?> GetPublicKeyAsync(string deviceId, CancellationToken token = default);
+    Task SetNewDevicePublicKey(string tenantUserId,string deviceId, string publicKey, CancellationToken token = default);
 }

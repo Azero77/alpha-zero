@@ -72,6 +72,18 @@ public class Program
         // Run migrations only when NOT in design-time (EF tools)
         // EF tools don't call Main if they find CreateBuilder, but we ensure safety here too.
         await app.RunMigrations(moduleInstances);
+/*
+        if (app.Environment.IsDevelopment())
+        {
+            var identityModule = moduleInstances.OfType<AlphaZero.Modules.Identity.Presentation.IdentityModule>().FirstOrDefault();
+            if (identityModule is not null)
+            {
+                using var scope = identityModule.CreateScope();
+                var identityContext = scope.Resolve<AlphaZero.Modules.Identity.Infrastructure.Persistance.AppDbContext>();
+                await AlphaZero.Modules.Identity.Infrastructure.Persistance.Seeding.IdentitySeedReader.SeedAsync(identityContext);
+            }
+        }*/
+
         app.MapGet("users/me", (ClaimsPrincipal principal) =>
         {
             return principal.Claims.ToDictionary(c => c.Type, c => c.Value);

@@ -68,6 +68,10 @@ public class ResourceArn
 
     public override bool Equals(object? obj) => obj is ResourceArn other && Value == other.Value;
     public override int GetHashCode() => Value.GetHashCode();
+    public bool IsRequestedPathContainedInResource(string requestedPath)
+    {
+        return ResourcePath == requestedPath || ResourcePath.StartsWith(requestedPath + "/");
+    }
     // --- Static Factories ---
 
     public static ResourceArn ForTenant(Guid tenantId) => new($"az:tenant:{GlobalTenant}:tenant/{tenantId}");
@@ -175,7 +179,7 @@ public class ResourcePattern
         // Prefix check (az)
         if (pPrefix != ResourceArn.Prefix) return false;
 
-        // Service check
+        // Service check (may be removed for the Courses nested elements for example to not care about chaning the service to * in order to pass)
         if (pService != "*" && !string.Equals(pService, arn.Service, StringComparison.OrdinalIgnoreCase))
             return false;
 
@@ -190,7 +194,8 @@ public class ResourcePattern
         if (pResourcePath.EndsWith("*"))
         {
             var prefix = pResourcePath.TrimEnd('*', '/');
-            return arn.ResourcePath.StartsWith(prefix, StringComparison.OrdinalIgnoreCase);
+            return arn.ResourcePath.Equals(prefix, StringComparison.OrdinalIgnoreCase) ||
+                   arn.ResourcePath.StartsWith(prefix + "/", StringComparison.OrdinalIgnoreCase);
         }
 
         // Handle placeholders in the pattern (e.g., az:courses:*:course/{courseId})

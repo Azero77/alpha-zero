@@ -29,7 +29,7 @@ public class CourseStateHandlersTests
     {
         // Arrange
         var courseId = Guid.NewGuid();
-        _courseRepository.GetByIdWithSectionsAsync(courseId, Arg.Any<CancellationToken>()).Returns((Course?)null);
+        _courseRepository.GetCourseAsync(courseId, Arg.Any<CancellationToken>()).Returns((Course?)null);
         var command = new SubmitCourseForReviewCommand(courseId);
 
         // Act
@@ -49,7 +49,7 @@ public class CourseStateHandlersTests
         var course = Course.Create(Guid.NewGuid(), tenantId, "Title", "Desc", subjectId).Value;
         // Status is Draft
         
-        _courseRepository.GetByIdWithSectionsAsync(course.Id, Arg.Any<CancellationToken>()).Returns(course);
+        _courseRepository.GetCourseAsync(course.Id, Arg.Any<CancellationToken>()).Returns(course);
         var command = new ApproveCourseCommand(course.Id);
 
         // Act
@@ -72,7 +72,7 @@ public class CourseStateHandlersTests
         course.AddCurriculumItem(course.Sections.First().Id, "L1", "Video", ResourceArn.ForVideo(tenantId, Guid.NewGuid()), JsonElement.Parse("{}"));
         course.SubmitForReview(); // Now UnderReview
 
-        _courseRepository.GetByIdWithSectionsAsync(course.Id, Arg.Any<CancellationToken>()).Returns(course);
+        _courseRepository.GetCourseAsync(course.Id, Arg.Any<CancellationToken>()).Returns(course);
         var command = new RejectCourseCommand(course.Id, ""); // Empty reason
 
         // Act
@@ -94,7 +94,7 @@ public class CourseStateHandlersTests
         course.AddCurriculumItem(course.Sections.First().Id, "L1", "Video", ResourceArn.ForVideo(tenantId, Guid.NewGuid()), JsonElement.Parse("{}"));
         course.SubmitForReview();
 
-        _courseRepository.GetByIdWithSectionsAsync(course.Id, Arg.Any<CancellationToken>()).Returns(course);
+        _courseRepository.GetCourseAsync(course.Id, Arg.Any<CancellationToken>()).Returns(course);
         var command = new RejectCourseCommand(course.Id, "Incomplete content");
 
         // Act

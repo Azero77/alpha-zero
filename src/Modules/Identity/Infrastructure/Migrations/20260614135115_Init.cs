@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace AlphaZero.Modules.Identity.Infrastructure.Migrations
 {
     /// <inheritdoc />
-    public partial class Initial : Migration
+    public partial class Init : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -62,7 +62,9 @@ namespace AlphaZero.Modules.Identity.Infrastructure.Migrations
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
                     TenantId = table.Column<Guid>(type: "uuid", nullable: false),
                     IdentityId = table.Column<string>(type: "character varying(128)", maxLength: 128, nullable: false),
-                    Name = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: false)
+                    Name = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: false),
+                    MainDeviceId = table.Column<Guid>(type: "uuid", nullable: true),
+                    LastMainDeviceSwitchDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -94,26 +96,49 @@ namespace AlphaZero.Modules.Identity.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "TenantPrinciaplAssignments",
+                name: "TenantPrincipalAssignments",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
                     TenantId = table.Column<Guid>(type: "uuid", nullable: false),
                     TenantUserId = table.Column<Guid>(type: "uuid", nullable: false),
+                    PrincipalId = table.Column<Guid>(type: "uuid", nullable: false),
                     ResourceArn = table.Column<string>(type: "text", nullable: false),
-                    PrincipalId = table.Column<Guid>(type: "uuid", nullable: false)
+                    TimeCreated = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_TenantPrinciaplAssignments", x => x.Id);
+                    table.PrimaryKey("PK_TenantPrincipalAssignments", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_TenantPrinciaplAssignments_Principals_PrincipalId",
+                        name: "FK_TenantPrincipalAssignments_Principals_PrincipalId",
                         column: x => x.PrincipalId,
                         principalTable: "Principals",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
-                        name: "FK_TenantPrinciaplAssignments_TenantUsers_TenantUserId",
+                        name: "FK_TenantPrincipalAssignments_TenantUsers_TenantUserId",
+                        column: x => x.TenantUserId,
+                        principalTable: "TenantUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "UserDevices",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    TenantUserId = table.Column<Guid>(type: "uuid", nullable: false),
+                    DeviceName = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: false),
+                    Platform = table.Column<string>(type: "text", nullable: false),
+                    PublicKey = table.Column<string>(type: "text", nullable: false),
+                    RegisteredAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_UserDevices", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_UserDevices_TenantUsers_TenantUserId",
                         column: x => x.TenantUserId,
                         principalTable: "TenantUsers",
                         principalColumn: "Id",
@@ -138,18 +163,18 @@ namespace AlphaZero.Modules.Identity.Infrastructure.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
-                name: "IX_TenantPrinciaplAssignments_PrincipalId",
-                table: "TenantPrinciaplAssignments",
+                name: "IX_TenantPrincipalAssignments_PrincipalId",
+                table: "TenantPrincipalAssignments",
                 column: "PrincipalId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_TenantPrinciaplAssignments_TenantId",
-                table: "TenantPrinciaplAssignments",
+                name: "IX_TenantPrincipalAssignments_TenantId",
+                table: "TenantPrincipalAssignments",
                 column: "TenantId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_TenantPrinciaplAssignments_TenantUserId_PrincipalId_Resourc~",
-                table: "TenantPrinciaplAssignments",
+                name: "IX_TenantPrincipalAssignments_TenantUserId_PrincipalId_Resourc~",
+                table: "TenantPrincipalAssignments",
                 columns: new[] { "TenantUserId", "PrincipalId", "ResourceArn" },
                 unique: true);
 
@@ -163,6 +188,11 @@ namespace AlphaZero.Modules.Identity.Infrastructure.Migrations
                 name: "IX_TenantUsers_TenantId",
                 table: "TenantUsers",
                 column: "TenantId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_UserDevices_TenantUserId",
+                table: "UserDevices",
+                column: "TenantUserId");
         }
 
         /// <inheritdoc />
@@ -175,7 +205,10 @@ namespace AlphaZero.Modules.Identity.Infrastructure.Migrations
                 name: "PrincipalManagedPolicyAssignments");
 
             migrationBuilder.DropTable(
-                name: "TenantPrinciaplAssignments");
+                name: "TenantPrincipalAssignments");
+
+            migrationBuilder.DropTable(
+                name: "UserDevices");
 
             migrationBuilder.DropTable(
                 name: "ManagedPolicies");

@@ -6,6 +6,7 @@ using AlphaZero.Modules.Identity.Domain.Services;
 using AlphaZero.Shared.Authorization;
 using AlphaZero.Shared.Domain;
 using AlphaZero.Shared.Infrastructure.Repositores;
+using Microsoft.Extensions.Caching.Hybrid;
 using ErrorOr;
 using FluentAssertions;
 using NSubstitute;
@@ -15,7 +16,7 @@ namespace AlphaZero.Modules.Identity.UnitTests.Domain.Services;
 public class PolicyEvaluatorServiceTests
 {
     private readonly IPrincipalRepository _principalRepository;
-    private readonly ITenantUserPrincpialAssignmentRepository _assignmentRepository;
+    private readonly ITenantUserPrincipalAssignmentRepository _assignmentRepository;
     private readonly IRepository<TenantUser> _userRepository;
     private readonly PolicyEvaluatorService _evaluator;
     
@@ -24,7 +25,7 @@ public class PolicyEvaluatorServiceTests
     public PolicyEvaluatorServiceTests()
     {
         _principalRepository = Substitute.For<IPrincipalRepository>();
-        _assignmentRepository = Substitute.For<ITenantUserPrincpialAssignmentRepository>();
+        _assignmentRepository = Substitute.For<ITenantUserPrincipalAssignmentRepository>();
         _userRepository = Substitute.For<IRepository<TenantUser>>();
         var conditionRepository = Substitute.For<IConditionRepository>();
         var operationEvaluators = Enumerable.Empty<IOperationEvaluator>();
@@ -56,10 +57,10 @@ public class PolicyEvaluatorServiceTests
         
         principal.AddPolicy(managedPolicy);
 
-        var assignment = TenantUserPrinciaplAssignment.Create(TenantId, user, principal, $"az:course:{TenantId}:course/101").Value;
+        var assignment = TenantUserPrincipalAssignment.Create(TenantId, user, principal, $"az:course:{TenantId}:course/101", DateTime.UtcNow).Value;
         
-        _assignmentRepository.Get(user.Id, Arg.Any<string>())
-            .Returns(Task.FromResult<TenantUserPrinciaplAssignment?>(assignment));
+        _assignmentRepository.GetActiveAssignment(user.Id, Arg.Any<string>())
+            .Returns(Task.FromResult<TenantUserPrincipalAssignment?>(assignment));
 
         // Act
         var result = await _evaluator.Authorize(new AuthorizationContext()
@@ -102,5 +103,54 @@ public class PolicyEvaluatorServiceTests
 
         // Assert
         result.IsError.Should().BeFalse();
+    }
+}
+
+public class FakeHybridCache : HybridCache
+{
+    private readonly Dictionary<string, object> _cache = new();
+
+    public override async ValueTask<T> GetOrCreateAsync<TState, T>(
+        string key,
+        TState state,
+        Func<TState, CancellationToken, ValueTask<T>> factory,
+        HybridCacheEntryOptions? options,
+        IEnumerable<string>? tags,
+        CancellationToken cancellationToken)
+    {
+        if (_cache.TryGetValue(key, out var value))
+        {
+            return (T)value;
+        }
+
+        var newValue = await factory(state, cancellationToken);
+        _cache[key] = newValue!;
+        return newValue;
+    }
+
+    public override ValueTask SetAsync<T>(
+        string key,
+        T value,
+        HybridCacheEntryOptions? options,
+        IEnumerable<string>? tags,
+        CancellationToken cancellationToken)
+    {
+        _cache[key] = value!;
+        return ValueTask.CompletedTask;
+    }
+
+    public override ValueTask RemoveAsync(
+        string key,
+        CancellationToken cancellationToken)
+    {
+        _cache.Remove(key);
+        return ValueTask.CompletedTask;
+    }
+
+    public override ValueTask RemoveByTagAsync(
+        string tag,
+        CancellationToken cancellationToken)
+    {
+        return ValueTask.CompletedTask;
     }
 }

@@ -1,9 +1,11 @@
+using AlphaZero.Modules.Identity.Domain.Models;
 using AlphaZero.Modules.Identity.Domain.Models.Principals;
 using AlphaZero.Modules.Identity.Domain.Models.Principals.Policies;
 using AlphaZero.Modules.Identity.Domain.Repositories;
 using AlphaZero.Shared.Authorization;
 using AlphaZero.Shared.Domain;
 using AlphaZero.Shared.Infrastructure.Repositores;
+using Microsoft.Extensions.Caching.Hybrid;
 using ErrorOr;
 
 namespace AlphaZero.Modules.Identity.Domain.Services;
@@ -81,11 +83,11 @@ public interface IAuthorizationStrategy
 
 public class TenantUserAuthorizationStrategy : IAuthorizationStrategy
 {
-    private readonly ITenantUserPrincpialAssignmentRepository _assignmentRepository;
+    private readonly ITenantUserPrincipalAssignmentRepository _assignmentRepository;
     private readonly IPolicyEvaluationEngine _evaluationEngine;
 
     public TenantUserAuthorizationStrategy(
-        ITenantUserPrincpialAssignmentRepository assignmentRepository,
+        ITenantUserPrincipalAssignmentRepository assignmentRepository,
         IPolicyEvaluationEngine evaluationEngine)
     {
         _assignmentRepository = assignmentRepository;
@@ -100,16 +102,19 @@ public class TenantUserAuthorizationStrategy : IAuthorizationStrategy
         if (targetArnResult.IsError) return Error.Forbidden("Resource.Invalid");
         var targetArn = targetArnResult.Value;
 
-        var assignment = await _assignmentRepository.Get(context.Id, targetArn.ToString());
-        if (assignment == null) return Error.Forbidden("Access.Denied", "No matching assignment found.");
+        //there is only one assignment for the user in the resource scope which is the latest , (can't be a teacher and a student in the same course);
+        var assignment = await _assignmentRepository.GetActiveAssignment(context.Id, targetArn.ToString());
 
-        var assignmentScope = assignment.Resource.ToString() + "/*";
+        if (assignment is null)
+            return Error.Forbidden("Access.Denied", "No matching assignments found.");
+
         var statements = new List<PolicyStatement>();
-
+        string scope = $"az:*:{assignment.TenantId}:{assignment.Resource.ResourcePath}/*"; //resource path is arn not a pattern so we must include /* in the end 
+        
         foreach (var policy in assignment.Policies)
         {
-            var statementsResult = policy.GetPolicyStatements(assignmentScope, assignment.TenantId);
-            if (statementsResult.IsError) return statementsResult.Errors;
+            var statementsResult = policy.GetPolicyStatements(scope, assignment.TenantId);
+            if (statementsResult.IsError) continue;
             statements.AddRange(statementsResult.Value);
         }
 

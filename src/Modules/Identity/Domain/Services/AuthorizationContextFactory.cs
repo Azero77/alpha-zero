@@ -1,4 +1,4 @@
-﻿using AlphaZero.Modules.Identity.Domain.Models;
+using AlphaZero.Modules.Identity.Domain.Models;
 using AlphaZero.Modules.Identity.Domain.Models.Principals;
 using AlphaZero.Modules.Identity.Domain.Repositories;
 using AlphaZero.Shared.Authorization;
@@ -15,14 +15,14 @@ namespace AlphaZero.Modules.Identity.Domain.Services;
 /// Provides methods for creating authorization contexts used to evaluate user permissions within the application.
 /// </summary>
 public class AuthorizationContextFactory(ICurrentTenantUserRepository currentTenantUserRepository,
-    ITenantUserPrincpialAssignmentRepository tenantUserPrincpialAssignmentRepository,
+    ITenantUserPrincipalAssignmentRepository tenantUserPrincipalAssignmentRepository,
     IPrincipalRepository principalRepository,
     IDeviceProvider deviceProvider,
     IHttpContextAccessor accessor
     ) : IAuthorizationContextFactory
 {
     public AuthorizationContext? CurrentAuthorizationContext { get; private set; } = null;
-    public async Task<ErrorOr<AuthorizationContext>> Create(ResourceArn arn, AuthenticationMethod authenticationMethod, string id)
+    public async Task<ErrorOr<AuthorizationContext>> Create(string requiredPermission,ResourceArn arn, AuthenticationMethod authenticationMethod, string id, CancellationToken cancellationToken)
     {
 
         var context = new AuthorizationContext()
@@ -33,14 +33,12 @@ public class AuthorizationContextFactory(ICurrentTenantUserRepository currentTen
             ResourceType = arn.Service,
             TenantId = Guid.Parse(arn.TenantIdString),
             DeviceId = deviceProvider.GetDeviceId(),
-            IpAddress = accessor?.HttpContext?.Connection.RemoteIpAddress?.ToString()
+            IpAddress = accessor?.HttpContext?.Connection.RemoteIpAddress?.ToString(),
+            RequiredPermission = requiredPermission
         };
         if (AuthenticationMethod.Principal == authenticationMethod)
         {
-            var principalResult = await principalRepository.GetById(Guid.Parse(id));
-            if (principalResult is null)
-                return Error.NotFound();
-            return Create(arn, principalResult, context);
+            return Create(arn, context);
         }
         else if (AuthenticationMethod.TenantUser == authenticationMethod)
         {
@@ -50,7 +48,7 @@ public class AuthorizationContextFactory(ICurrentTenantUserRepository currentTen
                 return Error.NotFound();
             }
 
-            var assignment = await tenantUserPrincpialAssignmentRepository.Get(tenantUser.UserId, arn.Value);
+            var assignment = await tenantUserPrincipalAssignmentRepository.GetActiveAssignment(tenantUser.UserId, arn.Value, cancellationToken);
             if (assignment is null)
                 return Error.Forbidden();
             var result =  Create(arn, assignment, context);
@@ -62,15 +60,15 @@ public class AuthorizationContextFactory(ICurrentTenantUserRepository currentTen
     }
 
 
-    public ErrorOr<AuthorizationContext> Create(ResourceArn arn, Principal principal, AuthorizationContext contextInitial)
+    public ErrorOr<AuthorizationContext> Create(ResourceArn arn, AuthorizationContext contextInitial)
     {
         return contextInitial;
     }
-    public ErrorOr<AuthorizationContext> Create(ResourceArn arn, TenantUserPrinciaplAssignment tenantUserPrinciaplAssignment, AuthorizationContext contextInitial)
+    public ErrorOr<AuthorizationContext> Create(ResourceArn arn, TenantUserPrincipalAssignment tenantUserPrincipalAssignment, AuthorizationContext contextInitial)
     {
         AuthorizationContext result = contextInitial with
         {
-            UserMainDeviceId = tenantUserPrinciaplAssignment.TenantUser.MainDeviceId?.ToString(),
+            UserMainDeviceId = tenantUserPrincipalAssignment.TenantUser.MainDeviceId?.ToString(),
         };
 
         return result;

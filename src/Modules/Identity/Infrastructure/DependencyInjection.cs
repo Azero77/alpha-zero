@@ -18,6 +18,8 @@ using Microsoft.AspNetCore.Authorization.Policy;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Caching.Hybrid;
+using AlphaZero.Modules.Identity.Domain.Models.Principals;
 
 namespace AlphaZero.Modules.Identity.Infrastructure;
 
@@ -34,13 +36,15 @@ public static class DependencyInjection
                 h.MigrationsAssembly(typeof(AppDbContext).Assembly.FullName);
                 h.MigrationsHistoryTable("__IdentityMigrationHistory");
             });
+            opts.ConfigureWarnings(w => w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
         });
 
         //they are public because it is used by fast endpoint middleware in the api scope
         services.AddScoped<IManagedPolicyRepository, ManagedPolicyRepository>();
         services.AddScoped<IPrincipalRepository, PrincipalRepository>();
         services.AddScoped<IRepository<TenantUser>,TenantUserRepository>(); 
-        services.AddScoped<ITenantUserPrincpialAssignmentRepository, TenantUserPrincpialAssignmentRepository>();
+        services.AddScoped<ITenantUserPrincipalAssignmentRepository, TenantUserPrincipalAssignmentRepository>();
+        services.Decorate<ITenantUserPrincipalAssignmentRepository, CachingTenantUserPrincipalAssignmentRepository>();
         
         services.AddScoped<IAuthorizationStrategy, TenantUserAuthorizationStrategy>();
         services.AddScoped<IAuthorizationStrategy, PrincipalUserAuthorizationStrategy>();
@@ -56,6 +60,7 @@ public static class DependencyInjection
         services.AddScoped<IAuthorizationContextFactory,AuthorizationContextFactory>();
         services.AddScoped<IDeviceSignatureVerifier,  DeviceSignatureVerifier>();
         services.AddScoped<IPublicKeyProvider, PublicKeyProvider>();
+        services.AddMemoryCache();
         services.Decorate<IPublicKeyProvider, CachePublicKeyProvider>();
         services.Scan(scan => scan.FromAssemblyOf<IOperationEvaluator>()
         .AddClasses(classes => classes.AssignableTo<IOperationEvaluator>())

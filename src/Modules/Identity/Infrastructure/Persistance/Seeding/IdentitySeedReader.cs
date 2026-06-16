@@ -1,6 +1,8 @@
 using AlphaZero.Modules.Identity.Domain.Models.Principals;
 using AlphaZero.Modules.Identity.Domain.Models.Principals.Policies;
 using AlphaZero.Modules.Identity.Infrastructure.Models;
+using AlphaZero.Modules.Identity.Infrastructure.Persistance;
+using Microsoft.EntityFrameworkCore;
 using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -56,5 +58,49 @@ public static class IdentitySeedReader
         }
 
         return (principals, managedPolicies);
+    }
+
+    public static async Task SeedAsync(AppDbContext context)
+    {
+        var (principals, managedPolicies) = GetData();
+
+        // Seed Managed Policies
+        foreach (var policy in managedPolicies)
+        {
+            if (!await context.ManagedPolicies.AnyAsync(mp => mp.Id == policy.Id))
+            {
+                context.ManagedPolicies.Add(policy);
+            }
+        }
+        await context.SaveChangesAsync();
+
+        // Load all tracked managed policies from database to prevent duplicate tracking issues
+        var dbManagedPolicies = await context.ManagedPolicies.ToListAsync();
+
+        // Seed Principals
+        foreach (var principal in principals)
+        {
+            var alreadyExists = await context.Principals.AnyAsync(p => p.Id == principal.Id);
+            if (!alreadyExists)
+            {
+                var principalData = new PrincipalDataModel
+                {
+                    Id = principal.Id,
+                    Username = principal.Username,
+                    PasswordHash = principal.PasswordHash,
+                    Name = principal.Name,
+                    PrincipalType = principal.PrincipalType,
+                    PrincipalScopePattern = principal.PrincipalScope?.Value,
+                    TenantId = principal.TenantId,
+                    InlinePolicies = principal.Policies.OfType<InlinePolicy>().ToList(),
+                    ManagedPolicies = dbManagedPolicies
+                        .Where(mp => principal.Policies.OfType<ManagedPolicy>().Any(pmp => pmp.Id == mp.Id))
+                        .ToList()
+                };
+
+                context.Principals.Add(principalData);
+            }
+        }
+        await context.SaveChangesAsync();
     }
 }

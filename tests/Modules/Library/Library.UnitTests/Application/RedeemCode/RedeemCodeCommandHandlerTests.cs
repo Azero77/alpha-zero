@@ -61,9 +61,10 @@ public class RedeemCodeCommandHandlerTests
         {
             AuthenticationMethod = AuthenticationMethod.TenantUser.ToString(),
             IpAddress = "127.0.0.1",
-            DeviceId = "fingerprint"
+            DeviceId = "fingerprint",
+            RequiredPermission=""
         });
-        _authorizationContextFactory.Create(targetArn,AuthenticationMethod.Principal, UserId.ToString()).Returns(new AuthorizationContext()
+        _authorizationContextFactory.Create("",targetArn,AuthenticationMethod.Principal, UserId.ToString()).Returns(new AuthorizationContext()
         {
             AuthenticationMethod = AuthenticationMethod.Principal.ToString(),
             IpAddress = "127.0.0.1",
