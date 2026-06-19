@@ -1,7 +1,6 @@
 using AlphaZero.Shared.Application;
 using AlphaZero.Shared.Domain;
 using AlphaZero.Shared.Queries;
-using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using System.Linq.Expressions;
@@ -61,11 +60,6 @@ public class BaseDataModelRepository<TContext, TDomainModel, TDataModel>
     // IRepository<TDomainModel> — read operations
     // ──────────────────────────────────────────────────────────────
 
-    public IQueryable<TDomainModel> Entities =>
-        throw new NotSupportedException(
-            "Direct IQueryable is not supported on DataModel repositories. " +
-            "Use the typed query methods instead.");
-
     public virtual async Task<TDomainModel?> GetById(Guid id, CancellationToken token = default)
     {
         var dataModel = await _context.Set<TDataModel>().FindAsync([id], token);
@@ -76,44 +70,29 @@ public class BaseDataModelRepository<TContext, TDomainModel, TDataModel>
         return domain;
     }
 
-    public virtual async Task<IReadOnlyCollection<TDomainModel>> GetAll(CancellationToken token = default)
+    public virtual async Task<TDomainModel?> GetFirst(
+        Expression<Func<TDomainModel, bool>> filter, CancellationToken token = default)
     {
-        var dataModels = await _context.Set<TDataModel>()
-            .AsNoTracking()
-            .ToListAsync(token);
-
+        var dataModels = await _context.Set<TDataModel>().AsNoTracking().ToListAsync(token);
+        var compiled = filter.Compile();
+        
+        _logger.LogWarning("BaseDataModelRepository is using a domain-level filter on an in-memory collection. " +
+            "This is inefficient and should be overridden in a subclass with a DataModel-aware filter.");
+            
         return dataModels.Select(d =>
         {
             var domain = _mapper.ToDomain(d);
             TrackEntity(domain);
             return domain;
-        }).ToList();
-    }
-
-    public virtual async Task<IReadOnlyCollection<TDomainModel>> Get(
-        Expression<Func<TDomainModel, bool>> filter, CancellationToken token = default)
-    {
-        // For DataModel repos, the filter is compiled against domain models
-        // after materialization. Subclasses should override with a DataModel-aware filter for perf.
-        var all = await GetAll(token);
-        var compiled = filter.Compile();
-        _logger.LogCritical("BaseDataModelRepository.Get() is using a domain-level filter on an in-memory collection. " +
-            "This is inefficient and should be overridden in a subclass with a DataModel-aware filter.");
-        return all.Where(compiled).ToList();
-    }
-
-    public virtual async Task<TDomainModel?> GetFirst(
-        Expression<Func<TDomainModel, bool>> filter, CancellationToken token = default)
-    {
-        var results = await Get(filter, token);
-        return results.FirstOrDefault();
+        }).FirstOrDefault(compiled);
     }
 
     public virtual async Task<bool> Any(
         Expression<Func<TDomainModel, bool>> filter, CancellationToken token = default)
     {
-        var results = await Get(filter, token);
-        return results.Any();
+        var dataModels = await _context.Set<TDataModel>().AsNoTracking().ToListAsync(token);
+        var compiled = filter.Compile();
+        return dataModels.Select(d => _mapper.ToDomain(d)).Any(compiled);
     }
 
     public virtual async Task<int> Count(
@@ -122,40 +101,9 @@ public class BaseDataModelRepository<TContext, TDomainModel, TDataModel>
         if (filter is null)
             return await _context.Set<TDataModel>().CountAsync(token);
 
-        var results = await Get(filter, token);
-        return results.Count;
-    }
-
-    public virtual async Task<PagedResult<TDomainModel>> Get<TKey>(
-        int pageNumber, int perPage,
-        Expression<Func<TDomainModel, TKey>> orderBy,
-        bool ascending = true, CancellationToken token = default)
-    {
-        var all = await GetAll(token);
-        var ordered = ascending
-            ? all.AsQueryable().OrderBy(orderBy)
-            : all.AsQueryable().OrderByDescending(orderBy);
-        _logger.LogCritical("BaseDataModelRepository.Get() is using a domain-level filter on an in-memory collection. " +
-            "This is inefficient and should be overridden in a subclass with a DataModel-aware filter.");
-        var count = all.Count;
-        var page = ordered.Skip((pageNumber - 1) * perPage).Take(perPage).ToList();
-        return new PagedResult<TDomainModel>(page, count, pageNumber, perPage);
-    }
-
-    public virtual async Task<PagedResult<TDomainModel>> Get<TKey>(
-        int pageNumber, int perPage,
-        Expression<Func<TDomainModel, bool>> filter,
-        Expression<Func<TDomainModel, TKey>> orderBy,
-        bool ascending = true, CancellationToken token = default)
-    {
-        var filtered = await Get(filter, token);
-        var ordered = ascending
-            ? filtered.AsQueryable().OrderBy(orderBy)
-            : filtered.AsQueryable().OrderByDescending(orderBy);
-
-        var count = filtered.Count;
-        var page = ordered.Skip((pageNumber - 1) * perPage).Take(perPage).ToList();
-        return new PagedResult<TDomainModel>(page, count, pageNumber, perPage);
+        var dataModels = await _context.Set<TDataModel>().AsNoTracking().ToListAsync(token);
+        var compiled = filter.Compile();
+        return dataModels.Select(d => _mapper.ToDomain(d)).Count(compiled);
     }
 
     private void TrackEntity(TDomainModel model)

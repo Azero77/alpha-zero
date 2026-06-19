@@ -24,8 +24,7 @@ public sealed class DistributeBatchCommandHandler(
 {
     public async Task<ErrorOr<Success>> Handle(DistributeBatchCommand request, CancellationToken cancellationToken)
     {
-        var count = await repository.Entities.Where(x => x.BatchId == request.BatchId && x.Status == AccessCodeStatus.Minted)
-            .ExecuteUpdateAsync(setter => setter.SetProperty(s => s.Status,AccessCodeStatus.Distributed));
+        var count = await repository.MarkBatchAsDistributedAsync(request.BatchId, cancellationToken);
 
         logger.LogInformation("Distributed {Count} codes in Batch {BatchId}.", count, request.BatchId);
 

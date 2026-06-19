@@ -1,8 +1,7 @@
-using AlphaZero.Modules.Assessments.Application.Repositories;
+using AlphaZero.Modules.Assessments.Application.Queries;
 using AlphaZero.Shared.Queries;
 using ErrorOr;
 using MediatR;
-using System.Linq;
 
 namespace AlphaZero.Modules.Assessments.Application.Assessments.Queries.ListAssessments;
 
@@ -18,32 +17,15 @@ public record ListAssessmentsQuery(int Page = 1, int PerPage = 10) : IRequest<Er
 
 public sealed class ListAssessmentsQueryHandler : IRequestHandler<ListAssessmentsQuery, ErrorOr<PagedResult<AssessmentDto>>>
 {
-    private readonly IAssessmentRepository _assessmentRepository;
+    private readonly IAssessmentQueryService _assessmentQueryService;
 
-    public ListAssessmentsQueryHandler(IAssessmentRepository assessmentRepository)
+    public ListAssessmentsQueryHandler(IAssessmentQueryService assessmentQueryService)
     {
-        _assessmentRepository = assessmentRepository;
+        _assessmentQueryService = assessmentQueryService;
     }
 
     public async Task<ErrorOr<PagedResult<AssessmentDto>>> Handle(ListAssessmentsQuery request, CancellationToken cancellationToken)
     {
-        var result = await _assessmentRepository.Get(
-            request.Page,
-            request.PerPage,
-            orderBy: a => a.Title,
-            ascending: true,
-            token: cancellationToken);
-
-        return new PagedResult<AssessmentDto>(
-            result.Items.Select(a => new AssessmentDto(
-                a.Id,
-                a.Title,
-                a.Description,
-                a.Type.ToString(),
-                a.PassingScore,
-                a.Status.ToString())).ToList(),
-            result.TotalCount,
-            result.CurrentPage,
-            result.PageSize);
+        return await _assessmentQueryService.ListAssessmentsAsync(request.Page, request.PerPage, cancellationToken);
     }
 }

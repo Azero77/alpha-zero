@@ -1,4 +1,4 @@
-﻿using AlphaZero.Shared.Domain;
+using AlphaZero.Shared.Domain;
 using AlphaZero.Shared.Queries;
 using Microsoft.EntityFrameworkCore;
 using System.Linq.Expressions;
@@ -11,27 +11,9 @@ public interface IRepository<TEntity>
     void Add(TEntity entity);
     void Remove(TEntity entity);
     void Update(TEntity entity);
-    IQueryable<TEntity> Entities { get; }
-    Task<IReadOnlyCollection<TEntity>> GetAll(CancellationToken token = default);
-    Task<IReadOnlyCollection<TEntity>> Get(Expression<Func<TEntity, bool>> filter,CancellationToken token = default);
     Task<TEntity?> GetFirst(Expression<Func<TEntity, bool>> filter, CancellationToken token = default);
     Task<bool> Any(Expression<Func<TEntity, bool>> filter, CancellationToken token = default);
     Task<int> Count(Expression<Func<TEntity, bool>>? filter = null, CancellationToken token = default);
-
-    Task<PagedResult<TEntity>> Get<TKey>(
-        int pageNumber,
-        int perPage,
-        Expression<Func<TEntity, TKey>> orderBy,
-        bool ascending = true,
-        CancellationToken token = default);
-
-    Task<PagedResult<TEntity>> Get<TKey>(
-        int pageNumber,
-        int perPage,
-        Expression<Func<TEntity, bool>> filter,
-        Expression<Func<TEntity, TKey>> orderBy,
-        bool ascending = true,
-        CancellationToken token = default);
 
     Task<TEntity?> GetById(Guid id, CancellationToken token = default);
 }

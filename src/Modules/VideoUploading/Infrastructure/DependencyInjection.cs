@@ -71,6 +71,7 @@ public static class DependencyInjection
         moduleServices.AddScoped<IVideoStateRepository, VideoStateRepository>();
         moduleServices.AddScoped<IRepository<VideoSecret>,VideoSecretRepository>();
         moduleServices.AddScoped<IUnitOfWork, UnitOfWork<AppDbContext>>();
+        moduleServices.AddScoped<AlphaZero.Modules.VideoUploading.Application.Queries.IVideoQueryService, AlphaZero.Modules.VideoUploading.Infrastructure.Queries.VideoQueryService>();
         moduleServices.AddScoped<IStreamingService, DatabaseCloudFlareCdnVideoStreamingService>();
     }
 }
