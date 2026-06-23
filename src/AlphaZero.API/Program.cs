@@ -32,20 +32,10 @@ public class Program
         app.UseFastEndpoints(c =>
         {
             c.Errors.UseProblemDetails();
-            if (app.Environment.IsDevelopment())
+            c.Endpoints.Configurator = ep =>
             {
-                c.Endpoints.Configurator = ep =>
-                {
-                    ep.PreProcessor<IAMDevPreprocessor>(Order.Before);
-                };
-            }
-            else
-            {
-                c.Endpoints.Configurator = ep =>
-                {
-                    ep.PreProcessor<IAMPreprocessor>(Order.Before);
-                };
-            }
+                ep.PreProcessor<IAMPreprocessor>(Order.Before);
+            };
         })
             .UseSwaggerGen();
 

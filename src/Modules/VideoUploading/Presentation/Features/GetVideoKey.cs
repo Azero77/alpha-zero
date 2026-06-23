@@ -1,34 +1,45 @@
-﻿using AlphaZero.API.Shared;
 using AlphaZero.Modules.VideoUploading.Application.Queries.GetVideoKey;
-using ErrorOr;
-using Microsoft.AspNetCore.Builder;
+using AlphaZero.Shared.Authorization;
+using AlphaZero.Shared.Domain;
+using AlphaZero.Shared.Presentation.Extensions;
+using FastEndpoints;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Routing;
 
-namespace AlphaZero.Modules.VideoUploading.Presentation.Features
+namespace AlphaZero.Modules.VideoUploading.Presentation.Features;
+
+public record GetVideoKeyRequest
 {
-    public static class GetVideoKey
+    public Guid VideoId { get; init; }
+}
+
+public class GetVideoKeyEndpoint : Endpoint<GetVideoKeyRequest>
+{
+    private readonly VideoUploadingModule _module;
+
+    public GetVideoKeyEndpoint(VideoUploadingModule module)
     {
-        public class Endpoint : IEndpoint
+        _module = module;
+    }
+
+    public override void Configure()
+    {
+        Get("api/video/keys/{VideoId:guid}");
+        this.AccessControl("video:Stream", (req, tenantId) => ResourceArn.ForVideo(tenantId, req.VideoId));
+        Description(d => d.WithTags("Video Streaming"));
+    }
+
+    public override async Task HandleAsync(GetVideoKeyRequest req, CancellationToken ct)
+    {
+        var result = await _module.Send(new GetVideoKeyQuery(req.VideoId), ct);
+
+        if (result.IsError)
         {
-            public void MapEndpoint(IEndpointRouteBuilder app)
-            {
-                // This is the production-style Key Delivery Service (KDS)
-                app.MapGet("api/video/keys/{videoId:guid}", Handler)
-                   .WithTags("Video Streaming")
-                   .Produces(StatusCodes.Status200OK, typeof(byte[]), "application/octet-stream");
-            }
-
-            private async Task<IResult> Handler(Guid videoId, VideoUploadingModule module)
-            {
-                // Cross-module request to VideoUploading to get the raw secret
-                // In production, we would add [Authorize] and check course enrollment here
-                var result = await module.Send<GetVideoKeyQuery, ErrorOr<byte[]>>(new GetVideoKeyQuery(videoId));
-
-                return result.Match(
-                    keyBytes => Results.File(keyBytes, "application/octet-stream"),
-                    errors => Results.NotFound());
-            }
+            await this.SendErrorResponseAsync(result.Errors, ct);
+            return;
         }
+
+        HttpContext.Response.ContentType = "application/octet-stream";
+        HttpContext.Response.StatusCode = StatusCodes.Status200OK;
+        await HttpContext.Response.Body.WriteAsync(result.Value, ct);
     }
 }
