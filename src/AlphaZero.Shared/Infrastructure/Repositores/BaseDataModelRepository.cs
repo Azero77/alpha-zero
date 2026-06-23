@@ -1,6 +1,7 @@
 using AlphaZero.Shared.Application;
 using AlphaZero.Shared.Domain;
 using AlphaZero.Shared.Queries;
+using Castle.Core.Logging;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using System.Linq.Expressions;
@@ -12,7 +13,7 @@ namespace AlphaZero.Shared.Infrastructure.Repositores;
 /// Internally maps via IDataModelMapper and tracks modifications in a local list,
 /// flushed by UnitOfWork before SaveChanges.
 /// </summary>
-public class BaseDataModelRepository<TContext, TDomainModel, TDataModel>
+public abstract class BaseDataModelRepository<TContext, TDomainModel, TDataModel>
     : IRepository<TDomainModel>
     where TContext : DbContext
     where TDomainModel : Entity
@@ -70,22 +71,9 @@ public class BaseDataModelRepository<TContext, TDomainModel, TDataModel>
         return domain;
     }
 
-    public virtual async Task<TDomainModel?> GetFirst(
-        Expression<Func<TDomainModel, bool>> filter, CancellationToken token = default)
-    {
-        var dataModels = await _context.Set<TDataModel>().AsNoTracking().ToListAsync(token);
-        var compiled = filter.Compile();
-        
-        _logger.LogWarning("BaseDataModelRepository is using a domain-level filter on an in-memory collection. " +
-            "This is inefficient and should be overridden in a subclass with a DataModel-aware filter.");
-            
-        return dataModels.Select(d =>
-        {
-            var domain = _mapper.ToDomain(d);
-            TrackEntity(domain);
-            return domain;
-        }).FirstOrDefault(compiled);
-    }
+    public abstract Task<TDomainModel?> GetFirst(
+        Expression<Func<TDomainModel, bool>> filter, CancellationToken token = default);
+    
 
     public virtual async Task<bool> Any(
         Expression<Func<TDomainModel, bool>> filter, CancellationToken token = default)
