@@ -42,10 +42,18 @@ public class Enrollement : TenantOwnedAggregate
         if (Status != EnrollementStatus.Active) 
             return Error.Conflict("Enrollement.Status", "Cannot complete items in an inactive enrollment.");
 
+        double oldPercentage = Progress.CompletionPercentage;
+
         var result = Progress.MarkAsComplete(bitIndex);
         if (result.IsError) return result.Errors;
 
         Progress = result.Value;
+
+        if (oldPercentage != Progress.CompletionPercentage)
+        {
+            AddDomainEvent(new ItemCompletedDomainEvent(Id, CourseId, bitIndex, oldPercentage, Progress.CompletionPercentage));
+        }
+
         return Result.Success;
     }
 
