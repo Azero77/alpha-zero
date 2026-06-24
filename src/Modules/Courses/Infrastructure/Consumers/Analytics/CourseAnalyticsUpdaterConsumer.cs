@@ -13,10 +13,10 @@ public class CourseAnalyticsUpdaterConsumer :
     private readonly ILogger<CourseAnalyticsUpdaterConsumer> _logger;
 
     public CourseAnalyticsUpdaterConsumer(
-        ICourseAnalyticsRepository repository,
+        ICoursesModule courseModule,
         ILogger<CourseAnalyticsUpdaterConsumer> logger)
     {
-        _repository = repository;
+        _repository = courseModule.Resolve<ICourseAnalyticsRepository>();
         _logger = logger;
     }
 

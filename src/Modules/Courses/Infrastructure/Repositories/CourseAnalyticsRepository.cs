@@ -33,6 +33,6 @@ public class CourseAnalyticsRepository : ICourseAnalyticsRepository
             INSERT INTO ""Courses"".""CourseAnalytics"" (""CourseId"", ""TotalEnrollments"", ""SumOfCompletionPercentages"", ""ItemCompletions"")
             VALUES ({courseId}, 1, 0, '{{}}'::jsonb)
             ON CONFLICT (""CourseId"") 
-            DO UPDATE SET ""TotalEnrollments"" = ""Courses"".""CourseAnalytics"".""TotalEnrollments"" + 1", cancellationToken);
+            DO UPDATE SET ""TotalEnrollments"" = ""CourseAnalytics"".""TotalEnrollments"" + 1", cancellationToken);
     }
 }

@@ -16,6 +16,7 @@ public class UnitOfWorkDecoratorCommandHandler<TRequest, TResponse> : IPipelineB
 
     public async Task<ErrorOr<TResponse>> Handle(TRequest request, RequestHandlerDelegate<ErrorOr<TResponse>> next, CancellationToken cancellationToken)
     {
+        Console.WriteLine("XXXXXXXXX UnitOfWorkDecoratorCommandHandler START for " + request.GetType().Name);
         var result = await next(cancellationToken);
 
         if (request is not ICommand<TResponse>)

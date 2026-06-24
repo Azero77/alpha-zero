@@ -20,6 +20,7 @@ public class UnitOfWork<TContext> : IUnitOfWork
 
     public async Task<int> SaveChangesAsync(CancellationToken cancellationToken)
     {
+        Console.WriteLine("XXXXXXXXX UnitOfWork.SaveChangesAsync CALLED");
         // 3. Harvest domain events from EF-tracked entities (existing path)
         var efDomainEvents = _context.ChangeTracker
             .Entries<AggregateRoot>()
