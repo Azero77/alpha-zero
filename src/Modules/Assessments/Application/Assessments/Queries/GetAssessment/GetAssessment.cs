@@ -1,8 +1,7 @@
-using AlphaZero.Modules.Assessments.Application.Repositories;
+using AlphaZero.Modules.Assessments.Application.Queries;
 using AlphaZero.Modules.Assessments.Domain.Models.Content;
 using ErrorOr;
 using MediatR;
-using Microsoft.EntityFrameworkCore;
 
 namespace AlphaZero.Modules.Assessments.Application.Assessments.Queries.GetAssessment;
 
@@ -20,68 +19,29 @@ public record GetAssessmentQuery(Guid Id, int? Version = null) : IRequest<ErrorO
 
 public sealed class GetAssessmentQueryHandler : IRequestHandler<GetAssessmentQuery, ErrorOr<AssessmentDetailsDto>>
 {
-    private readonly IAssessmentRepository _assessmentRepository;
+    private readonly IAssessmentQueryService _assessmentQueryService;
 
-    public GetAssessmentQueryHandler(IAssessmentRepository assessmentRepository)
+    public GetAssessmentQueryHandler(IAssessmentQueryService assessmentQueryService)
     {
-        _assessmentRepository = assessmentRepository;
+        _assessmentQueryService = assessmentQueryService;
     }
-    public async Task<ErrorOr<AssessmentDetailsDto>> Handle(
-    GetAssessmentQuery request,
-    CancellationToken cancellationToken)
-    {
-        var result = await _assessmentRepository.Entities
-            .Where(a => a.Id == request.Id)
-            .Select(a => new
-            {
-                a.Id,
-                a.Title,
-                a.Description,
-                Type = a.Type.ToString(),
-                a.PassingScore,
-                Status = a.Status.ToString(),
 
-                Version = request.Version.HasValue
-                    ? a.Versions
-                        .Where(v => v.VersionNumber == request.Version.Value)
-                        .Select(v => new
-                        {
-                            v.VersionNumber,
-                            v.Content
-                        })
-                        .FirstOrDefault()
-                    : a.Versions
-                        .Where(v => v.Id == a.CurrentVersionId)
-                        .Select(v => new
-                        {
-                            v.VersionNumber,
-                            v.Content
-                        })
-                        .FirstOrDefault()
-            })
-            .FirstOrDefaultAsync(cancellationToken);
+    public async Task<ErrorOr<AssessmentDetailsDto>> Handle(GetAssessmentQuery request, CancellationToken cancellationToken)
+    {
+        var result = await _assessmentQueryService.GetAssessmentAsync(request.Id, request.Version, cancellationToken);
 
         if (result is null)
         {
             return Error.NotFound("Assessment.NotFound", "Assessment not found.");
         }
 
-        if (request.Version.HasValue && result.Version is null)
+        if (request.Version.HasValue && result.VersionNumber == -1)
         {
             return Error.NotFound(
                 "Assessment.VersionNotFound",
                 $"Version {request.Version.Value} not found for this assessment.");
         }
 
-        return new AssessmentDetailsDto(
-            result.Id,
-            result.Title,
-            result.Description,
-            result.Type,
-            result.PassingScore,
-            result.Status,
-            result.Version?.VersionNumber ?? 0,
-            result.Version?.Content);
+        return result;
     }
-
 }

@@ -22,11 +22,11 @@ public class ListCoursesSummary : Summary<ListCoursesEndpoint>
     {
         Summary = "Lists all courses with pagination";
         Description = "Returns a paged list of courses for the current tenant. Optionally filterable by subject.";
-        Response<PagedResult<CourseDto>>(200, "Courses retrieved successfully");
+        Response<PagedResult<CourseSummaryDto>>(200, "Courses retrieved successfully");
     }
 }
 
-public class ListCoursesEndpoint : Endpoint<ListCoursesRequest, PagedResult<CourseDto>>
+public class ListCoursesEndpoint : Endpoint<ListCoursesRequest, PagedResult<CourseSummaryDto>>
 {
     private readonly CoursesModule _module;
 

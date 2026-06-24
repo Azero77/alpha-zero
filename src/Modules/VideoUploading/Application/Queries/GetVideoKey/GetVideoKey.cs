@@ -1,21 +1,19 @@
+using AlphaZero.Modules.VideoUploading.Application.Queries;
 using AlphaZero.Modules.VideoUploading.Domain.Models;
-using AlphaZero.Shared.Infrastructure.Repositores;
 using ErrorOr;
 using MediatR;
-using Microsoft.EntityFrameworkCore;
 
 namespace AlphaZero.Modules.VideoUploading.Application.Queries.GetVideoKey;
 
 public record GetVideoKeyQuery(Guid VideoId) : IRequest<ErrorOr<byte[]>>;
 
-public sealed class GetVideoKeyQueryHandler(IRepository<VideoSecret> repo) : IRequestHandler<GetVideoKeyQuery, ErrorOr<byte[]>>
+public sealed class GetVideoKeyQueryHandler(IVideoQueryService videoQueryService) : IRequestHandler<GetVideoKeyQuery, ErrorOr<byte[]>>
 {
     public async Task<ErrorOr<byte[]>> Handle(GetVideoKeyQuery request, CancellationToken cancellationToken)
     {
-        var secret = await repo.Entities.AsNoTracking()
-            .FirstOrDefaultAsync(s => s.VideoId == request.VideoId, cancellationToken);
+        var secretValue = await videoQueryService.GetVideoSecretKeyAsync(request.VideoId, cancellationToken);
 
-        if (secret == null)
+        if (secretValue == null)
         {
             return Error.NotFound("VideoSecret.NotFound", $"Secret for video {request.VideoId} not found.");
         }
@@ -23,7 +21,7 @@ public sealed class GetVideoKeyQueryHandler(IRepository<VideoSecret> repo) : IRe
         // Convert HEX back to bytes
         try
         {
-            byte[] keyBytes = Convert.FromHexString(secret.KeyValue);
+            byte[] keyBytes = Convert.FromHexString(secretValue);
             return keyBytes;
         }
         catch (Exception)

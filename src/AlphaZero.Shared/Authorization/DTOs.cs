@@ -64,6 +64,7 @@ public class IAMPreprocessor(IAuthorizationContextFactory authorizationContextFa
 {
     public async Task PreProcessAsync(IPreProcessorContext context, CancellationToken ct)
     {
+        Console.WriteLine($"[DEBUG] IAMPreprocessor executed for endpoint: {context.HttpContext.GetEndpoint()?.DisplayName}");
         var globalRequirement = context.HttpContext.GetEndpoint()?.Metadata.GetMetadata<GlobalAccessControlRequirement>();
         var tenantScopedRequirement = context.HttpContext.GetEndpoint()?.Metadata.GetMetadata<AccessControlWithTenantRequirement>();
         
@@ -73,7 +74,7 @@ public class IAMPreprocessor(IAuthorizationContextFactory authorizationContextFa
         var auth_scheme = context.HttpContext.User.Claims.FirstOrDefault(c => c.Type == "auth_method")?.Value;
         if (string.IsNullOrEmpty(id) || !Guid.TryParse(id, out var principalId) || string.IsNullOrEmpty(auth_scheme))
         {
-            await context.HttpContext.Response.SendForbiddenAsync(ct); return;
+            throw new BadHttpRequestException("Forbidden", StatusCodes.Status403Forbidden);
         }
 
         ResourceArn resourceArn;
@@ -86,7 +87,7 @@ public class IAMPreprocessor(IAuthorizationContextFactory authorizationContextFa
             var currentTenant = tenantProvider.GetTenant();
             if (currentTenant == null)
             {
-                await context.HttpContext.Response.SendForbiddenAsync(ct); return;
+                throw new BadHttpRequestException("Forbidden", StatusCodes.Status403Forbidden);
             }
             resourceArn = tenantScopedRequirement!.resourceArnFactory(context.Request!, currentTenant.Value);
         }
@@ -94,19 +95,21 @@ public class IAMPreprocessor(IAuthorizationContextFactory authorizationContextFa
 
         if(permission is null)
         {
-            await context.HttpContext.Response.SendForbiddenAsync(ct);return;
+            throw new BadHttpRequestException("Forbidden", StatusCodes.Status403Forbidden);
         }
-        var authContext = await authorizationContextFactory.Create(permission, resourceArn, Enum.Parse<AuthenticationMethod>(auth_scheme, true), id);
+        var authContext = await authorizationContextFactory.Create(permission, resourceArn, Enum.Parse<AuthenticationMethod>(auth_scheme, true), id, ct);
 
         if (authContext.IsError)
         {
-            await context.HttpContext.Response.SendForbiddenAsync(ct); return;
+            await context.HttpContext.Response.SendForbiddenAsync(ct);
+            return;
         }
         var result = await evaluator.Authorize(authContext.Value);
 
         if (result.IsError)
         {
-            await context.HttpContext.Response.SendForbiddenAsync(ct); return;
+            await context.HttpContext.Response.SendForbiddenAsync(ct);
+            return;
         }
     }
 }

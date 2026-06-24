@@ -38,8 +38,8 @@ public static class DependencyInjection
     {
         moduleServices.AddScoped<IAssessmentRepository, AssessmentRepository>();
         moduleServices.AddScoped<ISubmissionRepository, SubmissionRepository>();
-
         moduleServices.AddScoped<IUnitOfWork, UnitOfWork<AppDbContext>>();
+        moduleServices.AddScoped<AlphaZero.Modules.Assessments.Application.Queries.IAssessmentQueryService, AlphaZero.Modules.Assessments.Infrastructure.Queries.AssessmentQueryService>();
 
         moduleServices.AddValidatorsFromAssembly(typeof(IAssessmentsApplicationMarker).Assembly);
 

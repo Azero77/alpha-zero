@@ -32,20 +32,17 @@ public class Program
         app.UseFastEndpoints(c =>
         {
             c.Errors.UseProblemDetails();
-            if (app.Environment.IsDevelopment())
+            c.Endpoints.Configurator = ep =>
             {
-                c.Endpoints.Configurator = ep =>
+                if (builder.Configuration.GetValue<bool>("Testing:BypassIAM"))
                 {
                     ep.PreProcessor<IAMDevPreprocessor>(Order.Before);
-                };
-            }
-            else
-            {
-                c.Endpoints.Configurator = ep =>
+                }
+                else
                 {
                     ep.PreProcessor<IAMPreprocessor>(Order.Before);
-                };
-            }
+                }
+            };
         })
             .UseSwaggerGen();
 

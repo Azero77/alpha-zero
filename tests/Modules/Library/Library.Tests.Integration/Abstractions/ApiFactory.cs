@@ -16,6 +16,7 @@ public class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
     public ApiFactory()
     {
         Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", "Development");
+        Environment.SetEnvironmentVariable("Testing:BypassIAM", "true");
     }
 
     private readonly PostgreSqlContainer _dbContainer = new PostgreSqlBuilder()

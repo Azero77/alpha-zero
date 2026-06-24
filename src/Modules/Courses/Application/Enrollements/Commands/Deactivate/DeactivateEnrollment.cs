@@ -15,8 +15,7 @@ public sealed class DeactivateEnrollmentCommandHandler(
 {
     public async Task<ErrorOr<Success>> Handle(DeactivateEnrollmentCommand request, CancellationToken cancellationToken)
     {
-        var enrollments = await repository.Get(e => e.StudentId == request.UserId && e.CourseId == request.CourseId, cancellationToken);
-        var enrollment = enrollments.FirstOrDefault();
+        var enrollment = await repository.GetFirst(e => e.StudentId == request.UserId && e.CourseId == request.CourseId, cancellationToken);
 
         if (enrollment is null)
         {

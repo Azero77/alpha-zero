@@ -36,6 +36,7 @@ public static class DependencyInjection
     {
         services.AddScoped<ITenantRepository, TenantRepository>();
         services.AddScoped<IUnitOfWork, UnitOfWork<AppDbContext>>();
+        services.AddScoped<AlphaZero.Modules.Tenants.Application.Queries.ITenantQueryService, AlphaZero.Modules.Tenants.Infrastructure.Queries.TenantQueryService>();
 
         var applicationAssembly = typeof(AlphaZero.Modules.Tenants.Application.Tenants.Commands.CreateTenant.CreateTenantCommand).Assembly;
         

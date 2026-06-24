@@ -1,5 +1,4 @@
-using AlphaZero.Modules.Courses.Application.Repositories;
-using AlphaZero.Modules.Courses.Domain.Aggregates.Courses;
+using AlphaZero.Modules.Courses.Application.Queries;
 using ErrorOr;
 using MediatR;
 using System.Text.Json;
@@ -38,40 +37,17 @@ public record GetCourseQuery(Guid CourseId) : IRequest<ErrorOr<CourseDto>>;
 
 public sealed class GetCourseQueryHandler : IRequestHandler<GetCourseQuery, ErrorOr<CourseDto>>
 {
-    private readonly ICourseRepository _courseRepository;
+    private readonly ICourseQueryService _courseQueryService;
 
-    public GetCourseQueryHandler(ICourseRepository courseRepository)
+    public GetCourseQueryHandler(ICourseQueryService courseQueryService)
     {
-        _courseRepository = courseRepository;
+        _courseQueryService = courseQueryService;
     }
 
     public async Task<ErrorOr<CourseDto>> Handle(GetCourseQuery request, CancellationToken cancellationToken)
     {
-        var course = await _courseRepository.GetByIdWithSectionsAsync(request.CourseId, cancellationToken);
+        var course = await _courseQueryService.GetCourseByIdAsync(request.CourseId, cancellationToken);
         if (course is null) return Error.NotFound("Course.NotFound", "Course not found.");
-
-        var dto = new CourseDto(
-            course.Id,
-            course.Title,
-            course.Description,
-            course.SubjectId,
-            course.Status.ToString(),
-            course.Sections.OrderBy(s => s.Order).Select(s => new SectionDto(
-                s.Id,
-                s.Title,
-                s.Order,
-                s.Items.OrderBy(i => i.Order).Select(i => new ItemDto(
-                    i.Id,
-                    i.Title,
-                    i.MainType,
-                    i.Order,
-                    i.BitIndex,
-                    i.Resources.OrderBy(r => r.Order).Select(r => new ResourceDto(
-                        r.Arn.Value,
-                        r.Type,
-                        r.Order,
-                        r.Metadata)).ToList())).ToList())).ToList());
-
-        return dto;
+        return course;
     }
 }
