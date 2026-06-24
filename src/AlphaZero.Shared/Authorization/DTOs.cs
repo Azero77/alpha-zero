@@ -101,13 +101,15 @@ public class IAMPreprocessor(IAuthorizationContextFactory authorizationContextFa
 
         if (authContext.IsError)
         {
-            throw new BadHttpRequestException("Forbidden", StatusCodes.Status403Forbidden);
+            await context.HttpContext.Response.SendForbiddenAsync(ct);
+            return;
         }
         var result = await evaluator.Authorize(authContext.Value);
 
         if (result.IsError)
         {
-            throw new BadHttpRequestException("Forbidden", StatusCodes.Status403Forbidden);
+            await context.HttpContext.Response.SendForbiddenAsync(ct);
+            return;
         }
     }
 }
