@@ -98,7 +98,7 @@ public class TenantUserAuthorizationStrategy : IAuthorizationStrategy
 
     public async Task<ErrorOr<Success>> Authorize(AuthorizationContext context)
     {
-        var targetArnResult = ResourceArn.Create(context.ResourceType, context.TenantId.ToString(), context.ResourcePath);
+        var targetArnResult = ResourceArn.Create(context.ResourceType, context.TenantId?.ToString() ?? ResourceArn.GlobalTenant, context.ResourcePath);
         if (targetArnResult.IsError) return Error.Forbidden("Resource.Invalid");
         var targetArn = targetArnResult.Value;
 
@@ -142,7 +142,7 @@ public class PrincipalUserAuthorizationStrategy : IAuthorizationStrategy
         var principal = await _principalRepository.GetById(context.Id);
         if (principal is null) return Error.Forbidden("Principal.NotFound");
 
-        var targetArnResult = ResourceArn.Create(context.ResourceType, context.TenantId.ToString(), context.ResourcePath);
+        var targetArnResult = ResourceArn.Create(context.ResourceType, context.TenantId?.ToString() ?? ResourceArn.GlobalTenant, context.ResourcePath);
         if (targetArnResult.IsError) return Error.Forbidden("Resource.Invalid");
         var targetArn = targetArnResult.Value;
 
@@ -153,7 +153,7 @@ public class PrincipalUserAuthorizationStrategy : IAuthorizationStrategy
 
         foreach (var policy in principal.Policies)
         {
-            var statementsResult = policy.GetPolicyStatements(activeScope, context.TenantId.Value);
+            var statementsResult = policy.GetPolicyStatements(activeScope, context.TenantId ?? Guid.Empty);
             if (statementsResult.IsError) return statementsResult.Errors;
             statements.AddRange(statementsResult.Value);
         }

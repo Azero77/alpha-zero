@@ -31,7 +31,9 @@ public class AuthorizationContextFactory(ICurrentTenantUserRepository currentTen
             Id = Guid.Parse(id),
             ResourcePath = arn.ResourcePath,
             ResourceType = arn.Service,
-            TenantId = Guid.Parse(arn.TenantIdString),
+            TenantId = arn.TenantIdString.Equals(ResourceArn.GlobalTenant, StringComparison.OrdinalIgnoreCase) 
+                        ? null 
+                        : Guid.Parse(arn.TenantIdString),
             DeviceId = deviceProvider.GetDeviceId(),
             IpAddress = accessor?.HttpContext?.Connection.RemoteIpAddress?.ToString(),
             RequiredPermission = requiredPermission
