@@ -34,7 +34,14 @@ public class Program
             c.Errors.UseProblemDetails();
             c.Endpoints.Configurator = ep =>
             {
-                ep.PreProcessor<IAMPreprocessor>(Order.Before);
+                if (builder.Configuration.GetValue<bool>("Testing:BypassIAM"))
+                {
+                    ep.PreProcessor<IAMDevPreprocessor>(Order.Before);
+                }
+                else
+                {
+                    ep.PreProcessor<IAMPreprocessor>(Order.Before);
+                }
             };
         })
             .UseSwaggerGen();
