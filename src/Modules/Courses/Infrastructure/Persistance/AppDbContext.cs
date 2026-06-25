@@ -2,6 +2,7 @@ using AlphaZero.Modules.Courses.Domain.Aggregates.Courses;
 using AlphaZero.Modules.Courses.Domain.Aggregates.Enrollements;
 using AlphaZero.Modules.Courses.Domain.Aggregates.Subject;
 using AlphaZero.Modules.Courses.Infrastructure.Sagas.CourseRedemption;
+using AlphaZero.Modules.Courses.Infrastructure.Sagas.CourseRevocation;
 using AlphaZero.Shared.Infrastructure.Database;
 using AlphaZero.Shared.Infrastructure.Tenats;
 using Microsoft.EntityFrameworkCore;
@@ -23,7 +24,8 @@ public class AppDbContext : DbContext,ITenantDbContext
     public DbSet<CourseSection> CourseSections => Set<CourseSection>();
     public DbSet<CoursePlan> CoursePlans => Set<CoursePlan>();
     public DbSet<CourseRedemptionState> CourseRedemptionStates => Set<CourseRedemptionState>();
-    public DbSet<Sagas.CourseRevocation.CourseRevocationState> CourseRevocationStates => Set<Sagas.CourseRevocation.CourseRevocationState>();
+    public DbSet<CourseRevocationState> CourseRevocationStates => Set<Sagas.CourseRevocation.CourseRevocationState>();
+    public DbSet<CourseAnalytics> CourseAnalytics => Set<CourseAnalytics>();
 
     public Guid? TenantId => _tenantProvider.GetTenant();
 

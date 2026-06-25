@@ -47,3 +47,12 @@ Based on the `MVP-Score.md`, `PRD.md`, and the upcoming Web (Next.js) & Mobile (
       }
     }
     ```
+
+## 5. Offline Video Caching Infrastructure
+- **Gap:** The mobile app needs to download videos to bypass poor connectivity, but securely. 
+- **Why it is needed:** 
+  - *Mobile App (React Native):* The app uses `react-native-video` to download HLS streams (`.m3u8` and `.ts` chunks). If the streaming URLs are highly secure/expiring too fast, the background downloader will fail.
+- **Action:** 
+  - Ensure the `GetStreamingInfo` or `GetVideoKey` endpoints provide signed URLs for the HLS manifest that either:
+    1. Have a long enough expiration time to allow downloading over a slow 3G connection.
+    2. Provide a specific "Offline Manifest" payload that the mobile app can parse and download securely without risking URL expiration mid-download.

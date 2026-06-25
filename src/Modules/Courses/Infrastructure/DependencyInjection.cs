@@ -37,6 +37,7 @@ public static class DependencyInjection
         moduleServices.AddScoped<ICourseRepository, CourseRepository>();
         moduleServices.AddScoped<ISubjectRepository, SubjectRepository>();
         moduleServices.AddScoped<IEnrollementRepository, EnrollementRepository>();
+        moduleServices.AddScoped<ICourseAnalyticsRepository, CourseAnalyticsRepository>();
         moduleServices.AddScoped<ISectionRepository, SectionRepository>();
         moduleServices.AddScoped<ICurriculumItemRepository, CurriculumItemRepository>();
         moduleServices.AddScoped<IAssessmentService, AssessmentService>();
@@ -44,6 +45,7 @@ public static class DependencyInjection
         moduleServices.AddScoped<AlphaZero.Modules.Courses.Application.Queries.ICourseQueryService, AlphaZero.Modules.Courses.Infrastructure.Queries.CourseQueryService>();
         moduleServices.AddScoped<AlphaZero.Modules.Courses.Application.Queries.ISubjectQueryService, AlphaZero.Modules.Courses.Infrastructure.Queries.SubjectQueryService>();
         moduleServices.AddScoped<AlphaZero.Modules.Courses.Application.Queries.IEnrollmentQueryService, AlphaZero.Modules.Courses.Infrastructure.Queries.EnrollmentQueryService>();
+        moduleServices.AddScoped<AlphaZero.Modules.Courses.Application.Queries.ICourseAnalyticsQueryService, AlphaZero.Modules.Courses.Infrastructure.Queries.CourseAnalyticsQueryService>();
 
         moduleServices.AddValidatorsFromAssembly(typeof(ICoursesApplicationMarker).Assembly);
 

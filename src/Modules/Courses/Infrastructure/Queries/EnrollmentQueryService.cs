@@ -55,7 +55,48 @@ public class EnrollmentQueryService : IEnrollmentQueryService
             e.Progress.CompletionPercentage,
             e.EnrolledOn,
             e.TenantId)).ToListAsync(cancellationToken);
-            ;
+    }
 
+    public async Task<PagedResult<EnrollmentDto>> GetCourseEnrollmentsAsync(Guid courseId, int page, int perPage, CancellationToken cancellationToken = default)
+    {
+        var query = _context.Set<Enrollement>()
+            .AsNoTracking()
+            .Where(e => e.CourseId == courseId);
+
+        var totalCount = await query.CountAsync(cancellationToken);
+
+        var items = await query
+            .OrderByDescending(e => e.EnrolledOn)
+            .Skip((page - 1) * perPage)
+            .Take(perPage)
+            .Select(e => new EnrollmentDto(
+                e.Id,
+                e.StudentId,
+                e.CourseId,
+                e.Status.ToString(),
+                e.Progress.CompletionPercentage,
+                e.EnrolledOn,
+                e.TenantId))
+            .ToListAsync(cancellationToken);
+
+        return new PagedResult<EnrollmentDto>(items, totalCount, page, perPage);
+    }
+
+    public async Task<List<EnrollmentDto>> GetStudentEnrollmentsAcrossTenantsAsync(Guid studentId, CancellationToken cancellationToken = default)
+    {
+        return await _context.Set<Enrollement>()
+            .IgnoreQueryFilters()
+            .AsNoTracking()
+            .Where(e => e.StudentId == studentId && e.Status == EnrollementStatus.Active)
+            .OrderByDescending(e => e.EnrolledOn)
+            .Select(e => new EnrollmentDto(
+                e.Id,
+                e.StudentId,
+                e.CourseId,
+                e.Status.ToString(),
+                e.Progress.CompletionPercentage,
+                e.EnrolledOn,
+                e.TenantId))
+            .ToListAsync(cancellationToken);
     }
 }

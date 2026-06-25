@@ -23,6 +23,7 @@ public interface IModule
     void ConfigureModuleBus(IBusRegistrationConfigurator configuration);
     IConfiguration? Configuration { get; set; }
     ILifetimeScope CreateScope();
+    T Resolve<T>() where T:notnull;
 }
 
 /// <summary>
@@ -44,6 +45,17 @@ public abstract class AppModule : Module, IModule
         });
 
         _logger = Scope.Resolve<ILogger<AppModule>>();
+    }
+    
+    public T Resolve<T>()
+        where T : notnull
+    {
+        if(Scope is null)
+            throw new InvalidOperationException("Module not initialized. Did you forget to call Initialize()?");
+        var result = Scope.Resolve<T>();
+        if(result is null)
+            throw new InvalidOperationException($"Could not resolve {typeof(T).Name} from module {GetType().Name}");
+        return result;
     }
 
     public ILifetimeScope CreateScope()
