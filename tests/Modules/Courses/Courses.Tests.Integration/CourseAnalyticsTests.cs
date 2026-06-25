@@ -97,7 +97,7 @@ public class CourseAnalyticsTests : BaseIntegrationTest
             if (analytics2Resp.IsSuccessStatusCode)
             {
                 var temp = await analytics2Resp.Content.ReadFromJsonAsync<CourseAnalyticsDto>();
-                if (temp != null && temp.TotalEnrollments == 2)
+                if (temp != null && temp.TotalEnrollments == 2 && temp.ItemCompletionRates.Any())
                 {
                     analytics2 = temp;
                     break;

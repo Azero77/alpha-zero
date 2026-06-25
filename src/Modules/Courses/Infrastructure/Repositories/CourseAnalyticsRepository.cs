@@ -21,7 +21,7 @@ public class CourseAnalyticsRepository : ICourseAnalyticsRepository
                 ""SumOfCompletionPercentages"" = ""SumOfCompletionPercentages"" + {diff},
                 ""ItemCompletions"" = jsonb_set(
                     COALESCE(""ItemCompletions"", '{{}}'::jsonb),
-                    {{{bitIndex.ToString()}}}, 
+                    ARRAY[{bitIndex.ToString()}]::text[], 
                     (COALESCE((""ItemCompletions""->>{bitIndex.ToString()})::int, 0) + 1)::text::jsonb
                 )
             WHERE ""CourseId"" = {courseId}", cancellationToken);

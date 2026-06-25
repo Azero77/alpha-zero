@@ -8,7 +8,10 @@ namespace AlphaZero.Modules.Tenants.Presentation.Endpoints.LookupTenant;
 
 public record LookupTenantRequest { public string Subdomain { get; init; } = default!; }
 
-public class LookupTenantEndpoint(TenantsModule module) : Endpoint<LookupTenantRequest, TenantDto>
+public record LookupTenantBranding(string? PrimaryColor, string? LogoUrl);
+public record LookupTenantResponse(Guid Id, string Subdomain, string Name, LookupTenantBranding Branding);
+
+public class LookupTenantEndpoint(TenantsModule module) : Endpoint<LookupTenantRequest, LookupTenantResponse>
 {
     public override void Configure()
     {
@@ -16,7 +19,7 @@ public class LookupTenantEndpoint(TenantsModule module) : Endpoint<LookupTenantR
         AllowAnonymous();
         Description(d => d
             .WithTags("Tenants")
-            .Produces<TenantDto>(200)
+            .Produces<LookupTenantResponse>(200)
             .ProducesProblemDetails(404));
     }
 
@@ -31,6 +34,14 @@ public class LookupTenantEndpoint(TenantsModule module) : Endpoint<LookupTenantR
             return;
         }
 
-        await Send.OkAsync(result.Value, ct);
+        var tenant = result.Value;
+        var response = new LookupTenantResponse(
+            tenant.Id,
+            tenant.Subdomain,
+            tenant.Name,
+            new LookupTenantBranding(tenant.PrimaryColor, tenant.LogoUrl)
+        );
+
+        await Send.OkAsync(response, ct);
     }
 }
