@@ -22,7 +22,7 @@ public class Principal : AggregateRoot, IDomainTenantOwned
 
     private readonly List<IPolicy> _policies = new();
     public IReadOnlyCollection<IPolicy> Policies => _policies.AsReadOnly();
-
+    public bool IsManaged => PrincipalScope is null;
     private Principal() { } 
 
     private Principal(Guid id, string username, string passwordHash, string name, PrincipalType type, ResourcePattern? principalScope, Guid tenantId) : base(id)
@@ -74,5 +74,23 @@ public class Principal : AggregateRoot, IDomainTenantOwned
     {
         _policies.Clear();
         _policies.AddRange(policies);
+    }
+}
+
+
+public class PrincipalLoginService(IPasswordHasher passwordHasher)
+{
+    
+    public ErrorOr<Success> Login(Principal principal, string password)
+    {
+        if (principal.IsManaged)
+        {
+            return Error.Unexpected("Auth.ManagedPrincipal", "Managed principals cannot be logged in with.");
+        }
+        if(!passwordHasher.VerifyPassword(password, principal.PasswordHash))
+        {
+            return Error.Unauthorized("Auth.InvalidCredentials", "Invalid username or password.");
+        }
+        return Result.Success;
     }
 }

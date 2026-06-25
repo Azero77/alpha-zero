@@ -18,30 +18,31 @@ public record LoginPrincipalCommand(
 public sealed class LoginPrincipalCommandHandler : IRequestHandler<LoginPrincipalCommand, ErrorOr<TokenResponse>>
 {
     private readonly IPrincipalRepository _principalRepository;
-    private readonly IPasswordHasher _passwordHasher;
     private readonly IJwtProvider _jwtProvider;
     private readonly ILogger<LoginPrincipalCommandHandler> _logger;
+    private readonly PrincipalLoginService _principalLoginService;
 
     public LoginPrincipalCommandHandler(
         IPrincipalRepository principalRepository,
         IPasswordHasher passwordHasher,
         IJwtProvider jwtProvider,
+        PrincipalLoginService principalLoginService,
         ILogger<LoginPrincipalCommandHandler> logger)
     {
         _principalRepository = principalRepository;
-        _passwordHasher = passwordHasher;
         _jwtProvider = jwtProvider;
         _logger = logger;
+        _principalLoginService = principalLoginService;
     }
 
     public async Task<ErrorOr<TokenResponse>> Handle(LoginPrincipalCommand request, CancellationToken cancellationToken)
     {
         var principal = await _principalRepository.GetFirst(p => p.Username == request.Username && p.TenantId == request.TenantId, cancellationToken);
-
-        if (principal is null || !_passwordHasher.VerifyPassword(request.Password, principal.PasswordHash))
-        {
-            return Error.Unauthorized("Auth.InvalidCredentials", "Invalid username or password for this tenant.");
-        }
+        if (principal is null)
+            return Error.Unauthorized("Auth.NotFoundCredentials","Principal not found.");
+        var loginRequest = _principalLoginService.Login(principal, request.Password);
+        if (loginRequest.IsError)
+            return loginRequest.Errors;
 
         var token = _jwtProvider.GenerateToken(
             principal.Id,
