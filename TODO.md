@@ -4,15 +4,6 @@ Based on the `MVP-Score.md`, `PRD.md`, and the upcoming Web (Next.js) & Mobile (
 
 ---
 
-## 1. Video Progress Synchronization
-- **Gap:** We currently have a `CompleteItemEndpoint`, which marks an item as "Done" (fulfilling the Bitmasking/`VARBIT` requirement for storage efficiency). However, we lack granular tracking for "Video Last Watched Position".
-- **Why it is needed:** 
-  - *Frontend/Mobile UI:* When a student goes to their dashboard, they need to see a "Resume Lesson" button. When they click it, the video player should automatically jump to `05:23` instead of restarting.
-  - *Network Stability:* In Syrian/MENA internet conditions, connections drop frequently. The player needs to sync the timestamp every ~10-15 seconds in the background so progress isn't lost if the internet cuts out.
-- **Action:** 
-  - Create `UpdateVideoProgressEndpoint` (POST `/api/courses/enrollments/progress`): Receives `{ "lessonId": "uuid", "lastWatchedSecond": 323 }`.
-  - Create `GetVideoProgressEndpoint` (GET `/api/courses/enrollments/progress/{lessonId}`): Returns the last synced second.
-
 ## 2. Teacher Analytics & Cohort Tracking (MVP Requirement)
 - **Gap:** MVP Phase 1 & 2 states: *"the ability for teachers to track their students progress and see his courses statistics."* Currently, we only have student-facing `GetStudentDashboard` and general `ListCourses` endpoints.
 - **Why it is needed:** 
