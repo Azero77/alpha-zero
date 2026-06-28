@@ -60,6 +60,7 @@ public static class DependencyInjection
         services.AddScoped<IAuthorizationContextFactory,AuthorizationContextFactory>();
         services.AddScoped<IDeviceSignatureVerifier,  DeviceSignatureVerifier>();
         services.AddScoped<IPublicKeyProvider, PublicKeyProvider>();
+        services.AddSingleton<PrincipalLoginService>();
         services.AddMemoryCache();
         services.Decorate<IPublicKeyProvider, CachePublicKeyProvider>();
         services.Scan(scan => scan.FromAssemblyOf<IOperationEvaluator>()
