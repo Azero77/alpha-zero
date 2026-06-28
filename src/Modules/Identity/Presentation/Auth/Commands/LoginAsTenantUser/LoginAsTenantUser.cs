@@ -1,4 +1,5 @@
 using AlphaZero.Modules.Identity.Application.Auth.Commands.LoginAsTenantUser;
+using AlphaZero.Modules.Identity.Domain.Models;
 using AlphaZero.Shared.Presentation.Extensions;
 using FastEndpoints;
 using Microsoft.AspNetCore.Http;
@@ -8,6 +9,9 @@ namespace AlphaZero.Modules.Identity.Presentation.Auth.Commands.LoginAsTenantUse
 public record LoginAsTenantUserRequest
 {
     public Guid TenantId { get; init; }
+    public string PublicKey { get; init; } = string.Empty;
+    public string DeviceName { get; init; } = "Unknown Device";
+    public DevicePlatform Platform { get; init; }
 }
 
 public class LoginAsTenantUserEndpoint : Endpoint<LoginAsTenantUserRequest, TokenResponse>
@@ -40,7 +44,14 @@ public class LoginAsTenantUserEndpoint : Endpoint<LoginAsTenantUserRequest, Toke
             return;
         }
 
-        var command = new LoginAsTenantUserCommand(identityId, req.TenantId, name);
+        var command = new LoginAsTenantUserCommand(
+            identityId, 
+            req.TenantId, 
+            name, 
+            req.PublicKey, 
+            req.DeviceName, 
+            req.Platform);
+            
         var result = await _module.Send(command, ct);
 
         if (result.IsError)

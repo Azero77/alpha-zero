@@ -3,19 +3,23 @@
 To access content locked by the `IsMainDevice` condition, the frontend must participate in the signature verification flow.
 
 ## 1. Registering the Device
-When a user logs in on a new device, you must register it.
+When a user logs in on a new device, you must register it simultaneously with the token exchange.
 
 1. **Generate a Keypair**: Generate an RSA-256 keypair on the device.
 2. **Secure the Private Key**: Store the private key in the platform's secure storage (KeyStore on Android, Keychain on iOS, or an encrypted IndexedDB/WebCrypto for Web).
-3. **Send the Public Key**: Call the registration endpoint with the public key in PEM format.
+3. **Send the Public Key**: Call the login/token exchange endpoint with the public key in PEM format. The API will auto-register the device and return the new `deviceId` alongside your token.
 
 ```typescript
-// Example Registration Request
-const response = await api.post('/identity/users/devices', {
+// Example Login/Exchange Request
+const response = await api.post('/identity/auth/exchange-tenant-token', {
+  tenantId: "your-tenant-uuid",
   deviceName: "iPhone 15 Pro",
   platform: "Ios",
   publicKey: "-----BEGIN PUBLIC KEY-----\n..."
 });
+
+const { token, tenantUserId, deviceId } = response.data;
+// Store deviceId for later use in signing requests
 ```
 
 ## 2. Signing Requests
