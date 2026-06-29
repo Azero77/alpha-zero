@@ -69,7 +69,6 @@ public class Program
         // Run migrations only when NOT in design-time (EF tools)
         // EF tools don't call Main if they find CreateBuilder, but we ensure safety here too.
         await app.RunMigrations(moduleInstances);
-/*
         if (app.Environment.IsDevelopment())
         {
             var identityModule = moduleInstances.OfType<AlphaZero.Modules.Identity.Presentation.IdentityModule>().FirstOrDefault();
@@ -79,7 +78,7 @@ public class Program
                 var identityContext = scope.Resolve<AlphaZero.Modules.Identity.Infrastructure.Persistance.AppDbContext>();
                 await AlphaZero.Modules.Identity.Infrastructure.Persistance.Seeding.IdentitySeedReader.SeedAsync(identityContext);
             }
-        }*/
+        }
 
         app.MapGet("users/me", (ClaimsPrincipal principal) =>
         {
@@ -106,12 +105,21 @@ public class Program
             options.Authority = builder.Configuration["Authentication:Authority"] ?? "http://localhost:8080/realms/alpha-zero";
             options.Audience = builder.Configuration["Authentication:Audience"] ?? "account";
             options.RequireHttpsMetadata = false;
+            
+            var internalSecret = builder.Configuration["Jwt:Secret"] ?? "a-very-secret-key-that-should-be-in-appsettings";
+            var internalIssuer = builder.Configuration["Jwt:InternalIssuer"] ?? "AlphaZero";
+            var internalAudience = builder.Configuration["Jwt:InternalAudience"] ?? "AlphaZeroClient";
+            var idpIssuer = builder.Configuration["Authentication:Authority"] ?? "http://localhost:8080/realms/alpha-zero";
+            var idpAudience = builder.Configuration["Authentication:Audience"] ?? "account";
+
             options.TokenValidationParameters = new Microsoft.IdentityModel.Tokens.TokenValidationParameters
             {
                 ValidateIssuer = true,
-                ValidIssuer = builder.Configuration["Authentication:Authority"] ?? "http://localhost:8080/realms/alpha-zero",
+                ValidIssuers = new[] { idpIssuer, internalIssuer },
                 ValidateAudience = true,
-                ValidAudience = builder.Configuration["Authentication:Audience"] ?? "account"
+                ValidAudiences = new[] { idpAudience, internalAudience },
+                IssuerSigningKey = new Microsoft.IdentityModel.Tokens.SymmetricSecurityKey(System.Text.Encoding.UTF8.GetBytes(internalSecret)),
+                // Keycloak keys will still be fetched via the Authority endpoint and added automatically.
             };
         });
         
@@ -256,7 +264,7 @@ public class Program
             
             var region = builder.Configuration.GetAWSOptions().Region?.SystemName;
             
-            if (string.IsNullOrEmpty(region))
+            if (builder.Environment.IsDevelopment() || string.IsNullOrEmpty(region))
             {
                 x.UsingInMemory((context, cfg) => cfg.ConfigureEndpoints(context));
             }

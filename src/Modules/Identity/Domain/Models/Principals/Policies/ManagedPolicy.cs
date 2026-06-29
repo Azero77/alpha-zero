@@ -30,12 +30,15 @@ public class ManagedPolicy : Entity, IPolicy
 
         foreach (var item in Statements)
         {
-            result.Add(new PolicyStatement(
-                item.Sid, 
-                item.Actions, 
-                item.Effect, 
-                new List<ResourcePattern> { patternResult.Value }, 
-                item.Condition));
+            ErrorOr<PolicyStatement> policyStatement = PolicyStatement.Create(
+                item.Sid,
+                item.Actions,
+                item.Effect,
+                new List<ResourcePattern> { patternResult.Value },
+                item.Condition);
+            if (policyStatement.IsError)
+                return policyStatement.Errors;
+            result.Add(policyStatement.Value);
         }
 
         return result;

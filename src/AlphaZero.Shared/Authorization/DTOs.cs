@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion.Internal;
 using Microsoft.Extensions.DependencyInjection;
+using System.Security.Claims;
 
 namespace AlphaZero.Shared.Authorization;
 
@@ -64,15 +65,14 @@ public class IAMPreprocessor(IAuthorizationContextFactory authorizationContextFa
 {
     public async Task PreProcessAsync(IPreProcessorContext context, CancellationToken ct)
     {
-        Console.WriteLine($"[DEBUG] IAMPreprocessor executed for endpoint: {context.HttpContext.GetEndpoint()?.DisplayName}");
         var globalRequirement = context.HttpContext.GetEndpoint()?.Metadata.GetMetadata<GlobalAccessControlRequirement>();
         var tenantScopedRequirement = context.HttpContext.GetEndpoint()?.Metadata.GetMetadata<AccessControlWithTenantRequirement>();
         
         if (globalRequirement is null && tenantScopedRequirement is null) return;
 
-        var id = context.HttpContext.User.Claims.FirstOrDefault(c => c.Type == "sub")?.Value;
-        var auth_scheme = context.HttpContext.User.Claims.FirstOrDefault(c => c.Type == "auth_method")?.Value;
-        if (string.IsNullOrEmpty(id) || !Guid.TryParse(id, out var principalId) || string.IsNullOrEmpty(auth_scheme))
+        var id = context.HttpContext.User.Claims.FirstOrDefault(c => c.Type == "sub" || c.Type == ClaimTypes.NameIdentifier)?.Value;
+        var auth_scheme = context.HttpContext.User.Claims.FirstOrDefault(c => c.Type == "auth_method")?.Value ?? "Principal";
+        if (string.IsNullOrEmpty(id) || !Guid.TryParse(id, out var principalId))
         {
             throw new BadHttpRequestException("Forbidden", StatusCodes.Status403Forbidden);
         }

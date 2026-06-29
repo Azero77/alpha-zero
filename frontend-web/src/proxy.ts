@@ -25,15 +25,12 @@ export function proxy(request: NextRequest) {
   if (subdomain && subdomain !== 'www') {
     // Rewrite the URL to a dynamic route for the specific tenant
     url.pathname = `/${subdomain}${url.pathname}`;
-  }
-
-  const response = NextResponse.rewrite(url);
-  // Add subdomain to headers for easy access in server components
-  if (subdomain) {
+    const response = NextResponse.rewrite(url);
     response.headers.set('x-tenant-subdomain', subdomain);
+    return response;
   }
 
-  return response;
+  return NextResponse.next();
 }
 
 export const config = {

@@ -24,7 +24,7 @@ public class CreateTenantEndpoint(TenantsModule module) : Endpoint<CreateTenantR
     {
         Post("/tenants");
         // Global Tenants Manager permission
-        this.AccessControl("tenants:Manage", req => ResourceArn.ForTenant(Guid.Empty));
+        this.AccessControl("tenants:Manage", req => ResourceArn.AppUrn);
         Description(d => d.WithTags("Tenants"));
     }
 

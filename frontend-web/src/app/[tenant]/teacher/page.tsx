@@ -13,11 +13,6 @@ export default function TeacherDashboard() {
     const token = localStorage.getItem('auth_token');
     if (!token) {
       router.push(`/${params.tenant}/login`);
-    } else {
-      apiClient.instance.interceptors.request.use((config) => {
-        config.headers.Authorization = `Bearer ${token}`;
-        return config;
-      });
     }
   }, [params.tenant, router]);
 

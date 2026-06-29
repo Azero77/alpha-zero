@@ -30,8 +30,8 @@ public class JwtProvider : IJwtProvider
         var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
         var token = new JwtSecurityToken(
-            issuer: _configuration["Jwt:Issuer"],
-            audience: _configuration["Jwt:Audience"],
+            issuer: _configuration["Jwt:InternalIssuer"] ?? "AlphaZero",
+            audience: _configuration["Jwt:InternalAudience"] ?? "AlphaZeroClient",
             claims: claims,
             expires: DateTime.UtcNow.AddHours(24),
             signingCredentials: creds

@@ -10,5 +10,11 @@
     "Name": "Teacher",
     "PrincipalType": "Role",
     "ManagedPolicies": ["TeacherAccess"]
+  },
+  {
+    "Id": "00000000-0000-0000-0000-000000000003",
+    "Name": "SuperAdmin",
+    "PrincipalType": "User",
+    "ManagedPolicies": ["SuperAdminAccess"]
   }
 ]

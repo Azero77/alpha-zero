@@ -3,12 +3,13 @@ using ErrorOr;
 
 namespace AlphaZero.Modules.Identity.Domain.Models.Principals.Policies;
 
-public class InlinePolicy : Entity, IPolicy
+public class InlinePolicy : Entity, IPolicy, IDomainTenantOwned
 {
     public PolicyType Type => PolicyType.Inline;
     public string Name { get; private set; } = string.Empty;
     public Guid TenantId { get; private set; }
-    
+    public bool IsGlobal => TenantId == Guid.Empty;
+
     private List<PolicyStatement> _statements = new List<PolicyStatement>();
     public IReadOnlyCollection<PolicyStatement> Statements => _statements.AsReadOnly();
 

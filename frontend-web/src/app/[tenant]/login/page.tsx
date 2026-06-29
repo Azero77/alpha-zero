@@ -1,37 +1,49 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { apiClient } from '@/api/client';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 
-export default function Login({ params }: { params: { tenant: string } }) {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
+export default function TenantLoginExchange({ params }: { params: { tenant: string } }) {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [hasPrincipalToken, setHasPrincipalToken] = useState<boolean | null>(null);
   const router = useRouter();
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
+  useEffect(() => {
+    const token = localStorage.getItem('principal_token');
+    setHasPrincipalToken(!!token);
+  }, []);
+
+  const handleExchange = async () => {
     setError('');
     setIsLoading(true);
 
     try {
-      // Basic mock fingerprint for now
+      const principalToken = localStorage.getItem('principal_token');
+      if (!principalToken) {
+        throw new Error("No App User session found.");
+      }
+
       const fingerprint = typeof window !== 'undefined' && localStorage.getItem('device_fp') 
         || crypto.randomUUID();
       if (typeof window !== 'undefined') localStorage.setItem('device_fp', fingerprint);
 
+      // Call the exchange endpoint with the Bearer token configured in the apiClient
+      // But we need to ensure the Bearer token is attached! The generated apiClient likely reads from some context.
+      // Assuming apiClient is configured to send the token:
+      const originalToken = localStorage.getItem('auth_token');
+      localStorage.setItem('auth_token', principalToken); // temporarily use principal token for this request
+      
       const res = await apiClient.identity.alphaZeroModulesIdentityPresentationAuthCommandsLoginAsTenantUserLoginAsTenantUserEndpoint({
-        tenantId: params.tenant, // Assuming params.tenant is the ID or subdomain mapped to ID
-        username,
-        password,
-        deviceFingerprint: fingerprint,
+        tenantId: params.tenant,
+        publicKey: "none",
+        deviceName: "Web Browser",
         platform: 0 // Web
       });
 
-      // Assuming res.data contains the token
+      // Restore original or set new tenant token
       if (res.data?.token) {
-        // In a real app, save to HTTP-only cookie or secure storage
         localStorage.setItem('auth_token', res.data.token);
         if (res.data.tenantUserId) {
           localStorage.setItem('student_id', res.data.tenantUserId);
@@ -39,58 +51,44 @@ export default function Login({ params }: { params: { tenant: string } }) {
         router.push(`/${params.tenant}`);
       }
     } catch (err: any) {
-      if (err.status === 403 || err.data?.detail?.includes('Device') || err.data?.title?.includes('Device')) {
-        // Device limit warning
-        setError('Device limit reached. Please manage your devices.');
-        router.push(`/${params.tenant}/device-lock`);
-      } else {
-        setError('Login failed. Please check your credentials.');
-      }
+      setError('Failed to log into this tenant. ' + (err.message || ''));
+      localStorage.removeItem('auth_token'); // Clean up
     } finally {
       setIsLoading(false);
     }
   };
 
+  if (hasPrincipalToken === null) return null;
+
   return (
-    <div className="flex justify-center items-center min-h-[calc(100vh-80px)]">
-      <div className="bg-white dark:bg-gray-800 p-8 rounded shadow-lg w-full max-w-md">
-        <h2 className="text-2xl font-bold mb-6 text-center text-[var(--color-primary)]">Welcome Back</h2>
+    <div className="flex justify-center items-center min-h-[calc(100vh-80px)] bg-[var(--bg-color)] text-[var(--text-primary)]">
+      <div className="bg-[var(--bg-color)] p-8 shadow-lg w-full max-w-md border-[3px] border-[var(--text-primary)]">
+        <h2 className="text-2xl font-bold mb-6 text-center uppercase">Tenant Entry</h2>
         
-        {error && <div className="mb-4 text-red-500 text-sm bg-red-50 dark:bg-red-900/20 p-3 rounded">{error}</div>}
+        {error && <div className="mb-4 text-red-500 text-sm p-3 border-2 border-red-500 font-bold">{error}</div>}
         
-        <form onSubmit={handleLogin} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium mb-1">Username</label>
-            <input 
-              type="text" 
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              className="w-full border p-2 rounded focus:ring-2 focus:ring-[var(--color-primary)] focus:outline-none dark:bg-gray-700 dark:border-gray-600"
-              required 
-            />
+        {hasPrincipalToken ? (
+          <div className="space-y-4 text-center">
+            <p className="mb-4 font-bold">You have an active App User session.</p>
+            <button 
+              onClick={handleExchange}
+              disabled={isLoading}
+              className="w-full bg-[var(--text-primary)] text-[var(--bg-color)] py-3 font-bold uppercase hover:opacity-80 disabled:opacity-50 transition-opacity border-[3px] border-transparent"
+            >
+              {isLoading ? 'Entering Tenant...' : `Join Tenant ${params.tenant}`}
+            </button>
           </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">Password</label>
-            <input 
-              type="password" 
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full border p-2 rounded focus:ring-2 focus:ring-[var(--color-primary)] focus:outline-none dark:bg-gray-700 dark:border-gray-600"
-              required 
-            />
+        ) : (
+          <div className="space-y-4 text-center">
+            <p className="mb-4 font-bold">You must log in as an App User first via the Identity Provider.</p>
+            <Link 
+              href="/login" 
+              className="block w-full bg-black text-white py-3 font-bold uppercase hover:bg-gray-800 border-[3px] border-black text-center"
+            >
+              Go to App User Login
+            </Link>
           </div>
-          <button 
-            type="submit" 
-            disabled={isLoading}
-            className="w-full bg-[var(--color-primary)] text-white py-2 rounded font-semibold hover:opacity-90 transition disabled:opacity-50"
-          >
-            {isLoading ? 'Logging in...' : 'Login'}
-          </button>
-        </form>
-        
-        <div className="mt-4 text-center text-sm text-gray-600 dark:text-gray-400">
-          Don't have an account? <a href={`/${params.tenant}/register`} className="text-[var(--color-secondary)] hover:underline">Register</a>
-        </div>
+        )}
       </div>
     </div>
   );

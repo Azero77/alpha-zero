@@ -23,6 +23,7 @@ public class Principal : AggregateRoot, IDomainTenantOwned
     private readonly List<IPolicy> _policies = new();
     public IReadOnlyCollection<IPolicy> Policies => _policies.AsReadOnly();
     public bool IsManaged => PrincipalScope is null;
+    public bool IsGlobal => TenantId == Guid.Empty;
     private Principal() { } 
 
     private Principal(Guid id, string username, string passwordHash, string name, PrincipalType type, ResourcePattern? principalScope, Guid tenantId) : base(id)

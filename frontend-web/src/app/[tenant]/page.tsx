@@ -22,11 +22,6 @@ export default function TenantDashboard({ params }: { params: { tenant: string }
       router.push(`/${params.tenant}/login`);
     } else {
       setStudentId(id);
-      // Set token for api client
-      apiClient.instance.interceptors.request.use((config) => {
-        config.headers.Authorization = `Bearer ${token}`;
-        return config;
-      });
     }
   }, [params.tenant, router]);
 

@@ -1,8 +1,11 @@
 using AlphaZero.Modules.Identity.Domain.Models.Principals;
 using AlphaZero.Modules.Identity.Domain.Models.Principals.Policies;
+using AlphaZero.Modules.Identity.Domain.Repositories;
+using AlphaZero.Modules.Identity.Infrastructure.Auth;
 using AlphaZero.Modules.Identity.Infrastructure.Models;
 using AlphaZero.Modules.Identity.Infrastructure.Persistance;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -21,8 +24,13 @@ public static class IdentitySeedReader
 
         if (!File.Exists(managedPoliciesPath))
         {
-            managedPoliciesPath = Path.Combine(Directory.GetCurrentDirectory(), "src", "Modules", "Identity", "Domain", "SeedData", "ManagedPolicies.json");
-            principalTemplatesPath = Path.Combine(Directory.GetCurrentDirectory(), "src", "Modules", "Identity", "Domain", "SeedData", "PrincipalTemplates.json");
+            var basePath = Directory.GetCurrentDirectory();
+            if (basePath.EndsWith("AlphaZero.API"))
+            {
+                basePath = Directory.GetParent(basePath)?.Parent?.FullName ?? basePath;
+            }
+            managedPoliciesPath = Path.Combine(basePath, "src", "Modules", "Identity", "Domain", "SeedData", "ManagedPolicies.json");
+            principalTemplatesPath = Path.Combine(basePath, "src", "Modules", "Identity", "Domain", "SeedData", "PrincipalTemplates.json");
         }
 
         var managedPoliciesJson = File.ReadAllText(managedPoliciesPath);
@@ -39,8 +47,21 @@ public static class IdentitySeedReader
             var id = Guid.Parse(p!["Id"]!.GetValue<string>());
             var name = p["Name"]?.GetValue<string>() ?? "";
             var type = Enum.Parse<PrincipalType>(p["PrincipalType"]?.GetValue<string>() ?? "User", true);
-            // Seeding global principals (roles) for now with null tenant and null scope
-            var principalResult = Principal.Create(id, name.ToLowerInvariant(), "system-role", name, type, null, Guid.Empty);
+            
+            string passwordHash = "system-role";
+            string? scope = null;
+
+            if (type == PrincipalType.User)
+            {
+                // Basic SHA256 hash for "admin"
+                using var sha256 = System.Security.Cryptography.SHA256.Create();
+                var bytes = sha256.ComputeHash(System.Text.Encoding.UTF8.GetBytes("admin"));
+                passwordHash = Convert.ToBase64String(bytes);
+                scope = "az:*"; // Not managed
+            }
+
+            // Seeding global principals for now with global tenant (Guid.Empty)
+            var principalResult = Principal.Create(id, name.ToLowerInvariant(), passwordHash, name, type, scope, Guid.Empty);
             
             if (principalResult.IsError) continue;
 
@@ -80,8 +101,8 @@ public static class IdentitySeedReader
         // Seed Principals
         foreach (var principal in principals)
         {
-            var alreadyExists = await context.Principals.AnyAsync(p => p.Id == principal.Id);
-            if (!alreadyExists)
+            var existingPrincipal = await context.Principals.FirstOrDefaultAsync(p => p.Id == principal.Id);
+            if (existingPrincipal == null)
             {
                 var principalData = new PrincipalDataModel
                 {
@@ -99,6 +120,16 @@ public static class IdentitySeedReader
                 };
 
                 context.Principals.Add(principalData);
+            }
+            else
+            {
+                // Update existing principal in case seed data changed (e.g. password hash)
+                existingPrincipal.Username = principal.Username;
+                existingPrincipal.PasswordHash = principal.PasswordHash;
+                existingPrincipal.Name = principal.Name;
+                existingPrincipal.PrincipalType = principal.PrincipalType;
+                existingPrincipal.PrincipalScopePattern = principal.PrincipalScope?.Value;
+                existingPrincipal.TenantId = principal.TenantId;
             }
         }
         await context.SaveChangesAsync();

@@ -34,6 +34,18 @@
           "exams:Create",
           "exams:Grade",
           "exams:View"
+        ]
+      }
+    ]
+  },
+  {
+    "Id": "00000000-0000-0000-0000-000000000005",
+    "Name": "SuperAdminAccess",
+    "Statements": [
+      {
+        "Sid": "AllowAllActions",
+        "Actions": [
+          "*"
         ],
         "Effect": true
       }
