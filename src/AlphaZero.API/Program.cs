@@ -62,7 +62,7 @@ public class Program
             app.UseCors(b => b.AllowAnyHeader().AllowAnyOrigin().AllowAnyMethod());
         }
 
-        app.UseHttpsRedirection();
+        //app.UseHttpsRedirection();
         app.UseAuthentication();
         app.UseAuthorization();
 

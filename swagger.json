@@ -1,0 +1,5288 @@
+{
+  "x-generator": "NSwag v14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))",
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Alpha Zero",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:5053"
+    }
+  ],
+  "paths": {
+    "/assessments/submissions/{submissionId}/submit": {
+      "post": {
+        "tags": [
+          "Assessments",
+          "Assessments"
+        ],
+        "operationId": "AlphaZeroModulesAssessmentsPresentationEndpointsSubmissionsSubmitSubmitAssessmentEndpoint",
+        "parameters": [
+          {
+            "name": "submissionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "guid"
+            }
+          }
+        ],
+        "requestBody": {
+          "x-name": "SubmitAssessmentRequest",
+          "description": "",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AlphaZeroModulesAssessmentsPresentationEndpointsSubmissionsSubmitSubmitAssessmentRequest"
+              }
+            }
+          },
+          "required": true,
+          "x-position": 1
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlphaZeroModulesAssessmentsPresentationEndpointsSubmissionsSubmitSubmitAssessmentResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        },
+        "security": [
+          {
+            "JWTBearerAuth": []
+          },
+          {
+            "oauth2": []
+          }
+        ]
+      }
+    },
+    "/assessments/submissions": {
+      "get": {
+        "tags": [
+          "Submissions",
+          "Assessments"
+        ],
+        "operationId": "AlphaZeroModulesAssessmentsPresentationEndpointsSubmissionsListListSubmissionsEndpoint",
+        "parameters": [
+          {
+            "name": "assessmentId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "guid",
+              "nullable": true
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "nullable": true
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "perPage",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlphaZeroSharedQueriesPagedResultOfSubmissionSummaryDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FastEndpointsProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FastEndpointsProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "JWTBearerAuth": []
+          },
+          {
+            "oauth2": []
+          }
+        ]
+      }
+    },
+    "/assessments/{assessmentId}/content": {
+      "put": {
+        "tags": [
+          "Assessments",
+          "Assessments"
+        ],
+        "operationId": "AlphaZeroModulesAssessmentsPresentationEndpointsAssessmentsUpdateContentUpdateAssessmentContentEndpoint",
+        "parameters": [
+          {
+            "name": "assessmentId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "guid"
+            }
+          }
+        ],
+        "requestBody": {
+          "x-name": "UpdateAssessmentContentRequest",
+          "description": "",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AlphaZeroModulesAssessmentsPresentationEndpointsAssessmentsUpdateContentUpdateAssessmentContentRequest"
+              }
+            }
+          },
+          "required": true,
+          "x-position": 1
+        },
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        },
+        "security": [
+          {
+            "JWTBearerAuth": []
+          },
+          {
+            "oauth2": []
+          }
+        ]
+      }
+    },
+    "/assessments": {
+      "get": {
+        "tags": [
+          "Assessments",
+          "Assessments"
+        ],
+        "summary": "Lists all assessments with pagination",
+        "description": "Returns a paged list of assessments for the current tenant.",
+        "operationId": "AlphaZeroModulesAssessmentsPresentationEndpointsAssessmentsListListAssessmentsEndpoint",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "perPage",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Assessments retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlphaZeroSharedQueriesPagedResultOfAssessmentDto"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Assessments",
+          "Assessments"
+        ],
+        "operationId": "AlphaZeroModulesAssessmentsPresentationEndpointsAssessmentsCreateCreateAssessmentEndpoint",
+        "requestBody": {
+          "x-name": "CreateAssessmentRequest",
+          "description": "",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AlphaZeroModulesAssessmentsPresentationEndpointsAssessmentsCreateCreateAssessmentRequest"
+              }
+            }
+          },
+          "required": true,
+          "x-position": 1
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlphaZeroModulesAssessmentsPresentationEndpointsAssessmentsCreateCreateAssessmentResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        },
+        "security": [
+          {
+            "JWTBearerAuth": []
+          },
+          {
+            "oauth2": []
+          }
+        ]
+      }
+    },
+    "/assessments/{id}": {
+      "get": {
+        "tags": [
+          "Assessments",
+          "Assessments"
+        ],
+        "summary": "Retrieves a specific assessment by ID",
+        "description": "Returns full details of an assessment including its current content snapshot or a specific version.",
+        "operationId": "AlphaZeroModulesAssessmentsPresentationEndpointsAssessmentsGetGetAssessmentEndpoint",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "guid"
+            }
+          },
+          {
+            "name": "version",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "nullable": true
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Assessment details retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlphaZeroModulesAssessmentsApplicationAssessmentsQueriesGetAssessmentAssessmentDetailsDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Assessment or Version not found"
+          }
+        }
+      }
+    },
+    "/courses/enrollements/{enrollmentId}/complete": {
+      "post": {
+        "tags": [
+          "Enrollement",
+          "Courses"
+        ],
+        "operationId": "AlphaZeroModulesIdentityPresentationEnrollementsCompleteItemCompleteItemEndpoint",
+        "parameters": [
+          {
+            "name": "enrollmentId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "guid"
+            }
+          }
+        ],
+        "requestBody": {
+          "x-name": "CompleteItemRequest",
+          "description": "",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AlphaZeroModulesIdentityPresentationEnrollementsCompleteItemCompleteItemRequest"
+              }
+            }
+          },
+          "required": true,
+          "x-position": 1
+        },
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        },
+        "security": [
+          {
+            "JWTBearerAuth": []
+          },
+          {
+            "oauth2": []
+          }
+        ]
+      }
+    },
+    "/courses/subjects": {
+      "get": {
+        "tags": [
+          "Subjects",
+          "Courses"
+        ],
+        "operationId": "AlphaZeroModulesCoursesPresentationSubjectsListListSubjectsEndpoint",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "perPage",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlphaZeroSharedQueriesPagedResultOfSubjectDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        },
+        "security": [
+          {
+            "JWTBearerAuth": []
+          },
+          {
+            "oauth2": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "Subjects",
+          "Courses"
+        ],
+        "summary": "Creates a new educational subject",
+        "description": "Initializes a subject category (e.g., Physics, Chemistry) for the current tenant.",
+        "operationId": "AlphaZeroModulesCoursesPresentationSubjectsCreateCreateSubjectEndpoint",
+        "requestBody": {
+          "x-name": "CreateSubjectRequest",
+          "description": "",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AlphaZeroModulesCoursesPresentationSubjectsCreateCreateSubjectRequest"
+              }
+            }
+          },
+          "required": true,
+          "x-position": 1
+        },
+        "responses": {
+          "201": {
+            "description": "Subject successfully created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlphaZeroModulesCoursesPresentationSubjectsCreateCreateSubjectResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failure"
+          },
+          "401": {
+            "description": "Tenant context missing"
+          }
+        },
+        "security": [
+          {
+            "JWTBearerAuth": []
+          },
+          {
+            "oauth2": []
+          }
+        ]
+      }
+    },
+    "/courses/subjects/{id}": {
+      "get": {
+        "tags": [
+          "Subjects",
+          "Courses"
+        ],
+        "operationId": "AlphaZeroModulesCoursesPresentationSubjectsGetGetSubjectEndpoint",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "guid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlphaZeroModulesCoursesApplicationSubjectsQueriesGetSubjectSubjectDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        },
+        "security": [
+          {
+            "JWTBearerAuth": []
+          },
+          {
+            "oauth2": []
+          }
+        ]
+      }
+    },
+    "/courses/enrollments/{id}": {
+      "get": {
+        "tags": [
+          "Enrollment",
+          "Courses"
+        ],
+        "operationId": "AlphaZeroModulesCoursesPresentationEnrollementsGetGetEnrollementEndpoint",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "guid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlphaZeroModulesCoursesPresentationEnrollementsGetEnrollementResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        },
+        "security": [
+          {
+            "JWTBearerAuth": []
+          },
+          {
+            "oauth2": []
+          }
+        ]
+      }
+    },
+    "/courses/enroll": {
+      "post": {
+        "tags": [
+          "Enrollment",
+          "Courses"
+        ],
+        "summary": "Enrolls a student in a course",
+        "description": "Creates a new enrollment record and initializes the progress bitmask for the student.",
+        "operationId": "AlphaZeroModulesCoursesPresentationEnrollementsEnrollEnrollInCourseEndpoint",
+        "requestBody": {
+          "x-name": "EnrollInCourseRequest",
+          "description": "",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AlphaZeroModulesCoursesPresentationEnrollementsEnrollEnrollInCourseRequest"
+              }
+            }
+          },
+          "required": true,
+          "x-position": 1
+        },
+        "responses": {
+          "201": {
+            "description": "Student successfully enrolled",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlphaZeroModulesCoursesPresentationEnrollementsEnrollEnrollInCourseResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failure"
+          },
+          "404": {
+            "description": "Course not found"
+          },
+          "409": {
+            "description": "Student is already enrolled in this course"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        },
+        "security": [
+          {
+            "JWTBearerAuth": []
+          },
+          {
+            "oauth2": []
+          }
+        ]
+      }
+    },
+    "/courses/dashboard/{studentId}": {
+      "get": {
+        "tags": [
+          "Enrollment",
+          "Courses"
+        ],
+        "summary": "Retrieves student's learning dashboard across all academies",
+        "description": "Returns a list of all active course enrollments for the student, grouped by the academy (tenant) they belong to.",
+        "operationId": "AlphaZeroModulesCoursesPresentationEnrollementsDashboardGetStudentDashboardEndpoint",
+        "parameters": [
+          {
+            "name": "studentId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "guid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Dashboard retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlphaZeroModulesCoursesPresentationEnrollementsDashboardDashboardResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        },
+        "security": [
+          {
+            "JWTBearerAuth": []
+          },
+          {
+            "oauth2": []
+          }
+        ]
+      }
+    },
+    "/courses/{courseId}/approve": {
+      "patch": {
+        "tags": [
+          "Courses",
+          "Courses"
+        ],
+        "operationId": "AlphaZeroModulesCoursesPresentationCoursesStateApproveCourseEndpoint",
+        "parameters": [
+          {
+            "name": "courseId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "guid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        },
+        "security": [
+          {
+            "JWTBearerAuth": []
+          },
+          {
+            "oauth2": []
+          }
+        ]
+      }
+    },
+    "/courses/{courseId}/publish": {
+      "patch": {
+        "tags": [
+          "Courses",
+          "Courses"
+        ],
+        "operationId": "AlphaZeroModulesCoursesPresentationCoursesStatePublishCourseEndpoint",
+        "parameters": [
+          {
+            "name": "courseId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "guid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        },
+        "security": [
+          {
+            "JWTBearerAuth": []
+          },
+          {
+            "oauth2": []
+          }
+        ]
+      }
+    },
+    "/courses/{courseId}/reject": {
+      "patch": {
+        "tags": [
+          "Courses",
+          "Courses"
+        ],
+        "operationId": "AlphaZeroModulesCoursesPresentationCoursesStateRejectCourseEndpoint",
+        "parameters": [
+          {
+            "name": "courseId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "guid"
+            }
+          }
+        ],
+        "requestBody": {
+          "x-name": "RejectCourseRequest",
+          "description": "",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AlphaZeroModulesCoursesPresentationCoursesStateRejectCourseRequest"
+              }
+            }
+          },
+          "required": true,
+          "x-position": 1
+        },
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        },
+        "security": [
+          {
+            "JWTBearerAuth": []
+          },
+          {
+            "oauth2": []
+          }
+        ]
+      }
+    },
+    "/courses/{courseId}/review": {
+      "patch": {
+        "tags": [
+          "Courses",
+          "Courses"
+        ],
+        "operationId": "AlphaZeroModulesCoursesPresentationCoursesStateSubmitForReviewEndpoint",
+        "parameters": [
+          {
+            "name": "courseId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "guid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        },
+        "security": [
+          {
+            "JWTBearerAuth": []
+          },
+          {
+            "oauth2": []
+          }
+        ]
+      }
+    },
+    "/courses/{courseId}/sections/reorder": {
+      "post": {
+        "tags": [
+          "Courses",
+          "Courses"
+        ],
+        "operationId": "AlphaZeroModulesCoursesPresentationCoursesReorderSectionsReorderSectionsEndpoint",
+        "parameters": [
+          {
+            "name": "courseId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "guid"
+            }
+          }
+        ],
+        "requestBody": {
+          "x-name": "ReorderSectionsRequest",
+          "description": "",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AlphaZeroModulesCoursesPresentationCoursesReorderSectionsReorderSectionsRequest"
+              }
+            }
+          },
+          "required": true,
+          "x-position": 1
+        },
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        },
+        "security": [
+          {
+            "JWTBearerAuth": []
+          },
+          {
+            "oauth2": []
+          }
+        ]
+      }
+    },
+    "/courses/{courseId}/sections/{sectionId}/reorder": {
+      "post": {
+        "tags": [
+          "Courses",
+          "Courses"
+        ],
+        "operationId": "AlphaZeroModulesCoursesPresentationCoursesReorderItemsReorderItemsEndpoint",
+        "parameters": [
+          {
+            "name": "courseId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "guid"
+            }
+          },
+          {
+            "name": "sectionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "guid"
+            }
+          }
+        ],
+        "requestBody": {
+          "x-name": "ReorderItemsRequest",
+          "description": "",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AlphaZeroModulesCoursesPresentationCoursesReorderItemsReorderItemsRequest"
+              }
+            }
+          },
+          "required": true,
+          "x-position": 1
+        },
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        },
+        "security": [
+          {
+            "JWTBearerAuth": []
+          },
+          {
+            "oauth2": []
+          }
+        ]
+      }
+    },
+    "/courses/{courseId}/plans/{planId}": {
+      "put": {
+        "tags": [
+          "Courses",
+          "Courses"
+        ],
+        "operationId": "AlphaZeroModulesCoursesPresentationCoursesPlansUpdatePlanUpdatePlanEndpoint",
+        "parameters": [
+          {
+            "name": "courseId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "guid"
+            }
+          },
+          {
+            "name": "planId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "guid"
+            }
+          }
+        ],
+        "requestBody": {
+          "x-name": "UpdatePlanRequest",
+          "description": "",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AlphaZeroModulesCoursesPresentationCoursesPlansUpdatePlanUpdatePlanRequest"
+              }
+            }
+          },
+          "required": true,
+          "x-position": 1
+        },
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        },
+        "security": [
+          {
+            "JWTBearerAuth": []
+          },
+          {
+            "oauth2": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "Courses",
+          "Courses"
+        ],
+        "operationId": "AlphaZeroModulesCoursesPresentationCoursesPlansRemovePlanRemovePlanEndpoint",
+        "parameters": [
+          {
+            "name": "courseId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "guid"
+            }
+          },
+          {
+            "name": "planId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "guid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        },
+        "security": [
+          {
+            "JWTBearerAuth": []
+          },
+          {
+            "oauth2": []
+          }
+        ]
+      }
+    },
+    "/courses/{courseId}/plans": {
+      "post": {
+        "tags": [
+          "Courses",
+          "Courses"
+        ],
+        "operationId": "AlphaZeroModulesCoursesPresentationCoursesPlansAddPlanAddPlanEndpoint",
+        "parameters": [
+          {
+            "name": "courseId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "guid"
+            }
+          }
+        ],
+        "requestBody": {
+          "x-name": "AddPlanRequest",
+          "description": "",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AlphaZeroModulesCoursesPresentationCoursesPlansAddPlanAddPlanRequest"
+              }
+            }
+          },
+          "required": true,
+          "x-position": 1
+        },
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        },
+        "security": [
+          {
+            "JWTBearerAuth": []
+          },
+          {
+            "oauth2": []
+          }
+        ]
+      }
+    },
+    "/courses": {
+      "get": {
+        "tags": [
+          "Courses",
+          "Courses"
+        ],
+        "summary": "Lists all courses with pagination",
+        "description": "Returns a paged list of courses for the current tenant. Optionally filterable by subject.",
+        "operationId": "AlphaZeroModulesCoursesPresentationCoursesListListCoursesEndpoint",
+        "parameters": [
+          {
+            "name": "subjectId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "guid",
+              "nullable": true
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "perPage",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Courses retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlphaZeroSharedQueriesPagedResultOfCourseSummaryDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        },
+        "security": [
+          {
+            "JWTBearerAuth": []
+          },
+          {
+            "oauth2": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "Courses",
+          "Courses"
+        ],
+        "summary": "Initializes a new course",
+        "description": "Creates a course in Draft status under a specific subject.",
+        "operationId": "AlphaZeroModulesCoursesPresentationCoursesCreateCreateCourseEndpoint",
+        "requestBody": {
+          "x-name": "CreateCourseRequest",
+          "description": "",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AlphaZeroModulesCoursesPresentationCoursesCreateCreateCourseRequest"
+              }
+            }
+          },
+          "required": true,
+          "x-position": 1
+        },
+        "responses": {
+          "201": {
+            "description": "Course successfully created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlphaZeroModulesCoursesPresentationCoursesCreateCreateCourseResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failure"
+          },
+          "404": {
+            "description": "Subject not found"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        },
+        "security": [
+          {
+            "JWTBearerAuth": []
+          },
+          {
+            "oauth2": []
+          }
+        ]
+      }
+    },
+    "/courses/{id}": {
+      "get": {
+        "tags": [
+          "Courses",
+          "Courses"
+        ],
+        "summary": "Retrieves a course by its ID",
+        "description": "Returns the complete structure of a course, including all sections, lessons, and assessments.",
+        "operationId": "AlphaZeroModulesCoursesPresentationCoursesGetGetCourseEndpoint",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "guid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Course structure retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlphaZeroModulesCoursesPresentationCoursesGetCourseResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Course not found"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        },
+        "security": [
+          {
+            "JWTBearerAuth": []
+          },
+          {
+            "oauth2": []
+          }
+        ]
+      }
+    },
+    "/courses/{courseId}/sections": {
+      "post": {
+        "tags": [
+          "Courses",
+          "Courses"
+        ],
+        "operationId": "AlphaZeroModulesCoursesPresentationCoursesAddSectionAddSectionEndpoint",
+        "parameters": [
+          {
+            "name": "courseId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "guid"
+            }
+          }
+        ],
+        "requestBody": {
+          "x-name": "AddSectionRequest",
+          "description": "",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AlphaZeroModulesCoursesPresentationCoursesAddSectionAddSectionRequest"
+              }
+            }
+          },
+          "required": true,
+          "x-position": 1
+        },
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        },
+        "security": [
+          {
+            "JWTBearerAuth": []
+          },
+          {
+            "oauth2": []
+          }
+        ]
+      }
+    },
+    "/courses/{courseId}/sections/{sectionId}/lessons": {
+      "post": {
+        "tags": [
+          "Courses",
+          "Courses"
+        ],
+        "operationId": "AlphaZeroModulesCoursesPresentationCoursesAddItemAddLessonEndpoint",
+        "parameters": [
+          {
+            "name": "courseId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "guid"
+            }
+          },
+          {
+            "name": "sectionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "guid"
+            }
+          }
+        ],
+        "requestBody": {
+          "x-name": "AddLessonRequest",
+          "description": "",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AlphaZeroModulesCoursesPresentationCoursesAddItemAddLessonRequest"
+              }
+            }
+          },
+          "required": true,
+          "x-position": 1
+        },
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        },
+        "security": [
+          {
+            "JWTBearerAuth": []
+          },
+          {
+            "oauth2": []
+          }
+        ]
+      }
+    },
+    "/courses/{courseId}/sections/{sectionId}/assessments": {
+      "post": {
+        "tags": [
+          "Courses",
+          "Courses"
+        ],
+        "operationId": "AlphaZeroModulesCoursesPresentationCoursesAddItemAddAssessmentEndpoint",
+        "parameters": [
+          {
+            "name": "courseId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "guid"
+            }
+          },
+          {
+            "name": "sectionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "guid"
+            }
+          }
+        ],
+        "requestBody": {
+          "x-name": "AddAssessmentRequest",
+          "description": "",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AlphaZeroModulesCoursesPresentationCoursesAddItemAddAssessmentRequest"
+              }
+            }
+          },
+          "required": true,
+          "x-position": 1
+        },
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        },
+        "security": [
+          {
+            "JWTBearerAuth": []
+          },
+          {
+            "oauth2": []
+          }
+        ]
+      }
+    },
+    "/courses/{courseId}/analytics": {
+      "get": {
+        "tags": [
+          "Analytics",
+          "Courses"
+        ],
+        "summary": "Retrieves analytics for a course",
+        "description": "Returns total enrollments, average completion rate, and per-item completion stats.",
+        "operationId": "AlphaZeroModulesCoursesPresentationAnalyticsGetCourseAnalyticsEndpoint",
+        "parameters": [
+          {
+            "name": "courseId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "guid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Analytics retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlphaZeroModulesCoursesApplicationAnalyticsQueriesGetCourseAnalyticsCourseAnalyticsDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        },
+        "security": [
+          {
+            "JWTBearerAuth": []
+          },
+          {
+            "oauth2": []
+          }
+        ]
+      }
+    },
+    "/courses/{courseId}/students": {
+      "get": {
+        "tags": [
+          "Analytics",
+          "Courses"
+        ],
+        "summary": "Lists student progress for a course",
+        "description": "Returns a paginated list of enrollments and their completion percentages.",
+        "operationId": "AlphaZeroModulesCoursesPresentationAnalyticsListStudentProgressEndpoint",
+        "parameters": [
+          {
+            "name": "courseId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "guid"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "perPage",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Progress list retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlphaZeroSharedQueriesPagedResultOfEnrollmentDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        },
+        "security": [
+          {
+            "JWTBearerAuth": []
+          },
+          {
+            "oauth2": []
+          }
+        ]
+      }
+    },
+    "/identity/users/devices": {
+      "post": {
+        "tags": [
+          "Devices",
+          "Identity"
+        ],
+        "operationId": "AlphaZeroModulesIdentityPresentationUsersDevicesRegisterDeviceEndpoint",
+        "requestBody": {
+          "x-name": "RegisterDeviceRequest",
+          "description": "",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AlphaZeroModulesIdentityPresentationUsersDevicesRegisterDeviceRequest"
+              }
+            }
+          },
+          "required": true,
+          "x-position": 1
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlphaZeroModulesIdentityPresentationUsersDevicesRegisterDeviceResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        },
+        "security": [
+          {
+            "JWTBearerAuth": []
+          },
+          {
+            "oauth2": []
+          }
+        ]
+      }
+    },
+    "/identity/users/devices/main": {
+      "post": {
+        "tags": [
+          "Devices",
+          "Identity"
+        ],
+        "operationId": "AlphaZeroModulesIdentityPresentationUsersDevicesSetMainDeviceEndpoint",
+        "requestBody": {
+          "x-name": "SetMainDeviceRequest",
+          "description": "",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AlphaZeroModulesIdentityPresentationUsersDevicesSetMainDeviceRequest"
+              }
+            }
+          },
+          "required": true,
+          "x-position": 1
+        },
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        },
+        "security": [
+          {
+            "JWTBearerAuth": []
+          },
+          {
+            "oauth2": []
+          }
+        ]
+      }
+    },
+    "/identity/resources/{resourceType}/{resourceId}/principals": {
+      "get": {
+        "tags": [
+          "Identity",
+          "Identity"
+        ],
+        "operationId": "AlphaZeroModulesIdentityPresentationPrincipalsQueriesGetPrincipalsByResourceGetPrincipalsByResourceEndpoint",
+        "parameters": [
+          {
+            "name": "resourceType",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "resourceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "guid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AlphaZeroModulesIdentityApplicationPrincipalsQueriesGetPrincipalsByResourcePrincipalDto"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        },
+        "security": [
+          {
+            "JWTBearerAuth": []
+          },
+          {
+            "oauth2": []
+          }
+        ]
+      }
+    },
+    "/identity/principals/{principalId}/policies": {
+      "get": {
+        "tags": [
+          "Identity",
+          "Identity"
+        ],
+        "operationId": "AlphaZeroModulesIdentityPresentationPrincipalsQueriesGetPrincipalPoliciesGetPrincipalPoliciesEndpoint",
+        "parameters": [
+          {
+            "name": "principalId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "guid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlphaZeroModulesIdentityApplicationPrincipalsQueriesGetPrincipalPoliciesPrincipalPoliciesDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        },
+        "security": [
+          {
+            "JWTBearerAuth": []
+          },
+          {
+            "oauth2": []
+          }
+        ]
+      }
+    },
+    "/identity/principals/{principalId}/policies/managed/{managedPolicyId}": {
+      "delete": {
+        "tags": [
+          "Identity",
+          "Identity"
+        ],
+        "operationId": "AlphaZeroModulesIdentityPresentationPrincipalsCommandsDetachManagedPolicyDetachManagedPolicyEndpoint",
+        "parameters": [
+          {
+            "name": "principalId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "guid"
+            }
+          },
+          {
+            "name": "managedPolicyId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "guid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        },
+        "security": [
+          {
+            "JWTBearerAuth": []
+          },
+          {
+            "oauth2": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "Identity",
+          "Identity"
+        ],
+        "operationId": "AlphaZeroModulesIdentityPresentationPrincipalsCommandsAttachManagedPolicyAttachManagedPolicyEndpoint",
+        "parameters": [
+          {
+            "name": "principalId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "guid"
+            }
+          },
+          {
+            "name": "managedPolicyId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "guid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        },
+        "security": [
+          {
+            "JWTBearerAuth": []
+          },
+          {
+            "oauth2": []
+          }
+        ]
+      }
+    },
+    "/identity/principals/{principalId}/policies/inline/{policyId}": {
+      "delete": {
+        "tags": [
+          "Identity",
+          "Identity"
+        ],
+        "operationId": "AlphaZeroModulesIdentityPresentationPrincipalsCommandsDetachInlinePolicyDetachInlinePolicyEndpoint",
+        "parameters": [
+          {
+            "name": "principalId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "guid"
+            }
+          },
+          {
+            "name": "policyId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "guid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        },
+        "security": [
+          {
+            "JWTBearerAuth": []
+          },
+          {
+            "oauth2": []
+          }
+        ]
+      }
+    },
+    "/identity/principals": {
+      "post": {
+        "tags": [
+          "Identity",
+          "Identity"
+        ],
+        "operationId": "AlphaZeroModulesIdentityPresentationPrincipalsCommandsCreatePrincipalCreatePrincipalEndpoint",
+        "requestBody": {
+          "x-name": "CreatePrincipalRequest",
+          "description": "",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AlphaZeroModulesIdentityPresentationPrincipalsCommandsCreatePrincipalCreatePrincipalRequest"
+              }
+            }
+          },
+          "required": true,
+          "x-position": 1
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlphaZeroModulesIdentityPresentationPrincipalsCommandsCreatePrincipalCreatePrincipalResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        },
+        "security": [
+          {
+            "JWTBearerAuth": []
+          },
+          {
+            "oauth2": []
+          }
+        ]
+      }
+    },
+    "/identity/principals/{principalId}/policies/inline": {
+      "post": {
+        "tags": [
+          "Identity",
+          "Identity"
+        ],
+        "operationId": "AlphaZeroModulesIdentityPresentationPrincipalsCommandsAttachInlinePolicyAttachInlinePolicyEndpoint",
+        "parameters": [
+          {
+            "name": "principalId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "guid"
+            }
+          }
+        ],
+        "requestBody": {
+          "x-name": "AttachInlinePolicyRequest",
+          "description": "",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AlphaZeroModulesIdentityPresentationPrincipalsCommandsAttachInlinePolicyAttachInlinePolicyRequest"
+              }
+            }
+          },
+          "required": true,
+          "x-position": 1
+        },
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        },
+        "security": [
+          {
+            "JWTBearerAuth": []
+          },
+          {
+            "oauth2": []
+          }
+        ]
+      }
+    },
+    "/identity/policies/managed/{policyId}": {
+      "delete": {
+        "tags": [
+          "Identity Policies",
+          "Identity"
+        ],
+        "operationId": "AlphaZeroModulesIdentityPresentationPoliciesCommandsDeleteManagedPolicyDeleteManagedPolicyEndpoint",
+        "parameters": [
+          {
+            "name": "policyId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "guid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        },
+        "security": [
+          {
+            "JWTBearerAuth": []
+          },
+          {
+            "oauth2": []
+          }
+        ]
+      }
+    },
+    "/identity/policies/managed": {
+      "post": {
+        "tags": [
+          "Identity Policies",
+          "Identity"
+        ],
+        "operationId": "AlphaZeroModulesIdentityPresentationPoliciesCommandsCreateManagedPolicyCreateManagedPolicyEndpoint",
+        "requestBody": {
+          "x-name": "CreateManagedPolicyRequest",
+          "description": "",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AlphaZeroModulesIdentityPresentationPoliciesCommandsCreateManagedPolicyCreateManagedPolicyRequest"
+              }
+            }
+          },
+          "required": true,
+          "x-position": 1
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlphaZeroModulesIdentityPresentationPoliciesCommandsCreateManagedPolicyCreateManagedPolicyResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        },
+        "security": [
+          {
+            "JWTBearerAuth": []
+          },
+          {
+            "oauth2": []
+          }
+        ]
+      }
+    },
+    "/identity/auth/login-principal": {
+      "post": {
+        "tags": [
+          "Identity Auth",
+          "Identity"
+        ],
+        "operationId": "AlphaZeroModulesIdentityPresentationAuthCommandsLoginPrincipalLoginPrincipalEndpoint",
+        "requestBody": {
+          "x-name": "LoginPrincipalRequest",
+          "description": "",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AlphaZeroModulesIdentityPresentationAuthCommandsLoginPrincipalLoginPrincipalRequest"
+              }
+            }
+          },
+          "required": true,
+          "x-position": 1
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlphaZeroModulesIdentityApplicationAuthCommandsLoginAsTenantUserTokenResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/identity/auth/exchange-tenant-token": {
+      "post": {
+        "tags": [
+          "Identity Auth",
+          "Identity"
+        ],
+        "operationId": "AlphaZeroModulesIdentityPresentationAuthCommandsLoginAsTenantUserLoginAsTenantUserEndpoint",
+        "requestBody": {
+          "x-name": "LoginAsTenantUserRequest",
+          "description": "",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AlphaZeroModulesIdentityPresentationAuthCommandsLoginAsTenantUserLoginAsTenantUserRequest"
+              }
+            }
+          },
+          "required": true,
+          "x-position": 1
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlphaZeroModulesIdentityApplicationAuthCommandsLoginAsTenantUserTokenResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        },
+        "security": [
+          {
+            "JWTBearerAuth": []
+          },
+          {
+            "oauth2": []
+          }
+        ]
+      }
+    },
+    "/library/libraries/{libraryId}/audit-logs": {
+      "get": {
+        "tags": [
+          "Library"
+        ],
+        "operationId": "AlphaZeroModulesLibraryPresentationEndpointsRedemptionAuditLogsGetRedemptionLogsEndpoint",
+        "parameters": [
+          {
+            "name": "libraryId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "guid"
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "nullable": true
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "nullable": true
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 1,
+              "nullable": false
+            }
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 50,
+              "nullable": false
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlphaZeroSharedQueriesPagedResultOfRedemptionAuditLogDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/library/redeem": {
+      "post": {
+        "tags": [
+          "Library",
+          "Library"
+        ],
+        "operationId": "AlphaZeroModulesLibraryPresentationEndpointsRedeemCodeRedeemCodeEndpoint",
+        "requestBody": {
+          "x-name": "RedeemCodeRequest",
+          "description": "",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AlphaZeroModulesLibraryPresentationEndpointsRedeemCodeRedeemCodeRequest"
+              }
+            }
+          },
+          "required": true,
+          "x-position": 1
+        },
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        },
+        "security": [
+          {
+            "JWTBearerAuth": []
+          },
+          {
+            "oauth2": []
+          }
+        ]
+      }
+    },
+    "/library/libraries/{id}": {
+      "patch": {
+        "tags": [
+          "Library Management",
+          "Library"
+        ],
+        "operationId": "AlphaZeroModulesLibraryPresentationEndpointsLibrariesUpdateLibraryUpdateLibraryEndpoint",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "guid"
+            }
+          }
+        ],
+        "requestBody": {
+          "x-name": "UpdateLibraryRequest",
+          "description": "",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AlphaZeroModulesLibraryPresentationEndpointsLibrariesUpdateLibraryUpdateLibraryRequest"
+              }
+            }
+          },
+          "required": true,
+          "x-position": 1
+        },
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        },
+        "security": [
+          {
+            "JWTBearerAuth": []
+          },
+          {
+            "oauth2": []
+          }
+        ]
+      },
+      "get": {
+        "tags": [
+          "Library Management",
+          "Library"
+        ],
+        "operationId": "AlphaZeroModulesLibraryPresentationEndpointsLibrariesGetLibraryGetLibraryEndpoint",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "guid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlphaZeroModulesLibraryApplicationLibrariesQueriesGetLibraryLibraryDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        },
+        "security": [
+          {
+            "JWTBearerAuth": []
+          },
+          {
+            "oauth2": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "Library Management",
+          "Library"
+        ],
+        "operationId": "AlphaZeroModulesLibraryPresentationEndpointsLibrariesDeleteLibraryDeleteLibraryEndpoint",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "guid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        },
+        "security": [
+          {
+            "JWTBearerAuth": []
+          },
+          {
+            "oauth2": []
+          }
+        ]
+      }
+    },
+    "/library/libraries": {
+      "get": {
+        "tags": [
+          "Library Management",
+          "Library"
+        ],
+        "operationId": "AlphaZeroModulesLibraryPresentationEndpointsLibrariesListLibrariesListLibrariesEndpoint",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "perPage",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlphaZeroSharedQueriesPagedResultOfLibraryDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        },
+        "security": [
+          {
+            "JWTBearerAuth": []
+          },
+          {
+            "oauth2": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "Library Management",
+          "Library"
+        ],
+        "operationId": "AlphaZeroModulesLibraryPresentationEndpointsLibrariesCreateLibraryCreateLibraryEndpoint",
+        "requestBody": {
+          "x-name": "CreateLibraryRequest",
+          "description": "",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AlphaZeroModulesLibraryPresentationEndpointsLibrariesCreateLibraryCreateLibraryRequest"
+              }
+            }
+          },
+          "required": true,
+          "x-position": 1
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlphaZeroModulesLibraryPresentationEndpointsLibrariesCreateLibraryCreateLibraryResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        },
+        "security": [
+          {
+            "JWTBearerAuth": []
+          },
+          {
+            "oauth2": []
+          }
+        ]
+      }
+    },
+    "/library/libraries/{id}/resources": {
+      "delete": {
+        "tags": [
+          "Library Management",
+          "Library"
+        ],
+        "operationId": "AlphaZeroModulesLibraryPresentationEndpointsLibrariesDeauthorizeResourceDeauthorizeResourceEndpoint",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "guid"
+            }
+          }
+        ],
+        "requestBody": {
+          "x-name": "DeauthorizeResourceRequest",
+          "description": "",
+          "content": {
+            "*/*": {
+              "schema": {
+                "$ref": "#/components/schemas/AlphaZeroModulesLibraryPresentationEndpointsLibrariesDeauthorizeResourceDeauthorizeResourceRequest"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AlphaZeroModulesLibraryPresentationEndpointsLibrariesDeauthorizeResourceDeauthorizeResourceRequest"
+              }
+            }
+          },
+          "required": true,
+          "x-position": 1
+        },
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        },
+        "security": [
+          {
+            "JWTBearerAuth": []
+          },
+          {
+            "oauth2": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "Library Management",
+          "Library"
+        ],
+        "operationId": "AlphaZeroModulesLibraryPresentationEndpointsLibrariesAuthorizeResourceAuthorizeResourceEndpoint",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "guid"
+            }
+          }
+        ],
+        "requestBody": {
+          "x-name": "AuthorizeResourceRequest",
+          "description": "",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AlphaZeroModulesLibraryPresentationEndpointsLibrariesAuthorizeResourceAuthorizeResourceRequest"
+              }
+            }
+          },
+          "required": true,
+          "x-position": 1
+        },
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        },
+        "security": [
+          {
+            "JWTBearerAuth": []
+          },
+          {
+            "oauth2": []
+          }
+        ]
+      }
+    },
+    "/library/access-codes/void": {
+      "post": {
+        "tags": [
+          "Library",
+          "Library"
+        ],
+        "operationId": "AlphaZeroModulesLibraryPresentationEndpointsAccessCodesVoidCodeVoidCodeEndpoint",
+        "requestBody": {
+          "x-name": "VoidCodeRequest",
+          "description": "",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AlphaZeroModulesLibraryPresentationEndpointsAccessCodesVoidCodeVoidCodeRequest"
+              }
+            }
+          },
+          "required": true,
+          "x-position": 1
+        },
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        },
+        "security": [
+          {
+            "JWTBearerAuth": []
+          },
+          {
+            "oauth2": []
+          }
+        ]
+      }
+    },
+    "/library/libraries/{libraryId}/access-codes/generate": {
+      "post": {
+        "tags": [
+          "Library",
+          "Library"
+        ],
+        "operationId": "AlphaZeroModulesLibraryPresentationEndpointsAccessCodesGenerateBatchGenerateBatchEndpoint",
+        "parameters": [
+          {
+            "name": "libraryId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "guid"
+            }
+          }
+        ],
+        "requestBody": {
+          "x-name": "GenerateBatchRequest",
+          "description": "",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AlphaZeroModulesLibraryPresentationEndpointsAccessCodesGenerateBatchGenerateBatchRequest"
+              }
+            }
+          },
+          "required": true,
+          "x-position": 1
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlphaZeroModulesLibraryPresentationEndpointsAccessCodesGenerateBatchGenerateBatchResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        },
+        "security": [
+          {
+            "JWTBearerAuth": []
+          },
+          {
+            "oauth2": []
+          }
+        ]
+      }
+    },
+    "/library/admin/access-codes/generate-single": {
+      "post": {
+        "tags": [
+          "Library Management",
+          "Library"
+        ],
+        "operationId": "AlphaZeroModulesLibraryPresentationEndpointsAccessCodesGenerateAdminCodeGenerateAdminCodeEndpoint",
+        "requestBody": {
+          "x-name": "GenerateAdminCodeRequest",
+          "description": "",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AlphaZeroModulesLibraryPresentationEndpointsAccessCodesGenerateAdminCodeGenerateAdminCodeRequest"
+              }
+            }
+          },
+          "required": true,
+          "x-position": 1
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlphaZeroModulesLibraryPresentationEndpointsAccessCodesGenerateAdminCodeGenerateAdminCodeResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        },
+        "security": [
+          {
+            "JWTBearerAuth": []
+          },
+          {
+            "oauth2": []
+          }
+        ]
+      }
+    },
+    "/library/access-codes/batches/{batchId}/distribute": {
+      "post": {
+        "tags": [
+          "Library",
+          "Library"
+        ],
+        "operationId": "AlphaZeroModulesLibraryPresentationEndpointsAccessCodesDistributeBatchDistributeBatchEndpoint",
+        "parameters": [
+          {
+            "name": "batchId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "guid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        },
+        "security": [
+          {
+            "JWTBearerAuth": []
+          },
+          {
+            "oauth2": []
+          }
+        ]
+      }
+    },
+    "/tenants/{id}": {
+      "put": {
+        "tags": [
+          "Tenants",
+          "Tenants"
+        ],
+        "operationId": "AlphaZeroModulesTenantsPresentationEndpointsUpdateTenantUpdateTenantEndpoint",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "guid"
+            }
+          }
+        ],
+        "requestBody": {
+          "x-name": "UpdateTenantRequest",
+          "description": "",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AlphaZeroModulesTenantsPresentationEndpointsUpdateTenantUpdateTenantRequest"
+              }
+            }
+          },
+          "required": true,
+          "x-position": 1
+        },
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        },
+        "security": [
+          {
+            "JWTBearerAuth": []
+          },
+          {
+            "oauth2": []
+          }
+        ]
+      },
+      "get": {
+        "tags": [
+          "Tenants",
+          "Tenants"
+        ],
+        "operationId": "AlphaZeroModulesTenantsPresentationEndpointsGetTenantGetTenantEndpoint",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "guid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlphaZeroModulesTenantsApplicationTenantsQueriesGetTenantTenantDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        },
+        "security": [
+          {
+            "JWTBearerAuth": []
+          },
+          {
+            "oauth2": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "Tenants",
+          "Tenants"
+        ],
+        "operationId": "AlphaZeroModulesTenantsPresentationEndpointsDeleteTenantDeleteTenantEndpoint",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "guid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        },
+        "security": [
+          {
+            "JWTBearerAuth": []
+          },
+          {
+            "oauth2": []
+          }
+        ]
+      }
+    },
+    "/tenants/lookup": {
+      "get": {
+        "tags": [
+          "Tenants",
+          "Tenants"
+        ],
+        "operationId": "AlphaZeroModulesTenantsPresentationEndpointsLookupTenantLookupTenantEndpoint",
+        "parameters": [
+          {
+            "name": "subdomain",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlphaZeroModulesTenantsPresentationEndpointsLookupTenantLookupTenantResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FastEndpointsProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/tenants": {
+      "get": {
+        "tags": [
+          "Tenants",
+          "Tenants"
+        ],
+        "operationId": "AlphaZeroModulesTenantsPresentationEndpointsListTenantsListTenantsEndpoint",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "nullable": true
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "perPage",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlphaZeroSharedQueriesPagedResultOfTenantDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        },
+        "security": [
+          {
+            "JWTBearerAuth": []
+          },
+          {
+            "oauth2": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "Tenants",
+          "Tenants"
+        ],
+        "operationId": "AlphaZeroModulesTenantsPresentationEndpointsCreateTenantCreateTenantEndpoint",
+        "requestBody": {
+          "x-name": "CreateTenantRequest",
+          "description": "",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AlphaZeroModulesTenantsPresentationEndpointsCreateTenantCreateTenantRequest"
+              }
+            }
+          },
+          "required": true,
+          "x-position": 1
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlphaZeroModulesTenantsPresentationEndpointsCreateTenantCreateTenantResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        },
+        "security": [
+          {
+            "JWTBearerAuth": []
+          },
+          {
+            "oauth2": []
+          }
+        ]
+      }
+    },
+    "/api/video/keys/{videoId}": {
+      "get": {
+        "tags": [
+          "Video Streaming",
+          "Api"
+        ],
+        "operationId": "AlphaZeroModulesVideoUploadingPresentationFeaturesGetVideoKeyEndpoint",
+        "parameters": [
+          {
+            "name": "videoId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "guid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        },
+        "security": [
+          {
+            "JWTBearerAuth": []
+          },
+          {
+            "oauth2": []
+          }
+        ]
+      }
+    },
+    "/api/video-uploading/debug/videos": {
+      "get": {
+        "tags": [
+          "Video Uploading Debug"
+        ],
+        "operationId": "GetApiVideoUploadingDebugVideos",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "nullable": true
+            },
+            "x-position": 1
+          },
+          {
+            "name": "perPage",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "nullable": true
+            },
+            "x-position": 2
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        }
+      }
+    },
+    "/api/video-uploading/debug/videos/{id}": {
+      "get": {
+        "tags": [
+          "Video Uploading Debug"
+        ],
+        "operationId": "GetApiVideoUploadingDebugVideos2",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "guid"
+            },
+            "x-position": 1
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Video Uploading Debug"
+        ],
+        "operationId": "DeleteApiVideoUploadingDebugVideos",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "guid"
+            },
+            "x-position": 1
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Video Uploading Debug"
+        ],
+        "operationId": "PatchApiVideoUploadingDebugVideos",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "guid"
+            },
+            "x-position": 1
+          }
+        ],
+        "requestBody": {
+          "x-name": "request",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AlphaZeroModulesVideoUploadingPresentationFeaturesUpdateVideoInfo_Request"
+              }
+            }
+          },
+          "required": true,
+          "x-position": 2
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        }
+      }
+    },
+    "/api/video-uploading/debug/videos/{id}/state": {
+      "get": {
+        "tags": [
+          "Video Uploading Debug"
+        ],
+        "operationId": "GetApiVideoUploadingDebugVideosState",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "guid"
+            },
+            "x-position": 1
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        }
+      }
+    },
+    "/api/video-uploading/upload": {
+      "post": {
+        "tags": [
+          "Video Uploading"
+        ],
+        "operationId": "PostApiVideoUploadingUpload",
+        "requestBody": {
+          "x-name": "request",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AlphaZeroModulesVideoUploadingPresentationFeaturesUpload_Request"
+              }
+            }
+          },
+          "required": true,
+          "x-position": 1
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        }
+      }
+    },
+    "/api/video/{videoId}": {
+      "get": {
+        "tags": [
+          "Video Streaming"
+        ],
+        "operationId": "GetApiVideo",
+        "parameters": [
+          {
+            "name": "videoId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "guid"
+            },
+            "x-position": 1
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        }
+      }
+    },
+    "/users/me": {
+      "get": {
+        "operationId": "GetUsersMe",
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "JWTBearerAuth": []
+          },
+          {
+            "oauth2": []
+          }
+        ]
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AlphaZeroModulesAssessmentsPresentationEndpointsSubmissionsSubmitSubmitAssessmentResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "score": {
+            "type": "number",
+            "format": "decimal",
+            "nullable": true
+          },
+          "status": {
+            "type": "string"
+          }
+        }
+      },
+      "AlphaZeroModulesAssessmentsPresentationEndpointsSubmissionsSubmitSubmitAssessmentRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "responses": {
+            "$ref": "#/components/schemas/AlphaZeroModulesAssessmentsDomainModelsSubmissionsAssessmentSubmissionResponses"
+          }
+        }
+      },
+      "AlphaZeroModulesAssessmentsDomainModelsSubmissionsAssessmentSubmissionResponses": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "answers": {
+            "type": "object",
+            "additionalProperties": {}
+          }
+        }
+      },
+      "AlphaZeroSharedQueriesPagedResultOfSubmissionSummaryDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AlphaZeroModulesAssessmentsApplicationSubmissionsQueriesGetSubmissionsSubmissionSummaryDto"
+            }
+          },
+          "totalCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "currentPage": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "pageSize": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "totalPages": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "hasNextPage": {
+            "type": "boolean"
+          },
+          "hasPreviousPage": {
+            "type": "boolean"
+          }
+        }
+      },
+      "AlphaZeroModulesAssessmentsApplicationSubmissionsQueriesGetSubmissionsSubmissionSummaryDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "guid"
+          },
+          "assessmentId": {
+            "type": "string",
+            "format": "guid"
+          },
+          "studentId": {
+            "type": "string",
+            "format": "guid"
+          },
+          "status": {
+            "type": "string"
+          },
+          "totalScore": {
+            "type": "number",
+            "format": "decimal",
+            "nullable": true
+          },
+          "submittedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "AlphaZeroModulesAssessmentsPresentationEndpointsSubmissionsListListSubmissionsRequest": {
+        "type": "object",
+        "additionalProperties": false
+      },
+      "FastEndpointsProblemDetails": {
+        "type": "object",
+        "description": "RFC7807 compatible problem details/ error response class. this can be used by configuring startup like so:\napp.UseFastEndpoints(c => c.Errors.UseProblemDetails())",
+        "additionalProperties": false,
+        "properties": {
+          "type": {
+            "type": "string",
+            "default": "https://www.rfc-editor.org/rfc/rfc7231#section-6.5.1"
+          },
+          "title": {
+            "type": "string",
+            "default": "One or more validation errors occurred."
+          },
+          "status": {
+            "type": "integer",
+            "format": "int32",
+            "default": 400
+          },
+          "instance": {
+            "type": "string",
+            "default": "/api/route"
+          },
+          "traceId": {
+            "type": "string",
+            "default": "0HMPNHL0JHL76:00000001"
+          },
+          "detail": {
+            "type": "string",
+            "description": "the details of the error",
+            "nullable": true
+          },
+          "errors": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FastEndpointsProblemDetails_Error"
+            }
+          }
+        }
+      },
+      "FastEndpointsProblemDetails_Error": {
+        "type": "object",
+        "description": "the error details object",
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "the name of the error or property of the dto that caused the error",
+            "default": "Error or field name"
+          },
+          "reason": {
+            "type": "string",
+            "description": "the reason for the error",
+            "default": "Error reason"
+          },
+          "code": {
+            "type": "string",
+            "description": "the code of the error",
+            "nullable": true
+          },
+          "severity": {
+            "type": "string",
+            "description": "the severity of the error",
+            "nullable": true
+          }
+        }
+      },
+      "AlphaZeroModulesAssessmentsPresentationEndpointsAssessmentsUpdateContentUpdateAssessmentContentRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "content": {
+            "$ref": "#/components/schemas/AlphaZeroModulesAssessmentsDomainModelsContentAssessmentContent"
+          }
+        }
+      },
+      "AlphaZeroModulesAssessmentsDomainModelsContentAssessmentContent": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "version": {
+            "type": "string"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AlphaZeroModulesAssessmentsDomainModelsContentAssessmentItem"
+            }
+          }
+        }
+      },
+      "AlphaZeroModulesAssessmentsDomainModelsContentAssessmentItem": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "$ref": "#/components/schemas/AlphaZeroModulesAssessmentsDomainEnumsItemType"
+          },
+          "renderData": {},
+          "questionType": {
+            "nullable": true,
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/AlphaZeroModulesAssessmentsDomainEnumsQuestionType"
+              }
+            ]
+          },
+          "points": {
+            "type": "number",
+            "format": "decimal",
+            "nullable": true
+          },
+          "gradingData": {
+            "nullable": true,
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/AlphaZeroModulesAssessmentsDomainModelsContentGradingData"
+              }
+            ]
+          }
+        }
+      },
+      "AlphaZeroModulesAssessmentsDomainEnumsItemType": {
+        "type": "integer",
+        "description": "",
+        "x-enumNames": [
+          "Paragraph",
+          "Question"
+        ],
+        "enum": [
+          0,
+          1
+        ]
+      },
+      "AlphaZeroModulesAssessmentsDomainEnumsQuestionType": {
+        "type": "integer",
+        "description": "",
+        "x-enumNames": [
+          "MCQ",
+          "Handwritten",
+          "Voice",
+          "Video"
+        ],
+        "enum": [
+          0,
+          1,
+          2,
+          3
+        ]
+      },
+      "AlphaZeroModulesAssessmentsDomainModelsContentGradingData": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "choices": {
+            "type": "array",
+            "nullable": true,
+            "items": {
+              "$ref": "#/components/schemas/AlphaZeroModulesAssessmentsDomainModelsContentChoice"
+            }
+          },
+          "correctChoiceId": {
+            "type": "string",
+            "nullable": true
+          },
+          "shuffleOptions": {
+            "type": "boolean"
+          },
+          "rubric": {
+            "type": "string",
+            "nullable": true
+          },
+          "aiHint": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "AlphaZeroModulesAssessmentsDomainModelsContentChoice": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "renderData": {}
+        }
+      },
+      "AlphaZeroSharedQueriesPagedResultOfAssessmentDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AlphaZeroModulesAssessmentsApplicationAssessmentsQueriesListAssessmentsAssessmentDto"
+            }
+          },
+          "totalCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "currentPage": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "pageSize": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "totalPages": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "hasNextPage": {
+            "type": "boolean"
+          },
+          "hasPreviousPage": {
+            "type": "boolean"
+          }
+        }
+      },
+      "AlphaZeroModulesAssessmentsApplicationAssessmentsQueriesListAssessmentsAssessmentDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "guid"
+          },
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "type": {
+            "type": "string"
+          },
+          "passingScore": {
+            "type": "number",
+            "format": "decimal"
+          },
+          "status": {
+            "type": "string"
+          }
+        }
+      },
+      "AlphaZeroModulesAssessmentsPresentationEndpointsAssessmentsListListAssessmentsRequest": {
+        "type": "object",
+        "additionalProperties": false
+      },
+      "AlphaZeroModulesAssessmentsApplicationAssessmentsQueriesGetAssessmentAssessmentDetailsDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "guid"
+          },
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "type": {
+            "type": "string"
+          },
+          "passingScore": {
+            "type": "number",
+            "format": "decimal"
+          },
+          "status": {
+            "type": "string"
+          },
+          "versionNumber": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "content": {
+            "nullable": true,
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/AlphaZeroModulesAssessmentsDomainModelsContentAssessmentContent"
+              }
+            ]
+          }
+        }
+      },
+      "AlphaZeroModulesAssessmentsPresentationEndpointsAssessmentsGetGetAssessmentRequest": {
+        "type": "object",
+        "additionalProperties": false
+      },
+      "AlphaZeroModulesAssessmentsPresentationEndpointsAssessmentsCreateCreateAssessmentResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "guid"
+          }
+        }
+      },
+      "AlphaZeroModulesAssessmentsPresentationEndpointsAssessmentsCreateCreateAssessmentRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "type": {
+            "$ref": "#/components/schemas/AlphaZeroModulesAssessmentsDomainEnumsAssessmentType"
+          },
+          "passingScore": {
+            "type": "number",
+            "format": "decimal"
+          },
+          "initialContent": {
+            "nullable": true,
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/AlphaZeroModulesAssessmentsDomainModelsContentAssessmentContent"
+              }
+            ]
+          }
+        }
+      },
+      "AlphaZeroModulesAssessmentsDomainEnumsAssessmentType": {
+        "type": "integer",
+        "description": "",
+        "x-enumNames": [
+          "MCQ",
+          "Handwritten",
+          "Hybrid"
+        ],
+        "enum": [
+          0,
+          1,
+          2
+        ]
+      },
+      "AlphaZeroModulesIdentityPresentationEnrollementsCompleteItemCompleteItemRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "bitIndex": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "AlphaZeroSharedQueriesPagedResultOfSubjectDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AlphaZeroModulesCoursesApplicationSubjectsQueriesGetSubjectSubjectDto"
+            }
+          },
+          "totalCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "currentPage": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "pageSize": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "totalPages": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "hasNextPage": {
+            "type": "boolean"
+          },
+          "hasPreviousPage": {
+            "type": "boolean"
+          }
+        }
+      },
+      "AlphaZeroModulesCoursesApplicationSubjectsQueriesGetSubjectSubjectDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "guid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "AlphaZeroModulesCoursesPresentationSubjectsListListSubjectsRequest": {
+        "type": "object",
+        "additionalProperties": false
+      },
+      "AlphaZeroModulesCoursesPresentationSubjectsGetGetSubjectRequest": {
+        "type": "object",
+        "additionalProperties": false
+      },
+      "AlphaZeroModulesCoursesPresentationSubjectsCreateCreateSubjectResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "guid"
+          }
+        }
+      },
+      "AlphaZeroModulesCoursesPresentationSubjectsCreateCreateSubjectRequest": {
+        "type": "object",
+        "example": {
+          "name": "Mathematics",
+          "description": "General mathematics curriculum for high school."
+        },
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "Mathematics"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true,
+            "example": "General mathematics curriculum for high school."
+          }
+        }
+      },
+      "AlphaZeroModulesCoursesPresentationEnrollementsGetEnrollementResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "guid"
+          },
+          "studentId": {
+            "type": "string",
+            "format": "guid"
+          },
+          "courseId": {
+            "type": "string",
+            "format": "guid"
+          },
+          "status": {
+            "type": "string"
+          },
+          "completionPercentage": {
+            "type": "number",
+            "format": "double"
+          },
+          "enrolledOn": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "tenantId": {
+            "type": "string",
+            "format": "guid"
+          }
+        }
+      },
+      "AlphaZeroModulesCoursesPresentationEnrollementsGetGetEnrollementRequest": {
+        "type": "object",
+        "additionalProperties": false
+      },
+      "AlphaZeroModulesCoursesPresentationEnrollementsEnrollEnrollInCourseResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "enrollmentId": {
+            "type": "string",
+            "format": "guid"
+          }
+        }
+      },
+      "AlphaZeroModulesCoursesPresentationEnrollementsEnrollEnrollInCourseRequest": {
+        "type": "object",
+        "example": {
+          "studentId": "ea726e7c-ab83-4c3c-8513-e140d123ee8e",
+          "courseId": "8fd9347c-8a0a-441a-b2d8-7eeaba31f2bb"
+        },
+        "additionalProperties": false,
+        "properties": {
+          "studentId": {
+            "type": "string",
+            "format": "guid",
+            "example": "ea726e7c-ab83-4c3c-8513-e140d123ee8e"
+          },
+          "courseId": {
+            "type": "string",
+            "format": "guid",
+            "example": "8fd9347c-8a0a-441a-b2d8-7eeaba31f2bb"
+          }
+        }
+      },
+      "AlphaZeroModulesCoursesPresentationEnrollementsDashboardDashboardResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "academies": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "array",
+              "items": {
+                "$ref": "#/components/schemas/AlphaZeroModulesCoursesPresentationEnrollementsDashboardEnrollmentDto"
+              }
+            }
+          }
+        }
+      },
+      "AlphaZeroModulesCoursesPresentationEnrollementsDashboardEnrollmentDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "enrollmentId": {
+            "type": "string",
+            "format": "guid"
+          },
+          "courseId": {
+            "type": "string",
+            "format": "guid"
+          },
+          "status": {
+            "type": "string"
+          },
+          "completionPercentage": {
+            "type": "number",
+            "format": "double"
+          },
+          "enrolledOn": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "AlphaZeroModulesCoursesPresentationEnrollementsDashboardGetStudentDashboardRequest": {
+        "type": "object",
+        "additionalProperties": false
+      },
+      "AlphaZeroModulesCoursesPresentationCoursesStateApproveCourseRequest": {
+        "type": "object",
+        "additionalProperties": false
+      },
+      "AlphaZeroModulesCoursesPresentationCoursesStatePublishCourseRequest": {
+        "type": "object",
+        "additionalProperties": false
+      },
+      "AlphaZeroModulesCoursesPresentationCoursesStateRejectCourseRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "reason": {
+            "type": "string"
+          }
+        }
+      },
+      "AlphaZeroModulesCoursesPresentationCoursesStateSubmitForReviewRequest": {
+        "type": "object",
+        "additionalProperties": false
+      },
+      "AlphaZeroModulesCoursesPresentationCoursesReorderSectionsReorderSectionsRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "sectionIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "guid"
+            }
+          }
+        }
+      },
+      "AlphaZeroModulesCoursesPresentationCoursesReorderItemsReorderItemsRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "itemIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "guid"
+            }
+          }
+        }
+      },
+      "AlphaZeroModulesCoursesPresentationCoursesPlansUpdatePlanUpdatePlanRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "principalId": {
+            "type": "string",
+            "format": "guid"
+          }
+        }
+      },
+      "AlphaZeroModulesCoursesPresentationCoursesPlansRemovePlanRemovePlanRequest": {
+        "type": "object",
+        "additionalProperties": false
+      },
+      "AlphaZeroModulesCoursesPresentationCoursesPlansAddPlanAddPlanRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "principalId": {
+            "type": "string",
+            "format": "guid"
+          }
+        }
+      },
+      "AlphaZeroSharedQueriesPagedResultOfCourseSummaryDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AlphaZeroModulesCoursesApplicationCoursesQueriesListCoursesCourseSummaryDto"
+            }
+          },
+          "totalCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "currentPage": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "pageSize": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "totalPages": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "hasNextPage": {
+            "type": "boolean"
+          },
+          "hasPreviousPage": {
+            "type": "boolean"
+          }
+        }
+      },
+      "AlphaZeroModulesCoursesApplicationCoursesQueriesListCoursesCourseSummaryDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "guid"
+          },
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "subjectId": {
+            "type": "string",
+            "format": "guid"
+          },
+          "status": {
+            "type": "string"
+          }
+        }
+      },
+      "AlphaZeroModulesCoursesPresentationCoursesListListCoursesRequest": {
+        "type": "object",
+        "additionalProperties": false
+      },
+      "AlphaZeroModulesCoursesPresentationCoursesGetCourseResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "guid"
+          },
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "subjectId": {
+            "type": "string",
+            "format": "guid"
+          },
+          "status": {
+            "type": "string"
+          },
+          "sections": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AlphaZeroModulesCoursesPresentationCoursesGetSectionResponse"
+            }
+          }
+        }
+      },
+      "AlphaZeroModulesCoursesPresentationCoursesGetSectionResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "guid"
+          },
+          "title": {
+            "type": "string"
+          },
+          "order": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AlphaZeroModulesCoursesPresentationCoursesGetItemResponse"
+            }
+          }
+        }
+      },
+      "AlphaZeroModulesCoursesPresentationCoursesGetItemResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "guid"
+          },
+          "title": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "order": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "bitIndex": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "resources": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AlphaZeroModulesCoursesPresentationCoursesGetResourceResponse"
+            }
+          }
+        }
+      },
+      "AlphaZeroModulesCoursesPresentationCoursesGetResourceResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "arn": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "order": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "metadata": {}
+        }
+      },
+      "AlphaZeroModulesCoursesPresentationCoursesGetGetCourseRequest": {
+        "type": "object",
+        "additionalProperties": false
+      },
+      "AlphaZeroModulesCoursesPresentationCoursesCreateCreateCourseResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "guid"
+          }
+        }
+      },
+      "AlphaZeroModulesCoursesPresentationCoursesCreateCreateCourseRequest": {
+        "type": "object",
+        "example": {
+          "title": "Introduction to Algebra",
+          "description": "A basic course covering algebraic foundations.",
+          "subjectId": "00000000-0000-0000-0000-000000000001"
+        },
+        "additionalProperties": false,
+        "properties": {
+          "title": {
+            "type": "string",
+            "example": "Introduction to Algebra"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true,
+            "example": "A basic course covering algebraic foundations."
+          },
+          "subjectId": {
+            "type": "string",
+            "format": "guid",
+            "example": "00000000-0000-0000-0000-000000000001"
+          }
+        }
+      },
+      "AlphaZeroModulesCoursesPresentationCoursesAddSectionAddSectionRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "title": {
+            "type": "string"
+          }
+        }
+      },
+      "AlphaZeroModulesCoursesPresentationCoursesAddItemAddLessonRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "videoId": {
+            "type": "string",
+            "format": "guid"
+          }
+        }
+      },
+      "AlphaZeroModulesCoursesPresentationCoursesAddItemAddAssessmentRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "assessmentId": {
+            "type": "string",
+            "format": "guid"
+          },
+          "type": {
+            "type": "string"
+          },
+          "passingScore": {
+            "type": "number",
+            "format": "decimal"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "AlphaZeroModulesCoursesApplicationAnalyticsQueriesGetCourseAnalyticsCourseAnalyticsDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "courseId": {
+            "type": "string",
+            "format": "guid"
+          },
+          "totalEnrollments": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "averageCompletionPercentage": {
+            "type": "number",
+            "format": "double"
+          },
+          "itemCompletionRates": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AlphaZeroModulesCoursesApplicationAnalyticsQueriesGetCourseAnalyticsItemCompletionDto"
+            }
+          }
+        }
+      },
+      "AlphaZeroModulesCoursesApplicationAnalyticsQueriesGetCourseAnalyticsItemCompletionDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "bitIndex": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "completedCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "completionPercentage": {
+            "type": "number",
+            "format": "double"
+          }
+        }
+      },
+      "AlphaZeroModulesCoursesPresentationAnalyticsGetCourseAnalyticsRequest": {
+        "type": "object",
+        "additionalProperties": false
+      },
+      "AlphaZeroSharedQueriesPagedResultOfEnrollmentDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AlphaZeroModulesCoursesApplicationEnrollementsQueriesGetEnrollementEnrollmentDto"
+            }
+          },
+          "totalCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "currentPage": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "pageSize": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "totalPages": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "hasNextPage": {
+            "type": "boolean"
+          },
+          "hasPreviousPage": {
+            "type": "boolean"
+          }
+        }
+      },
+      "AlphaZeroModulesCoursesApplicationEnrollementsQueriesGetEnrollementEnrollmentDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "guid"
+          },
+          "studentId": {
+            "type": "string",
+            "format": "guid"
+          },
+          "courseId": {
+            "type": "string",
+            "format": "guid"
+          },
+          "status": {
+            "type": "string"
+          },
+          "completionPercentage": {
+            "type": "number",
+            "format": "double"
+          },
+          "enrolledOn": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "tenantId": {
+            "type": "string",
+            "format": "guid"
+          }
+        }
+      },
+      "AlphaZeroModulesCoursesPresentationAnalyticsListStudentProgressRequest": {
+        "type": "object",
+        "additionalProperties": false
+      },
+      "AlphaZeroModulesIdentityPresentationUsersDevicesRegisterDeviceResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "deviceId": {
+            "type": "string",
+            "format": "guid"
+          }
+        }
+      },
+      "AlphaZeroModulesIdentityPresentationUsersDevicesRegisterDeviceRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "deviceName": {
+            "type": "string"
+          },
+          "platform": {
+            "$ref": "#/components/schemas/AlphaZeroModulesIdentityDomainModelsDevicePlatform"
+          },
+          "publicKey": {
+            "type": "string"
+          }
+        }
+      },
+      "AlphaZeroModulesIdentityDomainModelsDevicePlatform": {
+        "type": "integer",
+        "description": "",
+        "x-enumNames": [
+          "Web",
+          "Android",
+          "Ios"
+        ],
+        "enum": [
+          0,
+          1,
+          2
+        ]
+      },
+      "AlphaZeroModulesIdentityPresentationUsersDevicesSetMainDeviceRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "deviceId": {
+            "type": "string",
+            "format": "guid"
+          }
+        }
+      },
+      "AlphaZeroModulesIdentityApplicationPrincipalsQueriesGetPrincipalsByResourcePrincipalDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "guid"
+          },
+          "username": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "principalType": {
+            "$ref": "#/components/schemas/AlphaZeroModulesIdentityDomainModelsPrincipalsPrincipalType"
+          },
+          "principalScopeUrn": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "AlphaZeroModulesIdentityDomainModelsPrincipalsPrincipalType": {
+        "type": "integer",
+        "description": "",
+        "x-enumNames": [
+          "User",
+          "Role"
+        ],
+        "enum": [
+          0,
+          1
+        ]
+      },
+      "AlphaZeroModulesIdentityPresentationPrincipalsQueriesGetPrincipalsByResourceGetPrincipalsByResourceRequest": {
+        "type": "object",
+        "additionalProperties": false
+      },
+      "AlphaZeroModulesIdentityApplicationPrincipalsQueriesGetPrincipalPoliciesPrincipalPoliciesDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "principalId": {
+            "type": "string",
+            "format": "guid"
+          },
+          "inlinePolicies": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AlphaZeroModulesIdentityApplicationPrincipalsQueriesGetPrincipalPoliciesPolicyDto"
+            }
+          },
+          "managedPolicies": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AlphaZeroModulesIdentityApplicationPrincipalsQueriesGetPrincipalPoliciesManagedPolicyDto"
+            }
+          }
+        }
+      },
+      "AlphaZeroModulesIdentityApplicationPrincipalsQueriesGetPrincipalPoliciesPolicyDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "guid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "statements": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AlphaZeroModulesIdentityDomainModelsPrincipalsPoliciesPolicyStatement"
+            }
+          }
+        }
+      },
+      "AlphaZeroModulesIdentityDomainModelsPrincipalsPoliciesPolicyStatement": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "sid": {
+            "type": "string"
+          },
+          "actions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "effect": {
+            "type": "boolean"
+          },
+          "resources": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AlphaZeroSharedDomainResourcePattern"
+            }
+          },
+          "condition": {
+            "nullable": true,
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/AlphaZeroModulesIdentityDomainModelsPrincipalsIConditionNode"
+              }
+            ]
+          }
+        }
+      },
+      "AlphaZeroSharedDomainResourcePattern": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "value": {
+            "type": "string"
+          },
+          "service": {
+            "type": "string"
+          },
+          "tenantIdString": {
+            "type": "string"
+          },
+          "resourcePath": {
+            "type": "string"
+          }
+        }
+      },
+      "AlphaZeroModulesIdentityDomainModelsPrincipalsIConditionNode": {
+        "type": "object",
+        "x-abstract": true,
+        "additionalProperties": false,
+        "properties": {
+          "type": {
+            "$ref": "#/components/schemas/AlphaZeroModulesIdentityDomainModelsPrincipalsConditionType"
+          }
+        }
+      },
+      "AlphaZeroModulesIdentityDomainModelsPrincipalsConditionType": {
+        "type": "integer",
+        "description": "",
+        "x-enumNames": [
+          "And",
+          "Or",
+          "Not",
+          "Statement",
+          "Reference"
+        ],
+        "enum": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ]
+      },
+      "AlphaZeroModulesIdentityApplicationPrincipalsQueriesGetPrincipalPoliciesManagedPolicyDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "guid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "statements": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AlphaZeroModulesIdentityDomainModelsPrincipalsPoliciesManagedPolicyStatement"
+            }
+          }
+        }
+      },
+      "AlphaZeroModulesIdentityDomainModelsPrincipalsPoliciesManagedPolicyStatement": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "sid": {
+            "type": "string"
+          },
+          "actions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "effect": {
+            "type": "boolean"
+          },
+          "condition": {
+            "nullable": true,
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/AlphaZeroModulesIdentityDomainModelsPrincipalsIConditionNode"
+              }
+            ]
+          }
+        }
+      },
+      "AlphaZeroModulesIdentityPresentationPrincipalsQueriesGetPrincipalPoliciesGetPrincipalPoliciesRequest": {
+        "type": "object",
+        "additionalProperties": false
+      },
+      "AlphaZeroModulesIdentityPresentationPrincipalsCommandsDetachManagedPolicyDetachManagedPolicyRequest": {
+        "type": "object",
+        "additionalProperties": false
+      },
+      "AlphaZeroModulesIdentityPresentationPrincipalsCommandsDetachInlinePolicyDetachInlinePolicyRequest": {
+        "type": "object",
+        "additionalProperties": false
+      },
+      "AlphaZeroModulesIdentityPresentationPrincipalsCommandsCreatePrincipalCreatePrincipalResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "guid"
+          }
+        }
+      },
+      "AlphaZeroModulesIdentityPresentationPrincipalsCommandsCreatePrincipalCreatePrincipalRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "username": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string"
+          },
+          "principalType": {
+            "$ref": "#/components/schemas/AlphaZeroModulesIdentityDomainModelsPrincipalsPrincipalType"
+          },
+          "principalScope": {
+            "type": "string",
+            "nullable": true
+          },
+          "name": {
+            "type": "string"
+          }
+        }
+      },
+      "AlphaZeroModulesIdentityPresentationPrincipalsCommandsAttachManagedPolicyAttachManagedPolicyRequest": {
+        "type": "object",
+        "additionalProperties": false
+      },
+      "AlphaZeroModulesIdentityPresentationPrincipalsCommandsAttachInlinePolicyAttachInlinePolicyRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "policyName": {
+            "type": "string"
+          },
+          "statements": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AlphaZeroModulesIdentityDomainModelsPrincipalsPoliciesPolicyStatement"
+            }
+          }
+        }
+      },
+      "AlphaZeroModulesIdentityPresentationPoliciesCommandsDeleteManagedPolicyDeleteManagedPolicyRequest": {
+        "type": "object",
+        "additionalProperties": false
+      },
+      "AlphaZeroModulesIdentityPresentationPoliciesCommandsCreateManagedPolicyCreateManagedPolicyResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "guid"
+          }
+        }
+      },
+      "AlphaZeroModulesIdentityPresentationPoliciesCommandsCreateManagedPolicyCreateManagedPolicyRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "statements": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AlphaZeroModulesIdentityDomainModelsPrincipalsPoliciesManagedPolicyStatement"
+            }
+          }
+        }
+      },
+      "AlphaZeroModulesIdentityApplicationAuthCommandsLoginAsTenantUserTokenResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "token": {
+            "type": "string"
+          },
+          "tenantUserId": {
+            "type": "string",
+            "format": "guid"
+          },
+          "deviceId": {
+            "type": "string",
+            "format": "guid",
+            "nullable": true
+          }
+        }
+      },
+      "AlphaZeroModulesIdentityPresentationAuthCommandsLoginPrincipalLoginPrincipalRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "tenantId": {
+            "type": "string",
+            "format": "guid"
+          },
+          "username": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string"
+          }
+        }
+      },
+      "AlphaZeroModulesIdentityPresentationAuthCommandsLoginAsTenantUserLoginAsTenantUserRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "tenantId": {
+            "type": "string",
+            "format": "guid"
+          },
+          "publicKey": {
+            "type": "string"
+          },
+          "deviceName": {
+            "type": "string"
+          },
+          "platform": {
+            "$ref": "#/components/schemas/AlphaZeroModulesIdentityDomainModelsDevicePlatform"
+          }
+        }
+      },
+      "AlphaZeroSharedQueriesPagedResultOfRedemptionAuditLogDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AlphaZeroModulesLibraryApplicationRedemptionAuditLogsGetRedemptionLogsRedemptionAuditLogDto"
+            }
+          },
+          "totalCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "currentPage": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "pageSize": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "totalPages": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "hasNextPage": {
+            "type": "boolean"
+          },
+          "hasPreviousPage": {
+            "type": "boolean"
+          }
+        }
+      },
+      "AlphaZeroModulesLibraryApplicationRedemptionAuditLogsGetRedemptionLogsRedemptionAuditLogDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "guid"
+          },
+          "accessCodeId": {
+            "type": "string",
+            "format": "guid"
+          },
+          "libraryId": {
+            "type": "string",
+            "format": "guid",
+            "nullable": true
+          },
+          "redeemedByUserId": {
+            "type": "string",
+            "format": "guid"
+          },
+          "strategyId": {
+            "type": "string"
+          },
+          "targetResourceArn": {
+            "type": "string"
+          },
+          "redeemedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "ipAddress": {
+            "type": "string",
+            "nullable": true
+          },
+          "deviceFingerprint": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "AlphaZeroModulesLibraryPresentationEndpointsRedemptionAuditLogsGetRedemptionLogsRequest": {
+        "type": "object",
+        "additionalProperties": false
+      },
+      "AlphaZeroModulesLibraryPresentationEndpointsRedeemCodeRedeemCodeRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "rawCode": {
+            "type": "string"
+          }
+        }
+      },
+      "AlphaZeroModulesLibraryPresentationEndpointsLibrariesUpdateLibraryUpdateLibraryRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "address": {
+            "type": "string"
+          },
+          "contactNumber": {
+            "type": "string"
+          }
+        }
+      },
+      "AlphaZeroSharedQueriesPagedResultOfLibraryDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AlphaZeroModulesLibraryApplicationLibrariesQueriesGetLibraryLibraryDto"
+            }
+          },
+          "totalCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "currentPage": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "pageSize": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "totalPages": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "hasNextPage": {
+            "type": "boolean"
+          },
+          "hasPreviousPage": {
+            "type": "boolean"
+          }
+        }
+      },
+      "AlphaZeroModulesLibraryApplicationLibrariesQueriesGetLibraryLibraryDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "guid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "address": {
+            "type": "string"
+          },
+          "contactNumber": {
+            "type": "string"
+          },
+          "allowedResources": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "AlphaZeroModulesLibraryPresentationEndpointsLibrariesListLibrariesListLibrariesRequest": {
+        "type": "object",
+        "additionalProperties": false
+      },
+      "AlphaZeroModulesLibraryPresentationEndpointsLibrariesGetLibraryGetLibraryRequest": {
+        "type": "object",
+        "additionalProperties": false
+      },
+      "AlphaZeroModulesLibraryPresentationEndpointsLibrariesDeleteLibraryDeleteLibraryRequest": {
+        "type": "object",
+        "additionalProperties": false
+      },
+      "AlphaZeroModulesLibraryPresentationEndpointsLibrariesDeauthorizeResourceDeauthorizeResourceRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "resourceArn": {
+            "type": "string"
+          }
+        }
+      },
+      "AlphaZeroModulesLibraryPresentationEndpointsLibrariesCreateLibraryCreateLibraryResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "guid"
+          }
+        }
+      },
+      "AlphaZeroModulesLibraryPresentationEndpointsLibrariesCreateLibraryCreateLibraryRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "address": {
+            "type": "string"
+          },
+          "contactNumber": {
+            "type": "string"
+          }
+        }
+      },
+      "AlphaZeroModulesLibraryPresentationEndpointsLibrariesAuthorizeResourceAuthorizeResourceRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "resourceArn": {
+            "type": "string"
+          }
+        }
+      },
+      "AlphaZeroModulesLibraryPresentationEndpointsAccessCodesVoidCodeVoidCodeRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "rawCode": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          }
+        }
+      },
+      "AlphaZeroModulesLibraryPresentationEndpointsAccessCodesGenerateBatchGenerateBatchResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "codes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "AlphaZeroModulesLibraryPresentationEndpointsAccessCodesGenerateBatchGenerateBatchRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "quantity": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "strategyId": {
+            "type": "string"
+          },
+          "targetResourceArn": {
+            "type": "string"
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": {}
+          }
+        }
+      },
+      "AlphaZeroModulesLibraryPresentationEndpointsAccessCodesGenerateAdminCodeGenerateAdminCodeResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "type": "string"
+          }
+        }
+      },
+      "AlphaZeroModulesLibraryPresentationEndpointsAccessCodesGenerateAdminCodeGenerateAdminCodeRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "targetResourceArn": {
+            "type": "string"
+          },
+          "metadata": {
+            "type": "object",
+            "nullable": true,
+            "additionalProperties": {}
+          }
+        }
+      },
+      "AlphaZeroModulesLibraryPresentationEndpointsAccessCodesDistributeBatchDistributeBatchRequest": {
+        "type": "object",
+        "additionalProperties": false
+      },
+      "AlphaZeroModulesTenantsPresentationEndpointsUpdateTenantUpdateTenantRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "logoUrl": {
+            "type": "string",
+            "nullable": true
+          },
+          "primaryColor": {
+            "type": "string",
+            "nullable": true
+          },
+          "secondaryColor": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "AlphaZeroModulesTenantsPresentationEndpointsLookupTenantLookupTenantResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "guid"
+          },
+          "subdomain": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "branding": {
+            "$ref": "#/components/schemas/AlphaZeroModulesTenantsPresentationEndpointsLookupTenantLookupTenantBranding"
+          }
+        }
+      },
+      "AlphaZeroModulesTenantsPresentationEndpointsLookupTenantLookupTenantBranding": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "primaryColor": {
+            "type": "string",
+            "nullable": true
+          },
+          "logoUrl": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "AlphaZeroModulesTenantsPresentationEndpointsLookupTenantLookupTenantRequest": {
+        "type": "object",
+        "additionalProperties": false
+      },
+      "AlphaZeroSharedQueriesPagedResultOfTenantDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AlphaZeroModulesTenantsApplicationTenantsQueriesGetTenantTenantDto"
+            }
+          },
+          "totalCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "currentPage": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "pageSize": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "totalPages": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "hasNextPage": {
+            "type": "boolean"
+          },
+          "hasPreviousPage": {
+            "type": "boolean"
+          }
+        }
+      },
+      "AlphaZeroModulesTenantsApplicationTenantsQueriesGetTenantTenantDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "guid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "subdomain": {
+            "type": "string"
+          },
+          "logoUrl": {
+            "type": "string",
+            "nullable": true
+          },
+          "primaryColor": {
+            "type": "string",
+            "nullable": true
+          },
+          "secondaryColor": {
+            "type": "string",
+            "nullable": true
+          },
+          "status": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "AlphaZeroModulesTenantsPresentationEndpointsListTenantsListTenantsRequest": {
+        "type": "object",
+        "additionalProperties": false
+      },
+      "AlphaZeroModulesTenantsPresentationEndpointsGetTenantGetTenantRequest": {
+        "type": "object",
+        "additionalProperties": false
+      },
+      "AlphaZeroModulesTenantsPresentationEndpointsDeleteTenantDeleteTenantRequest": {
+        "type": "object",
+        "additionalProperties": false
+      },
+      "AlphaZeroModulesTenantsPresentationEndpointsCreateTenantCreateTenantResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "guid"
+          }
+        }
+      },
+      "AlphaZeroModulesTenantsPresentationEndpointsCreateTenantCreateTenantRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "subdomain": {
+            "type": "string"
+          },
+          "logoUrl": {
+            "type": "string",
+            "nullable": true
+          },
+          "primaryColor": {
+            "type": "string",
+            "nullable": true
+          },
+          "secondaryColor": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "AlphaZeroModulesVideoUploadingPresentationFeaturesGetVideoKeyRequest": {
+        "type": "object",
+        "additionalProperties": false
+      },
+      "AlphaZeroModulesVideoUploadingPresentationFeaturesUpdateVideoInfo_Request": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "AlphaZeroModulesVideoUploadingPresentationFeaturesUpload_Request": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "fileName": {
+            "type": "string"
+          },
+          "contentType": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "transcodingMethod": {
+            "nullable": true,
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/AlphaZeroModulesVideoUploadingApplicationVideoTranscodingMetehod"
+              }
+            ]
+          },
+          "encryptionMethod": {
+            "nullable": true,
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/AlphaZeroModulesVideoUploadingApplicationVideoEncryptionMethod"
+              }
+            ]
+          },
+          "generateCustomThumbnailUrl": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "targetResourceArn": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "AlphaZeroModulesVideoUploadingApplicationVideoTranscodingMetehod": {
+        "type": "integer",
+        "description": "",
+        "x-enumNames": [
+          "FFMPEG",
+          "MediaConvert"
+        ],
+        "enum": [
+          0,
+          1
+        ]
+      },
+      "AlphaZeroModulesVideoUploadingApplicationVideoEncryptionMethod": {
+        "type": "integer",
+        "description": "",
+        "x-enumNames": [
+          "None",
+          "ClearKey",
+          "DRM"
+        ],
+        "enum": [
+          0,
+          1,
+          2
+        ]
+      }
+    },
+    "securitySchemes": {
+      "JWTBearerAuth": {
+        "type": "http",
+        "description": "Enter a JWT token to authorize the requests...",
+        "scheme": "Bearer",
+        "bearerFormat": "JWT"
+      },
+      "oauth2": {
+        "type": "oauth2",
+        "flows": {
+          "authorizationCode": {
+            "authorizationUrl": "http://localhost:8080/realms/alpha-zero/protocol/openid-connect/auth",
+            "tokenUrl": "http://localhost:8080/realms/alpha-zero/protocol/openid-connect/token",
+            "scopes": {
+              "openid": "openid",
+              "profile": "profile",
+              "email": "email"
+            }
+          }
+        }
+      }
+    }
+  }
+}

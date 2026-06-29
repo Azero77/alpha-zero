@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Outfit, Cairo, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
+import Providers from "@/components/Providers";
 
 const outfit = Outfit({
   subsets: ["latin"],
@@ -33,9 +34,11 @@ export default function RootLayout({
   return (
     // 'dir="auto"' allows the browser to switch RTL/LTR based on text, 
     // but in a real i18n setup, this would be dynamically set to "rtl" or "ltr" based on locale.
-    <html lang="en" dir="auto" className={`${outfit.variable} ${cairo.variable} ${jetbrainsMono.variable}`}>
+    <html lang="ar" dir="rtl" className={`${outfit.variable} ${cairo.variable} ${jetbrainsMono.variable}`}>
       <body className="antialiased font-sans">
-        {children}
+        <Providers>
+          {children}
+        </Providers>
       </body>
     </html>
   );

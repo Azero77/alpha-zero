@@ -16,13 +16,15 @@
     --warning: #F59E0B;
   }
   
-  [data-theme="dark"] {
-    --bg-color: #0F172A;
-    --surface-color: #1E293B;
-    --text-primary: #F8FAFC;
-    --text-muted: #94A3B8;
-    --border-color: #334155;
-    --accent: #E2E8F0;
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg-color: #0F172A;
+      --surface-color: #1E293B;
+      --text-primary: #F8FAFC;
+      --text-muted: #94A3B8;
+      --border-color: #334155;
+      --accent: #E2E8F0;
+    }
   }
 }
 
