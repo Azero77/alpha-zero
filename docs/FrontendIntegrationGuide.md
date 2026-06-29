@@ -112,4 +112,6 @@ To display a course, you only ever need to make **one call**. Do not call the Vi
 ---
 
 ## 🔐 Security Note
-All requests require the `X-Tenant-Id` header (or resolved via subdomain). The API uses **Resource-Based Access Control**. If you try to add a video to a course you don't own, the S3 upload request will fail at the backend level.
+All authenticated requests require the `X-TenantId` header (or equivalent context). The API uses **Resource-Based Access Control**. 
+
+**Important for Global Principals:** If you are authenticated as a global principal (e.g., global superadmin) and need to access resources within a specific tenant, you **must** include the `X-TenantId` header with the target tenant's GUID. The `HttpTenantProvider` will prioritize this header over your global claim, allowing query filters to correctly scope resources to that tenant and simplifying ARN construction. If you try to access a tenant resource you don't own or without specifying the context, the request will fail.

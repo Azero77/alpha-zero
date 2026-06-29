@@ -32,7 +32,7 @@ public class AuthorizationContextFactory(ICurrentTenantUserRepository currentTen
             ResourcePath = arn.ResourcePath,
             ResourceType = arn.Service,
             TenantId = arn.TenantIdString.Equals(ResourceArn.GlobalTenant, StringComparison.OrdinalIgnoreCase) 
-                        ? null 
+                        ? Guid.Empty 
                         : Guid.Parse(arn.TenantIdString),
             DeviceId = deviceProvider.GetDeviceId(),
             IpAddress = accessor?.HttpContext?.Connection.RemoteIpAddress?.ToString(),

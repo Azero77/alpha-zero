@@ -52,7 +52,7 @@ public class PolicyEvaluatorServiceTests
         
         var managedPolicy = new ManagedPolicy(Guid.NewGuid(), "View", new() 
         { 
-            new ManagedPolicyStatement("S1", new() { "courses:View" }, true) 
+            ManagedPolicyStatement.Create("S1", new() { "courses:View" }, true).Value
         });
         
         principal.AddPolicy(managedPolicy);
@@ -83,7 +83,7 @@ public class PolicyEvaluatorServiceTests
         var principal = Principal.Create(Guid.NewGuid(), "iam-user-1", "hashed-password", "Custom", PrincipalType.User, "az:*:*:*", TenantId).Value;
         
         var policy = new InlinePolicy(Guid.NewGuid(), "Inline", TenantId);
-        policy.AddStatement(new PolicyStatement("S1", new() { "video:Stream" }, true, new() { ResourcePattern.All }));
+        policy.AddStatement(PolicyStatement.Create("S1", new() { "video:Stream" }, true, new() { ResourcePattern.All }).Value);
         principal.AddPolicy(policy);
 
         _principalRepository.GetById(principal.Id).Returns(Task.FromResult<Principal?>(principal));

@@ -1,6 +1,7 @@
 using AlphaZero.Modules.Identity.Domain.Models.Principals;
 using AlphaZero.Shared.Domain;
 using ErrorOr;
+using Microsoft.Extensions.Options;
 
 namespace AlphaZero.Modules.Identity.Domain.Models.Principals.Policies;
 
@@ -13,8 +14,7 @@ public class PolicyStatement
     public IConditionNode? Condition { get; private set; }
 
     private PolicyStatement() { } // EF and JSON
-
-    private PolicyStatement(string sid, List<string> actions, bool effect, List<ResourcePattern> resources, IConditionNode? condition = null)
+    public PolicyStatement(string sid, List<string> actions, bool effect, List<ResourcePattern> resources, IConditionNode? condition = null)
     {
         Sid = sid;
         Actions = actions;
@@ -42,7 +42,7 @@ public class ManagedPolicyStatement
     public IConditionNode? Condition { get; private set; }
     private ManagedPolicyStatement() { } // EF and JSON
 
-    private ManagedPolicyStatement(string sid, List<string> actions, bool effect, IConditionNode? condition = null)
+    public ManagedPolicyStatement(string sid, List<string> actions, bool effect, IConditionNode? condition = null)
     {
         Sid = sid;
         Actions = actions;

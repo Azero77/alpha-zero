@@ -29,6 +29,7 @@ export default function PrincipalLogin() {
         // If it's the global superadmin, go to dashboard
         if (tenantId === '00000000-0000-0000-0000-000000000000') {
           localStorage.setItem('auth_token', res.data.token);
+          localStorage.setItem('tenant_id', tenantId);
           router.push('/');
         } else {
           // Redirect to tenant exchange

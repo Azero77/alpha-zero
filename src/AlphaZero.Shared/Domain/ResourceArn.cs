@@ -16,7 +16,7 @@ public class ResourceArn
 
     public const string Prefix = "az";
     public const string GlobalTenant = "global";
-    public static ResourceArn AppUrn => new ResourceArn("az:global");
+    public static ResourceArn AppUrn => new ResourceArn("az:app:global:app");
     // Strict pattern for concrete ARNs
     private static readonly Regex ConcreteRegex = new(@"^az:(?<service>[a-zA-Z]+):(?<tenantId>[a-zA-Z0-9-]+):(?<resourcePath>[A-Za-z0-9\/\-]+)$", RegexOptions.Compiled);
 

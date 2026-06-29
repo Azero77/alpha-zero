@@ -49,7 +49,7 @@ public class OfflineVideoKeyTests : BaseIntegrationTest
         var condition = new ConditionNode("DeviceId", Operator.IsMainDevice, JsonDocument.Parse("true").RootElement);
         var managedPolicy = new ManagedPolicy(Guid.NewGuid(), "VideoPolicy", new() 
         { 
-            new ManagedPolicyStatement("S1", new() { "video:Stream" }, true, condition) 
+            ManagedPolicyStatement.Create("S1", new() { "video:Stream" }, true, condition) .Value
         });
 
         var principal = Principal.Create(Guid.NewGuid(), "video-role", "hash", "Role", PrincipalType.Role, null, tenantId).Value;
@@ -90,7 +90,7 @@ public class OfflineVideoKeyTests : BaseIntegrationTest
         var condition = new ConditionNode("DeviceId", Operator.IsMainDevice, JsonDocument.Parse("true").RootElement);
         var managedPolicy = new ManagedPolicy(Guid.NewGuid(), "VideoPolicy2", new() 
         { 
-            new ManagedPolicyStatement("S1", new() { "video:Stream" }, true, condition) 
+            ManagedPolicyStatement.Create("S1", new() { "video:Stream" }, true, condition) .Value
         });
 
         var principal = Principal.Create(Guid.NewGuid(), "video-role-2", "hash", "Role", PrincipalType.Role, null, tenantId).Value;

@@ -45,6 +45,7 @@ export default function TenantLoginExchange({ params }: { params: { tenant: stri
       // Restore original or set new tenant token
       if (res.data?.token) {
         localStorage.setItem('auth_token', res.data.token);
+        localStorage.setItem('tenant_id', params.tenant);
         if (res.data.tenantUserId) {
           localStorage.setItem('student_id', res.data.tenantUserId);
         }

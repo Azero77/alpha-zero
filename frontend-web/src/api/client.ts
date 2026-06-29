@@ -6,12 +6,18 @@ export const apiClient = new Api({
   securityWorker: (securityData: any | null) => {
     if (typeof window !== 'undefined') {
       const token = localStorage.getItem('auth_token');
+      const tenantId = localStorage.getItem('tenant_id');
+      const headers: any = {};
+      
       if (token) {
-        return {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        };
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      if (tenantId) {
+        headers['X-TenantId'] = tenantId;
+      }
+      
+      if (Object.keys(headers).length > 0) {
+        return { headers };
       }
     }
     return {};
