@@ -821,6 +821,7 @@ export interface AlphaZeroModulesTenantsPresentationEndpointsLookupTenantLookupT
 
 export interface AlphaZeroModulesTenantsPresentationEndpointsLookupTenantLookupTenantBranding {
   primaryColor?: string | null;
+  secondaryColor?: string | null;
   logoUrl?: string | null;
 }
 

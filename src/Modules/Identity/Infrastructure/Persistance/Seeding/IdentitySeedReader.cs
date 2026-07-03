@@ -24,10 +24,16 @@ public static class IdentitySeedReader
 
         if (!File.Exists(managedPoliciesPath))
         {
-            var basePath = Directory.GetCurrentDirectory();
-            if (basePath.EndsWith("AlphaZero.API"))
+            var current = Directory.GetCurrentDirectory();
+            var basePath = current;
+            while (!string.IsNullOrEmpty(current))
             {
-                basePath = Directory.GetParent(basePath)?.Parent?.FullName ?? basePath;
+                if (File.Exists(Path.Combine(current, "AlphaZero.sln")))
+                {
+                    basePath = current;
+                    break;
+                }
+                current = Directory.GetParent(current)?.FullName;
             }
             managedPoliciesPath = Path.Combine(basePath, "src", "Modules", "Identity", "Domain", "SeedData", "ManagedPolicies.json");
             principalTemplatesPath = Path.Combine(basePath, "src", "Modules", "Identity", "Domain", "SeedData", "PrincipalTemplates.json");

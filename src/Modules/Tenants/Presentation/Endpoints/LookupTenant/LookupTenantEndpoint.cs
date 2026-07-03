@@ -8,7 +8,7 @@ namespace AlphaZero.Modules.Tenants.Presentation.Endpoints.LookupTenant;
 
 public record LookupTenantRequest { public string Subdomain { get; init; } = default!; }
 
-public record LookupTenantBranding(string? PrimaryColor, string? LogoUrl);
+public record LookupTenantBranding(string? PrimaryColor, string? SecondaryColor, string? LogoUrl);
 public record LookupTenantResponse(Guid Id, string Subdomain, string Name, LookupTenantBranding Branding);
 
 public class LookupTenantEndpoint(TenantsModule module) : Endpoint<LookupTenantRequest, LookupTenantResponse>
@@ -39,7 +39,7 @@ public class LookupTenantEndpoint(TenantsModule module) : Endpoint<LookupTenantR
             tenant.Id,
             tenant.Subdomain,
             tenant.Name,
-            new LookupTenantBranding(tenant.PrimaryColor, tenant.LogoUrl)
+            new LookupTenantBranding(tenant.PrimaryColor, tenant.SecondaryColor, tenant.LogoUrl)
         );
 
         await Send.OkAsync(response, ct);

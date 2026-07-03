@@ -35,12 +35,10 @@ export default function AdminDashboard() {
     e.preventDefault();
     createTenantMutation.mutate({
       name: newTenant.name,
-      slug: newTenant.slug,
-      branding: {
-        primaryColor: newTenant.primaryColor,
-        secondaryColor: newTenant.secondaryColor,
-        logoUrl: '' 
-      }
+      subdomain: newTenant.slug,
+      primaryColor: newTenant.primaryColor,
+      secondaryColor: newTenant.secondaryColor,
+      logoUrl: '' 
     });
   };
 
@@ -118,14 +116,14 @@ export default function AdminDashboard() {
                       <tr key={tenant.id} className="hover:bg-[var(--text-primary)] hover:text-[var(--bg-color)] transition-colors group">
                         <td className="p-4 font-bold">{tenant.name}</td>
                         <td className="p-4">
-                          <a href={`http://${tenant.slug}.localhost:3000`} className="underline decoration-2 underline-offset-4" target="_blank" rel="noreferrer">
-                            {tenant.slug}.localhost:3000
+                          <a href={`http://${tenant.subdomain}.localhost:3000`} className="underline decoration-2 underline-offset-4" target="_blank" rel="noreferrer">
+                            {tenant.subdomain}.localhost:3000
                           </a>
                         </td>
                         <td className="p-4">
                           <div className="flex items-center gap-3">
-                            <div className="w-5 h-5 border-2 border-current" style={{ backgroundColor: tenant.branding?.primaryColor || '#000' }}></div>
-                            <span>{tenant.branding?.primaryColor || 'DEFAULT'}</span>
+                            <div className="w-5 h-5 border-2 border-current" style={{ backgroundColor: tenant.primaryColor || '#000' }}></div>
+                            <span>{tenant.primaryColor || 'DEFAULT'}</span>
                           </div>
                         </td>
                         <td className="p-4 text-right">

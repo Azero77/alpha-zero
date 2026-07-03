@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
@@ -9,5 +9,11 @@
 	<ItemGroup>
 		<ProjectReference Include="..\..\..\AlphaZero.Shared\AlphaZero.Shared.csproj" />
 	</ItemGroup>
+
+  <ItemGroup>
+    <None Update="SeedData\*.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
 
 </Project>
