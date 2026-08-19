@@ -48,8 +48,8 @@ export function proxy(request: NextRequest) {
     if (url.pathname.startsWith(`/${subdomain}/`) || url.pathname === `/${subdomain}`) {
       return NextResponse.next();
     }
-    // Rewrite the URL to a dynamic route for the specific tenant
-    url.pathname = `/${subdomain}${url.pathname}`;
+    const path = url.pathname === '/' ? '' : url.pathname;
+    url.pathname = `/${subdomain}${path}`;
     const response = NextResponse.rewrite(url);
     response.headers.set('x-tenant-subdomain', subdomain);
     return response;

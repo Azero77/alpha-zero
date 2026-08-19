@@ -30,3 +30,8 @@ Create a Playwright end-to-end test suite (`npx playwright test`) that comprehen
 ### E2E Testing Verification
 - [ ] `npx playwright test` executes and passes successfully for all implemented features against the local backend.
 - [ ] Tests verify actual UI rendering and DOM updates, not just network mocks.
+
+## Follow-up — 2026-07-04T19:25:41Z
+
+The server restarted again. Please revive all agents and resume building. Also, IMPORTANT: the agents previously created BOTH `src/middleware.ts` AND `src/proxy.ts` which caused a Next.js crash. The `src/middleware.ts` file has now been deleted. Going forward, ALL routing/proxy logic must live ONLY in `src/proxy.ts`. Do NOT create a `src/middleware.ts` file. Please continue from where you left off on Milestone 2 (Auth Exchange & Student Registration).
+

@@ -14,7 +14,7 @@ Start the Project Orchestrator, monitor progress, run sentinel crons, and manage
 - Victory Audit is MANDATORY before reporting completion
 
 ## User Context
-- **Last user request**: Build out the frontend and write E2E tests.
+- **Last user request**: Build out the frontend and write E2E tests. (Follow-up: server restarted, middleware.ts deleted, routing must live only in proxy.ts)
 - **Pending clarifications**: none
 - **Delivered results**: none
 

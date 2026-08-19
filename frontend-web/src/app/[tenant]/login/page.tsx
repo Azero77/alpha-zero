@@ -1,16 +1,25 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { apiClient } from '@/api/client';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 
-export default function TenantLoginExchange({ params }: { params: { tenant: string } }) {
+import { use } from 'react';
+
+export default function TenantLoginExchange({ params }: { params: Promise<{ tenant: string }> }) {
+  const resolvedParams = use(params);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [hasPrincipalToken, setHasPrincipalToken] = useState<boolean | null>(null);
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   useEffect(() => {
+    const pt = searchParams.get('pt');
+    if (pt) {
+      localStorage.setItem('principal_token', pt);
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
     const token = localStorage.getItem('principal_token');
     setHasPrincipalToken(!!token);
   }, []);
@@ -36,7 +45,7 @@ export default function TenantLoginExchange({ params }: { params: { tenant: stri
       localStorage.setItem('auth_token', principalToken); // temporarily use principal token for this request
       
       const res = await apiClient.identity.alphaZeroModulesIdentityPresentationAuthCommandsLoginAsTenantUserLoginAsTenantUserEndpoint({
-        tenantId: params.tenant,
+        tenantId: resolvedParams.tenant,
         publicKey: "none",
         deviceName: "Web Browser",
         platform: 0 // Web
@@ -45,11 +54,11 @@ export default function TenantLoginExchange({ params }: { params: { tenant: stri
       // Restore original or set new tenant token
       if (res.data?.token) {
         localStorage.setItem('auth_token', res.data.token);
-        localStorage.setItem('tenant_id', params.tenant);
+        localStorage.setItem('tenant_id', resolvedParams.tenant);
         if (res.data.tenantUserId) {
           localStorage.setItem('student_id', res.data.tenantUserId);
         }
-        router.push(`/${params.tenant}`);
+        window.location.href = '/';
       }
     } catch (err: any) {
       setError('Failed to log into this tenant. ' + (err.message || ''));
@@ -76,7 +85,7 @@ export default function TenantLoginExchange({ params }: { params: { tenant: stri
               disabled={isLoading}
               className="w-full bg-[var(--text-primary)] text-[var(--bg-color)] py-3 font-bold uppercase hover:opacity-80 disabled:opacity-50 transition-opacity border-[3px] border-transparent"
             >
-              {isLoading ? 'Entering Tenant...' : `Join Tenant ${params.tenant}`}
+              {isLoading ? 'Entering Tenant...' : `Join Tenant ${resolvedParams.tenant}`}
             </button>
           </div>
         ) : (

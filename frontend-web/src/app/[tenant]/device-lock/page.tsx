@@ -16,8 +16,8 @@ export default function DeviceLock({ params }: { params: { tenant: string } }) {
       const fingerprint = typeof window !== 'undefined' && localStorage.getItem('device_fp') 
         || crypto.randomUUID();
 
-      await apiClient.identity.alphaZeroModulesIdentityPresentationAuthCommandsSetMainDeviceSetMainDeviceEndpoint({
-        deviceFingerprint: fingerprint
+      await apiClient.identity.alphaZeroModulesIdentityPresentationUsersDevicesSetMainDeviceEndpoint({
+        deviceId: fingerprint
       });
 
       // Redirect back to login so they can authenticate successfully

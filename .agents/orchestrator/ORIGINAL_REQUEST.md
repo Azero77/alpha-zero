@@ -18,3 +18,10 @@ Your instructions:
 
 The server was restarted, which paused all execution. Please check the current status of all subagents and tasks (including implementation and E2E testing sub-orchestrators) and resume building the remaining milestones and E2E tests exactly where you left off.
 
+## 2026-07-04T19:26:39Z
+
+The server has restarted. Please revive all track orchestrators and workers and resume coordination from where you left off on Milestone 2 (Auth Exchange & Student Registration).
+
+IMPORTANT: The system previously created both `src/middleware.ts` and `src/proxy.ts` which caused a Next.js crash. The file `src/middleware.ts` has been deleted. Going forward, all routing and proxy logic must live ONLY in `src/proxy.ts`. Do NOT create a `src/middleware.ts` file under any circumstances. Ensure this instruction is propagated to all your subagents and workers.
+
+

@@ -12,8 +12,8 @@ export default function AdminDashboard() {
     queryKey: ['tenants'],
     queryFn: async () => {
       const res = await apiClient.tenants.alphaZeroModulesTenantsPresentationEndpointsListTenantsListTenantsEndpoint({
-        PageNumber: 1,
-        PageSize: 100
+        page: 1,
+        perPage: 100
       });
       return res.data;
     }

@@ -20,11 +20,12 @@ export default function Quiz({ courseId, quizId, questions, tenant }: QuizProps)
     try {
       const studentId = localStorage.getItem('student_id');
       if (studentId) {
-        await apiClient.courses.alphaZeroModulesCoursesPresentationCoursesCompleteItemCompleteItemEndpoint({
+        await apiClient.courses.alphaZeroModulesIdentityPresentationEnrollementsCompleteItemCompleteItemEndpoint(
           studentId,
-          courseId,
-          itemId: quizId
-        });
+          {
+            bitIndex: 1 // TODO: fetch actual bitIndex from item
+          }
+        );
         alert('Quiz submitted successfully!');
         router.push(`/${tenant}`);
       }

@@ -62,7 +62,7 @@ Build out the entire AlphaZero frontend from top to bottom, implementing every f
 - Successor: not yet spawned
 
 ## Active Timers
-- Heartbeat cron: 7154f2a4-6b77-450a-aaef-eccb77d805c2/task-616
+- Heartbeat cron: 7154f2a4-6b77-450a-aaef-eccb77d805c2/task-736
 - Safety timer: none
 - On succession: kill all timers before spawning successor
 - On context truncation: run `manage_task(Action="list")` — re-create if missing

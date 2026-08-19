@@ -4,7 +4,10 @@ import { apiClient } from '@/api/client';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
-export default function TenantDashboard({ params }: { params: { tenant: string } }) {
+import { use } from 'react';
+
+export default function TenantDashboard({ params }: { params: Promise<{ tenant: string }> }) {
+  const resolvedParams = use(params);
   const router = useRouter();
   const queryClient = useQueryClient();
   const [studentId, setStudentId] = useState<string | null>(null);
@@ -19,11 +22,11 @@ export default function TenantDashboard({ params }: { params: { tenant: string }
     const token = localStorage.getItem('auth_token');
     
     if (!token || !id) {
-      router.push(`/${params.tenant}/login`);
+      window.location.href = '/login';
     } else {
       setStudentId(id);
     }
-  }, [params.tenant, router]);
+  }, [resolvedParams.tenant, router]);
 
   const { data: dashboard, isLoading, error } = useQuery({
     queryKey: ['dashboard', studentId],
@@ -41,8 +44,7 @@ export default function TenantDashboard({ params }: { params: { tenant: string }
     setRedeemMessage('');
     try {
       await apiClient.library.alphaZeroModulesLibraryPresentationEndpointsRedeemCodeRedeemCodeEndpoint({
-        studentId: studentId,
-        code: redeemCode,
+        rawCode: redeemCode,
       });
       setRedeemStatus('success');
       setRedeemMessage('Code redeemed successfully!');
@@ -119,17 +121,17 @@ export default function TenantDashboard({ params }: { params: { tenant: string }
           </div>
         )}
 
-        {dashboard?.enrollments && dashboard.enrollments.length === 0 && (
+        {dashboard?.academies && Object.values(dashboard.academies)[0]?.length === 0 && (
           <div className="text-center py-12 text-gray-500">
             <div className="text-5xl mb-4">📚</div>
             <p className="text-lg">You have no active courses.</p>
           </div>
         )}
 
-        {dashboard?.enrollments && dashboard.enrollments.length > 0 && (
+        {dashboard?.academies && Object.values(dashboard.academies)[0]?.length > 0 && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {dashboard.enrollments.map((course: any) => (
-              <div key={course.courseId} className="border border-gray-200 rounded shadow-sm overflow-hidden flex flex-col cursor-pointer hover:shadow-md transition-shadow" onClick={() => router.push(`/${params.tenant}/courses/${course.courseId}`)}>
+            {Object.values(dashboard.academies)[0].map((course: any) => (
+              <div key={course.courseId} className="border border-gray-200 rounded shadow-sm overflow-hidden flex flex-col cursor-pointer hover:shadow-md transition-shadow" onClick={() => router.push(`/${resolvedParams.tenant}/courses/${course.courseId}`)}>
                 <div className="h-40 bg-gray-100 flex items-center justify-center text-gray-400">
                   {/* Course Image Placeholder */}
                   No Image

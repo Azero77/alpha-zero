@@ -32,8 +32,8 @@ export default function PrincipalLogin() {
           localStorage.setItem('tenant_id', tenantId);
           router.push('/');
         } else {
-          // Redirect to tenant exchange
-          router.push(`/${tenantId}/login`);
+          // Redirect to tenant exchange via subdomain, passing principal token
+          window.location.href = `http://${tenantId}.localhost:3000/login?pt=${res.data.token}`;
         }
       }
     } catch (err: any) {

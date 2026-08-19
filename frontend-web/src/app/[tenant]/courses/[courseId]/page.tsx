@@ -9,8 +9,10 @@ import Quiz from '@/components/Quiz';
 // Dynamically import VideoPlayer to avoid SSR issues with Shaka Player
 const VideoPlayer = dynamic(() => import('@/components/VideoPlayer'), { ssr: false });
 
-export default function CourseDetails() {
-  const params = useParams() as { tenant: string; courseId: string };
+import { use } from 'react';
+
+export default function CourseDetails({ params }: { params: Promise<{ tenant: string; courseId: string }> }) {
+  const resolvedParams = use(params);
   const router = useRouter();
   
   const [activeVideoItem, setActiveVideoItem] = useState<any>(null);
@@ -28,9 +30,9 @@ export default function CourseDetails() {
   }, []);
 
   const { data: course, isLoading, error } = useQuery({
-    queryKey: ['course', params.courseId],
+    queryKey: ['course', resolvedParams.courseId],
     queryFn: async () => {
-      const res = await apiClient.courses.alphaZeroModulesCoursesPresentationCoursesGetCourseGetCourseEndpoint(params.courseId);
+      const res = await apiClient.courses.alphaZeroModulesCoursesPresentationCoursesGetGetCourseEndpoint(resolvedParams.courseId);
       return res.data;
     }
   });
@@ -48,11 +50,12 @@ export default function CourseDetails() {
     try {
       const studentId = localStorage.getItem('student_id');
       if (studentId) {
-        await apiClient.courses.alphaZeroModulesCoursesPresentationCoursesCompleteItemCompleteItemEndpoint({
+        await apiClient.courses.alphaZeroModulesIdentityPresentationEnrollementsCompleteItemCompleteItemEndpoint(
           studentId,
-          courseId: params.courseId,
-          itemId: activeVideoItem.id
-        });
+          {
+            bitIndex: 1 // TODO: fetch actual bitIndex from item
+          }
+        );
         alert('Lesson marked as complete!');
       }
     } catch (e) {
@@ -68,7 +71,7 @@ export default function CourseDetails() {
     return (
       <div className="p-8 text-center text-red-500">
         <h2>Failed to load course details.</h2>
-        <button onClick={() => router.push(`/${params.tenant}`)}>Go back</button>
+        <button onClick={() => router.push(`/${resolvedParams.tenant}`)}>Go back</button>
       </div>
     );
   }
@@ -106,10 +109,10 @@ export default function CourseDetails() {
                 </>
               ) : activeVideoItem.type === 'Quiz' ? (
                 <Quiz 
-                  courseId={params.courseId} 
+                  courseId={resolvedParams.courseId} 
                   quizId={activeVideoItem.id} 
                   questions={activeVideoItem.resource?.questions || []} 
-                  tenant={params.tenant} 
+                  tenant={resolvedParams.tenant} 
                 />
               ) : (
                 <div className="bg-gray-100 p-8 rounded flex items-center justify-center">

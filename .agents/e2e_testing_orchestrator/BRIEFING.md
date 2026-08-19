@@ -55,18 +55,18 @@ Manage the E2E Testing Track for the AlphaZero project by setting up test infras
 | worker_check_compile | teamwork_preview_worker | TSC compilation check | completed | f1c86432-391d-4bd0-9597-9f35b2e2bfa7 |
 | worker_git_check | teamwork_preview_worker | Git status & diff check | completed | b0d1f4ab-073e-46bd-9049-02c6124aea87 |
 | worker_fix_backend | teamwork_preview_worker | Backend path lookup fix | completed | ea9c6596-0ca9-4e47-a69c-46bb6f23388c |
-| worker_write_registration | teamwork_preview_worker | Backend student registration | failed | 3aba05a9-86cb-438e-8480-708bc77dafac |
-| worker_write_registration_gen1 | teamwork_preview_worker | Backend student registration | in-progress | a70100f1-ef54-4302-849d-802579e03658 |
+| worker_write_registration | teamwork_preview_worker | Backend student registration | stopped | 3aba05a9-86cb-438e-8480-708bc77dafac |
+| explorer_e2e_state | teamwork_preview_explorer | E2E Readiness & State Recovery | pending | 3a3cf68e-655a-43f3-b7b5-1a8fba2aa107 |
 
 ## Succession Status
 - Succession required: no
 - Spawn count: 8 / 16
-- Pending subagents: a70100f1-ef54-4302-849d-802579e03658
+- Pending subagents: 3a3cf68e-655a-43f3-b7b5-1a8fba2aa107
 - Predecessor: none
 - Successor: not yet spawned
 
 ## Active Timers
-- Heartbeat cron: task-384
+- Heartbeat cron: task-129
 - Safety timer: none
 - On succession: kill all timers before spawning successor
 - On context truncation: run manage_task(Action="list") — re-create if missing
