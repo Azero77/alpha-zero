@@ -1,5 +1,9 @@
 # 🏗️ Payments Integration & Pricing Tiers Plan
 
+> **Implementation Status:** 📋 Architecturally Planned — Not Yet Implemented  
+> **Decision:** Online payment implementation deferred until first tenants provide feedback (see [PricingStrategy.md](./PricingStrategy.md) §5 for phase gates)  
+> **Business Model:** See [PricingStrategy.md](./PricingStrategy.md) for pricing tiers, revenue share, and monetization model
+
 This document outlines the architectural plan for integrating online payments (**Stripe Checkout**), adding pricing tiers, coupons, and discounts in the `Courses` module, and unifying them with the offline physical `AccessCode` flow in the `Library` module.
 
 ---

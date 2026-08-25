@@ -147,3 +147,5 @@ lib/
 *.env
 *.pfx
 *.pem
+
+knowledgeResources/

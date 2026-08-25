@@ -102,15 +102,15 @@ public class Program
         })
         .AddJwtBearer(options =>
         {
-            options.Authority = builder.Configuration["Authentication:Authority"] ?? "http://localhost:8080/realms/alpha-zero";
-            options.Audience = builder.Configuration["Authentication:Audience"] ?? "account";
+            options.Authority = builder.Configuration["Authentication:Authority"];
+            options.Audience = builder.Configuration["Authentication:Audience"];
             options.RequireHttpsMetadata = false;
             
-            var internalSecret = builder.Configuration["Jwt:Secret"] ?? "a-very-secret-key-that-should-be-in-appsettings";
-            var internalIssuer = builder.Configuration["Jwt:InternalIssuer"] ?? "AlphaZero";
-            var internalAudience = builder.Configuration["Jwt:InternalAudience"] ?? "AlphaZeroClient";
-            var idpIssuer = builder.Configuration["Authentication:Authority"] ?? "http://localhost:8080/realms/alpha-zero";
-            var idpAudience = builder.Configuration["Authentication:Audience"] ?? "account";
+            var internalSecret = builder.Configuration["Jwt:Secret"];
+            var internalIssuer = builder.Configuration["Jwt:InternalIssuer"];
+            var internalAudience = builder.Configuration["Jwt:InternalAudience"];
+            var idpIssuer = builder.Configuration["Authentication:Authority"] ;
+            var idpAudience = builder.Configuration["Authentication:Audience"];
 
             options.TokenValidationParameters = new Microsoft.IdentityModel.Tokens.TokenValidationParameters
             {

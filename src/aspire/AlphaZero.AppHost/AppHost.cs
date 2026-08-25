@@ -150,7 +150,6 @@ var keyCloak = builder.AddKeycloakContainer("idsrv")
     .WithImport("KeycloakConfiguration.json")
     .WithPostgresDatabase(keycloakDb)
     ;
-
 var api = builder.AddProject<Projects.AlphaZero_API>("alphazero-api")
     .WithReference(awsSdkConfig)
     .WithReference(input_s3)
