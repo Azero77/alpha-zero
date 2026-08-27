@@ -4,7 +4,6 @@ using AlphaZero.Shared.Infrastructure;
 using Autofac;
 using Autofac.Extensions.DependencyInjection;
 using FastEndpoints;
-using FastEndpoints.Security;
 using FastEndpoints.Swagger;
 using MassTransit;
 using MassTransit.EntityFrameworkCoreIntegration;
@@ -43,18 +42,18 @@ public class Program
                     ep.PreProcessor<IAMPreprocessor>(Order.Before);
                 }
             };
-        })
-            .UseSwaggerGen();
-
-        app.UseSwaggerUi(c =>
-        {
-            c.OAuth2Client = new OAuth2ClientSettings()
-            {
-                ClientId = builder.Configuration["Keycloak:ClientId"] ?? "alpha-zero-client",
-                UsePkceWithAuthorizationCodeGrant = true,
-            };
-
         });
+        if (app.Environment.IsDevelopment())
+        {
+            app.UseSwaggerGen(uiConfig: c =>
+            {
+                c.OAuth2Client = new OAuth2ClientSettings()
+                {
+                    ClientId = builder.Configuration["Authentication:ClientId"],
+                    UsePkceWithAuthorizationCodeGrant = true,
+                };
+            }); 
+        }
         MapModulesEndpoint(app, moduleTypes);
 
         if (app.Environment.IsDevelopment())
@@ -107,8 +106,8 @@ public class Program
             options.RequireHttpsMetadata = false;
             
             var internalSecret = builder.Configuration["Jwt:Secret"];
-            var internalIssuer = builder.Configuration["Jwt:InternalIssuer"];
-            var internalAudience = builder.Configuration["Jwt:InternalAudience"];
+            var internalIssuer = builder.Configuration["Authentication:InternalIssuer"];
+            var internalAudience = builder.Configuration["Authentication:InternalAudience"];
             var idpIssuer = builder.Configuration["Authentication:Authority"] ;
             var idpAudience = builder.Configuration["Authentication:Audience"];
 
@@ -150,8 +149,8 @@ public class Program
                     {
                         AuthorizationCode = new()
                         {
-                            AuthorizationUrl = builder.Configuration["Keycloak:AuthorizationUrl"]!,
-                            TokenUrl = builder.Configuration["Keycloak:TokenUrl"]!,
+                            AuthorizationUrl = builder.Configuration["Authentication:AuthorizationUrl"]!,
+                            TokenUrl = builder.Configuration["Authentication:TokenUrl"]!,
                             Scopes = new Dictionary<string, string>
                             {
                                 ["openid"] = "openid",
