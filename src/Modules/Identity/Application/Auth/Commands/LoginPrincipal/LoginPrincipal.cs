@@ -1,4 +1,5 @@
 using AlphaZero.Modules.Identity.Application.Auth.Commands.LoginAsTenantUser;
+using AlphaZero.Modules.Identity.Application.Auth.Extensions;
 using AlphaZero.Modules.Identity.Domain.Models.Principals;
 using AlphaZero.Modules.Identity.Domain.Repositories;
 using AlphaZero.Shared.Application;
@@ -21,18 +22,20 @@ public sealed class LoginPrincipalCommandHandler : IRequestHandler<LoginPrincipa
     private readonly IJwtProvider _jwtProvider;
     private readonly ILogger<LoginPrincipalCommandHandler> _logger;
     private readonly PrincipalLoginService _principalLoginService;
+    private readonly IClock _clock;
 
     public LoginPrincipalCommandHandler(
         IPrincipalRepository principalRepository,
-        IPasswordHasher passwordHasher,
         IJwtProvider jwtProvider,
         PrincipalLoginService principalLoginService,
+        IClock clock,
         ILogger<LoginPrincipalCommandHandler> logger)
     {
         _principalRepository = principalRepository;
         _jwtProvider = jwtProvider;
         _logger = logger;
         _principalLoginService = principalLoginService;
+        _clock = clock;
     }
 
     public async Task<ErrorOr<TokenResponse>> Handle(LoginPrincipalCommand request, CancellationToken cancellationToken)
@@ -44,13 +47,17 @@ public sealed class LoginPrincipalCommandHandler : IRequestHandler<LoginPrincipa
         if (loginRequest.IsError)
             return loginRequest.Errors;
 
+        var additionalClaims = principal.ToClaims(_clock);
+
         var token = _jwtProvider.GenerateToken(
             principal.Id,
             principal.TenantId,
-            AuthenticationMethod.Principal);
+            AuthenticationMethod.Principal,
+            additionalClaims);
 
         _logger.LogInformation("Principal {Username} logged into Tenant {TenantId}.", request.Username, request.TenantId);
 
         return new TokenResponse(token, principal.Id);
     }
 }
+

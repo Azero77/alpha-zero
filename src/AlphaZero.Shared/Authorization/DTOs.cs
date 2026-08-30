@@ -128,3 +128,6 @@ public enum AuthenticationMethod
     GlobalUser
 }
 
+public record ClaimDTO(string Key, string Value);
+
+

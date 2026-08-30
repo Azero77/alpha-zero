@@ -31,7 +31,7 @@ public class JwtProvider : IJwtProvider
         _signingCredentials = new SigningCredentials(_key, SecurityAlgorithms.HmacSha256);
     }
 
-    public string GenerateToken(Guid id, Guid tenantId, AuthenticationMethod method)
+    public string GenerateToken(Guid id, Guid tenantId, AuthenticationMethod method, List<ClaimDTO>? addiotionalClaims = null)
     {
         var claims = new List<Claim>
         {
@@ -40,7 +40,8 @@ public class JwtProvider : IJwtProvider
             new("tid", tenantId.ToString()),
             new("auth_method", method.ToString())
         };
-
+        if(addiotionalClaims != null)
+            claims.AddRange(addiotionalClaims.Select(s => new Claim(s.Key,s.Value)));
         var token = new JwtSecurityToken(
             issuer: _options.Issuer,
             audience: _options.Audience,
