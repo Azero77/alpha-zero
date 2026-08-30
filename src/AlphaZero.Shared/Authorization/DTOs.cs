@@ -124,6 +124,7 @@ public class IAMDevPreprocessor : IGlobalPreProcessor
 public enum AuthenticationMethod
 {
     Principal,
-    TenantUser
+    TenantUser,
+    GlobalUser
 }
 

@@ -145,10 +145,19 @@ var postgres = builder.AddPostgres("postgres")
     .WithPgAdmin(cfg => cfg.WithImage("dpage/pgadmin4:snapshot"))
     .WithDataVolume(isReadOnly: false);
 var db = postgres.AddDatabase("alphazerodb");
+
+var resendApiKey = builder.Configuration["EmailSettings:ResendApiKey"] ?? "";
+var googleClientId = builder.Configuration["Authentication:GoogleClientId"] ?? "";
+var googleClientSecret = builder.Configuration["Authentication:GoogleClientSecret"] ?? "";
+
+
 var keycloakDb = postgres.AddDatabase("idsrvDb");
 var keyCloak = builder.AddKeycloakContainer("idsrv")
     .WithImport("KeycloakConfiguration.development.json")
     .WithPostgresDatabase(keycloakDb)
+    .WithEnvironment("RESEND_API_KEY", resendApiKey)
+    .WithEnvironment("GOOGLE_CLIENT_ID", googleClientId)
+    .WithEnvironment("GOOGLE_CLIENT_SECRET", googleClientSecret);
     ;
 var keycloakHttp = keyCloak.GetEndpoint("http");
 

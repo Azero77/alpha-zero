@@ -53,6 +53,7 @@ public static class DependencyInjection
         services.AddScoped<IPolicyEvaluatorService, PolicyEvaluatorService>();
         services.AddScoped<PolicyEvaluatorService>();
         services.AddScoped<ConditionEvaluatorService>();
+        services.Configure<JwtOptions>(configuration.GetSection(JwtOptions.SectionName));
         services.AddScoped<IJwtProvider, Auth.JwtProvider>();
         services.AddScoped<IDeviceProvider, Auth.DeviceProvider>();
         services.AddScoped<IPasswordHasher, Auth.PasswordHasher>();

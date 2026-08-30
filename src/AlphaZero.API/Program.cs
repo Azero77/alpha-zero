@@ -101,6 +101,7 @@ public class Program
         })
         .AddJwtBearer(options =>
         {
+            options.MapInboundClaims = false;
             options.Authority = builder.Configuration["Authentication:Authority"];
             options.Audience = builder.Configuration["Authentication:Audience"];
             options.RequireHttpsMetadata = false;

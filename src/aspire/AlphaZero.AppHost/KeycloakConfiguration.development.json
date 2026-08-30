@@ -2,6 +2,135 @@
   "realm": "alpha-zero",
   "enabled": true,
 
+  "browserSecurityHeaders": {
+    "contentSecurityPolicyReportOnly": "",
+    "xContentTypeOptions": "nosniff",
+    "xRobotsTag": "none",
+    "xFrameOptions": "SAMEORIGIN",
+    "contentSecurityPolicy": "frame-src 'self'; frame-ancestors 'self'; object-src 'none';",
+    "crossOriginOpenerPolicy": "unsafe-none"
+  },
+
+  "registrationAllowed": true,
+  "registrationEmailAsUsername": false,
+  "rememberMe": true,
+  "verifyEmail": true,
+  "resetPasswordAllowed": true,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "editUsernameAllowed": false,
+
+  "passwordPolicy": "length(12) and upperCase(1) and lowerCase(1) and digits(1) and specialChars(1) and notUsername and notEmail and passwordHistory(3) and hashIterations(27500)",
+
+  "bruteForceProtected": true,
+  "permanentLockout": false,
+  "maxFailureWaitSeconds": 900,
+  "minimumQuickLoginWaitSeconds": 60,
+  "waitIncrementSeconds": 60,
+  "quickLoginCheckMilliSeconds": 1000,
+  "maxDeltaTimeSeconds": 43200,
+  "failureFactor": 5,
+
+  "otpPolicyType": "totp",
+  "otpPolicyAlgorithm": "HmacSHA256",
+  "otpPolicyDigits": 6,
+  "otpPolicyInitialCounter": 0,
+  "otpPolicyLookAheadWindow": 1,
+  "otpPolicyPeriod": 30,
+  "otpSupportedApplications": [
+    "FreeOTP",
+    "Google Authenticator",
+    "Microsoft Authenticator"
+  ],
+
+  "requiredActions": [
+    {
+      "alias": "VERIFY_EMAIL",
+      "name": "Verify Email",
+      "providerId": "VERIFY_EMAIL",
+      "enabled": true,
+      "defaultAction": true,
+      "priority": 10
+    },
+    {
+      "alias": "CONFIGURE_TOTP",
+      "name": "Configure OTP",
+      "providerId": "CONFIGURE_TOTP",
+      "enabled": true,
+      "defaultAction": true,
+      "priority": 20
+    },
+    {
+      "alias": "UPDATE_PASSWORD",
+      "name": "Update Password",
+      "providerId": "UPDATE_PASSWORD",
+      "enabled": true,
+      "defaultAction": false,
+      "priority": 30
+    },
+    {
+      "alias": "UPDATE_PROFILE",
+      "name": "Update Profile",
+      "providerId": "UPDATE_PROFILE",
+      "enabled": true,
+      "defaultAction": false,
+      "priority": 40
+    }
+  ],
+
+  "defaultRole": {
+    "name": "default-roles-alpha-zero",
+    "description": "${role_default-roles}",
+    "composite": true,
+    "composites": {
+      "realm": [
+        "user"
+      ]
+    }
+  },
+
+  "smtpServer": {
+    "host": "smtp.resend.com",
+    "port": "587",
+    "from": "noreply@zadmuslim.cc",
+    "fromDisplayName": "alphazero",
+    "auth": "true",
+    "ssl": "false",
+    "starttls": "true",
+    "user": "resend",
+    "password": "${RESEND_API_KEY}"
+  },
+
+  "accessTokenLifespan": 2592000,
+  "accessTokenLifespanForImplicitFlow": 2592000,
+  "ssoSessionIdleTimeout": 2592000,
+  "ssoSessionMaxLifespan": 2592000,
+  "offlineSessionIdleTimeout": 2592000,
+  "offlineSessionMaxLifespan": 5184000,
+  "revokeRefreshToken": false,
+  "refreshTokenMaxReuse": 0,
+
+  "identityProviders": [
+    {
+      "alias": "google",
+      "displayName": "Google",
+      "providerId": "google",
+      "enabled": true,
+      "updateProfileFirstLoginMode": "on",
+      "trustEmail": true,
+      "storeToken": false,
+      "addReadTokenRoleOnCreate": false,
+      "authenticateByDefault": false,
+      "linkOnly": false,
+      "firstBrokerLoginFlowAlias": "first broker login",
+      "config": {
+        "clientId": "{GOOGLE_CLIENT_ID}",
+        "clientSecret": "{GOOGLE_CLIENT_SECRET}",
+        "defaultScope": "openid profile email"
+      }
+    }
+  ],
+
   "roles": {
     "realm": [
       {
@@ -15,6 +144,7 @@
   
   "users": [
     {
+      "id": "e7b0a850-7164-4bf8-b219-482a5c9f5641",
       "username": "AdminUser",
       "email": "admin@alphazero.com",
       "enabled": true,
@@ -23,7 +153,7 @@
       "credentials": [
         {
           "type": "password",
-          "value": "admin123",
+          "value": "Admin@123456!",
           "temporary": false
         }
       ],
@@ -34,6 +164,7 @@
     },
 
     {
+      "id": "a1b2c3d4-e5f6-4a5b-8c9d-0e1f2a3b4c5d",
       "username": "NormalUser",
       "email": "user@alphazero.com",
       "enabled": true,
@@ -42,7 +173,7 @@
       "credentials": [
         {
           "type": "password",
-          "value": "user123",
+          "value": "User@123456!",
           "temporary": false
         }
       ],
@@ -66,11 +197,16 @@
       "standardFlowEnabled": true,
 
       "defaultClientScopes": [
+        "basic",
         "web-origins",
         "acr",
         "roles",
         "profile",
         "email"
+      ],
+
+      "optionalClientScopes": [
+        "offline_access"
       ],
 
       "redirectUris": [
@@ -87,6 +223,19 @@
       ],
       "protocolMappers": [
         {
+          "name": "sub-mapper",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-property-mapper",
+          "config": {
+            "user.attribute": "id",
+            "claim.name": "sub",
+            "jsonType.label": "String",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        },
+        {
           "name": "audience-mapper",
           "protocol": "openid-connect",
           "protocolMapper": "oidc-audience-mapper",
@@ -94,6 +243,19 @@
             "included.client.audience": "account",
             "id.token.claim": "true",
             "access.token.claim": "true"
+          }
+        },
+        {
+          "name": "auth-method-mapper",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-hardcoded-claim-mapper",
+          "config": {
+            "claim.name": "auth_method",
+            "claim.value": "GlobalUser",
+            "jsonType.label": "String",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true"
           }
         }
       ]
