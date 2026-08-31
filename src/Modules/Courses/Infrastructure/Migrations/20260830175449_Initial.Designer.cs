@@ -14,8 +14,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace AlphaZero.Modules.Courses.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260624112512_AddCourseAnalytics_MovedToInfra")]
-    partial class AddCourseAnalytics_MovedToInfra
+    [Migration("20260830175449_Initial")]
+    partial class Initial
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -64,9 +64,6 @@ namespace AlphaZero.Modules.Courses.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("IsDeleted")
-                        .HasFilter("\"IsDeleted\" = FALSE");
-
-                    b.HasIndex("TenantId")
                         .HasFilter("\"IsDeleted\" = FALSE");
 
                     b.ToTable("Courses", "Courses");
@@ -128,9 +125,6 @@ namespace AlphaZero.Modules.Courses.Infrastructure.Migrations
                     b.HasIndex("IsDeleted")
                         .HasFilter("\"IsDeleted\" = FALSE");
 
-                    b.HasIndex("TenantId")
-                        .HasFilter("\"IsDeleted\" = FALSE");
-
                     b.ToTable("CourseSections", "Courses");
                 });
 
@@ -174,9 +168,6 @@ namespace AlphaZero.Modules.Courses.Infrastructure.Migrations
 
                     b.HasIndex("SectionId");
 
-                    b.HasIndex("TenantId")
-                        .HasFilter("\"IsDeleted\" = FALSE");
-
                     b.ToTable("CurriculumItems", "Courses");
                 });
 
@@ -202,8 +193,6 @@ namespace AlphaZero.Modules.Courses.Infrastructure.Migrations
                         .HasColumnType("uuid");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("TenantId");
 
                     b.HasIndex("StudentId", "CourseId")
                         .IsUnique();
@@ -237,9 +226,6 @@ namespace AlphaZero.Modules.Courses.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("IsDeleted")
-                        .HasFilter("\"IsDeleted\" = FALSE");
-
-                    b.HasIndex("TenantId")
                         .HasFilter("\"IsDeleted\" = FALSE");
 
                     b.ToTable("Subjects", "Courses");
