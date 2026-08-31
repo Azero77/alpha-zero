@@ -145,11 +145,22 @@ var postgres = builder.AddPostgres("postgres")
     .WithPgAdmin(cfg => cfg.WithImage("dpage/pgadmin4:snapshot"))
     .WithDataVolume(isReadOnly: false);
 var db = postgres.AddDatabase("alphazerodb");
+
+var resendApiKey = builder.Configuration["EmailSettings:ResendApiKey"] ?? "";
+var googleClientId = builder.Configuration["Authentication:GoogleClientId"] ?? "";
+var googleClientSecret = builder.Configuration["Authentication:GoogleClientSecret"] ?? "";
+
+
 var keycloakDb = postgres.AddDatabase("idsrvDb");
 var keyCloak = builder.AddKeycloakContainer("idsrv")
-    .WithImport("KeycloakConfiguration.json")
+    .WithImport("KeycloakConfiguration.development.json")
     .WithPostgresDatabase(keycloakDb)
+    .WithEnvironment("RESEND_API_KEY", resendApiKey)
+    .WithEnvironment("GOOGLE_CLIENT_ID", googleClientId)
+    .WithEnvironment("GOOGLE_CLIENT_SECRET", googleClientSecret);
     ;
+var keycloakHttp = keyCloak.GetEndpoint("http");
+
 var api = builder.AddProject<Projects.AlphaZero_API>("alphazero-api")
     .WithReference(awsSdkConfig)
     .WithReference(input_s3)
@@ -160,6 +171,9 @@ var api = builder.AddProject<Projects.AlphaZero_API>("alphazero-api")
     .WaitFor(db)
     .WithReference(videoProcessedQueue)
     .WithReference(keyCloak)
+    .WithEnvironment("Authentication__AuthorizationUrl", ReferenceExpression.Create($"{keycloakHttp}/realms/alpha-zero/protocol/openid-connect/auth"))
+    .WithEnvironment("Authentication__TokenUrl", ReferenceExpression.Create($"{keycloakHttp}/realms/alpha-zero/protocol/openid-connect/token"))
+    .WithEnvironment("Authentication__Authority", ReferenceExpression.Create($"{keycloakHttp}/realms/alpha-zero"))
     .WithEnvironment("AWS__Resources__MediaConvertRoleArn", awscdkStack.GetOutput("MediaConvertRoleArnOutput"))
     .WithEnvironment("AWS__Resources__MediaConvertKeyKMSArn", kmsArn)
     .WithEnvironment("AWS__Resources__CdnDomain" , cdnDomain)

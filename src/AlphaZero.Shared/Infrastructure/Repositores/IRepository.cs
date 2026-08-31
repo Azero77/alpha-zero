@@ -16,6 +16,7 @@ public interface IRepository<TEntity>
     Task<int> Count(Expression<Func<TEntity, bool>>? filter = null, CancellationToken token = default);
 
     Task<TEntity?> GetById(Guid id, CancellationToken token = default);
+    void IgnoreQueryFilter();
 }
 
 public class BaseRepository<TContext, TEntity> : IRepository<TEntity>
@@ -23,12 +24,13 @@ public class BaseRepository<TContext, TEntity> : IRepository<TEntity>
     where TEntity : Entity
 {
     protected readonly TContext _context;
-
+    private IQueryable<TEntity> _items;
     public IQueryable<TEntity> Entities => _context.Set<TEntity>();
 
     public BaseRepository(TContext context)
     {
         _context = context;
+        _items = _context.Set<TEntity>();
     }
 
     public virtual void Add(TEntity entity) => _context.Set<TEntity>().Add(entity);
@@ -115,6 +117,11 @@ public class BaseRepository<TContext, TEntity> : IRepository<TEntity>
         return await _context.Set<TEntity>()
             .FirstOrDefaultAsync(d => d.Id == id, token);
 
+    }
+
+    public void IgnoreQueryFilter()
+    {
+        _items = _items.IgnoreQueryFilters();
     }
 
     public async Task<IReadOnlyCollection<TEntity>> Get(Expression<Func<TEntity, bool>> filter, CancellationToken token = default)

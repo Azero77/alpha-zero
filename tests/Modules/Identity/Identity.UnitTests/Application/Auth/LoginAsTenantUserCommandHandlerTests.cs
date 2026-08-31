@@ -40,10 +40,10 @@ public class LoginAsTenantUserCommandHandlerTests
         _userRepository.GetFirst(Arg.Any<Expression<Func<TenantUser, bool>>>(), Arg.Any<CancellationToken>())
             .ReturnsNull();
 
-        _jwtProvider.GenerateToken(Arg.Any<Guid>(), TenantId, AuthenticationMethod.TenantUser)
+        _jwtProvider.GenerateToken(Arg.Any<Guid>(), TenantId, AuthenticationMethod.TenantUser, Arg.Any<List<ClaimDTO>>())
             .Returns("token-123");
 
-        var command = new LoginAsTenantUserCommand(IdentityId, TenantId, "Ali", "pub-key", "Test Device", DevicePlatform.Web);
+        var command = new LoginAsTenantUserCommand(IdentityId, TenantId, "Ali", "pub-key", "Test Device", DevicePlatform.Web.ToString());
 
         // Act
         var result = await _handler.Handle(command, CancellationToken.None);
@@ -61,6 +61,18 @@ public class LoginAsTenantUserCommandHandlerTests
             u.Devices.First().PublicKey == "pub-key" &&
             u.MainDeviceId == u.Devices.First().Id
         ));
+
+        _jwtProvider.Received(1).GenerateToken(
+            Arg.Any<Guid>(), 
+            TenantId, 
+            AuthenticationMethod.TenantUser, 
+            Arg.Is<List<ClaimDTO>>(claims => 
+                claims.Any(c => c.Key == CustomClaimTypes.IdentityId && c.Value == IdentityId) &&
+                claims.Any(c => c.Key == CustomClaimTypes.Name && c.Value == "Ali") &&
+                claims.Any(c => c.Key == CustomClaimTypes.DeviceName && c.Value == "Test Device") &&
+                claims.Any(c => c.Key == CustomClaimTypes.DevicePublicKey && c.Value == "pub-key") &&
+                claims.Any(c => c.Key == CustomClaimTypes.DevicePlatform && c.Value == DevicePlatform.Web.ToString())
+            ));
     }
 
     [Fact]
@@ -76,10 +88,10 @@ public class LoginAsTenantUserCommandHandlerTests
         _userRepository.GetFirst(Arg.Any<Expression<Func<TenantUser, bool>>>(), Arg.Any<CancellationToken>())
             .Returns(user);
 
-        _jwtProvider.GenerateToken(user.Id, TenantId, AuthenticationMethod.TenantUser)
+        _jwtProvider.GenerateToken(user.Id, TenantId, AuthenticationMethod.TenantUser, Arg.Any<List<ClaimDTO>>())
             .Returns("token-123");
 
-        var command = new LoginAsTenantUserCommand(IdentityId, TenantId, "Ali", "new-key", "New Device", DevicePlatform.Android);
+        var command = new LoginAsTenantUserCommand(IdentityId, TenantId, "Ali", "new-key", "New Device", DevicePlatform.Android.ToString());
 
         // Act
         var result = await _handler.Handle(command, CancellationToken.None);
@@ -107,10 +119,10 @@ public class LoginAsTenantUserCommandHandlerTests
         _userRepository.GetFirst(Arg.Any<Expression<Func<TenantUser, bool>>>(), Arg.Any<CancellationToken>())
             .Returns(user);
 
-        _jwtProvider.GenerateToken(user.Id, TenantId, AuthenticationMethod.TenantUser)
+        _jwtProvider.GenerateToken(user.Id, TenantId, AuthenticationMethod.TenantUser, Arg.Any<List<ClaimDTO>>())
             .Returns("token-123");
 
-        var command = new LoginAsTenantUserCommand(IdentityId, TenantId, "Ali", "existing-key", "Existing Device", DevicePlatform.Web);
+        var command = new LoginAsTenantUserCommand(IdentityId, TenantId, "Ali", "existing-key", "Existing Device", DevicePlatform.Web.ToString());
 
         // Act
         var result = await _handler.Handle(command, CancellationToken.None);

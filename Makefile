@@ -3,7 +3,7 @@
 # ------------------------
 m ?= VideoUploading
 PROJECT = src/Modules/$(m)/Infrastructure/Infrastructure.csproj
-API = src/Alphazero.API/Alphazero.API.csproj
+API = src/AlphaZero.API/AlphaZero.API.csproj
 o = Migrations
 DbContext = AlphaZero.Modules.$(m).Infrastructure.Persistance.AppDbContext
 
@@ -35,7 +35,7 @@ migrations-migrate:
 # Remove last migration
 # ------------------------
 migrations-clean:
-	dotnet ef migrations remove --project $(PROJECT) --startup-project $(API) --force --context $(DbContext	)
+	dotnet ef migrations remove --project $(PROJECT) --startup-project $(API) --force --context $(DbContext)
 
 
 #-------------------------

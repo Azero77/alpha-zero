@@ -1,9 +1,11 @@
+using AlphaZero.Modules.Identity.Application.Auth.Extensions;
 using AlphaZero.Modules.Identity.Domain.Models;
 using AlphaZero.Shared.Authorization;
 using AlphaZero.Shared.Infrastructure.Repositores;
 using AlphaZero.Shared.Application;
 using AlphaZero.Shared.Domain;
 using ErrorOr;
+using FluentValidation;
 using MediatR;
 using Microsoft.Extensions.Logging;
 
@@ -19,15 +21,23 @@ public record LoginAsTenantUserCommand(
     string UserName,
     string PublicKey,
     string DeviceName,
-    DevicePlatform Platform) : ICommand<TokenResponse>;
+    string Platform) : ICommand<TokenResponse>;
 
 public record TokenResponse(string Token, Guid TenantUserId, Guid? DeviceId = null);
+
+public class LoginAsTenantUserValidator : AbstractValidator<LoginAsTenantUserCommand>
+{
+    public LoginAsTenantUserValidator()
+    {
+        RuleFor(x => x.Platform)
+            .IsEnumName(typeof(DevicePlatform), caseSensitive: false);
+    }
+}
 
 public sealed class LoginAsTenantUserCommandHandler : IRequestHandler<LoginAsTenantUserCommand, ErrorOr<TokenResponse>>
 {
     private readonly IRepository<TenantUser> _userRepository;
     private readonly ILogger<LoginAsTenantUserCommandHandler> _logger;
-    // Note: IJwtProvider will be implemented in Infrastructure
     private readonly IJwtProvider _jwtProvider; 
     private readonly IClock _clock;
 
@@ -49,6 +59,7 @@ public sealed class LoginAsTenantUserCommandHandler : IRequestHandler<LoginAsTen
         bool isNewUser = false;
         
         // 1. Find or Auto-Create TenantUser
+        _userRepository.IgnoreQueryFilter();
         var user = await _userRepository.GetFirst(u => u.IdentityId == request.IdentityId && u.TenantId == request.TenantId, cancellationToken);
 
         if (user is null)
@@ -64,7 +75,7 @@ public sealed class LoginAsTenantUserCommandHandler : IRequestHandler<LoginAsTen
         var device = user.Devices.FirstOrDefault(d => d.PublicKey == request.PublicKey);
         if (device is null)
         {
-            var registerResult = user.RegisterDevice(request.DeviceName, request.Platform, request.PublicKey, now);
+            var registerResult = user.RegisterDevice(request.DeviceName, Enum.Parse<DevicePlatform>(request.Platform, ignoreCase: true), request.PublicKey, now);
             if (registerResult.IsError) return registerResult.Errors;
             
             device = user.Devices.First(d => d.PublicKey == request.PublicKey);
@@ -82,11 +93,14 @@ public sealed class LoginAsTenantUserCommandHandler : IRequestHandler<LoginAsTen
             _userRepository.Update(user);
         }
 
+        var additionalClaims = user.ToClaims(device, _clock);
+
         // 3. Generate Scoped JWT
         var token = _jwtProvider.GenerateToken(
             user.Id, 
             user.TenantId, 
-            AuthenticationMethod.TenantUser);
+            AuthenticationMethod.TenantUser,
+            additionalClaims);
 
         _logger.LogInformation("Identity {IdentityId} logged into Tenant {TenantId} as User {UserId} with Device {DeviceId}.", 
             request.IdentityId, request.TenantId, user.Id, device.Id);
@@ -97,5 +111,5 @@ public sealed class LoginAsTenantUserCommandHandler : IRequestHandler<LoginAsTen
 
 public interface IJwtProvider
 {
-    string GenerateToken(Guid id, Guid tenantId, AuthenticationMethod method);
+    string GenerateToken(Guid id, Guid tenantId, AuthenticationMethod method, List<ClaimDTO>? addiotionalClaims = null);
 }

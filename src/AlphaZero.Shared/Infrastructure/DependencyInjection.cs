@@ -35,7 +35,7 @@ public static class DependencyInjection
         // 3. Tenant Provider
         if (environment.IsDevelopment())
         {
-            services.AddScoped<ITenantProvider, FakeTenantProvider>();
+            services.AddScoped<ITenantProvider, HttpTenantProvider>();
         }
         else
         {

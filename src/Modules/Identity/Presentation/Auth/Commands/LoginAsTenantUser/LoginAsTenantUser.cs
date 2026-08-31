@@ -11,7 +11,7 @@ public record LoginAsTenantUserRequest
     public Guid TenantId { get; init; }
     public string PublicKey { get; init; } = string.Empty;
     public string DeviceName { get; init; } = "Unknown Device";
-    public DevicePlatform Platform { get; init; }
+    public string Platform { get; init; } = string.Empty;
 }
 
 public class LoginAsTenantUserEndpoint : Endpoint<LoginAsTenantUserRequest, TokenResponse>

@@ -53,7 +53,7 @@ public static class ModelBuilderExtensions
             }
 
             // 2. Tenant Filter: e.TenantId == context.TenantId
-            if (isTenantOwned)
+            if (isTenantOwned && context.TenantId is not null)
             {
                 var tenantProp = Expression.Property(parameter, nameof(IDomainTenantOwned.TenantId));
                 var tenantPropNullable = Expression.Convert(tenantProp, typeof(Guid?));

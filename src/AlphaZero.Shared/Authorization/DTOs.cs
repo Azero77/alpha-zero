@@ -124,6 +124,10 @@ public class IAMDevPreprocessor : IGlobalPreProcessor
 public enum AuthenticationMethod
 {
     Principal,
-    TenantUser
+    TenantUser,
+    GlobalUser
 }
+
+public record ClaimDTO(string Key, string Value);
+
 

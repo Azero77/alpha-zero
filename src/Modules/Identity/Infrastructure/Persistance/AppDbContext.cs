@@ -6,6 +6,7 @@ using AlphaZero.Modules.Identity.Infrastructure.Models;
 using AlphaZero.Shared.Infrastructure.Database;
 using AlphaZero.Shared.Infrastructure.Tenats;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Migrations;
 
 namespace AlphaZero.Modules.Identity.Infrastructure.Persistance;
 
@@ -29,6 +30,7 @@ public class AppDbContext : DbContext, ITenantDbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        modelBuilder.HasDefaultSchema("Identity");
         modelBuilder.ApplyConfigurationsFromAssembly(Assembly.GetExecutingAssembly());
         modelBuilder.ApplyAlphaZeroGlobalFilters(this);
 
@@ -36,7 +38,6 @@ public class AppDbContext : DbContext, ITenantDbContext
         modelBuilder.Ignore<PolicyStatement>();
         modelBuilder.Ignore<ManagedPolicyStatement>();
         modelBuilder.Ignore<Principal>(); 
-
         base.OnModelCreating(modelBuilder);
     }
 }
