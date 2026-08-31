@@ -43,7 +43,7 @@ public class LoginAsTenantUserCommandHandlerTests
         _jwtProvider.GenerateToken(Arg.Any<Guid>(), TenantId, AuthenticationMethod.TenantUser, Arg.Any<List<ClaimDTO>>())
             .Returns("token-123");
 
-        var command = new LoginAsTenantUserCommand(IdentityId, TenantId, "Ali", "pub-key", "Test Device", DevicePlatform.Web);
+        var command = new LoginAsTenantUserCommand(IdentityId, TenantId, "Ali", "pub-key", "Test Device", DevicePlatform.Web.ToString());
 
         // Act
         var result = await _handler.Handle(command, CancellationToken.None);
@@ -91,7 +91,7 @@ public class LoginAsTenantUserCommandHandlerTests
         _jwtProvider.GenerateToken(user.Id, TenantId, AuthenticationMethod.TenantUser, Arg.Any<List<ClaimDTO>>())
             .Returns("token-123");
 
-        var command = new LoginAsTenantUserCommand(IdentityId, TenantId, "Ali", "new-key", "New Device", DevicePlatform.Android);
+        var command = new LoginAsTenantUserCommand(IdentityId, TenantId, "Ali", "new-key", "New Device", DevicePlatform.Android.ToString());
 
         // Act
         var result = await _handler.Handle(command, CancellationToken.None);
@@ -122,7 +122,7 @@ public class LoginAsTenantUserCommandHandlerTests
         _jwtProvider.GenerateToken(user.Id, TenantId, AuthenticationMethod.TenantUser, Arg.Any<List<ClaimDTO>>())
             .Returns("token-123");
 
-        var command = new LoginAsTenantUserCommand(IdentityId, TenantId, "Ali", "existing-key", "Existing Device", DevicePlatform.Web);
+        var command = new LoginAsTenantUserCommand(IdentityId, TenantId, "Ali", "existing-key", "Existing Device", DevicePlatform.Web.ToString());
 
         // Act
         var result = await _handler.Handle(command, CancellationToken.None);

@@ -5,6 +5,7 @@ using AlphaZero.Shared.Infrastructure.Repositores;
 using AlphaZero.Shared.Application;
 using AlphaZero.Shared.Domain;
 using ErrorOr;
+using FluentValidation;
 using MediatR;
 using Microsoft.Extensions.Logging;
 
@@ -20,9 +21,18 @@ public record LoginAsTenantUserCommand(
     string UserName,
     string PublicKey,
     string DeviceName,
-    DevicePlatform Platform) : ICommand<TokenResponse>;
+    string Platform) : ICommand<TokenResponse>;
 
 public record TokenResponse(string Token, Guid TenantUserId, Guid? DeviceId = null);
+
+public class LoginAsTenantUserValidator : AbstractValidator<LoginAsTenantUserCommand>
+{
+    public LoginAsTenantUserValidator()
+    {
+        RuleFor(x => x.Platform)
+            .IsEnumName(typeof(DevicePlatform), caseSensitive: false);
+    }
+}
 
 public sealed class LoginAsTenantUserCommandHandler : IRequestHandler<LoginAsTenantUserCommand, ErrorOr<TokenResponse>>
 {
@@ -65,7 +75,7 @@ public sealed class LoginAsTenantUserCommandHandler : IRequestHandler<LoginAsTen
         var device = user.Devices.FirstOrDefault(d => d.PublicKey == request.PublicKey);
         if (device is null)
         {
-            var registerResult = user.RegisterDevice(request.DeviceName, request.Platform, request.PublicKey, now);
+            var registerResult = user.RegisterDevice(request.DeviceName, Enum.Parse<DevicePlatform>(request.Platform, ignoreCase: true), request.PublicKey, now);
             if (registerResult.IsError) return registerResult.Errors;
             
             device = user.Devices.First(d => d.PublicKey == request.PublicKey);
