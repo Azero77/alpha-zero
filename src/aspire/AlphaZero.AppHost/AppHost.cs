@@ -177,5 +177,6 @@ var api = builder.AddProject<Projects.AlphaZero_API>("alphazero-api")
     .WithEnvironment("AWS__Resources__MediaConvertRoleArn", awscdkStack.GetOutput("MediaConvertRoleArnOutput"))
     .WithEnvironment("AWS__Resources__MediaConvertKeyKMSArn", kmsArn)
     .WithEnvironment("AWS__Resources__CdnDomain" , cdnDomain)
+    .WithEnvironment("Testing__BypassIAM", "true")
     ;
 builder.Build().Run();
