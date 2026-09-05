@@ -7,9 +7,9 @@
     "typecheck": "tsc --noEmit --emitDeclarationOnly false"
   },
   "dependencies": {
-    "@repo/analytics": "workspace:*",
-    "@repo/auth": "workspace:*",
-    "@repo/design-system": "workspace:*",
+    "@repo/analytics": "*",
+    "@repo/auth": "*",
+    "@repo/design-system": "*",
     "@t3-oss/env-nextjs": "^0.13.10",
     "@vercel/toolbar": "^0.2.2",
     "flags": "^4.0.3",
@@ -20,7 +20,7 @@
     "next": "16.1.6"
   },
   "devDependencies": {
-    "@repo/typescript-config": "workspace:*",
+    "@repo/typescript-config": "*",
     "@types/node": "25.3.5",
     "@types/react": "19.2.14",
     "@types/react-dom": "19.2.3",
