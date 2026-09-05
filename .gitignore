@@ -84,6 +84,7 @@ _ReSharper*/
 # Ignore package management folders
 packages/
 node_modules/
+!alphazero-frontend/packages/
 
 # Ignore published files
 .publish/
