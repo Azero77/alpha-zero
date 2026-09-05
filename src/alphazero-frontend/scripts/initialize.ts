@@ -211,7 +211,7 @@ const getPackageManager = async (): Promise<PackageManagerName> => {
       value: choice,
       label: choice,
     })),
-    initialValue: "bun" as PackageManagerName,
+    initialValue: "pnpm" as PackageManagerName,
   });
 
   if (isCancel(value)) {

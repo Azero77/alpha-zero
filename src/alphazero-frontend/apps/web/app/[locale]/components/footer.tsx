@@ -1,10 +1,12 @@
-import { legal } from "@repo/cms";
 import { Status } from "@repo/observability/status";
 import Link from "next/link";
 import { env } from "@/env";
 
-export const Footer = async () => {
-  const legalPages = await legal.getPostsMeta();
+export const Footer = () => {
+  const legalPages = [
+    { _title: "Privacy Policy", _slug: "privacy" },
+    { _title: "Terms of Service", _slug: "terms" },
+  ];
 
   const navigationItems = [
     {

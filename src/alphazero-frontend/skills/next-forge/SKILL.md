@@ -18,9 +18,9 @@ npx next-forge@latest init
 The CLI prompts for a project name and package manager (bun, npm, yarn, or pnpm). After installation:
 
 1. Set the `DATABASE_URL` in `packages/database/.env` pointing to a PostgreSQL database (Neon recommended).
-2. Run database migrations: `bun run migrate`
+2. Run database migrations: `pnpm migrate`
 3. Add any optional integration keys to the appropriate `.env.local` files.
-4. Start development: `bun run dev`
+4. Start development: `pnpm dev`
 
 All integrations besides the database are optional. Missing environment variables gracefully disable features rather than causing errors.
 
@@ -83,9 +83,9 @@ All integrations beyond the database are optional. Clients use optional chaining
 ### Running Development
 
 ```bash
-bun run dev                  # All apps
-bun dev --filter app         # Single app (port 3000)
-bun dev --filter web         # Marketing site (port 3001)
+pnpm dev                  # All apps
+pnpm --filter --filter app         # Single app (port 3000)
+pnpm --filter --filter web         # Marketing site (port 3001)
 ```
 
 ### Database Migrations
@@ -93,7 +93,7 @@ bun dev --filter web         # Marketing site (port 3001)
 After changing `packages/database/prisma/schema.prisma`:
 
 ```bash
-bun run migrate
+pnpm migrate
 ```
 
 This runs Prisma format, generate, and db push in sequence.
@@ -107,7 +107,7 @@ npx shadcn@latest add [component] -c packages/design-system
 Update existing components:
 
 ```bash
-bun run bump-ui
+pnpm bump-ui
 ```
 
 ### Adding a New Package
@@ -117,21 +117,21 @@ Create a new directory in `/packages/` with a `package.json` using the `@repo/<n
 ### Linting and Formatting
 
 ```bash
-bun run lint                 # Check code style (Ultracite/Biome)
-bun run format               # Fix code style
+pnpm lint                 # Check code style (Ultracite/Biome)
+pnpm format               # Fix code style
 ```
 
 ### Testing
 
 ```bash
-bun run test                 # Run tests across monorepo
+pnpm test                 # Run tests across monorepo
 ```
 
 ### Building
 
 ```bash
-bun run build                # Build all apps and packages
-bun run analyze              # Bundle analysis
+pnpm build                # Build all apps and packages
+pnpm analyze              # Bundle analysis
 ```
 
 ### Deployment

@@ -166,7 +166,7 @@ LANGUINE_PROJECT_ID="..."
 After setting `DATABASE_URL`, push the schema to the database:
 
 ```bash
-bun run migrate
+pnpm migrate
 ```
 
 This runs three Prisma commands in sequence:
@@ -174,12 +174,12 @@ This runs three Prisma commands in sequence:
 2. `prisma generate` — generates the Prisma client
 3. `prisma db push` — pushes the schema to the database
 
-The schema lives at `packages/database/prisma/schema.prisma`. Edit it, then run `bun run migrate` again after changes.
+The schema lives at `packages/database/prisma/schema.prisma`. Edit it, then run `pnpm migrate` again after changes.
 
 Browse the database visually with Prisma Studio:
 
 ```bash
-bun dev --filter studio
+pnpm --filter --filter studio
 ```
 
 ## Stripe CLI Setup
@@ -198,15 +198,15 @@ The Stripe CLI automatically forwards webhook events to `http://localhost:3000/a
 Start all apps:
 
 ```bash
-bun run dev
+pnpm dev
 ```
 
 Start a specific app:
 
 ```bash
-bun dev --filter app         # Port 3000
-bun dev --filter web         # Port 3001
-bun dev --filter api         # Port 3002
+pnpm --filter --filter app         # Port 3000
+pnpm --filter --filter web         # Port 3001
+pnpm --filter --filter api         # Port 3002
 ```
 
 ## Environment Variable Validation

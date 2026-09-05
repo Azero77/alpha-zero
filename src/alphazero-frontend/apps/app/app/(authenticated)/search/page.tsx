@@ -1,5 +1,4 @@
 import { auth } from "@repo/auth/server";
-import { database } from "@repo/database";
 import { notFound, redirect } from "next/navigation";
 import { Header } from "../components/header";
 
@@ -22,13 +21,14 @@ export const generateMetadata = async ({
 
 const SearchPage = async ({ searchParams }: SearchPageProperties) => {
   const { q } = await searchParams;
-  const pages = await database.page.findMany({
-    where: {
-      name: {
-        contains: q,
-      },
-    },
-  });
+  const mockPages = [
+    { id: "1", name: "Courses & Curricula" },
+    { id: "2", name: "Students & Enrollments" },
+    { id: "3", name: "Library Codes & Redemptions" },
+  ];
+  const pages = mockPages.filter((item) =>
+    item.name.toLowerCase().includes((q ?? "").toLowerCase())
+  );
   const { orgId } = await auth();
 
   if (!orgId) {

@@ -72,7 +72,7 @@ next-forge comes with batteries included:
 ### Prerequisites
 
 - Node.js 20+
-- [Bun](https://bun.sh) (or npm/yarn/pnpm)
+- [pnpm](https://pnpm.io)
 - [Stripe CLI](https://docs.stripe.com/stripe-cli) for local webhook testing
 
 ### Installation

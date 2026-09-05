@@ -99,29 +99,29 @@ Global dependencies include `.env.*local` files. Environment mode is loose. The 
 
 | Command | Description |
 |---------|-------------|
-| `bun run dev` | Start all apps in development mode |
-| `bun run build` | Build all apps and packages |
-| `bun run test` | Run tests across the monorepo |
-| `bun run lint` | Check code style (Ultracite/Biome) |
-| `bun run format` | Fix code style |
-| `bun run analyze` | Run bundle analysis |
-| `bun run translate` | Run i18n translation via Languine |
-| `bun run boundaries` | Check Turborepo workspace boundary violations |
-| `bun run bump-deps` | Update all dependencies |
-| `bun run bump-ui` | Update shadcn/ui components |
-| `bun run migrate` | Push database schema (format, generate, db push) |
-| `bun run clean` | Remove node_modules across the monorepo |
-| `bun run changeset` | Manage changesets for releases |
-| `bun run release` | Publish using changesets |
+| `pnpm dev` | Start all apps in development mode |
+| `pnpm build` | Build all apps and packages |
+| `pnpm test` | Run tests across the monorepo |
+| `pnpm lint` | Check code style (Ultracite/Biome) |
+| `pnpm format` | Fix code style |
+| `pnpm analyze` | Run bundle analysis |
+| `pnpm translate` | Run i18n translation via Languine |
+| `pnpm boundaries` | Check Turborepo workspace boundary violations |
+| `pnpm bump-deps` | Update all dependencies |
+| `pnpm bump-ui` | Update shadcn/ui components |
+| `pnpm migrate` | Push database schema (format, generate, db push) |
+| `pnpm clean` | Remove node_modules across the monorepo |
+| `pnpm changeset` | Manage changesets for releases |
+| `pnpm release` | Publish using changesets |
 
 ## Filtering
 
 Run commands for a specific app or package:
 
 ```bash
-bun dev --filter app         # Only the main app
-bun dev --filter web         # Only the marketing site
-bun build --filter @repo/database  # Only the database package
+pnpm --filter --filter app         # Only the main app
+pnpm --filter --filter web         # Only the marketing site
+pnpm --filter --filter @repo/database  # Only the database package
 ```
 
 ## Build Outputs

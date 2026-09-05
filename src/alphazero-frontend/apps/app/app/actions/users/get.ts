@@ -38,11 +38,17 @@ const colors = [
   "var(--color-rose-500)",
 ];
 
+export interface UserInfo {
+  color: string;
+  name: string;
+  picture: string;
+}
+
 export const getUsers = async (
   userIds: string[]
 ): Promise<
   | {
-      data: Liveblocks["UserMeta"]["info"][];
+      data: UserInfo[];
     }
   | {
       error: unknown;
@@ -62,7 +68,7 @@ export const getUsers = async (
       limit: 100,
     });
 
-    const data: Liveblocks["UserMeta"]["info"][] = members.data
+    const data: UserInfo[] = members.data
       .filter(
         (user) =>
           user.publicUserData?.userId &&

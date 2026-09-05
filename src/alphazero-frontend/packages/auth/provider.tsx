@@ -52,7 +52,8 @@ export const AuthProvider = ({
   return (
     <ClerkProvider
       {...properties}
-      appearance={{ layout, baseTheme, elements, variables }}
+      // biome-ignore lint/suspicious/noExplicitAny: Clerk appearance compatibility
+      appearance={{ layout, baseTheme, elements, variables } as any}
     />
   );
 };

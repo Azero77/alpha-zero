@@ -6,7 +6,7 @@ export const keys = () =>
     skipValidation: process.env.SKIP_ENV_VALIDATION === "true",
     server: {
       BETTERSTACK_API_KEY: z.string().optional(),
-      BETTERSTACK_URL: z.url().optional(),
+      BETTERSTACK_URL: z.url().optional().or(z.literal("")),
 
       // Added by Sentry Integration, Vercel Marketplace
       SENTRY_ORG: z.string().optional(),
@@ -14,7 +14,7 @@ export const keys = () =>
     },
     client: {
       // Added by Sentry Integration, Vercel Marketplace
-      NEXT_PUBLIC_SENTRY_DSN: z.url().optional(),
+      NEXT_PUBLIC_SENTRY_DSN: z.url().optional().or(z.literal("")),
     },
     runtimeEnv: {
       BETTERSTACK_API_KEY: process.env.BETTERSTACK_API_KEY,

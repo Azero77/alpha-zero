@@ -31,7 +31,7 @@ const users = await database.user.findMany();
 ```
 
 **Schema**: `packages/database/prisma/schema.prisma`
-**Migrations**: `bun run migrate` (format → generate → db push)
+**Migrations**: `pnpm migrate` (format → generate → db push)
 
 **Swappable to**: Drizzle, PlanetScale, Supabase, Turso, EdgeDB, Prisma Postgres.
 
@@ -100,7 +100,7 @@ npx shadcn@latest add [component] -c packages/design-system
 
 **Update components**:
 ```bash
-bun run bump-ui
+pnpm bump-ui
 ```
 
 **Dark mode**: Integrated via `next-themes`. The provider handles theme switching.
@@ -221,7 +221,7 @@ const dict = await getDictionary(locale);
 
 **Middleware**: `internationalizationMiddleware` configured for the `web` app.
 
-**Translate**: `bun run translate`
+**Translate**: `pnpm translate`
 
 ## Webhooks (`@repo/webhooks`)
 

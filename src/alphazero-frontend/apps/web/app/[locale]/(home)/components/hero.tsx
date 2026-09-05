@@ -1,4 +1,3 @@
-import { blog } from "@repo/cms";
 import { Button } from "@repo/design-system/components/ui/button";
 import type { Dictionary } from "@repo/internationalization";
 import { MoveRight, PhoneCall } from "lucide-react";
@@ -9,8 +8,8 @@ interface HeroProps {
   dictionary: Dictionary;
 }
 
-export const Hero = async ({ dictionary }: HeroProps) => {
-  const latestPost = await blog.getLatestPost();
+export const Hero = ({ dictionary }: HeroProps) => {
+  const latestPost = null as { _slug: string } | null;
 
   return (
     <div className="w-full">

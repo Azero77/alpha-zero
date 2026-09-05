@@ -32,6 +32,14 @@ export const config: NextConfig = {
 
   // This is required to support PostHog trailing slash API requests
   skipTrailingSlashRedirect: true,
+
+  experimental: {
+    optimizePackageImports: [
+      "lucide-react",
+      "@radix-ui/react-icons",
+      "date-fns",
+    ],
+  },
 };
 
 export const withAnalyzer = (sourceConfig: NextConfig): NextConfig =>
