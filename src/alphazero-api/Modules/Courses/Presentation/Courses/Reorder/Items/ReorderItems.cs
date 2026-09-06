@@ -15,6 +15,19 @@ public record ReorderItemsRequest
     public List<Guid> ItemIds { get; init; } = new();
 }
 
+public class ReorderItemsSummary : Summary<ReorderItemsEndpoint>
+{
+    public ReorderItemsSummary()
+    {
+        Summary = "Reorders curriculum items in a section";
+        Description = "Updates the sequence order of lessons/quizzes within a specific course section.";
+        Response(204, "Items reordered successfully");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(401, "Unauthorized");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(403, "Forbidden (Missing courses:Edit permission)");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(404, "Not found (Course.NotFound, Course.Section)");
+    }
+}
+
 public class ReorderItemsEndpoint : Endpoint<ReorderItemsRequest>
 {
     private readonly CoursesModule _module;
@@ -29,6 +42,7 @@ public class ReorderItemsEndpoint : Endpoint<ReorderItemsRequest>
         Post("/courses/{CourseId}/sections/{SectionId}/reorder");
         this.AccessControl("courses:Edit", (req, tenantId) => ResourceArn.ForCourse(tenantId, req.CourseId));
         Description(d => d.WithTags("Courses"));
+        Summary(new ReorderItemsSummary());
     }
 
     public override async Task HandleAsync(ReorderItemsRequest req, CancellationToken ct)

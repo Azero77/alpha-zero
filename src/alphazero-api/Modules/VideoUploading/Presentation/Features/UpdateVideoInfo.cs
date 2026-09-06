@@ -20,7 +20,14 @@ public static class UpdateVideoInfo
         {
             app.MapPatch("api/video-uploading/debug/videos/{id:guid}", Handler)
                .WithTags("Video Uploading Debug")
-               .AccessControl("video:Edit", (ctx, tenantId) => ResourceArn.ForVideo(tenantId, Guid.Parse(ctx.Request.RouteValues["id"]?.ToString() ?? Guid.Empty.ToString())));        }
+               .AccessControl("video:Edit", (ctx, tenantId) => ResourceArn.ForVideo(tenantId, Guid.Parse(ctx.Request.RouteValues["id"]?.ToString() ?? Guid.Empty.ToString())))
+               .WithSummary("Updates video title and description")
+               .WithDescription("Updates metadata of an uploaded video.")
+               .Produces(StatusCodes.Status204NoContent)
+               .ProducesProblem(StatusCodes.Status401Unauthorized)
+               .ProducesProblem(StatusCodes.Status403Forbidden)
+               .ProducesProblem(StatusCodes.Status404NotFound);
+        }
 
         private async Task<IResult> Handler(Guid id, Request request, VideoUploadingModule module)
         {

@@ -28,9 +28,11 @@ public class EnrollInCourseSummary : Summary<EnrollInCourseEndpoint>
             CourseId = Guid.NewGuid()
         };
         Response<EnrollInCourseResponse>(201, "Student successfully enrolled");
-        Response(400, "Validation failure");
-        Response(404, "Course not found");
-        Response(409, "Student is already enrolled in this course");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(400, "Validation failure (Enrollement.StudentId, Enrollement.CourseId)");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(401, "Unauthorized (Tenant.NotFound)");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(403, "Forbidden (Missing courses:Enroll permission)");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(404, "Course not found (Course.NotFound)");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(409, "Student is already enrolled in this course (Enrollment.Exists)");
     }
 }
 

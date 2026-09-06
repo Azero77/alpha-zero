@@ -16,6 +16,9 @@ public class GetCourseAnalyticsSummary : Summary<GetCourseAnalyticsEndpoint>
         Summary = "Retrieves analytics for a course";
         Description = "Returns total enrollments, average completion rate, and per-item completion stats.";
         Response<CourseAnalyticsDto>(200, "Analytics retrieved successfully");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(401, "Unauthorized");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(403, "Forbidden (Missing courses:ViewAnalytics permission)");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(404, "Analytics not found (CourseAnalytics.NotFound)");
     }
 }
 

@@ -14,6 +14,19 @@ public record LoginAsTenantUserRequest
     public string Platform { get; init; } = string.Empty;
 }
 
+public class LoginAsTenantUserSummary : Summary<LoginAsTenantUserEndpoint>
+{
+    public LoginAsTenantUserSummary()
+    {
+        Summary = "Exchanges global IDP token for a tenant-scoped access token";
+        Description = "Authenticates an IDP user against a tenant, registers or verifies their device, and returns a tenant token.";
+        Response<TokenResponse>(200, "Token exchange successful");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(400, "Validation failure (Invalid Platform)");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(401, "Unauthorized (Missing or invalid IDP claims)");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(403, "Forbidden");
+    }
+}
+
 public class LoginAsTenantUserEndpoint : Endpoint<LoginAsTenantUserRequest, TokenResponse>
 {
     private readonly IdentityModule _module;
@@ -30,6 +43,7 @@ public class LoginAsTenantUserEndpoint : Endpoint<LoginAsTenantUserRequest, Toke
         // It will be validated by the standard ASP.NET Core Authentication middleware
         // which we will configure for Cognito
         Description(d => d.WithTags("Identity Auth"));
+        Summary(new LoginAsTenantUserSummary());
     }
 
     public override async Task HandleAsync(LoginAsTenantUserRequest req, CancellationToken ct)

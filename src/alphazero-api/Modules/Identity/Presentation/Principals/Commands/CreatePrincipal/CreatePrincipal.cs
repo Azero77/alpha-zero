@@ -19,6 +19,19 @@ public record CreatePrincipalRequest
 
 public record CreatePrincipalResponse(Guid Id);
 
+public class CreatePrincipalSummary : Summary<CreatePrincipalEndpoint>
+{
+    public CreatePrincipalSummary()
+    {
+        Summary = "Creates a new principal";
+        Description = "Creates an IAM principal (User, Role, or System) within the tenant.";
+        Response<CreatePrincipalResponse>(201, "Principal created successfully");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(400, "Validation failure (Username empty, Password < 8 chars, Name empty/too long, PrincipalType invalid)");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(401, "Unauthorized (Tenant not found or invalid credentials)");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(403, "Forbidden (Missing identity:ManagePrincipals permission)");
+    }
+}
+
 public class CreatePrincipalEndpoint : Endpoint<CreatePrincipalRequest, CreatePrincipalResponse>
 {
     private readonly IdentityModule _module;
@@ -33,6 +46,7 @@ public class CreatePrincipalEndpoint : Endpoint<CreatePrincipalRequest, CreatePr
         Post("/identity/principals");
         this.AccessControl("identity:ManagePrincipals", (req, tenantId) => ResourceArn.ForTenant(tenantId));
         Description(d => d.WithTags("Identity"));
+        Summary(new CreatePrincipalSummary());
     }
 
     public override async Task HandleAsync(CreatePrincipalRequest req, CancellationToken ct)

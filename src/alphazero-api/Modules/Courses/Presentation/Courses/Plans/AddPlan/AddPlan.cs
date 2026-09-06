@@ -14,7 +14,23 @@ public record AddPlanRequest
     public Guid PrincipalId { get; init; }
 }
 
-public class AddPlanEndpoint : Endpoint<AddPlanRequest>
+public record AddPlanResponse(Guid PlanId);
+
+public class AddPlanSummary : Summary<AddPlanEndpoint>
+{
+    public AddPlanSummary()
+    {
+        Summary = "Adds an access plan to a course";
+        Description = "Creates a new plan option for accessing the course.";
+        Response<AddPlanResponse>(200, "Plan added successfully");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(400, "Validation failure (CourseId, Name, PrincipalId empty or Course.PlanName)");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(401, "Unauthorized");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(403, "Forbidden (Missing courses:Edit permission)");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(404, "Course not found (Course.NotFound)");
+    }
+}
+
+public class AddPlanEndpoint : Endpoint<AddPlanRequest, AddPlanResponse>
 {
     private readonly CoursesModule _module;
 
@@ -28,6 +44,7 @@ public class AddPlanEndpoint : Endpoint<AddPlanRequest>
         Post("/courses/{CourseId}/plans");
         this.AccessControl("courses:Edit", (req, tenantId) => ResourceArn.ForCourse(tenantId, req.CourseId));
         Description(d => d.WithTags("Courses"));
+        Summary(new AddPlanSummary());
     }
 
     public override async Task HandleAsync(AddPlanRequest req, CancellationToken ct)
@@ -41,6 +58,6 @@ public class AddPlanEndpoint : Endpoint<AddPlanRequest>
             return;
         }
 
-        await Send.OkAsync(new { PlanId = result.Value }, ct);
+        await Send.OkAsync(new AddPlanResponse(result.Value), ct);
     }
 }

@@ -13,6 +13,21 @@ public record SubmitForReviewRequest
     public Guid CourseId { get; init; }
 }
 
+public class SubmitForReviewSummary : Summary<SubmitForReviewEndpoint>
+{
+    public SubmitForReviewSummary()
+    {
+        Summary = "Submits a course for administrative review";
+        Description = "Transitions course status from Draft to UnderReview.";
+        Response(204, "Course submitted for review successfully");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(400, "Validation failure (Course.Empty - course must have content before review)");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(401, "Unauthorized");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(403, "Forbidden (Missing courses:Submit permission)");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(404, "Course not found (Course.NotFound)");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(409, "Conflict (Course.Status - only draft courses can be reviewed)");
+    }
+}
+
 public class SubmitForReviewEndpoint : Endpoint<SubmitForReviewRequest>
 {
     private readonly CoursesModule _module;
@@ -28,6 +43,7 @@ public class SubmitForReviewEndpoint : Endpoint<SubmitForReviewRequest>
         Description(d => d
             .WithTags("Courses")
             .Accepts<SubmitForReviewRequest>("application/json"));
+        Summary(new SubmitForReviewSummary());
     }
 
     public override async Task HandleAsync(SubmitForReviewRequest req, CancellationToken ct)

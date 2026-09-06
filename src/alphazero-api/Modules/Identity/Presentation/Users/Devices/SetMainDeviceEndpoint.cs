@@ -10,12 +10,25 @@ public record SetMainDeviceRequest
     public Guid DeviceId { get; init; }
 }
 
+public class SetMainDeviceSummary : Summary<SetMainDeviceEndpoint>
+{
+    public SetMainDeviceSummary()
+    {
+        Summary = "Sets the user's primary device";
+        Description = "Updates the user's main device for playback security.";
+        Response(204, "Main device updated successfully");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(401, "Unauthorized");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(404, "Device not found (Device.NotFound)");
+    }
+}
+
 public class SetMainDeviceEndpoint(IdentityModule module) : Endpoint<SetMainDeviceRequest>
 {
     public override void Configure()
     {
         Post("/identity/users/devices/main");
         Description(d => d.WithTags("Devices"));
+        Summary(new SetMainDeviceSummary());
     }
 
     public override async Task HandleAsync(SetMainDeviceRequest req, CancellationToken ct)

@@ -14,6 +14,20 @@ public record AddSectionRequest
     public string Title { get; init; } = default!;
 }
 
+public class AddSectionSummary : Summary<AddSectionEndpoint>
+{
+    public AddSectionSummary()
+    {
+        Summary = "Adds a curriculum section to a course";
+        Description = "Appends a new numbered section to the specified course.";
+        Response(204, "Section added successfully");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(400, "Validation failure (CourseId empty, Title empty/too long)");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(401, "Unauthorized");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(403, "Forbidden (Missing courses:Edit permission)");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(404, "Course not found (Course.NotFound)");
+    }
+}
+
 public class AddSectionEndpoint : Endpoint<AddSectionRequest>
 {
     private readonly CoursesModule _module;
@@ -28,6 +42,7 @@ public class AddSectionEndpoint : Endpoint<AddSectionRequest>
         Post("/courses/{CourseId}/sections");
         this.AccessControl("courses:Edit", (req, tenantId) => ResourceArn.ForCourse(tenantId, req.CourseId));
         Description(d => d.WithTags("Courses"));
+        Summary(new AddSectionSummary());
     }
 
     public override async Task HandleAsync(AddSectionRequest req, CancellationToken ct)

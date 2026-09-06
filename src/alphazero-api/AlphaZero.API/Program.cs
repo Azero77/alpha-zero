@@ -139,9 +139,11 @@ public class Program
                 .ToList();
         }).SwaggerDocument( o =>
         {
+            o.ShortSchemaNames = true;
             o.DocumentSettings = s =>
             {
                 s.Title = "Alpha Zero";
+                
                 
                 s.AddAuth("oauth2", new()
                 {

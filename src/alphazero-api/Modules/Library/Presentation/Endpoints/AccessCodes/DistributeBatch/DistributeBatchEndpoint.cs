@@ -9,6 +9,20 @@ namespace AlphaZero.Modules.Library.Presentation.Endpoints.AccessCodes.Distribut
 
 public record DistributeBatchRequest { public Guid BatchId { get; init; } }
 
+public class DistributeBatchSummary : Summary<DistributeBatchEndpoint>
+{
+    public DistributeBatchSummary()
+    {
+        Summary = "Distributes a batch of access codes";
+        Description = "Marks a batch of minted access codes as distributed to libraries for sale.";
+        Response(204, "Batch distributed successfully");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(400, "Validation failure (BatchId empty)");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(401, "Unauthorized");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(403, "Forbidden (Missing library:SellCodes permission)");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(409, "Invalid code status (AccessCode.InvalidStatus)");
+    }
+}
+
 public class DistributeBatchEndpoint(LibraryModule module) : Endpoint<DistributeBatchRequest>
 {
     public override void Configure()
@@ -17,6 +31,7 @@ public class DistributeBatchEndpoint(LibraryModule module) : Endpoint<Distribute
         // Distributing batches is an administrative/accountant task
         this.AccessControl("library:SellCodes", (req, tenantId) => ResourceArn.ForTenant(tenantId));
         Description(d => d.WithTags("Library"));
+        Summary(new DistributeBatchSummary());
     }
 
     public override async Task HandleAsync(DistributeBatchRequest req, CancellationToken ct)

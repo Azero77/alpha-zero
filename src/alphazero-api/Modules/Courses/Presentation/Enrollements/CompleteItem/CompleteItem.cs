@@ -15,6 +15,20 @@ public record CompleteItemRequest
     public int BitIndex { get; init; }
 }
 
+public class CompleteItemSummary : Summary<CompleteItemEndpoint>
+{
+    public CompleteItemSummary()
+    {
+        Summary = "Marks a course item as completed";
+        Description = "Updates the student's progress bitmask for the specified item bit index.";
+        Response(204, "Item marked as completed successfully");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(401, "Unauthorized");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(403, "Forbidden (Missing enrollments:Complete permission)");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(404, "Not found (Enrollment.NotFound, Course.Item)");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(409, "Conflict (Enrollement.Status - cannot complete items in inactive enrollment)");
+    }
+}
+
 public class CompleteItemEndpoint : Endpoint<CompleteItemRequest>
 {
     private readonly CoursesModule _module;
@@ -29,6 +43,7 @@ public class CompleteItemEndpoint : Endpoint<CompleteItemRequest>
         Post("/courses/enrollements/{EnrollmentId}/complete");
         this.AccessControl("enrollments:Complete", (req, tenantId) => ResourceArn.ForEnrollment(tenantId, req.EnrollmentId));
         Description(d => d.WithTags("Enrollement"));
+        Summary(new CompleteItemSummary());
     }
 
     public override async Task HandleAsync(CompleteItemRequest req, CancellationToken ct)

@@ -19,6 +19,19 @@ public record EnrollementResponse(
     DateTime EnrolledOn,
     Guid TenantId);
 
+public class GetEnrollementSummary : Summary<GetEnrollementEndpoint>
+{
+    public GetEnrollementSummary()
+    {
+        Summary = "Retrieves enrollment details";
+        Description = "Returns the student enrollment details including completion percentage and status.";
+        Response<EnrollementResponse>(200, "Enrollment retrieved successfully");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(401, "Unauthorized");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(403, "Forbidden (Missing enrollments:View permission)");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(404, "Enrollment not found (Enrollment.NotFound)");
+    }
+}
+
 public class GetEnrollementEndpoint : Endpoint<GetEnrollementRequest, EnrollementResponse>
 {
     private readonly CoursesModule _module;
@@ -33,6 +46,7 @@ public class GetEnrollementEndpoint : Endpoint<GetEnrollementRequest, Enrollemen
         Get("/courses/enrollments/{Id}");
         this.AccessControl("enrollments:View", (req, tenantId) => ResourceArn.ForEnrollment(tenantId, req.Id));
         Description(d => d.WithTags("Enrollment"));
+        Summary(new GetEnrollementSummary());
     }
 
     public override async Task HandleAsync(GetEnrollementRequest req, CancellationToken ct)

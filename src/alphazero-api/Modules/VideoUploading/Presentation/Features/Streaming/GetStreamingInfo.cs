@@ -15,7 +15,11 @@ public static class GetStreamingInfo
         public void MapEndpoint(IEndpointRouteBuilder app)
         {
             app.MapGet("api/video/{videoId:guid}", Handler)
-               .WithTags("Video Streaming");
+               .WithTags("Video Streaming")
+               .WithSummary("Gets streaming playback information for a video")
+               .WithDescription("Retrieves the HLS/DASH manifest URL and DRM/encryption licensing information.")
+               .Produces<StreamingInfoResponseDTO>(StatusCodes.Status200OK)
+               .ProducesProblem(StatusCodes.Status404NotFound);
         }
         private async Task<IResult> Handler(Guid videoId, VideoUploadingModule module)
         {

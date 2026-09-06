@@ -16,6 +16,20 @@ public record UpdateTenantRequest
     public string? SecondaryColor { get; init; }
 }
 
+public class UpdateTenantSummary : Summary<UpdateTenantEndpoint>
+{
+    public UpdateTenantSummary()
+    {
+        Summary = "Updates tenant details";
+        Description = "Updates the name, logo, or theme colors of an academy tenant.";
+        Response(204, "Tenant updated successfully");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(400, "Validation failure (Id empty, Name empty/too long)");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(401, "Unauthorized");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(403, "Forbidden (Missing tenants:Manage permission)");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(404, "Tenant not found (Tenant.NotFound)");
+    }
+}
+
 public class UpdateTenantEndpoint(TenantsModule module) : Endpoint<UpdateTenantRequest>
 {
     public override void Configure()
@@ -23,6 +37,7 @@ public class UpdateTenantEndpoint(TenantsModule module) : Endpoint<UpdateTenantR
         Put("/tenants/{Id}");
         this.AccessControl("tenants:Manage", req => ResourceArn.ForTenant(req.Id));
         Description(d => d.WithTags("Tenants"));
+        Summary(new UpdateTenantSummary());
     }
 
     public override async Task HandleAsync(UpdateTenantRequest req, CancellationToken ct)

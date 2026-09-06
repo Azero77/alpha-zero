@@ -9,6 +9,19 @@ namespace AlphaZero.Modules.Tenants.Presentation.Endpoints.GetTenant;
 
 public record GetTenantRequest { public Guid Id { get; init; } }
 
+public class GetTenantSummary : Summary<GetTenantEndpoint>
+{
+    public GetTenantSummary()
+    {
+        Summary = "Gets tenant details by ID";
+        Description = "Retrieves configuration and metadata for the specified academy tenant.";
+        Response<TenantDto>(200, "Tenant retrieved successfully");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(401, "Unauthorized");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(403, "Forbidden (Missing tenants:Manage permission)");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(404, "Tenant not found (Tenant.NotFound)");
+    }
+}
+
 public class GetTenantEndpoint(TenantsModule module) : Endpoint<GetTenantRequest, TenantDto>
 {
     public override void Configure()
@@ -16,6 +29,7 @@ public class GetTenantEndpoint(TenantsModule module) : Endpoint<GetTenantRequest
         Get("/tenants/{Id}");
         this.AccessControl("tenants:Manage", req => ResourceArn.ForTenant(req.Id));
         Description(d => d.WithTags("Tenants"));
+        Summary(new GetTenantSummary());
     }
 
     public override async Task HandleAsync(GetTenantRequest req, CancellationToken ct)

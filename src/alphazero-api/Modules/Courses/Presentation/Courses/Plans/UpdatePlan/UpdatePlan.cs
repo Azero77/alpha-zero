@@ -15,6 +15,20 @@ public record UpdatePlanRequest
     public Guid PrincipalId { get; init; }
 }
 
+public class UpdatePlanSummary : Summary<UpdatePlanEndpoint>
+{
+    public UpdatePlanSummary()
+    {
+        Summary = "Updates an access plan for a course";
+        Description = "Updates the plan name or associated principal for accessing the course.";
+        Response(204, "Plan updated successfully");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(400, "Validation failure (CourseId, PlanId, Name, PrincipalId empty or Course.PlanName)");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(401, "Unauthorized");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(403, "Forbidden (Missing courses:Edit permission)");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(404, "Not found (Course.NotFound, Course.Plan)");
+    }
+}
+
 public class UpdatePlanEndpoint : Endpoint<UpdatePlanRequest>
 {
     private readonly CoursesModule _module;
@@ -29,6 +43,7 @@ public class UpdatePlanEndpoint : Endpoint<UpdatePlanRequest>
         Put("/courses/{CourseId}/plans/{PlanId}");
         this.AccessControl("courses:Edit", (req, tenantId) => ResourceArn.ForCourse(tenantId, req.CourseId));
         Description(d => d.WithTags("Courses"));
+        Summary(new UpdatePlanSummary());
     }
 
     public override async Task HandleAsync(UpdatePlanRequest req, CancellationToken ct)

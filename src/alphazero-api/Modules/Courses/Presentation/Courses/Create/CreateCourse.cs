@@ -31,8 +31,10 @@ public class CreateCourseSummary : Summary<CreateCourseEndpoint>
             SubjectId = Guid.Parse("00000000-0000-0000-0000-000000000001")
         };
         Response<CreateCourseResponse>(201, "Course successfully created");
-        Response(400, "Validation failure");
-        Response(404, "Subject not found");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(400, "Validation failure (Course.Title, SubjectId empty)");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(401, "Unauthorized (Tenant.NotFound)");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(403, "Forbidden (Missing courses:Create permission)");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(404, "Subject not found (Course.SubjectId)");
     }
 }
 

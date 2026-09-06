@@ -13,6 +13,17 @@ public record LoginPrincipalRequest
     public string Password { get; init; } = default!;
 }
 
+public class LoginPrincipalSummary : Summary<LoginPrincipalEndpoint>
+{
+    public LoginPrincipalSummary()
+    {
+        Summary = "Authenticates a principal";
+        Description = "Validates principal credentials and returns an access token.";
+        Response<TokenResponse>(200, "Authentication successful");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(401, "Invalid credentials (Auth.NotFoundCredentials, Auth.InvalidCredentials)");
+    }
+}
+
 public class LoginPrincipalEndpoint : Endpoint<LoginPrincipalRequest, TokenResponse>
 {
     private readonly IdentityModule _module;
@@ -27,6 +38,7 @@ public class LoginPrincipalEndpoint : Endpoint<LoginPrincipalRequest, TokenRespo
         Post("/identity/auth/login-principal");
         AllowAnonymous();
         Description(d => d.WithTags("Identity Auth"));
+        Summary(new LoginPrincipalSummary());
     }
 
     public override async Task HandleAsync(LoginPrincipalRequest req, CancellationToken ct)

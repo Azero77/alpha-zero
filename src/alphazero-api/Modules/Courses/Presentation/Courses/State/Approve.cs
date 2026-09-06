@@ -13,6 +13,20 @@ public record ApproveCourseRequest
     public Guid CourseId { get; init; }
 }
 
+public class ApproveCourseSummary : Summary<ApproveCourseEndpoint>
+{
+    public ApproveCourseSummary()
+    {
+        Summary = "Approves a course under review";
+        Description = "Transitions course status from UnderReview to Approved.";
+        Response(204, "Course approved successfully");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(401, "Unauthorized");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(403, "Forbidden (Missing courses:Approve permission)");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(404, "Course not found (Course.NotFound)");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(409, "Conflict (Course.Status - only courses under review can be approved)");
+    }
+}
+
 public class ApproveCourseEndpoint : Endpoint<ApproveCourseRequest>
 {
     private readonly CoursesModule _module;
@@ -28,6 +42,7 @@ public class ApproveCourseEndpoint : Endpoint<ApproveCourseRequest>
         Description(d => d
             .WithTags("Courses")
             .Accepts<ApproveCourseRequest>("application/json"));
+        Summary(new ApproveCourseSummary());
     }
 
     public override async Task HandleAsync(ApproveCourseRequest req, CancellationToken ct)

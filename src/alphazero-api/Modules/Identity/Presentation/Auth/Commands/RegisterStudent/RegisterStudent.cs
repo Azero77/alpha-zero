@@ -15,6 +15,19 @@ public record RegisterStudentRequest
 
 public record RegisterStudentResponse(Guid Id);
 
+public class RegisterStudentSummary : Summary<RegisterStudentEndpoint>
+{
+    public RegisterStudentSummary()
+    {
+        Summary = "Registers a new student";
+        Description = "Creates a student principal associated with a tenant.";
+        Response<RegisterStudentResponse>(200, "Student successfully registered");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(400, "Validation failure (TenantId empty, Username empty/too long, Password < 8 chars, Name empty/too long)");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(404, "StudentAccess policy not found (ManagedPolicy.NotFound)");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(409, "User already exists");
+    }
+}
+
 public class RegisterStudentEndpoint : Endpoint<RegisterStudentRequest, RegisterStudentResponse>
 {
     private readonly IdentityModule _module;
@@ -29,6 +42,7 @@ public class RegisterStudentEndpoint : Endpoint<RegisterStudentRequest, Register
         Post("/identity/auth/register-student");
         AllowAnonymous();
         Description(d => d.WithTags("Identity Auth"));
+        Summary(new RegisterStudentSummary());
     }
 
     public override async Task HandleAsync(RegisterStudentRequest req, CancellationToken ct)

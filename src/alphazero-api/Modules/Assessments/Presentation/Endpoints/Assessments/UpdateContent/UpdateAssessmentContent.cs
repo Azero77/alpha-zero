@@ -14,6 +14,21 @@ public record UpdateAssessmentContentRequest
     public AssessmentContent Content { get; init; } = default!;
 }
 
+public class UpdateAssessmentContentSummary : Summary<UpdateAssessmentContentEndpoint>
+{
+    public UpdateAssessmentContentSummary()
+    {
+        Summary = "Updates the content of an existing assessment";
+        Description = "Creates a new content version snapshot for the assessment.";
+        Response(204, "Assessment content updated successfully");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(400, "Validation failure (AssessmentId empty, Content null, or invalid questions)");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(401, "Unauthorized");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(403, "Forbidden (Missing assessments:Edit permission)");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(404, "Assessment not found (Assessment.NotFound)");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(409, "Conflict (Assessment.Status - archived assessment cannot be modified)");
+    }
+}
+
 public class UpdateAssessmentContentEndpoint : Endpoint<UpdateAssessmentContentRequest>
 {
     private readonly AssessmentsModule _module;
@@ -28,6 +43,7 @@ public class UpdateAssessmentContentEndpoint : Endpoint<UpdateAssessmentContentR
         Put("/assessments/{AssessmentId}/content");
         this.AccessControl("assessments:Edit", (req, tenantId) => ResourceArn.ForAssessment(tenantId, req.AssessmentId));
         Description(d => d.WithTags("Assessments"));
+        Summary(new UpdateAssessmentContentSummary());
     }
 
     public override async Task HandleAsync(UpdateAssessmentContentRequest req, CancellationToken ct)

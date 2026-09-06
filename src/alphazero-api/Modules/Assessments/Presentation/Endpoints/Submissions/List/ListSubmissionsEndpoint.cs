@@ -17,6 +17,18 @@ public record ListSubmissionsRequest
     public int PerPage { get; init; } = 10;
 }
 
+public class ListSubmissionsSummary : Summary<ListSubmissionsEndpoint>
+{
+    public ListSubmissionsSummary()
+    {
+        Summary = "Lists assessment submissions";
+        Description = "Retrieves a paginated list of submissions optionally filtered by assessment or status.";
+        Response<PagedResult<SubmissionSummaryDto>>(200, "Submissions retrieved successfully");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(401, "Unauthorized");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(403, "Forbidden (Missing assessments:ViewSubmissions permission)");
+    }
+}
+
 public class ListSubmissionsEndpoint(AssessmentsModule module) : Endpoint<ListSubmissionsRequest, PagedResult<SubmissionSummaryDto>>
 {
     public override void Configure()
@@ -30,11 +42,8 @@ public class ListSubmissionsEndpoint(AssessmentsModule module) : Endpoint<ListSu
                 ? ResourceArn.ForAssessment(tenantId, req.AssessmentId.Value) 
                 : ResourceArn.ForTenant(tenantId));
 
-        Description(d => d
-            .WithTags("Submissions")
-            .Produces<PagedResult<SubmissionSummaryDto>>(200)
-            .ProducesProblemDetails(401)
-            .ProducesProblemDetails(403));
+        Description(d => d.WithTags("Submissions"));
+        Summary(new ListSubmissionsSummary());
     }
 
     public override async Task HandleAsync(ListSubmissionsRequest req, CancellationToken ct)

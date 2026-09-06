@@ -13,6 +13,21 @@ public record PublishCourseRequest
     public Guid CourseId { get; init; }
 }
 
+public class PublishCourseSummary : Summary<PublishCourseEndpoint>
+{
+    public PublishCourseSummary()
+    {
+        Summary = "Publishes an approved course";
+        Description = "Transitions course status from Approved to Published, making it discoverable and enrollable.";
+        Response(204, "Course published successfully");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(400, "Validation failure (Course.NoPlans - course must have at least one plan before publishing)");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(401, "Unauthorized");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(403, "Forbidden (Missing courses:Publish permission)");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(404, "Course not found (Course.NotFound)");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(409, "Conflict (Course.Status - only approved courses can be published)");
+    }
+}
+
 public class PublishCourseEndpoint : Endpoint<PublishCourseRequest>
 {
     private readonly CoursesModule _module;
@@ -28,6 +43,7 @@ public class PublishCourseEndpoint : Endpoint<PublishCourseRequest>
         Description(d => d
             .WithTags("Courses")
             .Accepts<PublishCourseRequest>("application/json"));
+        Summary(new PublishCourseSummary());
     }
 
     public override async Task HandleAsync(PublishCourseRequest req, CancellationToken ct)

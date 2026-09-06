@@ -72,7 +72,11 @@ public static class Debug
         {
             app.MapGet("api/video-uploading/debug/videos", Handler)
                .WithTags("Video Uploading Debug")
-               .AccessControl("video:List", (req, tenantId) => ResourceArn.ForTenant(tenantId));
+               .AccessControl("video:List", (req, tenantId) => ResourceArn.ForTenant(tenantId))
+               .WithSummary("Lists uploaded videos (debug)")
+               .Produces<PagedResult<VideoResponse>>(StatusCodes.Status200OK)
+               .ProducesProblem(StatusCodes.Status401Unauthorized)
+               .ProducesProblem(StatusCodes.Status403Forbidden);
         }
 
         private async Task<IResult> Handler(int? page, int? perPage, VideoUploadingModule module, AWSResources resources)
@@ -95,7 +99,12 @@ public static class Debug
         {
             app.MapGet("api/video-uploading/debug/videos/{id:guid}", Handler)
                .WithTags("Video Uploading Debug")
-               .AccessControl("video:View", (ctx, tenantId) => ResourceArn.ForVideo(tenantId, Guid.Parse(ctx.Request.RouteValues["id"]?.ToString() ?? Guid.Empty.ToString())));
+               .AccessControl("video:View", (ctx, tenantId) => ResourceArn.ForVideo(tenantId, Guid.Parse(ctx.Request.RouteValues["id"]?.ToString() ?? Guid.Empty.ToString())))
+               .WithSummary("Gets uploaded video details (debug)")
+               .Produces<VideoResponse>(StatusCodes.Status200OK)
+               .ProducesProblem(StatusCodes.Status401Unauthorized)
+               .ProducesProblem(StatusCodes.Status403Forbidden)
+               .ProducesProblem(StatusCodes.Status404NotFound);
         }
 
         private async Task<IResult> Handler(Guid id, VideoUploadingModule module, AWSResources resources)
@@ -114,7 +123,12 @@ public static class Debug
         {
             app.MapGet("api/video-uploading/debug/videos/{id:guid}/state", Handler)
                .WithTags("Video Uploading Debug")
-               .AccessControl("video:View", (ctx, tenantId) => ResourceArn.ForVideo(tenantId, Guid.Parse(ctx.Request.RouteValues["id"]?.ToString() ?? Guid.Empty.ToString())));
+               .AccessControl("video:View", (ctx, tenantId) => ResourceArn.ForVideo(tenantId, Guid.Parse(ctx.Request.RouteValues["id"]?.ToString() ?? Guid.Empty.ToString())))
+               .WithSummary("Gets transcoding and processing state of video (debug)")
+               .Produces<AlphaZero.Modules.VideoUploading.Application.Repositories.VideoStateDto>(StatusCodes.Status200OK)
+               .ProducesProblem(StatusCodes.Status401Unauthorized)
+               .ProducesProblem(StatusCodes.Status403Forbidden)
+               .ProducesProblem(StatusCodes.Status404NotFound);
         }
 
         private async Task<IResult> Handler(Guid id, VideoUploadingModule module)
@@ -133,7 +147,12 @@ public static class Debug
         {
             app.MapDelete("api/video-uploading/debug/videos/{id:guid}", Handler)
                .WithTags("Video Uploading Debug")
-               .AccessControl("video:Delete", ctx => ResourceArn.ForVideo(Guid.Empty, Guid.Parse(ctx.Request.RouteValues["id"]?.ToString() ?? Guid.Empty.ToString())));
+               .AccessControl("video:Delete", ctx => ResourceArn.ForVideo(Guid.Empty, Guid.Parse(ctx.Request.RouteValues["id"]?.ToString() ?? Guid.Empty.ToString())))
+               .WithSummary("Deletes uploaded video (debug)")
+               .Produces(StatusCodes.Status204NoContent)
+               .ProducesProblem(StatusCodes.Status401Unauthorized)
+               .ProducesProblem(StatusCodes.Status403Forbidden)
+               .ProducesProblem(StatusCodes.Status404NotFound);
         }
 
         private async Task<IResult> Handler(Guid id, VideoUploadingModule module)

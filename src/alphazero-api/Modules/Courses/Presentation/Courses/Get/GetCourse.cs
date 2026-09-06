@@ -46,7 +46,9 @@ public class GetCourseSummary : Summary<GetCourseEndpoint>
         Summary = "Retrieves a course by its ID";
         Description = "Returns the complete structure of a course, including all sections, lessons, and assessments.";
         Response<CourseResponse>(200, "Course structure retrieved successfully");
-        Response(404, "Course not found");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(401, "Unauthorized");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(403, "Forbidden (Missing courses:View permission)");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(404, "Course not found (Course.NotFound)");
     }
 }
 

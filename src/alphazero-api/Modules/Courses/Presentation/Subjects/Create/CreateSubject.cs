@@ -28,8 +28,9 @@ public class CreateSubjectSummary : Summary<CreateSubjectEndpoint>
             Description = "General mathematics curriculum for high school."
         };
         Response<CreateSubjectResponse>(201, "Subject successfully created");
-        Response(400, "Validation failure");
-        Response(401, "Tenant context missing");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(400, "Validation failure (Name empty/too long, Subject.Validation)");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(401, "Unauthorized (Tenant.NotFound)");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(403, "Forbidden (Missing subjects:Create permission)");
     }
 }
 

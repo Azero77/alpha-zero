@@ -15,12 +15,26 @@ public record RegisterDeviceRequest
 
 public record RegisterDeviceResponse(Guid DeviceId);
 
+public class RegisterDeviceSummary : Summary<RegisterDeviceEndpoint>
+{
+    public RegisterDeviceSummary()
+    {
+        Summary = "Registers a new device for the user";
+        Description = "Registers a client device public key for secure offline playback.";
+        Response<RegisterDeviceResponse>(200, "Device registered successfully");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(400, "Validation failure (DeviceName empty/too long, PublicKey empty, Platform invalid)");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(401, "Unauthorized");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(409, "Device already registered (Device.Exists)");
+    }
+}
+
 public class RegisterDeviceEndpoint(IdentityModule module) : Endpoint<RegisterDeviceRequest, RegisterDeviceResponse>
 {
     public override void Configure()
     {
         Post("/identity/users/devices");
         Description(d => d.WithTags("Devices"));
+        Summary(new RegisterDeviceSummary());
     }
 
     public override async Task HandleAsync(RegisterDeviceRequest req, CancellationToken ct)

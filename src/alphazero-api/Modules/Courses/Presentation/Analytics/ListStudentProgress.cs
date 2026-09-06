@@ -23,6 +23,8 @@ public class ListStudentProgressSummary : Summary<ListStudentProgressEndpoint>
         Summary = "Lists student progress for a course";
         Description = "Returns a paginated list of enrollments and their completion percentages.";
         Response<PagedResult<EnrollmentDto>>(200, "Progress list retrieved successfully");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(401, "Unauthorized");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(403, "Forbidden (Missing courses:ViewAnalytics permission)");
     }
 }
 

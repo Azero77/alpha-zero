@@ -15,6 +15,18 @@ public record ListLibrariesRequest
     public int PerPage { get; init; } = 10;
 }
 
+public class ListLibrariesSummary : Summary<ListLibrariesEndpoint>
+{
+    public ListLibrariesSummary()
+    {
+        Summary = "Lists partner libraries";
+        Description = "Retrieves a paginated list of registered partner libraries.";
+        Response<PagedResult<LibraryDto>>(200, "Libraries retrieved successfully");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(401, "Unauthorized");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(403, "Forbidden (Missing library:Audit permission)");
+    }
+}
+
 public class ListLibrariesEndpoint(LibraryModule module) : Endpoint<ListLibrariesRequest, PagedResult<LibraryDto>>
 {
     public override void Configure()
@@ -22,6 +34,7 @@ public class ListLibrariesEndpoint(LibraryModule module) : Endpoint<ListLibrarie
         Get("/library/libraries");
         this.AccessControl("library:Audit", (req, tenantId) => ResourceArn.ForTenant(tenantId));
         Description(d => d.WithTags("Library Management"));
+        Summary(new ListLibrariesSummary());
     }
 
     public override async Task HandleAsync(ListLibrariesRequest req, CancellationToken ct)

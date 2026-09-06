@@ -14,6 +14,20 @@ public record DetachInlinePolicyRequest
     public Guid PolicyId { get; init; }
 }
 
+public class DetachInlinePolicySummary : Summary<DetachInlinePolicyEndpoint>
+{
+    public DetachInlinePolicySummary()
+    {
+        Summary = "Detaches an inline policy from a principal";
+        Description = "Removes an inline policy from an IAM principal.";
+        Response(204, "Inline policy detached successfully");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(400, "Validation failure (PrincipalId or PolicyId empty)");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(401, "Unauthorized");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(403, "Forbidden (Missing identity:ManagePrincipals permission)");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(404, "Principal not found (Principal.NotFound)");
+    }
+}
+
 public class DetachInlinePolicyEndpoint : Endpoint<DetachInlinePolicyRequest>
 {
     private readonly IdentityModule _module;
@@ -28,6 +42,7 @@ public class DetachInlinePolicyEndpoint : Endpoint<DetachInlinePolicyRequest>
         Delete("/identity/principals/{PrincipalId}/policies/inline/{PolicyId}");
         this.AccessControl("identity:ManagePrincipals", (req, tenantId) => ResourceArn.ForTenant(tenantId));
         Description(d => d.WithTags("Identity"));
+        Summary(new DetachInlinePolicySummary());
     }
 
     public override async Task HandleAsync(DetachInlinePolicyRequest req, CancellationToken ct)

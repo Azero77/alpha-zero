@@ -15,6 +15,18 @@ public record GetPrincipalsByResourceRequest
     public Guid ResourceId { get; init; } 
 }
 
+public class GetPrincipalsByResourceSummary : Summary<GetPrincipalsByResourceEndpoint>
+{
+    public GetPrincipalsByResourceSummary()
+    {
+        Summary = "Gets principals assigned to a resource";
+        Description = "Retrieves a list of principals that have direct or indirect permissions on the resource.";
+        Response<List<PrincipalDto>>(200, "Principals retrieved successfully");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(401, "Unauthorized");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(403, "Forbidden (Missing identity:ManagePrincipals permission)");
+    }
+}
+
 public class GetPrincipalsByResourceEndpoint : Endpoint<GetPrincipalsByResourceRequest, List<PrincipalDto>>
 {
     private readonly IdentityModule _module;
@@ -29,6 +41,7 @@ public class GetPrincipalsByResourceEndpoint : Endpoint<GetPrincipalsByResourceR
         Get("/identity/resources/{ResourceType}/{ResourceId}/principals");
         this.AccessControl("identity:ManagePrincipals", (req, tenantId) => ResourceArn.ForTenant(tenantId));
         Description(d => d.WithTags("Identity"));
+        Summary(new GetPrincipalsByResourceSummary());
     }
 
     public override async Task HandleAsync(GetPrincipalsByResourceRequest req, CancellationToken ct)

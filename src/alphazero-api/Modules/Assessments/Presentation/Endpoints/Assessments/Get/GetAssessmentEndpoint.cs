@@ -19,7 +19,7 @@ public class GetAssessmentSummary : Summary<GetAssessmentEndpoint>
         Summary = "Retrieves a specific assessment by ID";
         Description = "Returns full details of an assessment including its current content snapshot or a specific version.";
         Response<AssessmentDetailsDto>(200, "Assessment details retrieved successfully");
-        Response(404, "Assessment or Version not found");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(404, "Assessment or version not found (Assessment.NotFound, Assessment.VersionNotFound)");
     }
 }
 

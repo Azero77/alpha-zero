@@ -23,6 +23,8 @@ public class ListCoursesSummary : Summary<ListCoursesEndpoint>
         Summary = "Lists all courses with pagination";
         Description = "Returns a paged list of courses for the current tenant. Optionally filterable by subject.";
         Response<PagedResult<CourseSummaryDto>>(200, "Courses retrieved successfully");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(401, "Unauthorized");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(403, "Forbidden (Missing courses:View permission)");
     }
 }
 

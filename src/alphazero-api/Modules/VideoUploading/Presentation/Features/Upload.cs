@@ -40,7 +40,14 @@ public static class Upload
         {
             app.MapPost("api/video-uploading/upload", Handler)
                .WithTags("Video Uploading")
-               .AccessControl("video:Upload", (req, tenantId) => ResourceArn.ForTenant(tenantId));        }
+               .AccessControl("video:Upload", (req, tenantId) => ResourceArn.ForTenant(tenantId))
+               .WithSummary("Requests pre-signed URL for video upload")
+               .WithDescription("Initializes a video upload session and returns S3 pre-signed upload URLs.")
+               .Produces<Response>(StatusCodes.Status200OK)
+               .ProducesProblem(StatusCodes.Status400BadRequest)
+               .ProducesProblem(StatusCodes.Status401Unauthorized)
+               .ProducesProblem(StatusCodes.Status403Forbidden);
+        }
 
         private async Task<IResult> Handler(Request request, VideoUploadingModule module, HttpContext context)
         {

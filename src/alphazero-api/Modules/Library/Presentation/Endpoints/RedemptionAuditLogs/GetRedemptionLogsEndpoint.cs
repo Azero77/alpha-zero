@@ -8,6 +8,18 @@ using MediatR;
 
 namespace AlphaZero.Modules.Library.Presentation.Endpoints.RedemptionAuditLogs;
 
+public class GetRedemptionLogsSummary : Summary<GetRedemptionLogsEndpoint>
+{
+    public GetRedemptionLogsSummary()
+    {
+        Summary = "Gets redemption audit logs";
+        Description = "Retrieves paginated redemption audit logs for a library or tenant.";
+        Response<PagedResult<RedemptionAuditLogDto>>(200, "Redemption audit logs retrieved successfully");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(401, "Unauthorized");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(403, "Forbidden (Missing library:Audit permission)");
+    }
+}
+
 public class GetRedemptionLogsEndpoint : Endpoint<GetRedemptionLogsRequest, PagedResult<RedemptionAuditLogDto>>
 {
     private readonly LibraryModule _module;
@@ -30,6 +42,7 @@ public class GetRedemptionLogsEndpoint : Endpoint<GetRedemptionLogsRequest, Page
             }
             return ResourceArn.ForTenant(tenantId);
         });
+        Summary(new GetRedemptionLogsSummary());
     }
 
     public override async Task HandleAsync(GetRedemptionLogsRequest req, CancellationToken ct)

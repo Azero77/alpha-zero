@@ -17,6 +17,19 @@ public record CreateManagedPolicyRequest
 
 public record CreateManagedPolicyResponse(Guid Id);
 
+public class CreateManagedPolicySummary : Summary<CreateManagedPolicyEndpoint>
+{
+    public CreateManagedPolicySummary()
+    {
+        Summary = "Creates a managed policy";
+        Description = "Creates a reusable IAM policy with permission statements.";
+        Response<CreateManagedPolicyResponse>(201, "Managed policy created successfully");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(400, "Validation failure (Name empty/too long, Statements empty)");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(401, "Unauthorized");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(403, "Forbidden (Missing identity:ManagePolicies permission)");
+    }
+}
+
 public class CreateManagedPolicyEndpoint : Endpoint<CreateManagedPolicyRequest, CreateManagedPolicyResponse>
 {
     private readonly IdentityModule _module;
@@ -31,6 +44,7 @@ public class CreateManagedPolicyEndpoint : Endpoint<CreateManagedPolicyRequest, 
         Post("/identity/policies/managed");
         this.AccessControl("identity:ManagePolicies",_ => ResourceArn.AppUrn);
         Description(d => d.WithTags("Identity Policies"));
+        Summary(new CreateManagedPolicySummary());
     }
 
     public override async Task HandleAsync(CreateManagedPolicyRequest req, CancellationToken ct)

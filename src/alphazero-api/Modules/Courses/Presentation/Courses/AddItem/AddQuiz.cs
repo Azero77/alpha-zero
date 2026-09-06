@@ -21,6 +21,21 @@ public record AddAssessmentRequest
     public decimal PassingScore { get; set; }
     public string? Description { get; set; }
 }
+
+public class AddAssessmentSummary : Summary<AddAssessmentEndpoint>
+{
+    public AddAssessmentSummary()
+    {
+        Summary = "Adds an assessment to a course section";
+        Description = "Creates an assessment item within the specified course and section.";
+        Response(204, "Assessment added successfully");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(400, "Validation failure (CourseId, SectionId, Title empty or invalid)");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(401, "Unauthorized (No TenantID provided or unauthenticated)");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(403, "Forbidden (Missing courses:Edit permission)");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(404, "Not found (Course.NotFound, Course.Section, or Assessment.NotFound)");
+    }
+}
+
 public class AddAssessmentEndpoint : Endpoint<AddAssessmentRequest>
 {
     private readonly CoursesModule _module;
@@ -37,6 +52,7 @@ public class AddAssessmentEndpoint : Endpoint<AddAssessmentRequest>
         Post("/courses/{CourseId}/sections/{SectionId}/assessments");
         this.AccessControl("courses:Edit", (req, tenantId) => ResourceArn.ForCourse(tenantId, req.CourseId));
         Description(d => d.WithTags("Courses"));
+        Summary(new AddAssessmentSummary());
     }
 
     public override async Task HandleAsync(AddAssessmentRequest req, CancellationToken ct)

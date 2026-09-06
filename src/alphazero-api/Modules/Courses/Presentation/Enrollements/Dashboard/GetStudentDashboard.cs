@@ -27,6 +27,8 @@ public class GetStudentDashboardSummary : Summary<GetStudentDashboardEndpoint>
         Summary = "Retrieves student's learning dashboard across all academies";
         Description = "Returns a list of all active course enrollments for the student, grouped by the academy (tenant) they belong to.";
         Response<DashboardResponse>(200, "Dashboard retrieved successfully");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(401, "Unauthorized");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(403, "Forbidden (Missing enrollments:View permission)");
     }
 }
 

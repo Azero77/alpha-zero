@@ -13,6 +13,20 @@ public record RemovePlanRequest
     public Guid PlanId { get; init; }
 }
 
+public class RemovePlanSummary : Summary<RemovePlanEndpoint>
+{
+    public RemovePlanSummary()
+    {
+        Summary = "Removes an access plan from a course";
+        Description = "Deletes an enrollment plan option from the specified course.";
+        Response(204, "Plan removed successfully");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(400, "Validation failure (CourseId or PlanId empty)");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(401, "Unauthorized");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(403, "Forbidden (Missing courses:Edit permission)");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(404, "Not found (Course.NotFound, Course.Plan)");
+    }
+}
+
 public class RemovePlanEndpoint : Endpoint<RemovePlanRequest>
 {
     private readonly CoursesModule _module;
@@ -27,6 +41,7 @@ public class RemovePlanEndpoint : Endpoint<RemovePlanRequest>
         Delete("/courses/{CourseId}/plans/{PlanId}");
         this.AccessControl("courses:Edit", (req, tenantId) => ResourceArn.ForCourse(tenantId, req.CourseId));
         Description(d => d.WithTags("Courses"));
+        Summary(new RemovePlanSummary());
     }
 
     public override async Task HandleAsync(RemovePlanRequest req, CancellationToken ct)

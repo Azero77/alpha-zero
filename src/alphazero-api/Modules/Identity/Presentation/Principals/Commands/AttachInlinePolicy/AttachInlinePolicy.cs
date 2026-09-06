@@ -16,6 +16,20 @@ public record AttachInlinePolicyRequest
     public List<PolicyStatement> Statements { get; init; } = new();
 }
 
+public class AttachInlinePolicySummary : Summary<AttachInlinePolicyEndpoint>
+{
+    public AttachInlinePolicySummary()
+    {
+        Summary = "Attaches an inline policy to a principal";
+        Description = "Appends a custom inline policy to an IAM principal.";
+        Response(204, "Inline policy attached successfully");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(400, "Validation failure (PrincipalId empty, PolicyName empty/too long, Statements empty)");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(401, "Unauthorized (Tenant not found or invalid token)");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(403, "Forbidden (Missing identity:ManagePrincipals permission)");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(404, "Principal not found (Principal.NotFound)");
+    }
+}
+
 public class AttachInlinePolicyEndpoint : Endpoint<AttachInlinePolicyRequest>
 {
     private readonly IdentityModule _module;
@@ -30,6 +44,7 @@ public class AttachInlinePolicyEndpoint : Endpoint<AttachInlinePolicyRequest>
         Post("/identity/principals/{PrincipalId}/policies/inline");
         this.AccessControl("identity:ManagePrincipals", (req, tenantId) => ResourceArn.ForTenant(tenantId));
         Description(d => d.WithTags("Identity"));
+        Summary(new AttachInlinePolicySummary());
     }
 
     public override async Task HandleAsync(AttachInlinePolicyRequest req, CancellationToken ct)

@@ -14,6 +14,21 @@ public record RejectCourseRequest
     public string Reason { get; init; } = default!;
 }
 
+public class RejectCourseSummary : Summary<RejectCourseEndpoint>
+{
+    public RejectCourseSummary()
+    {
+        Summary = "Rejects a course under review";
+        Description = "Transitions course status from UnderReview back to Draft with a specified rejection reason.";
+        Response(204, "Course rejected successfully");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(400, "Validation failure (Course.RejectionReason - rejection reason is required)");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(401, "Unauthorized");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(403, "Forbidden (Missing courses:Reject permission)");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(404, "Course not found (Course.NotFound)");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(409, "Conflict (Course.Status - only courses under review can be rejected)");
+    }
+}
+
 public class RejectCourseEndpoint : Endpoint<RejectCourseRequest>
 {
     private readonly CoursesModule _module;
@@ -28,6 +43,7 @@ public class RejectCourseEndpoint : Endpoint<RejectCourseRequest>
         Patch("/courses/{CourseId}/reject");
         this.AccessControl("courses:Reject", (req, tenantId) => ResourceArn.ForCourse(tenantId, req.CourseId));
         Description(d => d.WithTags("Courses"));
+        Summary(new RejectCourseSummary());
     }
 
     public override async Task HandleAsync(RejectCourseRequest req, CancellationToken ct)

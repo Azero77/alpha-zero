@@ -16,6 +16,21 @@ public record SubmitAssessmentRequest
 
 public record SubmitAssessmentResponse(decimal? Score, string Status);
 
+public class SubmitAssessmentSummary : Summary<SubmitAssessmentEndpoint>
+{
+    public SubmitAssessmentSummary()
+    {
+        Summary = "Submits responses for an assessment";
+        Description = "Submits a student's responses, triggers automated grading, and marks for manual review if subjective questions are present.";
+        Response<SubmitAssessmentResponse>(200, "Assessment submitted successfully");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(400, "Validation failure (Submission.Empty)");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(401, "Unauthorized");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(403, "Forbidden (Missing assessments:Submit permission)");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(404, "Not found (Submission.NotFound, Assessment.NotFound)");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(409, "Conflict (Submission.Status - only in-progress submissions can be submitted)");
+    }
+}
+
 public class SubmitAssessmentEndpoint : Endpoint<SubmitAssessmentRequest, SubmitAssessmentResponse>
 {
     private readonly AssessmentsModule _module;
@@ -30,6 +45,7 @@ public class SubmitAssessmentEndpoint : Endpoint<SubmitAssessmentRequest, Submit
         Post("/assessments/submissions/{SubmissionId}/submit");
         this.AccessControl("assessments:Submit", (req, tenantId) => ResourceArn.ForAssessmentSubmission(tenantId, req.SubmissionId));
         Description(d => d.WithTags("Assessments"));
+        Summary(new SubmitAssessmentSummary());
     }
 
     public override async Task HandleAsync(SubmitAssessmentRequest req, CancellationToken ct)
