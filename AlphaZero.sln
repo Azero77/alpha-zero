@@ -1,19 +1,19 @@
-﻿
+
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 18
 VisualStudioVersion = 18.4.11626.88
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AlphaZero.API", "src\AlphaZero.API\AlphaZero.API.csproj", "{F2EBC211-C323-9692-8294-88F9B7DE636A}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AlphaZero.API", "src\alphazero-api\AlphaZero.API\AlphaZero.API.csproj", "{F2EBC211-C323-9692-8294-88F9B7DE636A}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AlphaZero.AppHost", "src\aspire\AlphaZero.AppHost\AlphaZero.AppHost.csproj", "{E4A265BF-7210-4BF0-8D2A-13702781B1C0}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AlphaZero.AppHost", "src\alphazero-api\aspire\AlphaZero.AppHost\AlphaZero.AppHost.csproj", "{E4A265BF-7210-4BF0-8D2A-13702781B1C0}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AlphaZero.ServiceDefaults", "src\aspire\AlphaZero.ServiceDefaults\AlphaZero.ServiceDefaults.csproj", "{276F6FC8-D38F-D8E1-4EC3-A533A1160F45}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AlphaZero.ServiceDefaults", "src\alphazero-api\aspire\AlphaZero.ServiceDefaults\AlphaZero.ServiceDefaults.csproj", "{276F6FC8-D38F-D8E1-4EC3-A533A1160F45}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "aspire", "aspire", "{02EA681E-C7D8-13C7-8484-4AC65E1B71E8}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Modules", "Modules", "{67CAD9C1-6ACD-4FEC-8FC4-1304E4070C85}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AlphaZero.Shared", "src\AlphaZero.Shared\AlphaZero.Shared.csproj", "{1F3330DF-E05E-4114-86DA-E67CA745B58B}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AlphaZero.Shared", "src\alphazero-api\AlphaZero.Shared\AlphaZero.Shared.csproj", "{1F3330DF-E05E-4114-86DA-E67CA745B58B}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{FBFC60C1-3CDC-4960-86B3-8EB0531B0CE6}"
 	ProjectSection(SolutionItems) = preProject
@@ -21,29 +21,29 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		Directory.Packages.props = Directory.Packages.props
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Aspire.Shared", "src\aspire\Aspire.Shared\Aspire.Shared.csproj", "{C36B1121-9AB0-4315-967E-2E98F2A23858}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Aspire.Shared", "src\alphazero-api\aspire\Aspire.Shared\Aspire.Shared.csproj", "{C36B1121-9AB0-4315-967E-2E98F2A23858}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Courses", "Courses", "{13104521-1933-4E18-91FA-9D61373512FB}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "VideoUploading", "VideoUploading", "{E80F57F8-2B2D-4E6A-8970-A6763942AEA6}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Application", "src\Modules\VideoUploading\Application\Application.csproj", "{AEB75969-91FE-4CDA-9503-6E8F43EF76B1}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Application", "src\alphazero-api\Modules\VideoUploading\Application\Application.csproj", "{AEB75969-91FE-4CDA-9503-6E8F43EF76B1}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Infrastructure", "src\Modules\VideoUploading\Infrastructure\Infrastructure.csproj", "{55CFAAC2-501C-4B81-9D85-E7BC5D1C9E9C}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Infrastructure", "src\alphazero-api\Modules\VideoUploading\Infrastructure\Infrastructure.csproj", "{55CFAAC2-501C-4B81-9D85-E7BC5D1C9E9C}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Domain", "src\Modules\VideoUploading\Domain\Domain.csproj", "{271B073D-0C94-4110-A289-85EF27856380}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Domain", "src\alphazero-api\Modules\VideoUploading\Domain\Domain.csproj", "{271B073D-0C94-4110-A289-85EF27856380}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Presentation", "src\Modules\VideoUploading\Presentation\Presentation.csproj", "{142ACD6A-F12B-464B-B84A-18DC6F36AD54}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Presentation", "src\alphazero-api\Modules\VideoUploading\Presentation\Presentation.csproj", "{142ACD6A-F12B-464B-B84A-18DC6F36AD54}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Application", "src\Modules\Courses\Application\Application.csproj", "{F00F6B22-4158-4C34-B63C-9429C7FCB87F}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Application", "src\alphazero-api\Modules\Courses\Application\Application.csproj", "{F00F6B22-4158-4C34-B63C-9429C7FCB87F}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Infrastructure", "src\Modules\Courses\Infrastructure\Infrastructure.csproj", "{276E9C4B-9DDC-4A39-9706-FB964DAE71C2}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Infrastructure", "src\alphazero-api\Modules\Courses\Infrastructure\Infrastructure.csproj", "{276E9C4B-9DDC-4A39-9706-FB964DAE71C2}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Domain", "src\Modules\Courses\Domain\Domain.csproj", "{96650D9A-1796-42A7-8038-92297078812D}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Domain", "src\alphazero-api\Modules\Courses\Domain\Domain.csproj", "{96650D9A-1796-42A7-8038-92297078812D}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Presentation", "src\Modules\Courses\Presentation\Presentation.csproj", "{5A6E0526-28ED-4CEE-BAB0-AFC737AE467F}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Presentation", "src\alphazero-api\Modules\Courses\Presentation\Presentation.csproj", "{5A6E0526-28ED-4CEE-BAB0-AFC737AE467F}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IntegrationEvents", "src\Modules\VideoUploading\IntegrationEvents\IntegrationEvents.csproj", "{23594DFB-A847-417C-B547-A90D79199A0A}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IntegrationEvents", "src\alphazero-api\Modules\VideoUploading\IntegrationEvents\IntegrationEvents.csproj", "{23594DFB-A847-417C-B547-A90D79199A0A}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{AA01DED2-E727-405C-9550-E2C2B8A892D4}"
 EndProject
@@ -57,13 +57,13 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Courses.UnitTests", "tests\
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Identity", "Identity", "{80DDE3F7-A609-4E4D-BA33-4A08A816E7D9}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Domain", "src\Modules\Identity\Domain\Domain.csproj", "{B445C9F8-C108-8F92-4A4C-61ECE0BEA461}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Domain", "src\alphazero-api\Modules\Identity\Domain\Domain.csproj", "{B445C9F8-C108-8F92-4A4C-61ECE0BEA461}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Application", "src\Modules\Identity\Application\Application.csproj", "{27FD6C57-01F5-EC31-533F-E8026BA9A664}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Application", "src\alphazero-api\Modules\Identity\Application\Application.csproj", "{27FD6C57-01F5-EC31-533F-E8026BA9A664}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Infrastructure", "src\Modules\Identity\Infrastructure\Infrastructure.csproj", "{5D10B582-4350-2160-1EC5-0F3C0A432CB3}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Infrastructure", "src\alphazero-api\Modules\Identity\Infrastructure\Infrastructure.csproj", "{5D10B582-4350-2160-1EC5-0F3C0A432CB3}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Presentation", "src\Modules\Identity\Presentation\Presentation.csproj", "{A3E6CAA0-50A8-5EF5-B226-A16A9928931D}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Presentation", "src\alphazero-api\Modules\Identity\Presentation\Presentation.csproj", "{A3E6CAA0-50A8-5EF5-B226-A16A9928931D}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Identity", "Identity", "{1DA57474-B079-48BB-91A9-58F94F302CDB}"
 EndProject
@@ -73,17 +73,17 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Identity.Tests.Integration"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Library", "Library", "{F942821F-4605-4EDA-9F5E-64BE480005BF}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Domain", "src\Modules\Library\Domain\Domain.csproj", "{E9B2D8C1-7A3F-4B1E-9214-5582967A609A}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Domain", "src\alphazero-api\Modules\Library\Domain\Domain.csproj", "{E9B2D8C1-7A3F-4B1E-9214-5582967A609A}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Application", "src\Modules\Library\Application\Application.csproj", "{71A2E3B4-C5D6-4E7F-8A9B-0C1D2E3F4A5B}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Application", "src\alphazero-api\Modules\Library\Application\Application.csproj", "{71A2E3B4-C5D6-4E7F-8A9B-0C1D2E3F4A5B}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Infrastructure", "src\Modules\Library\Infrastructure\Infrastructure.csproj", "{9B8A7C6D-5E4F-3D2C-1B0A-9876543210FE}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Infrastructure", "src\alphazero-api\Modules\Library\Infrastructure\Infrastructure.csproj", "{9B8A7C6D-5E4F-3D2C-1B0A-9876543210FE}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Presentation", "src\Modules\Library\Presentation\Presentation.csproj", "{8D7E6C5B-4A3F-2E1D-0C9B-8A7B6C5D4E3F}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Presentation", "src\alphazero-api\Modules\Library\Presentation\Presentation.csproj", "{8D7E6C5B-4A3F-2E1D-0C9B-8A7B6C5D4E3F}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IntegrationEvents", "src\Modules\Library\IntegrationEvents\IntegrationEvents.csproj", "{4E2B1A8C-D3F5-4B1E-9214-5582967A609A}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IntegrationEvents", "src\alphazero-api\Modules\Library\IntegrationEvents\IntegrationEvents.csproj", "{4E2B1A8C-D3F5-4B1E-9214-5582967A609A}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IntegrationEvents", "src\Modules\Courses\IntegrationEvents\IntegrationEvents.csproj", "{C1B2D3E4-F5A6-4E7F-8A9B-0C1D2E3F4A5B}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IntegrationEvents", "src\alphazero-api\Modules\Courses\IntegrationEvents\IntegrationEvents.csproj", "{C1B2D3E4-F5A6-4E7F-8A9B-0C1D2E3F4A5B}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Library", "Library", "{AD2975BB-9320-4A5D-968E-8DD16C2D3441}"
 EndProject
@@ -93,27 +93,27 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Library.Tests.Integration",
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Assessments", "Assessments", "{5B655FB5-BC82-1B23-35D9-8C84E650BE0D}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Domain", "src\Modules\Assessments\Domain\Domain.csproj", "{5A6087AC-57F2-4BA8-9343-5BB1687B4B21}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Domain", "src\alphazero-api\Modules\Assessments\Domain\Domain.csproj", "{5A6087AC-57F2-4BA8-9343-5BB1687B4B21}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IntegrationEvents", "src\Modules\Assessments\IntegrationEvents\IntegrationEvents.csproj", "{E7B734AB-D968-4E98-8BCC-83DB1E870AC9}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IntegrationEvents", "src\alphazero-api\Modules\Assessments\IntegrationEvents\IntegrationEvents.csproj", "{E7B734AB-D968-4E98-8BCC-83DB1E870AC9}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Application", "src\Modules\Assessments\Application\Application.csproj", "{17EA7F4B-21D7-4CE9-A93F-694BE9BE7D6E}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Application", "src\alphazero-api\Modules\Assessments\Application\Application.csproj", "{17EA7F4B-21D7-4CE9-A93F-694BE9BE7D6E}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Infrastructure", "src\Modules\Assessments\Infrastructure\Infrastructure.csproj", "{1FD6ED0F-A993-4239-B753-02A359FC9851}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Infrastructure", "src\alphazero-api\Modules\Assessments\Infrastructure\Infrastructure.csproj", "{1FD6ED0F-A993-4239-B753-02A359FC9851}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Presentation", "src\Modules\Assessments\Presentation\Presentation.csproj", "{4BBE66F4-E83A-40E4-84B4-FE0672478735}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Presentation", "src\alphazero-api\Modules\Assessments\Presentation\Presentation.csproj", "{4BBE66F4-E83A-40E4-84B4-FE0672478735}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tenants", "Tenants", "{5DE10B77-85A7-497B-AAE0-E42A6C7786E4}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Presentation", "src\Modules\Tenants\Presentation\Presentation.csproj", "{9EBAD175-4C4D-12F5-12ED-BCAD468D7F15}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Presentation", "src\alphazero-api\Modules\Tenants\Presentation\Presentation.csproj", "{9EBAD175-4C4D-12F5-12ED-BCAD468D7F15}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IntegrationEvents", "src\Modules\Tenants\IntegrationEvents\IntegrationEvents.csproj", "{391A0040-0583-092E-A1FA-B9CB9CD15139}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IntegrationEvents", "src\alphazero-api\Modules\Tenants\IntegrationEvents\IntegrationEvents.csproj", "{391A0040-0583-092E-A1FA-B9CB9CD15139}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Infrastructure", "src\Modules\Tenants\Infrastructure\Infrastructure.csproj", "{3ED66DCA-7D38-2AE5-D8BB-9BDC28E50F84}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Infrastructure", "src\alphazero-api\Modules\Tenants\Infrastructure\Infrastructure.csproj", "{3ED66DCA-7D38-2AE5-D8BB-9BDC28E50F84}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Domain", "src\Modules\Tenants\Domain\Domain.csproj", "{85732FCD-719C-4CB8-0035-F5FDFD02465D}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Domain", "src\alphazero-api\Modules\Tenants\Domain\Domain.csproj", "{85732FCD-719C-4CB8-0035-F5FDFD02465D}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Application", "src\Modules\Tenants\Application\Application.csproj", "{BCE15EB4-7604-3409-041B-FD569CB4B4E8}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Application", "src\alphazero-api\Modules\Tenants\Application\Application.csproj", "{BCE15EB4-7604-3409-041B-FD569CB4B4E8}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Modules", "Modules", "{C85F9375-3F41-C1FB-0DD8-CCD4BE34795D}"
 EndProject

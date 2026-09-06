@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
@@ -21,10 +21,10 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\..\..\src\Modules\Courses\Application\Application.csproj" />
-    <ProjectReference Include="..\..\..\..\src\Modules\Courses\Domain\Domain.csproj" />
-    <ProjectReference Include="..\..\..\..\src\Modules\Courses\Infrastructure\Infrastructure.csproj" />
-    <ProjectReference Include="..\..\..\..\src\Modules\Courses\IntegrationEvents\IntegrationEvents.csproj" />
+    <ProjectReference Include="..\..\..\..\src\alphazero-api\Modules\Courses\Application\Application.csproj" />
+    <ProjectReference Include="..\..\..\..\src\alphazero-api\Modules\Courses\Domain\Domain.csproj" />
+    <ProjectReference Include="..\..\..\..\src\alphazero-api\Modules\Courses\Infrastructure\Infrastructure.csproj" />
+    <ProjectReference Include="..\..\..\..\src\alphazero-api\Modules\Courses\IntegrationEvents\IntegrationEvents.csproj" />
   </ItemGroup>
 
   <ItemGroup>

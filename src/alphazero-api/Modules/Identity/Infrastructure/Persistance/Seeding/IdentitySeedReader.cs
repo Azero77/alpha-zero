@@ -35,8 +35,8 @@ public static class IdentitySeedReader
                 }
                 current = Directory.GetParent(current)?.FullName;
             }
-            managedPoliciesPath = Path.Combine(basePath, "src", "Modules", "Identity", "Domain", "SeedData", "ManagedPolicies.json");
-            principalTemplatesPath = Path.Combine(basePath, "src", "Modules", "Identity", "Domain", "SeedData", "PrincipalTemplates.json");
+            managedPoliciesPath = Path.Combine(basePath, "src", "alphazero-api", "Modules", "Identity", "Domain", "SeedData", "ManagedPolicies.json");
+            principalTemplatesPath = Path.Combine(basePath, "src", "alphazero-api", "Modules", "Identity", "Domain", "SeedData", "PrincipalTemplates.json");
         }
 
         var managedPoliciesJson = File.ReadAllText(managedPoliciesPath);

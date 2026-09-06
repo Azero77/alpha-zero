@@ -12,10 +12,10 @@ EXPOSE 8081
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
-COPY ["src/AlphaZero.API/AlphaZero.API.csproj", "src/AlphaZero.API/"]
-RUN dotnet restore "./src/AlphaZero.API/AlphaZero.API.csproj"
+COPY ["src/alphazero-api/AlphaZero.API/AlphaZero.API.csproj", "src/alphazero-api/AlphaZero.API/"]
+RUN dotnet restore "./src/alphazero-api/AlphaZero.API/AlphaZero.API.csproj"
 COPY . .
-WORKDIR "/src/src/AlphaZero.API"
+WORKDIR "/src/src/alphazero-api/AlphaZero.API"
 RUN dotnet build "./AlphaZero.API.csproj" -c $BUILD_CONFIGURATION -o /app/build
 
 # This stage is used to publish the service project to be copied to the final stage
