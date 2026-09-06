@@ -1,5 +1,5 @@
 {
-  "name": "@repo/lms-types",
+  "name": "@repo/lms-api-client",
   "version": "0.0.0",
   "private": true,
   "main": "./src/index.ts",
@@ -9,8 +9,8 @@
     "typecheck": "tsc --noEmit --emitDeclarationOnly false"
   },
   "dependencies": {
-    "openapi-fetch": "^0.17.0",
-    "zod": "^4.3.6"
+    "@repo/lms-types": "workspace:*",
+    "ky": "^1.7.5"
   },
   "devDependencies": {
     "@repo/typescript-config": "workspace:*",
