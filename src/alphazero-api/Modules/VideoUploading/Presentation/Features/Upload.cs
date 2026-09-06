@@ -18,8 +18,8 @@ public static class Upload
         string contentType,
         string title,
         string? description,
-        VideoTranscodingMetehod? transcodingMethod,
-        VideoEncryptionMethod? encryptionMethod,
+        string? transcodingMethod,
+        string? encryptionMethod,
         bool? generateCustomThumbnailUrl,
         string? targetResourceArn);
     public record Response(
@@ -44,16 +44,13 @@ public static class Upload
 
         private async Task<IResult> Handler(Request request, VideoUploadingModule module, HttpContext context)
         {
-            var transcodingMethod = request.transcodingMethod ?? VideoTranscodingMetehod.FFMPEG;
-            var encryptionMethod = request.encryptionMethod ?? VideoEncryptionMethod.ClearKey;
-
             var command = new UploadCommand(
                 request.fileName,
                 request.contentType,
                 request.title,
                 request.description,
-                transcodingMethod,
-                encryptionMethod,
+                request.transcodingMethod,
+                request.encryptionMethod,
                 request.generateCustomThumbnailUrl ?? false,
                 request.targetResourceArn);
             var response = await module.Send<UploadCommand, ErrorOr<UploadCommandResponse>>(command);

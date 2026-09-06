@@ -1,5 +1,4 @@
 using AlphaZero.Modules.Assessments.Application.Assessments.Commands.Create;
-using AlphaZero.Modules.Assessments.Domain.Enums;
 using AlphaZero.Modules.Assessments.Domain.Models.Content;
 using AlphaZero.Shared.Authorization;
 using AlphaZero.Shared.Domain;
@@ -13,7 +12,7 @@ public record CreateAssessmentRequest
 {
     public string Title { get; init; } = default!;
     public string? Description { get; init; }
-    public AssessmentType Type { get; init; }
+    public string Type { get; init; } = default!;
     public decimal PassingScore { get; init; }
     public AssessmentContent? InitialContent { get; init; }
 }

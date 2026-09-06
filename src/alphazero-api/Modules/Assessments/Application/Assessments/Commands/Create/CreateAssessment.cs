@@ -15,7 +15,7 @@ namespace AlphaZero.Modules.Assessments.Application.Assessments.Commands.Create;
 public record CreateAssessmentCommand(
     string Title, 
     string? Description, 
-    AssessmentType Type, 
+    string Type, 
     decimal PassingScore,
     AssessmentContent? InitialContent = null) : ICommand<Guid>;
 
@@ -25,6 +25,10 @@ public class CreateAssessmentCommandValidator : AbstractValidator<CreateAssessme
     {
         RuleFor(x => x.Title).NotEmpty().MaximumLength(256);
         RuleFor(x => x.PassingScore).GreaterThanOrEqualTo(0);
+        RuleFor(x => x.Type)
+            .NotEmpty()
+            .IsEnumName(typeof(AssessmentType), caseSensitive: false)
+            .WithMessage("Invalid assessment type.");
     }
 }
 
@@ -53,13 +57,15 @@ public sealed class CreateAssessmentCommandHandler : IRequestHandler<CreateAsses
         var tenantId = _tenantProvider.GetTenant();
         if (tenantId is null) return Error.Unauthorized("Tenant.NotFound", "Tenant not found.");
 
+        var assessmentType = Enum.Parse<AssessmentType>(request.Type, ignoreCase: true);
+
         var assessmentId = Guid.NewGuid();
         var assessmentResult = Assessment.Create(
             assessmentId, 
             tenantId.Value, 
             request.Title, 
             request.Description, 
-            request.Type, 
+            assessmentType, 
             request.PassingScore);
 
         if (assessmentResult.IsError) return assessmentResult.Errors;
@@ -68,11 +74,11 @@ public sealed class CreateAssessmentCommandHandler : IRequestHandler<CreateAsses
         
         if (request.InitialContent != null)
         {
-            assessment.UpdateContent(request.InitialContent,_assestmentValidtorFactory.CreateValidator(request.Type));
+            assessment.UpdateContent(request.InitialContent, _assestmentValidtorFactory.CreateValidator(assessmentType));
         }
 
         _assessmentRepository.Add(assessment);
-        _logger.LogInformation("Assessment {AssessmentId} created of type {Type}.", assessmentId, request.Type);
+        _logger.LogInformation("Assessment {AssessmentId} created of type {Type}.", assessmentId, assessmentType);
 
         return assessmentId;
     }

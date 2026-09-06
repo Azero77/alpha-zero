@@ -18,8 +18,8 @@ public record UploadCommand(
     string contentType, 
     string title, 
     string? description, 
-    VideoTranscodingMetehod VideoTranscodingMetehod, 
-    VideoEncryptionMethod VideoEncryptionMethod = VideoEncryptionMethod.None,
+    string? VideoTranscodingMetehod = null, 
+    string? VideoEncryptionMethod = null,
     bool generateCustomThumbnailUrl = false,
     string? TargetResourceArn = null): ICommand<UploadCommandResponse>;
 
@@ -40,6 +40,20 @@ public class UploadCommandValidator : AbstractValidator<UploadCommand>
         RuleFor(x => x.title)
             .NotEmpty()
             .MaximumLength(255);
+
+        When(x => !string.IsNullOrEmpty(x.VideoTranscodingMetehod), () =>
+        {
+            RuleFor(x => x.VideoTranscodingMetehod)
+                .IsEnumName(typeof(VideoTranscodingMetehod), caseSensitive: false)
+                .WithMessage("Invalid video transcoding method.");
+        });
+
+        When(x => !string.IsNullOrEmpty(x.VideoEncryptionMethod), () =>
+        {
+            RuleFor(x => x.VideoEncryptionMethod)
+                .IsEnumName(typeof(VideoEncryptionMethod), caseSensitive: false)
+                .WithMessage("Invalid video encryption method.");
+        });
     }
 }
 
@@ -49,7 +63,7 @@ public record UploadCommandResponse(
     string Key, 
     string PreSignedUrl, 
     string TranscodingMethod, 
-    string EncryptionMethod,
+    string EncryptionMethod, 
     Dictionary<string, string> Headers,
     string? ThumbnailKey = null,
     string? ThumbnailPreSignedUrl = null,
@@ -62,6 +76,14 @@ public sealed class UploadCommandHandler(IUploadService uploadService, IModuleBu
         Guid? tenantId = tenantProvider.GetTenant();
         if (tenantId is null) return Error.Failure("Tenant.NotFound", "Tenant not found in context.");
 
+        var transcodingMethod = !string.IsNullOrWhiteSpace(request.VideoTranscodingMetehod) && Enum.TryParse<VideoTranscodingMetehod>(request.VideoTranscodingMetehod, ignoreCase: true, out var parsedTranscoding)
+            ? parsedTranscoding
+            : VideoTranscodingMetehod.FFMPEG;
+
+        var encryptionMethod = !string.IsNullOrWhiteSpace(request.VideoEncryptionMethod) && Enum.TryParse<VideoEncryptionMethod>(request.VideoEncryptionMethod, ignoreCase: true, out var parsedEncryption)
+            ? parsedEncryption
+            : VideoEncryptionMethod.ClearKey;
+
         Guid videoId = Guid.NewGuid();
         var response = await uploadService.UploadFile(request.fileName, request.contentType, new Dictionary<string, string>()
         {
@@ -69,8 +91,8 @@ public sealed class UploadCommandHandler(IUploadService uploadService, IModuleBu
             { "TenantId", tenantId.Value.ToString() },
             { "Title", request.title },
             { "Description", request.description ?? string.Empty },
-            { "VideoTranscodingMetehod", request.VideoTranscodingMetehod.ToString() },
-            { "VideoEncryptionMethod", request.VideoEncryptionMethod.ToString() },
+            { "VideoTranscodingMetehod", transcodingMethod.ToString() },
+            { "VideoEncryptionMethod", encryptionMethod.ToString() },
             { "TargetResourceArn", request.TargetResourceArn ?? string.Empty }
         });
         if (response.IsError) return response.Errors;
@@ -100,7 +122,7 @@ public sealed class UploadCommandHandler(IUploadService uploadService, IModuleBu
             videoId, 
             tenantId.Value, 
             clock.Now, 
-            request.VideoEncryptionMethod.ToString(),
+            encryptionMethod.ToString(),
             thumbnailKey,
             request.TargetResourceArn));
 
@@ -108,9 +130,9 @@ public sealed class UploadCommandHandler(IUploadService uploadService, IModuleBu
             videoId, 
             tenantId.Value, 
             response.Value.key, 
-            response.Value.presignedUrl,
-            request.VideoTranscodingMetehod.ToString(),
-            request.VideoEncryptionMethod.ToString(),
+            response.Value.presignedUrl, 
+            transcodingMethod.ToString(),
+            encryptionMethod.ToString(),
             response.Value.headers,
             thumbnailKey,
             thumbnailPreSignedUrl,

@@ -14,7 +14,7 @@ namespace AlphaZero.Modules.Identity.Application.Principals.Commands.CreatePrinc
 public record CreatePrincipalCommand(
     string Username, 
     string Password,
-    PrincipalType PrincipalType, 
+    string PrincipalType, 
     string? PrincipalScope, 
     string Name) : ICommand<Guid>;
 
@@ -25,6 +25,10 @@ public class CreatePrincipalCommandValidator : AbstractValidator<CreatePrincipal
         RuleFor(x => x.Username).NotEmpty();
         RuleFor(x => x.Password).NotEmpty().MinimumLength(8);
         RuleFor(x => x.Name).NotEmpty().MaximumLength(200);
+        RuleFor(x => x.PrincipalType)
+            .NotEmpty()
+            .IsEnumName(typeof(PrincipalType), caseSensitive: false)
+            .WithMessage("Invalid principal type.");
     }
 }
 
@@ -58,14 +62,15 @@ public sealed class CreatePrincipalCommandHandler : IRequestHandler<CreatePrinci
         }
 
         var passwordHash = _passwordHasher.HashPassword(request.Password);
+        var principalType = Enum.Parse<PrincipalType>(request.PrincipalType, ignoreCase: true);
 
         var principalId = Guid.NewGuid();
         var principalResult = Principal.Create(
             principalId, 
             request.Username, 
-            passwordHash,
-            request.Name,
-            request.PrincipalType, 
+            passwordHash, 
+            request.Name, 
+            principalType, 
             request.PrincipalScope, 
             tenantId.Value);
 

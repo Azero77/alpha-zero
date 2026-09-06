@@ -8,13 +8,28 @@ using ErrorOr;
 using MediatR;
 using Microsoft.Extensions.Caching.Hybrid;
 
+using FluentValidation;
+
 namespace AlphaZero.Modules.Identity.Application.Users.Commands.RegisterDevice;
 
 public record RegisterDeviceCommand(
     Guid TenantUserId,
     string DeviceName,
-    DevicePlatform Platform,
+    string Platform,
     string PublicKey) : ICommand<Guid>;
+
+public class RegisterDeviceCommandValidator : AbstractValidator<RegisterDeviceCommand>
+{
+    public RegisterDeviceCommandValidator()
+    {
+        RuleFor(x => x.DeviceName).NotEmpty().MaximumLength(100);
+        RuleFor(x => x.PublicKey).NotEmpty();
+        RuleFor(x => x.Platform)
+            .NotEmpty()
+            .IsEnumName(typeof(DevicePlatform), caseSensitive: false)
+            .WithMessage("Invalid device platform.");
+    }
+}
 
 public class RegisterDeviceCommandHandler(
     IRepository<TenantUser> userRepository,
@@ -26,7 +41,8 @@ public class RegisterDeviceCommandHandler(
         var user = await userRepository.GetById(request.TenantUserId);
         if (user is null) return Error.NotFound("User.NotFound");
 
-        var result = user.RegisterDevice(request.DeviceName, request.Platform, request.PublicKey, clock.Now);
+        var platform = Enum.Parse<DevicePlatform>(request.Platform, ignoreCase: true);
+        var result = user.RegisterDevice(request.DeviceName, platform, request.PublicKey, clock.Now);
         if (result.IsError) return result.Errors;
 
         var device = user.Devices.Last(); // Newly added device

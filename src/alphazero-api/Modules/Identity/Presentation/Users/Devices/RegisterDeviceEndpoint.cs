@@ -9,7 +9,7 @@ namespace AlphaZero.Modules.Identity.Presentation.Users.Devices;
 public record RegisterDeviceRequest
 {
     public string DeviceName { get; init; } = default!;
-    public DevicePlatform Platform { get; init; }
+    public string Platform { get; init; } = default!;
     public string PublicKey { get; init; } = default!;
 }
 

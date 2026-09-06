@@ -21,7 +21,7 @@ public class CreateAssessmentRequestHandler(IAssessmentsModule module) : IConsum
 
             return;
         }
-        var request = new CreateAssessmentCommand(context.Message.Title,context.Message.Description,assessmentType, context.Message.PassingScore);
+        var request = new CreateAssessmentCommand(context.Message.Title, context.Message.Description, context.Message.Type, context.Message.PassingScore);
 
         var response = await module.Send(request);
         if(response.IsError)

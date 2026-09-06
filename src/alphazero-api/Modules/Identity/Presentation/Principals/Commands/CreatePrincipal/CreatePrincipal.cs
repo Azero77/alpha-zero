@@ -1,5 +1,4 @@
 using AlphaZero.Modules.Identity.Application.Principals.Commands.CreatePrincipal;
-using AlphaZero.Modules.Identity.Domain.Models.Principals;
 using AlphaZero.Shared.Authorization;
 using AlphaZero.Shared.Domain;
 using AlphaZero.Shared.Presentation.Extensions;
@@ -13,7 +12,7 @@ public record CreatePrincipalRequest
 {
     public string Username { get; init; } = default!;
     public string Password { get; init; } = default!;
-    public PrincipalType PrincipalType { get; init; }
+    public string PrincipalType { get; init; } = default!;
     public string? PrincipalScope { get; init; }
     public string Name { get; init; } = default!;
 }
