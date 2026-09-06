@@ -4,5696 +4,5697 @@
  */
 
 export interface paths {
-    "/identity/users/devices": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Registers a new device for the user
-         * @description Registers a client device public key for secure offline playback.
-         */
-        post: operations["AlphaZeroModulesIdentityPresentationUsersDevicesRegisterDeviceEndpoint"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+  "/api/video-uploading/debug/videos": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/identity/users/devices/main": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Sets the user's primary device
-         * @description Updates the user's main device for playback security.
-         */
-        post: operations["AlphaZeroModulesIdentityPresentationUsersDevicesSetMainDeviceEndpoint"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    get: operations["GetApiVideoUploadingDebugVideos"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/video-uploading/debug/videos/{id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/identity/resources/{resourceType}/{resourceId}/principals": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Gets principals assigned to a resource
-         * @description Retrieves a list of principals that have direct or indirect permissions on the resource.
-         */
-        get: operations["AlphaZeroModulesIdentityPresentationPrincipalsQueriesGetPrincipalsByResourceGetPrincipalsByResourceEndpoint"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    get: operations["GetApiVideoUploadingDebugVideos2"];
+    put?: never;
+    post?: never;
+    delete: operations["DeleteApiVideoUploadingDebugVideos"];
+    options?: never;
+    head?: never;
+    patch: operations["PatchApiVideoUploadingDebugVideos"];
+    trace?: never;
+  };
+  "/api/video-uploading/debug/videos/{id}/state": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/identity/principals/{principalId}/policies": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Gets policies for a principal
-         * @description Retrieves both inline and managed policies associated with the specified principal.
-         */
-        get: operations["AlphaZeroModulesIdentityPresentationPrincipalsQueriesGetPrincipalPoliciesGetPrincipalPoliciesEndpoint"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    get: operations["GetApiVideoUploadingDebugVideosState"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/video-uploading/upload": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/identity/principals/{principalId}/policies/managed/{managedPolicyId}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Attaches a managed policy to a principal
-         * @description Assigns an existing managed policy to an IAM principal.
-         */
-        post: operations["AlphaZeroModulesIdentityPresentationPrincipalsCommandsAttachManagedPolicyAttachManagedPolicyEndpoint"];
-        /**
-         * Detaches a managed policy from a principal
-         * @description Removes a managed policy association from an IAM principal.
-         */
-        delete: operations["AlphaZeroModulesIdentityPresentationPrincipalsCommandsDetachManagedPolicyDetachManagedPolicyEndpoint"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    get?: never;
+    put?: never;
+    post: operations["PostApiVideoUploadingUpload"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/video/{videoId}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/identity/principals/{principalId}/policies/inline/{policyId}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        /**
-         * Detaches an inline policy from a principal
-         * @description Removes an inline policy from an IAM principal.
-         */
-        delete: operations["AlphaZeroModulesIdentityPresentationPrincipalsCommandsDetachInlinePolicyDetachInlinePolicyEndpoint"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    get: operations["GetApiVideo"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/video/keys/{videoId}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/identity/principals": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Creates a new principal
-         * @description Creates an IAM principal (User, Role, or System) within the tenant.
-         */
-        post: operations["AlphaZeroModulesIdentityPresentationPrincipalsCommandsCreatePrincipalCreatePrincipalEndpoint"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    /**
+     * Retrieves decryption key for an encrypted video
+     * @description Returns the binary 16-byte AES decryption key for HLS playback.
+     */
+    get: operations["AlphaZeroModulesVideoUploadingPresentationFeaturesGetVideoKeyEndpoint"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/assessments": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/identity/principals/{principalId}/policies/inline": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Attaches an inline policy to a principal
-         * @description Appends a custom inline policy to an IAM principal.
-         */
-        post: operations["AlphaZeroModulesIdentityPresentationPrincipalsCommandsAttachInlinePolicyAttachInlinePolicyEndpoint"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    /**
+     * Lists all assessments with pagination
+     * @description Returns a paged list of assessments for the current tenant.
+     */
+    get: operations["AlphaZeroModulesAssessmentsPresentationEndpointsAssessmentsListListAssessmentsEndpoint"];
+    put?: never;
+    /**
+     * Creates a new assessment
+     * @description Initializes an assessment in Draft status with metadata and optional initial content.
+     */
+    post: operations["AlphaZeroModulesAssessmentsPresentationEndpointsAssessmentsCreateCreateAssessmentEndpoint"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/assessments/{assessmentId}/content": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/identity/policies/managed/{policyId}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        /**
-         * Deletes a managed policy
-         * @description Permanently deletes a managed IAM policy.
-         */
-        delete: operations["AlphaZeroModulesIdentityPresentationPoliciesCommandsDeleteManagedPolicyDeleteManagedPolicyEndpoint"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    get?: never;
+    /**
+     * Updates the content of an existing assessment
+     * @description Creates a new content version snapshot for the assessment.
+     */
+    put: operations["AlphaZeroModulesAssessmentsPresentationEndpointsAssessmentsUpdateContentUpdateAssessmentContentEndpoint"];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/assessments/{id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/identity/policies/managed": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Creates a managed policy
-         * @description Creates a reusable IAM policy with permission statements.
-         */
-        post: operations["AlphaZeroModulesIdentityPresentationPoliciesCommandsCreateManagedPolicyCreateManagedPolicyEndpoint"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    /**
+     * Retrieves a specific assessment by ID
+     * @description Returns full details of an assessment including its current content snapshot or a specific version.
+     */
+    get: operations["AlphaZeroModulesAssessmentsPresentationEndpointsAssessmentsGetGetAssessmentEndpoint"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/assessments/submissions": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/identity/auth/register-student": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Registers a new student
-         * @description Creates a student principal associated with a tenant.
-         */
-        post: operations["AlphaZeroModulesIdentityPresentationAuthCommandsRegisterStudentRegisterStudentEndpoint"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    /**
+     * Lists assessment submissions
+     * @description Retrieves a paginated list of submissions optionally filtered by assessment or status.
+     */
+    get: operations["AlphaZeroModulesAssessmentsPresentationEndpointsSubmissionsListListSubmissionsEndpoint"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/assessments/submissions/{submissionId}/submit": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/identity/auth/login-principal": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Authenticates a principal
-         * @description Validates principal credentials and returns an access token.
-         */
-        post: operations["AlphaZeroModulesIdentityPresentationAuthCommandsLoginPrincipalLoginPrincipalEndpoint"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    get?: never;
+    put?: never;
+    /**
+     * Submits responses for an assessment
+     * @description Submits a student's responses, triggers automated grading, and marks for manual review if subjective questions are present.
+     */
+    post: operations["AlphaZeroModulesAssessmentsPresentationEndpointsSubmissionsSubmitSubmitAssessmentEndpoint"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/courses": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/identity/auth/exchange-tenant-token": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Exchanges global IDP token for a tenant-scoped access token
-         * @description Authenticates an IDP user against a tenant, registers or verifies their device, and returns a tenant token.
-         */
-        post: operations["AlphaZeroModulesIdentityPresentationAuthCommandsLoginAsTenantUserLoginAsTenantUserEndpoint"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    /**
+     * Lists all courses with pagination
+     * @description Returns a paged list of courses for the current tenant. Optionally filterable by subject.
+     */
+    get: operations["AlphaZeroModulesCoursesPresentationCoursesListListCoursesEndpoint"];
+    put?: never;
+    /**
+     * Initializes a new course
+     * @description Creates a course in Draft status under a specific subject.
+     */
+    post: operations["AlphaZeroModulesCoursesPresentationCoursesCreateCreateCourseEndpoint"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/courses/{courseId}/analytics": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/video/keys/{videoId}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Retrieves decryption key for an encrypted video
-         * @description Returns the binary 16-byte AES decryption key for HLS playback.
-         */
-        get: operations["AlphaZeroModulesVideoUploadingPresentationFeaturesGetVideoKeyEndpoint"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    /**
+     * Retrieves analytics for a course
+     * @description Returns total enrollments, average completion rate, and per-item completion stats.
+     */
+    get: operations["AlphaZeroModulesCoursesPresentationAnalyticsGetCourseAnalyticsEndpoint"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/courses/{courseId}/approve": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/tenants/{id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Gets tenant details by ID
-         * @description Retrieves configuration and metadata for the specified academy tenant.
-         */
-        get: operations["AlphaZeroModulesTenantsPresentationEndpointsGetTenantGetTenantEndpoint"];
-        /**
-         * Updates tenant details
-         * @description Updates the name, logo, or theme colors of an academy tenant.
-         */
-        put: operations["AlphaZeroModulesTenantsPresentationEndpointsUpdateTenantUpdateTenantEndpoint"];
-        post?: never;
-        /**
-         * Deletes an academy tenant
-         * @description Removes an academy tenant from the platform.
-         */
-        delete: operations["AlphaZeroModulesTenantsPresentationEndpointsDeleteTenantDeleteTenantEndpoint"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    get?: never;
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    /**
+     * Approves a course under review
+     * @description Transitions course status from UnderReview to Approved.
+     */
+    patch: operations["AlphaZeroModulesCoursesPresentationCoursesStateApproveCourseEndpoint"];
+    trace?: never;
+  };
+  "/courses/{courseId}/plans": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/tenants/lookup": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Looks up tenant by subdomain
-         * @description Publicly resolves academy branding and metadata based on the subdomain.
-         */
-        get: operations["AlphaZeroModulesTenantsPresentationEndpointsLookupTenantLookupTenantEndpoint"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    get?: never;
+    put?: never;
+    /**
+     * Adds an access plan to a course
+     * @description Creates a new plan option for accessing the course.
+     */
+    post: operations["AlphaZeroModulesCoursesPresentationCoursesPlansAddPlanAddPlanEndpoint"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/courses/{courseId}/plans/{planId}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/tenants": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Lists academy tenants
-         * @description Retrieves a paginated list of registered academy tenants.
-         */
-        get: operations["AlphaZeroModulesTenantsPresentationEndpointsListTenantsListTenantsEndpoint"];
-        put?: never;
-        /**
-         * Creates a new academy tenant
-         * @description Provisions an isolated tenant/academy instance with its own subdomain and branding.
-         */
-        post: operations["AlphaZeroModulesTenantsPresentationEndpointsCreateTenantCreateTenantEndpoint"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    get?: never;
+    /**
+     * Updates an access plan for a course
+     * @description Updates the plan name or associated principal for accessing the course.
+     */
+    put: operations["AlphaZeroModulesCoursesPresentationCoursesPlansUpdatePlanUpdatePlanEndpoint"];
+    post?: never;
+    /**
+     * Removes an access plan from a course
+     * @description Deletes an enrollment plan option from the specified course.
+     */
+    delete: operations["AlphaZeroModulesCoursesPresentationCoursesPlansRemovePlanRemovePlanEndpoint"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/courses/{courseId}/publish": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/assessments/submissions/{submissionId}/submit": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Submits responses for an assessment
-         * @description Submits a student's responses, triggers automated grading, and marks for manual review if subjective questions are present.
-         */
-        post: operations["AlphaZeroModulesAssessmentsPresentationEndpointsSubmissionsSubmitSubmitAssessmentEndpoint"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    get?: never;
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    /**
+     * Publishes an approved course
+     * @description Transitions course status from Approved to Published, making it discoverable and enrollable.
+     */
+    patch: operations["AlphaZeroModulesCoursesPresentationCoursesStatePublishCourseEndpoint"];
+    trace?: never;
+  };
+  "/courses/{courseId}/reject": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/assessments/submissions": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Lists assessment submissions
-         * @description Retrieves a paginated list of submissions optionally filtered by assessment or status.
-         */
-        get: operations["AlphaZeroModulesAssessmentsPresentationEndpointsSubmissionsListListSubmissionsEndpoint"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    get?: never;
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    /**
+     * Rejects a course under review
+     * @description Transitions course status from UnderReview back to Draft with a specified rejection reason.
+     */
+    patch: operations["AlphaZeroModulesCoursesPresentationCoursesStateRejectCourseEndpoint"];
+    trace?: never;
+  };
+  "/courses/{courseId}/review": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/assessments/{assessmentId}/content": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        /**
-         * Updates the content of an existing assessment
-         * @description Creates a new content version snapshot for the assessment.
-         */
-        put: operations["AlphaZeroModulesAssessmentsPresentationEndpointsAssessmentsUpdateContentUpdateAssessmentContentEndpoint"];
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    get?: never;
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    /**
+     * Submits a course for administrative review
+     * @description Transitions course status from Draft to UnderReview.
+     */
+    patch: operations["AlphaZeroModulesCoursesPresentationCoursesStateSubmitForReviewEndpoint"];
+    trace?: never;
+  };
+  "/courses/{courseId}/sections": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/assessments": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Lists all assessments with pagination
-         * @description Returns a paged list of assessments for the current tenant.
-         */
-        get: operations["AlphaZeroModulesAssessmentsPresentationEndpointsAssessmentsListListAssessmentsEndpoint"];
-        put?: never;
-        /**
-         * Creates a new assessment
-         * @description Initializes an assessment in Draft status with metadata and optional initial content.
-         */
-        post: operations["AlphaZeroModulesAssessmentsPresentationEndpointsAssessmentsCreateCreateAssessmentEndpoint"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    get?: never;
+    put?: never;
+    /**
+     * Adds a curriculum section to a course
+     * @description Appends a new numbered section to the specified course.
+     */
+    post: operations["AlphaZeroModulesCoursesPresentationCoursesAddSectionAddSectionEndpoint"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/courses/{courseId}/sections/{sectionId}/assessments": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/assessments/{id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Retrieves a specific assessment by ID
-         * @description Returns full details of an assessment including its current content snapshot or a specific version.
-         */
-        get: operations["AlphaZeroModulesAssessmentsPresentationEndpointsAssessmentsGetGetAssessmentEndpoint"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    get?: never;
+    put?: never;
+    /**
+     * Adds an assessment to a course section
+     * @description Creates an assessment item within the specified course and section.
+     */
+    post: operations["AlphaZeroModulesCoursesPresentationCoursesAddItemAddAssessmentEndpoint"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/courses/{courseId}/sections/{sectionId}/lessons": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/courses/enrollements/{enrollmentId}/complete": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Marks a course item as completed
-         * @description Updates the student's progress bitmask for the specified item bit index.
-         */
-        post: operations["AlphaZeroModulesIdentityPresentationEnrollementsCompleteItemCompleteItemEndpoint"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    get?: never;
+    put?: never;
+    /**
+     * Adds a video lesson to a course section
+     * @description Appends a lesson curriculum item linked to a video.
+     */
+    post: operations["AlphaZeroModulesCoursesPresentationCoursesAddItemAddLessonEndpoint"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/courses/{courseId}/sections/{sectionId}/reorder": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/courses/subjects": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Lists all subjects with pagination
-         * @description Returns a paged list of educational subjects for the current tenant.
-         */
-        get: operations["AlphaZeroModulesCoursesPresentationSubjectsListListSubjectsEndpoint"];
-        put?: never;
-        /**
-         * Creates a new educational subject
-         * @description Initializes a subject category (e.g., Physics, Chemistry) for the current tenant.
-         */
-        post: operations["AlphaZeroModulesCoursesPresentationSubjectsCreateCreateSubjectEndpoint"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    get?: never;
+    put?: never;
+    /**
+     * Reorders curriculum items in a section
+     * @description Updates the sequence order of lessons/quizzes within a specific course section.
+     */
+    post: operations["AlphaZeroModulesCoursesPresentationCoursesReorderItemsReorderItemsEndpoint"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/courses/{courseId}/sections/reorder": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/courses/subjects/{id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Retrieves a subject by ID
-         * @description Returns the details of a specific subject category.
-         */
-        get: operations["AlphaZeroModulesCoursesPresentationSubjectsGetGetSubjectEndpoint"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    get?: never;
+    put?: never;
+    /**
+     * Reorders sections within a course
+     * @description Updates the sequence order of curriculum sections for a draft course.
+     */
+    post: operations["AlphaZeroModulesCoursesPresentationCoursesReorderSectionsReorderSectionsEndpoint"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/courses/{courseId}/students": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/courses/enrollments/{id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Retrieves enrollment details
-         * @description Returns the student enrollment details including completion percentage and status.
-         */
-        get: operations["AlphaZeroModulesCoursesPresentationEnrollementsGetGetEnrollementEndpoint"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    /**
+     * Lists student progress for a course
+     * @description Returns a paginated list of enrollments and their completion percentages.
+     */
+    get: operations["AlphaZeroModulesCoursesPresentationAnalyticsListStudentProgressEndpoint"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/courses/{id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/courses/enroll": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Enrolls a student in a course
-         * @description Creates a new enrollment record and initializes the progress bitmask for the student.
-         */
-        post: operations["AlphaZeroModulesCoursesPresentationEnrollementsEnrollEnrollInCourseEndpoint"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    /**
+     * Retrieves a course by its ID
+     * @description Returns the complete structure of a course, including all sections, lessons, and assessments.
+     */
+    get: operations["AlphaZeroModulesCoursesPresentationCoursesGetGetCourseEndpoint"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/courses/dashboard/{studentId}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/courses/dashboard/{studentId}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Retrieves student's learning dashboard across all academies
-         * @description Returns a list of all active course enrollments for the student, grouped by the academy (tenant) they belong to.
-         */
-        get: operations["AlphaZeroModulesCoursesPresentationEnrollementsDashboardGetStudentDashboardEndpoint"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    /**
+     * Retrieves student's learning dashboard across all academies
+     * @description Returns a list of all active course enrollments for the student, grouped by the academy (tenant) they belong to.
+     */
+    get: operations["AlphaZeroModulesCoursesPresentationEnrollementsDashboardGetStudentDashboardEndpoint"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/courses/enroll": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/courses/{courseId}/approve": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        /**
-         * Approves a course under review
-         * @description Transitions course status from UnderReview to Approved.
-         */
-        patch: operations["AlphaZeroModulesCoursesPresentationCoursesStateApproveCourseEndpoint"];
-        trace?: never;
+    get?: never;
+    put?: never;
+    /**
+     * Enrolls a student in a course
+     * @description Creates a new enrollment record and initializes the progress bitmask for the student.
+     */
+    post: operations["AlphaZeroModulesCoursesPresentationEnrollementsEnrollEnrollInCourseEndpoint"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/courses/enrollements/{enrollmentId}/complete": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/courses/{courseId}/publish": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        /**
-         * Publishes an approved course
-         * @description Transitions course status from Approved to Published, making it discoverable and enrollable.
-         */
-        patch: operations["AlphaZeroModulesCoursesPresentationCoursesStatePublishCourseEndpoint"];
-        trace?: never;
+    get?: never;
+    put?: never;
+    /**
+     * Marks a course item as completed
+     * @description Updates the student's progress bitmask for the specified item bit index.
+     */
+    post: operations["AlphaZeroModulesIdentityPresentationEnrollementsCompleteItemCompleteItemEndpoint"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/courses/enrollments/{id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/courses/{courseId}/reject": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        /**
-         * Rejects a course under review
-         * @description Transitions course status from UnderReview back to Draft with a specified rejection reason.
-         */
-        patch: operations["AlphaZeroModulesCoursesPresentationCoursesStateRejectCourseEndpoint"];
-        trace?: never;
+    /**
+     * Retrieves enrollment details
+     * @description Returns the student enrollment details including completion percentage and status.
+     */
+    get: operations["AlphaZeroModulesCoursesPresentationEnrollementsGetGetEnrollementEndpoint"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/courses/subjects": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/courses/{courseId}/review": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        /**
-         * Submits a course for administrative review
-         * @description Transitions course status from Draft to UnderReview.
-         */
-        patch: operations["AlphaZeroModulesCoursesPresentationCoursesStateSubmitForReviewEndpoint"];
-        trace?: never;
+    /**
+     * Lists all subjects with pagination
+     * @description Returns a paged list of educational subjects for the current tenant.
+     */
+    get: operations["AlphaZeroModulesCoursesPresentationSubjectsListListSubjectsEndpoint"];
+    put?: never;
+    /**
+     * Creates a new educational subject
+     * @description Initializes a subject category (e.g., Physics, Chemistry) for the current tenant.
+     */
+    post: operations["AlphaZeroModulesCoursesPresentationSubjectsCreateCreateSubjectEndpoint"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/courses/subjects/{id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/courses/{courseId}/sections/reorder": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Reorders sections within a course
-         * @description Updates the sequence order of curriculum sections for a draft course.
-         */
-        post: operations["AlphaZeroModulesCoursesPresentationCoursesReorderSectionsReorderSectionsEndpoint"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    /**
+     * Retrieves a subject by ID
+     * @description Returns the details of a specific subject category.
+     */
+    get: operations["AlphaZeroModulesCoursesPresentationSubjectsGetGetSubjectEndpoint"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/identity/auth/exchange-tenant-token": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/courses/{courseId}/sections/{sectionId}/reorder": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Reorders curriculum items in a section
-         * @description Updates the sequence order of lessons/quizzes within a specific course section.
-         */
-        post: operations["AlphaZeroModulesCoursesPresentationCoursesReorderItemsReorderItemsEndpoint"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    get?: never;
+    put?: never;
+    /**
+     * Exchanges global IDP token for a tenant-scoped access token
+     * @description Authenticates an IDP user against a tenant, registers or verifies their device, and returns a tenant token.
+     */
+    post: operations["AlphaZeroModulesIdentityPresentationAuthCommandsLoginAsTenantUserLoginAsTenantUserEndpoint"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/identity/auth/login-principal": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/courses/{courseId}/plans/{planId}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        /**
-         * Updates an access plan for a course
-         * @description Updates the plan name or associated principal for accessing the course.
-         */
-        put: operations["AlphaZeroModulesCoursesPresentationCoursesPlansUpdatePlanUpdatePlanEndpoint"];
-        post?: never;
-        /**
-         * Removes an access plan from a course
-         * @description Deletes an enrollment plan option from the specified course.
-         */
-        delete: operations["AlphaZeroModulesCoursesPresentationCoursesPlansRemovePlanRemovePlanEndpoint"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    get?: never;
+    put?: never;
+    /**
+     * Authenticates a principal
+     * @description Validates principal credentials and returns an access token.
+     */
+    post: operations["AlphaZeroModulesIdentityPresentationAuthCommandsLoginPrincipalLoginPrincipalEndpoint"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/identity/auth/register-student": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/courses/{courseId}/plans": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Adds an access plan to a course
-         * @description Creates a new plan option for accessing the course.
-         */
-        post: operations["AlphaZeroModulesCoursesPresentationCoursesPlansAddPlanAddPlanEndpoint"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    get?: never;
+    put?: never;
+    /**
+     * Registers a new student
+     * @description Creates a student principal associated with a tenant.
+     */
+    post: operations["AlphaZeroModulesIdentityPresentationAuthCommandsRegisterStudentRegisterStudentEndpoint"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/identity/policies/managed": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/courses": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Lists all courses with pagination
-         * @description Returns a paged list of courses for the current tenant. Optionally filterable by subject.
-         */
-        get: operations["AlphaZeroModulesCoursesPresentationCoursesListListCoursesEndpoint"];
-        put?: never;
-        /**
-         * Initializes a new course
-         * @description Creates a course in Draft status under a specific subject.
-         */
-        post: operations["AlphaZeroModulesCoursesPresentationCoursesCreateCreateCourseEndpoint"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    get?: never;
+    put?: never;
+    /**
+     * Creates a managed policy
+     * @description Creates a reusable IAM policy with permission statements.
+     */
+    post: operations["AlphaZeroModulesIdentityPresentationPoliciesCommandsCreateManagedPolicyCreateManagedPolicyEndpoint"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/identity/policies/managed/{policyId}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/courses/{id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Retrieves a course by its ID
-         * @description Returns the complete structure of a course, including all sections, lessons, and assessments.
-         */
-        get: operations["AlphaZeroModulesCoursesPresentationCoursesGetGetCourseEndpoint"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    get?: never;
+    put?: never;
+    post?: never;
+    /**
+     * Deletes a managed policy
+     * @description Permanently deletes a managed IAM policy.
+     */
+    delete: operations["AlphaZeroModulesIdentityPresentationPoliciesCommandsDeleteManagedPolicyDeleteManagedPolicyEndpoint"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/identity/principals": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/courses/{courseId}/sections": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Adds a curriculum section to a course
-         * @description Appends a new numbered section to the specified course.
-         */
-        post: operations["AlphaZeroModulesCoursesPresentationCoursesAddSectionAddSectionEndpoint"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    get?: never;
+    put?: never;
+    /**
+     * Creates a new principal
+     * @description Creates an IAM principal (User, Role, or System) within the tenant.
+     */
+    post: operations["AlphaZeroModulesIdentityPresentationPrincipalsCommandsCreatePrincipalCreatePrincipalEndpoint"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/identity/principals/{principalId}/policies": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/courses/{courseId}/sections/{sectionId}/lessons": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Adds a video lesson to a course section
-         * @description Appends a lesson curriculum item linked to a video.
-         */
-        post: operations["AlphaZeroModulesCoursesPresentationCoursesAddItemAddLessonEndpoint"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    /**
+     * Gets policies for a principal
+     * @description Retrieves both inline and managed policies associated with the specified principal.
+     */
+    get: operations["AlphaZeroModulesIdentityPresentationPrincipalsQueriesGetPrincipalPoliciesGetPrincipalPoliciesEndpoint"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/identity/principals/{principalId}/policies/inline": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/courses/{courseId}/sections/{sectionId}/assessments": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Adds an assessment to a course section
-         * @description Creates an assessment item within the specified course and section.
-         */
-        post: operations["AlphaZeroModulesCoursesPresentationCoursesAddItemAddAssessmentEndpoint"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    get?: never;
+    put?: never;
+    /**
+     * Attaches an inline policy to a principal
+     * @description Appends a custom inline policy to an IAM principal.
+     */
+    post: operations["AlphaZeroModulesIdentityPresentationPrincipalsCommandsAttachInlinePolicyAttachInlinePolicyEndpoint"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/identity/principals/{principalId}/policies/inline/{policyId}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/courses/{courseId}/analytics": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Retrieves analytics for a course
-         * @description Returns total enrollments, average completion rate, and per-item completion stats.
-         */
-        get: operations["AlphaZeroModulesCoursesPresentationAnalyticsGetCourseAnalyticsEndpoint"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    get?: never;
+    put?: never;
+    post?: never;
+    /**
+     * Detaches an inline policy from a principal
+     * @description Removes an inline policy from an IAM principal.
+     */
+    delete: operations["AlphaZeroModulesIdentityPresentationPrincipalsCommandsDetachInlinePolicyDetachInlinePolicyEndpoint"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/identity/principals/{principalId}/policies/managed/{managedPolicyId}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/courses/{courseId}/students": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Lists student progress for a course
-         * @description Returns a paginated list of enrollments and their completion percentages.
-         */
-        get: operations["AlphaZeroModulesCoursesPresentationAnalyticsListStudentProgressEndpoint"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    get?: never;
+    put?: never;
+    /**
+     * Attaches a managed policy to a principal
+     * @description Assigns an existing managed policy to an IAM principal.
+     */
+    post: operations["AlphaZeroModulesIdentityPresentationPrincipalsCommandsAttachManagedPolicyAttachManagedPolicyEndpoint"];
+    /**
+     * Detaches a managed policy from a principal
+     * @description Removes a managed policy association from an IAM principal.
+     */
+    delete: operations["AlphaZeroModulesIdentityPresentationPrincipalsCommandsDetachManagedPolicyDetachManagedPolicyEndpoint"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/identity/resources/{resourceType}/{resourceId}/principals": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/library/libraries/{libraryId}/audit-logs": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Gets redemption audit logs
-         * @description Retrieves paginated redemption audit logs for a library or tenant.
-         */
-        get: operations["AlphaZeroModulesLibraryPresentationEndpointsRedemptionAuditLogsGetRedemptionLogsEndpoint"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    /**
+     * Gets principals assigned to a resource
+     * @description Retrieves a list of principals that have direct or indirect permissions on the resource.
+     */
+    get: operations["AlphaZeroModulesIdentityPresentationPrincipalsQueriesGetPrincipalsByResourceGetPrincipalsByResourceEndpoint"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/identity/users/devices": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/library/redeem": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Redeems an access code
-         * @description Enrolls the authenticated user into the course/resource associated with the access code.
-         */
-        post: operations["AlphaZeroModulesLibraryPresentationEndpointsRedeemCodeRedeemCodeEndpoint"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    get?: never;
+    put?: never;
+    /**
+     * Registers a new device for the user
+     * @description Registers a client device public key for secure offline playback.
+     */
+    post: operations["AlphaZeroModulesIdentityPresentationUsersDevicesRegisterDeviceEndpoint"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/identity/users/devices/main": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/library/libraries/{id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Gets a library by ID
-         * @description Retrieves details of a registered partner library.
-         */
-        get: operations["AlphaZeroModulesLibraryPresentationEndpointsLibrariesGetLibraryGetLibraryEndpoint"];
-        put?: never;
-        post?: never;
-        /**
-         * Deletes a partner library
-         * @description Removes a partner library from the academy system.
-         */
-        delete: operations["AlphaZeroModulesLibraryPresentationEndpointsLibrariesDeleteLibraryDeleteLibraryEndpoint"];
-        options?: never;
-        head?: never;
-        /**
-         * Updates partner library information
-         * @description Updates the name, address, or contact number of an existing partner library.
-         */
-        patch: operations["AlphaZeroModulesLibraryPresentationEndpointsLibrariesUpdateLibraryUpdateLibraryEndpoint"];
-        trace?: never;
+    get?: never;
+    put?: never;
+    /**
+     * Sets the user's primary device
+     * @description Updates the user's main device for playback security.
+     */
+    post: operations["AlphaZeroModulesIdentityPresentationUsersDevicesSetMainDeviceEndpoint"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/library/access-codes/batches/{batchId}/distribute": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/library/libraries": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Lists partner libraries
-         * @description Retrieves a paginated list of registered partner libraries.
-         */
-        get: operations["AlphaZeroModulesLibraryPresentationEndpointsLibrariesListLibrariesListLibrariesEndpoint"];
-        put?: never;
-        /**
-         * Creates a new physical partner library
-         * @description Registers a new partner library authorized to sell and distribute physical access codes.
-         */
-        post: operations["AlphaZeroModulesLibraryPresentationEndpointsLibrariesCreateLibraryCreateLibraryEndpoint"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    get?: never;
+    put?: never;
+    /**
+     * Distributes a batch of access codes
+     * @description Marks a batch of minted access codes as distributed to libraries for sale.
+     */
+    post: operations["AlphaZeroModulesLibraryPresentationEndpointsAccessCodesDistributeBatchDistributeBatchEndpoint"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/library/access-codes/void": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/library/libraries/{id}/resources": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Authorizes a resource for a library
-         * @description Enables a partner library to sell access codes for the specified course/resource.
-         */
-        post: operations["AlphaZeroModulesLibraryPresentationEndpointsLibrariesAuthorizeResourceAuthorizeResourceEndpoint"];
-        /**
-         * Deauthorizes a resource from a library
-         * @description Revokes a partner library's permission to sell access codes for the specified course/resource.
-         */
-        delete: operations["AlphaZeroModulesLibraryPresentationEndpointsLibrariesDeauthorizeResourceDeauthorizeResourceEndpoint"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    get?: never;
+    put?: never;
+    /**
+     * Voids an access code
+     * @description Permanently voids an access code so it cannot be redeemed.
+     */
+    post: operations["AlphaZeroModulesLibraryPresentationEndpointsAccessCodesVoidCodeVoidCodeEndpoint"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/library/admin/access-codes/generate-single": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/library/access-codes/void": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Voids an access code
-         * @description Permanently voids an access code so it cannot be redeemed.
-         */
-        post: operations["AlphaZeroModulesLibraryPresentationEndpointsAccessCodesVoidCodeVoidCodeEndpoint"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    get?: never;
+    put?: never;
+    /**
+     * Generates a single administrative access code
+     * @description Generates a direct access code bypass without going through library batches.
+     */
+    post: operations["AlphaZeroModulesLibraryPresentationEndpointsAccessCodesGenerateAdminCodeGenerateAdminCodeEndpoint"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/library/libraries": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/library/libraries/{libraryId}/access-codes/generate": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Generates a batch of access codes for a library
-         * @description Generates physical or digital access codes linked to a course/resource for distribution.
-         */
-        post: operations["AlphaZeroModulesLibraryPresentationEndpointsAccessCodesGenerateBatchGenerateBatchEndpoint"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    /**
+     * Lists partner libraries
+     * @description Retrieves a paginated list of registered partner libraries.
+     */
+    get: operations["AlphaZeroModulesLibraryPresentationEndpointsLibrariesListLibrariesListLibrariesEndpoint"];
+    put?: never;
+    /**
+     * Creates a new physical partner library
+     * @description Registers a new partner library authorized to sell and distribute physical access codes.
+     */
+    post: operations["AlphaZeroModulesLibraryPresentationEndpointsLibrariesCreateLibraryCreateLibraryEndpoint"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/library/libraries/{id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/library/admin/access-codes/generate-single": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Generates a single administrative access code
-         * @description Generates a direct access code bypass without going through library batches.
-         */
-        post: operations["AlphaZeroModulesLibraryPresentationEndpointsAccessCodesGenerateAdminCodeGenerateAdminCodeEndpoint"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    /**
+     * Gets a library by ID
+     * @description Retrieves details of a registered partner library.
+     */
+    get: operations["AlphaZeroModulesLibraryPresentationEndpointsLibrariesGetLibraryGetLibraryEndpoint"];
+    put?: never;
+    post?: never;
+    /**
+     * Deletes a partner library
+     * @description Removes a partner library from the academy system.
+     */
+    delete: operations["AlphaZeroModulesLibraryPresentationEndpointsLibrariesDeleteLibraryDeleteLibraryEndpoint"];
+    options?: never;
+    head?: never;
+    /**
+     * Updates partner library information
+     * @description Updates the name, address, or contact number of an existing partner library.
+     */
+    patch: operations["AlphaZeroModulesLibraryPresentationEndpointsLibrariesUpdateLibraryUpdateLibraryEndpoint"];
+    trace?: never;
+  };
+  "/library/libraries/{id}/resources": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/library/access-codes/batches/{batchId}/distribute": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Distributes a batch of access codes
-         * @description Marks a batch of minted access codes as distributed to libraries for sale.
-         */
-        post: operations["AlphaZeroModulesLibraryPresentationEndpointsAccessCodesDistributeBatchDistributeBatchEndpoint"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    get?: never;
+    put?: never;
+    /**
+     * Authorizes a resource for a library
+     * @description Enables a partner library to sell access codes for the specified course/resource.
+     */
+    post: operations["AlphaZeroModulesLibraryPresentationEndpointsLibrariesAuthorizeResourceAuthorizeResourceEndpoint"];
+    /**
+     * Deauthorizes a resource from a library
+     * @description Revokes a partner library's permission to sell access codes for the specified course/resource.
+     */
+    delete: operations["AlphaZeroModulesLibraryPresentationEndpointsLibrariesDeauthorizeResourceDeauthorizeResourceEndpoint"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/library/libraries/{libraryId}/access-codes/generate": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/video-uploading/debug/videos": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["GetApiVideoUploadingDebugVideos"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    get?: never;
+    put?: never;
+    /**
+     * Generates a batch of access codes for a library
+     * @description Generates physical or digital access codes linked to a course/resource for distribution.
+     */
+    post: operations["AlphaZeroModulesLibraryPresentationEndpointsAccessCodesGenerateBatchGenerateBatchEndpoint"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/library/libraries/{libraryId}/audit-logs": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/video-uploading/debug/videos/{id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["GetApiVideoUploadingDebugVideos2"];
-        put?: never;
-        post?: never;
-        delete: operations["DeleteApiVideoUploadingDebugVideos"];
-        options?: never;
-        head?: never;
-        patch: operations["PatchApiVideoUploadingDebugVideos"];
-        trace?: never;
+    /**
+     * Gets redemption audit logs
+     * @description Retrieves paginated redemption audit logs for a library or tenant.
+     */
+    get: operations["AlphaZeroModulesLibraryPresentationEndpointsRedemptionAuditLogsGetRedemptionLogsEndpoint"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/library/redeem": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/video-uploading/debug/videos/{id}/state": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["GetApiVideoUploadingDebugVideosState"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    get?: never;
+    put?: never;
+    /**
+     * Redeems an access code
+     * @description Enrolls the authenticated user into the course/resource associated with the access code.
+     */
+    post: operations["AlphaZeroModulesLibraryPresentationEndpointsRedeemCodeRedeemCodeEndpoint"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/tenants": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/video-uploading/upload": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["PostApiVideoUploadingUpload"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    /**
+     * Lists academy tenants
+     * @description Retrieves a paginated list of registered academy tenants.
+     */
+    get: operations["AlphaZeroModulesTenantsPresentationEndpointsListTenantsListTenantsEndpoint"];
+    put?: never;
+    /**
+     * Creates a new academy tenant
+     * @description Provisions an isolated tenant/academy instance with its own subdomain and branding.
+     */
+    post: operations["AlphaZeroModulesTenantsPresentationEndpointsCreateTenantCreateTenantEndpoint"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/tenants/{id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/video/{videoId}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["GetApiVideo"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    /**
+     * Gets tenant details by ID
+     * @description Retrieves configuration and metadata for the specified academy tenant.
+     */
+    get: operations["AlphaZeroModulesTenantsPresentationEndpointsGetTenantGetTenantEndpoint"];
+    /**
+     * Updates tenant details
+     * @description Updates the name, logo, or theme colors of an academy tenant.
+     */
+    put: operations["AlphaZeroModulesTenantsPresentationEndpointsUpdateTenantUpdateTenantEndpoint"];
+    post?: never;
+    /**
+     * Deletes an academy tenant
+     * @description Removes an academy tenant from the platform.
+     */
+    delete: operations["AlphaZeroModulesTenantsPresentationEndpointsDeleteTenantDeleteTenantEndpoint"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/tenants/lookup": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/users/me": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["GetUsersMe"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    /**
+     * Looks up tenant by subdomain
+     * @description Publicly resolves academy branding and metadata based on the subdomain.
+     */
+    get: operations["AlphaZeroModulesTenantsPresentationEndpointsLookupTenantLookupTenantEndpoint"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/users/me": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
+    get: operations["GetUsersMe"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
-    schemas: {
-        RegisterDeviceResponse: {
-            /** Format: guid */
-            deviceId?: string;
-        };
-        ProblemDetails: {
-            type?: string | null;
-            title?: string | null;
-            /** Format: int32 */
-            status?: number | null;
-            detail?: string | null;
-            instance?: string | null;
-        } & {
-            [key: string]: unknown;
-        };
-        RegisterDeviceRequest: {
-            deviceName?: string;
-            platform?: string;
-            publicKey?: string;
-        };
-        SetMainDeviceRequest: {
-            /** Format: guid */
-            deviceId?: string;
-        };
-        PrincipalDto: {
-            /** Format: guid */
-            id?: string;
-            username?: string;
-            name?: string;
-            principalType?: components["schemas"]["PrincipalType"];
-            principalScopeUrn?: string | null;
-        };
-        /** @enum {integer} */
-        PrincipalType: 0 | 1;
-        GetPrincipalsByResourceRequest: Record<string, never>;
-        PrincipalPoliciesDto: {
-            /** Format: guid */
-            principalId?: string;
-            inlinePolicies?: components["schemas"]["PolicyDto"][];
-            managedPolicies?: components["schemas"]["ManagedPolicyDto"][];
-        };
-        PolicyDto: {
-            /** Format: guid */
-            id?: string;
-            name?: string;
-            statements?: components["schemas"]["PolicyStatement"][];
-        };
-        PolicyStatement: {
-            sid?: string;
-            actions?: string[];
-            effect?: boolean;
-            resources?: components["schemas"]["ResourcePattern"][];
-            condition?: components["schemas"]["IConditionNode"] | null;
-        };
-        ResourcePattern: {
-            value?: string;
-            service?: string;
-            tenantIdString?: string;
-            resourcePath?: string;
-        };
-        IConditionNode: {
-            type?: components["schemas"]["ConditionType"];
-        };
-        /** @enum {integer} */
-        ConditionType: 0 | 1 | 2 | 3 | 4;
-        ManagedPolicyDto: {
-            /** Format: guid */
-            id?: string;
-            name?: string;
-            statements?: components["schemas"]["ManagedPolicyStatement"][];
-        };
-        ManagedPolicyStatement: {
-            sid?: string;
-            actions?: string[];
-            effect?: boolean;
-            condition?: components["schemas"]["IConditionNode"] | null;
-        };
-        GetPrincipalPoliciesRequest: Record<string, never>;
-        DetachManagedPolicyRequest: Record<string, never>;
-        DetachInlinePolicyRequest: Record<string, never>;
-        CreatePrincipalResponse: {
-            /** Format: guid */
-            id?: string;
-        };
-        CreatePrincipalRequest: {
-            username?: string;
-            password?: string;
-            principalType?: string;
-            principalScope?: string | null;
-            name?: string;
-        };
-        AttachManagedPolicyRequest: Record<string, never>;
-        AttachInlinePolicyRequest: {
-            policyName?: string;
-            statements?: components["schemas"]["PolicyStatement"][];
-        };
-        DeleteManagedPolicyRequest: Record<string, never>;
-        CreateManagedPolicyResponse: {
-            /** Format: guid */
-            id?: string;
-        };
-        CreateManagedPolicyRequest: {
-            name?: string;
-            statements?: components["schemas"]["ManagedPolicyStatement"][];
-        };
-        RegisterStudentResponse: {
-            /** Format: guid */
-            id?: string;
-        };
-        RegisterStudentRequest: {
-            /** Format: guid */
-            tenantId?: string;
-            username?: string;
-            password?: string;
-            name?: string;
-        };
-        TokenResponse: {
-            token?: string;
-            /** Format: guid */
-            tenantUserId?: string;
-            /** Format: guid */
-            deviceId?: string | null;
-        };
-        LoginPrincipalRequest: {
-            /** Format: guid */
-            tenantId?: string;
-            username?: string;
-            password?: string;
-        };
-        LoginAsTenantUserRequest: {
-            /** Format: guid */
-            tenantId?: string;
-            publicKey?: string;
-            deviceName?: string;
-            platform?: string;
-        };
-        GetVideoKeyRequest: Record<string, never>;
-        UpdateTenantRequest: {
-            name?: string;
-            logoUrl?: string | null;
-            primaryColor?: string | null;
-            secondaryColor?: string | null;
-        };
-        LookupTenantResponse: {
-            /** Format: guid */
-            id?: string;
-            subdomain?: string;
-            name?: string;
-            branding?: components["schemas"]["LookupTenantBranding"];
-        };
-        LookupTenantBranding: {
-            primaryColor?: string | null;
-            secondaryColor?: string | null;
-            logoUrl?: string | null;
-        };
-        LookupTenantRequest: Record<string, never>;
-        PagedResultOfTenantDto: {
-            items?: components["schemas"]["TenantDto"][];
-            /** Format: int32 */
-            totalCount?: number;
-            /** Format: int32 */
-            currentPage?: number;
-            /** Format: int32 */
-            pageSize?: number;
-            /** Format: int32 */
-            totalPages?: number;
-            hasNextPage?: boolean;
-            hasPreviousPage?: boolean;
-        };
-        TenantDto: {
-            /** Format: guid */
-            id?: string;
-            name?: string;
-            subdomain?: string;
-            logoUrl?: string | null;
-            primaryColor?: string | null;
-            secondaryColor?: string | null;
-            status?: string;
-            /** Format: date-time */
-            createdAt?: string;
-        };
-        ListTenantsRequest: Record<string, never>;
-        GetTenantRequest: Record<string, never>;
-        DeleteTenantRequest: Record<string, never>;
-        CreateTenantResponse: {
-            /** Format: guid */
-            id?: string;
-        };
-        CreateTenantRequest: {
-            name?: string;
-            subdomain?: string;
-            logoUrl?: string | null;
-            primaryColor?: string | null;
-            secondaryColor?: string | null;
-        };
-        SubmitAssessmentResponse: {
-            /** Format: decimal */
-            score?: number | null;
-            status?: string;
-        };
-        SubmitAssessmentRequest: {
-            responses?: components["schemas"]["AssessmentSubmissionResponses"];
-        };
-        AssessmentSubmissionResponses: {
-            answers?: {
-                [key: string]: unknown;
-            };
-        };
-        PagedResultOfSubmissionSummaryDto: {
-            items?: components["schemas"]["SubmissionSummaryDto"][];
-            /** Format: int32 */
-            totalCount?: number;
-            /** Format: int32 */
-            currentPage?: number;
-            /** Format: int32 */
-            pageSize?: number;
-            /** Format: int32 */
-            totalPages?: number;
-            hasNextPage?: boolean;
-            hasPreviousPage?: boolean;
-        };
-        SubmissionSummaryDto: {
-            /** Format: guid */
-            id?: string;
-            /** Format: guid */
-            assessmentId?: string;
-            /** Format: guid */
-            studentId?: string;
-            status?: string;
-            /** Format: decimal */
-            totalScore?: number | null;
-            /** Format: date-time */
-            submittedAt?: string;
-        };
-        ListSubmissionsRequest: Record<string, never>;
-        UpdateAssessmentContentRequest: {
-            content?: components["schemas"]["AssessmentContent"];
-        };
-        AssessmentContent: {
-            version?: string;
-            items?: components["schemas"]["AssessmentItem"][];
-        };
-        AssessmentItem: {
-            id?: string;
-            type?: components["schemas"]["ItemType"];
-            renderData?: unknown;
-            questionType?: components["schemas"]["QuestionType"] | null;
-            /** Format: decimal */
-            points?: number | null;
-            gradingData?: components["schemas"]["GradingData"] | null;
-        };
-        /** @enum {integer} */
-        ItemType: 0 | 1;
-        /** @enum {integer} */
-        QuestionType: 0 | 1 | 2 | 3;
-        GradingData: {
-            choices?: components["schemas"]["Choice"][] | null;
-            correctChoiceId?: string | null;
-            shuffleOptions?: boolean;
-            rubric?: string | null;
-            aiHint?: string | null;
-        };
-        Choice: {
-            id?: string;
-            renderData?: unknown;
-        };
-        PagedResultOfAssessmentDto: {
-            items?: components["schemas"]["AssessmentDto"][];
-            /** Format: int32 */
-            totalCount?: number;
-            /** Format: int32 */
-            currentPage?: number;
-            /** Format: int32 */
-            pageSize?: number;
-            /** Format: int32 */
-            totalPages?: number;
-            hasNextPage?: boolean;
-            hasPreviousPage?: boolean;
-        };
-        AssessmentDto: {
-            /** Format: guid */
-            id?: string;
-            title?: string;
-            description?: string | null;
-            type?: string;
-            /** Format: decimal */
-            passingScore?: number;
-            status?: string;
-        };
-        ListAssessmentsRequest: Record<string, never>;
-        AssessmentDetailsDto: {
-            /** Format: guid */
-            id?: string;
-            title?: string;
-            description?: string | null;
-            type?: string;
-            /** Format: decimal */
-            passingScore?: number;
-            status?: string;
-            /** Format: int32 */
-            versionNumber?: number;
-            content?: components["schemas"]["AssessmentContent"] | null;
-        };
-        GetAssessmentRequest: Record<string, never>;
-        CreateAssessmentResponse: {
-            /** Format: guid */
-            id?: string;
-        };
-        CreateAssessmentRequest: {
-            title?: string;
-            description?: string | null;
-            type?: string;
-            /** Format: decimal */
-            passingScore?: number;
-            initialContent?: components["schemas"]["AssessmentContent"] | null;
-        };
-        CompleteItemRequest: {
-            /** Format: int32 */
-            bitIndex?: number;
-        };
-        PagedResultOfSubjectDto: {
-            items?: components["schemas"]["SubjectDto"][];
-            /** Format: int32 */
-            totalCount?: number;
-            /** Format: int32 */
-            currentPage?: number;
-            /** Format: int32 */
-            pageSize?: number;
-            /** Format: int32 */
-            totalPages?: number;
-            hasNextPage?: boolean;
-            hasPreviousPage?: boolean;
-        };
-        SubjectDto: {
-            /** Format: guid */
-            id?: string;
-            name?: string;
-            description?: string | null;
-        };
-        ListSubjectsRequest: Record<string, never>;
-        GetSubjectRequest: Record<string, never>;
-        CreateSubjectResponse: {
-            /** Format: guid */
-            id?: string;
-        };
-        /**
-         * @example {
-         *       "name": "Mathematics",
-         *       "description": "General mathematics curriculum for high school."
-         *     }
-         */
-        CreateSubjectRequest: {
-            /** @example Mathematics */
-            name?: string;
-            /** @example General mathematics curriculum for high school. */
-            description?: string | null;
-        };
-        EnrollementResponse: {
-            /** Format: guid */
-            id?: string;
-            /** Format: guid */
-            studentId?: string;
-            /** Format: guid */
-            courseId?: string;
-            status?: string;
-            /** Format: double */
-            completionPercentage?: number;
-            /** Format: date-time */
-            enrolledOn?: string;
-            /** Format: guid */
-            tenantId?: string;
-        };
-        GetEnrollementRequest: Record<string, never>;
-        EnrollInCourseResponse: {
-            /** Format: guid */
-            enrollmentId?: string;
-        };
-        /**
-         * @example {
-         *       "studentId": "b1731a2a-5d27-4d19-9eb0-1c29b10769b9",
-         *       "courseId": "a6d845c6-a3d8-454e-88da-66307b980d73"
-         *     }
-         */
-        EnrollInCourseRequest: {
-            /**
-             * Format: guid
-             * @example b1731a2a-5d27-4d19-9eb0-1c29b10769b9
-             */
-            studentId?: string;
-            /**
-             * Format: guid
-             * @example a6d845c6-a3d8-454e-88da-66307b980d73
-             */
-            courseId?: string;
-        };
-        DashboardResponse: {
-            academies?: {
-                [key: string]: components["schemas"]["EnrollmentDto"][];
-            };
-        };
-        EnrollmentDto: {
-            /** Format: guid */
-            enrollmentId?: string;
-            /** Format: guid */
-            courseId?: string;
-            status?: string;
-            /** Format: double */
-            completionPercentage?: number;
-            /** Format: date-time */
-            enrolledOn?: string;
-        };
-        GetStudentDashboardRequest: Record<string, never>;
-        ApproveCourseRequest: Record<string, never>;
-        PublishCourseRequest: Record<string, never>;
-        RejectCourseRequest: {
-            reason?: string;
-        };
-        SubmitForReviewRequest: Record<string, never>;
-        ReorderSectionsRequest: {
-            sectionIds?: string[];
-        };
-        ReorderItemsRequest: {
-            itemIds?: string[];
-        };
-        UpdatePlanRequest: {
-            name?: string;
-            /** Format: guid */
-            principalId?: string;
-        };
-        RemovePlanRequest: Record<string, never>;
-        AddPlanResponse: {
-            /** Format: guid */
-            planId?: string;
-        };
-        AddPlanRequest: {
-            name?: string;
-            /** Format: guid */
-            principalId?: string;
-        };
-        PagedResultOfCourseSummaryDto: {
-            items?: components["schemas"]["CourseSummaryDto"][];
-            /** Format: int32 */
-            totalCount?: number;
-            /** Format: int32 */
-            currentPage?: number;
-            /** Format: int32 */
-            pageSize?: number;
-            /** Format: int32 */
-            totalPages?: number;
-            hasNextPage?: boolean;
-            hasPreviousPage?: boolean;
-        };
-        CourseSummaryDto: {
-            /** Format: guid */
-            id?: string;
-            title?: string;
-            description?: string | null;
-            /** Format: guid */
-            subjectId?: string;
-            status?: string;
-        };
-        ListCoursesRequest: Record<string, never>;
-        CourseResponse: {
-            /** Format: guid */
-            id?: string;
-            title?: string;
-            description?: string | null;
-            /** Format: guid */
-            subjectId?: string;
-            status?: string;
-            sections?: components["schemas"]["SectionResponse"][];
-        };
-        SectionResponse: {
-            /** Format: guid */
-            id?: string;
-            title?: string;
-            /** Format: int32 */
-            order?: number;
-            items?: components["schemas"]["ItemResponse"][];
-        };
-        ItemResponse: {
-            /** Format: guid */
-            id?: string;
-            title?: string;
-            type?: string;
-            /** Format: int32 */
-            order?: number;
-            /** Format: int32 */
-            bitIndex?: number;
-            resources?: components["schemas"]["ResourceResponse"][];
-        };
-        ResourceResponse: {
-            arn?: string;
-            type?: string;
-            /** Format: int32 */
-            order?: number;
-            metadata?: unknown;
-        };
-        GetCourseRequest: Record<string, never>;
-        CreateCourseResponse: {
-            /** Format: guid */
-            id?: string;
-        };
-        /**
-         * @example {
-         *       "title": "Introduction to Algebra",
-         *       "description": "A basic course covering algebraic foundations.",
-         *       "subjectId": "00000000-0000-0000-0000-000000000001"
-         *     }
-         */
-        CreateCourseRequest: {
-            /** @example Introduction to Algebra */
-            title?: string;
-            /** @example A basic course covering algebraic foundations. */
-            description?: string | null;
-            /**
-             * Format: guid
-             * @example 00000000-0000-0000-0000-000000000001
-             */
-            subjectId?: string;
-        };
-        AddSectionRequest: {
-            title?: string;
-        };
-        AddLessonRequest: {
-            title?: string;
-            /** Format: guid */
-            videoId?: string;
-        };
-        AddAssessmentRequest: {
-            title?: string;
-            /** Format: guid */
-            assessmentId?: string;
-            type?: string;
-            /** Format: decimal */
-            passingScore?: number;
-            description?: string | null;
-        };
-        CourseAnalyticsDto: {
-            /** Format: guid */
-            courseId?: string;
-            /** Format: int32 */
-            totalEnrollments?: number;
-            /** Format: double */
-            averageCompletionPercentage?: number;
-            itemCompletionRates?: components["schemas"]["ItemCompletionDto"][];
-        };
-        ItemCompletionDto: {
-            /** Format: int32 */
-            bitIndex?: number;
-            /** Format: int32 */
-            completedCount?: number;
-            /** Format: double */
-            completionPercentage?: number;
-        };
-        GetCourseAnalyticsRequest: Record<string, never>;
-        PagedResultOfEnrollmentDto: {
-            items?: components["schemas"]["EnrollmentDto2"][];
-            /** Format: int32 */
-            totalCount?: number;
-            /** Format: int32 */
-            currentPage?: number;
-            /** Format: int32 */
-            pageSize?: number;
-            /** Format: int32 */
-            totalPages?: number;
-            hasNextPage?: boolean;
-            hasPreviousPage?: boolean;
-        };
-        EnrollmentDto2: {
-            /** Format: guid */
-            id?: string;
-            /** Format: guid */
-            studentId?: string;
-            /** Format: guid */
-            courseId?: string;
-            status?: string;
-            /** Format: double */
-            completionPercentage?: number;
-            /** Format: date-time */
-            enrolledOn?: string;
-            /** Format: guid */
-            tenantId?: string;
-        };
-        ListStudentProgressRequest: Record<string, never>;
-        PagedResultOfRedemptionAuditLogDto: {
-            items?: components["schemas"]["RedemptionAuditLogDto"][];
-            /** Format: int32 */
-            totalCount?: number;
-            /** Format: int32 */
-            currentPage?: number;
-            /** Format: int32 */
-            pageSize?: number;
-            /** Format: int32 */
-            totalPages?: number;
-            hasNextPage?: boolean;
-            hasPreviousPage?: boolean;
-        };
-        RedemptionAuditLogDto: {
-            /** Format: guid */
-            id?: string;
-            /** Format: guid */
-            accessCodeId?: string;
-            /** Format: guid */
-            libraryId?: string | null;
-            /** Format: guid */
-            redeemedByUserId?: string;
-            strategyId?: string;
-            targetResourceArn?: string;
-            /** Format: date-time */
-            redeemedAt?: string;
-            ipAddress?: string | null;
-            deviceFingerprint?: string | null;
-        };
-        GetRedemptionLogsRequest: Record<string, never>;
-        RedeemCodeRequest: {
-            rawCode?: string;
-        };
-        UpdateLibraryRequest: {
-            name?: string;
-            address?: string;
-            contactNumber?: string;
-        };
-        PagedResultOfLibraryDto: {
-            items?: components["schemas"]["LibraryDto"][];
-            /** Format: int32 */
-            totalCount?: number;
-            /** Format: int32 */
-            currentPage?: number;
-            /** Format: int32 */
-            pageSize?: number;
-            /** Format: int32 */
-            totalPages?: number;
-            hasNextPage?: boolean;
-            hasPreviousPage?: boolean;
-        };
-        LibraryDto: {
-            /** Format: guid */
-            id?: string;
-            name?: string;
-            address?: string;
-            contactNumber?: string;
-            allowedResources?: string[];
-        };
-        ListLibrariesRequest: Record<string, never>;
-        GetLibraryRequest: Record<string, never>;
-        DeleteLibraryRequest: Record<string, never>;
-        DeauthorizeResourceRequest: {
-            resourceArn?: string;
-        };
-        CreateLibraryResponse: {
-            /** Format: guid */
-            id?: string;
-        };
-        CreateLibraryRequest: {
-            name?: string;
-            address?: string;
-            contactNumber?: string;
-        };
-        AuthorizeResourceRequest: {
-            resourceArn?: string;
-        };
-        VoidCodeRequest: {
-            rawCode?: string;
-            reason?: string;
-        };
-        GenerateBatchResponse: {
-            codes?: string[];
-        };
-        GenerateBatchRequest: {
-            /** Format: int32 */
-            quantity?: number;
-            strategyId?: string;
-            targetResourceArn?: string;
-            metadata?: {
-                [key: string]: unknown;
-            };
-        };
-        GenerateAdminCodeResponse: {
-            code?: string;
-        };
-        GenerateAdminCodeRequest: {
-            targetResourceArn?: string;
-            metadata?: {
-                [key: string]: unknown;
-            } | null;
-        };
-        DistributeBatchRequest: Record<string, never>;
-        PagedResultOfVideoResponse: {
-            items?: components["schemas"]["Debug_VideoResponse"][];
-            /** Format: int32 */
-            totalCount?: number;
-            /** Format: int32 */
-            currentPage?: number;
-            /** Format: int32 */
-            pageSize?: number;
-            /** Format: int32 */
-            totalPages?: number;
-            hasNextPage?: boolean;
-            hasPreviousPage?: boolean;
-        };
-        Debug_VideoResponse: {
-            /** Format: guid */
-            id?: string;
-            title?: string;
-            description?: string | null;
-            status?: string;
-            thumbnailUrl?: string | null;
-            streamingUrl?: string | null;
-            metadata?: components["schemas"]["VideoMetadata"];
-            specifications?: components["schemas"]["VideoSpecifications"];
-            sourceKey?: string;
-            outputFolder?: string | null;
-            /** Format: date-time */
-            createdOn?: string;
-            /** Format: date-time */
-            publishedOn?: string | null;
-        };
-        VideoMetadata: {
-            originalFileName?: string;
-            contentType?: string;
-            /** Format: int64 */
-            fileSize?: number;
-            transcodingMethod?: string;
-            encryptionMethod?: string | null;
-        };
-        VideoSpecifications: {
-            /** Format: duration */
-            duration?: string;
-            resolution?: components["schemas"]["Resolution"];
-        };
-        Resolution: {
-            /** Format: int32 */
-            width?: number;
-            /** Format: int32 */
-            height?: number;
-        };
-        VideoStateDto: {
-            /** Format: guid */
-            correlationId?: string;
-            /** Format: guid */
-            tenantId?: string;
-            currentState?: string;
-            mediaConverterJobId?: string | null;
-            key?: string | null;
-            customThumbnailKey?: string | null;
-            isFailed?: boolean;
-            /** Format: int32 */
-            version?: number;
-        };
-        UpdateVideoInfo_Request: {
-            title?: string;
-            description?: string | null;
-        };
-        Upload_Response: {
-            /** Format: guid */
-            videoId?: string;
-            /** Format: guid */
-            tenantId?: string;
-            key?: string;
-            preSignedUrl?: string;
-            transcodingMethod?: string;
-            encryptionMethod?: string;
-            headers?: {
-                [key: string]: string;
-            };
-            thumbnailKey?: string | null;
-            thumbnailPreSignedUrl?: string | null;
-            thumbnailHeaders?: {
-                [key: string]: string;
-            } | null;
-        };
-        Upload_Request: {
-            fileName?: string;
-            contentType?: string;
-            title?: string;
-            description?: string | null;
-            transcodingMethod?: string | null;
-            encryptionMethod?: string | null;
-            generateCustomThumbnailUrl?: boolean | null;
-            targetResourceArn?: string | null;
-        };
-        StreamingInfoResponseDTO: {
-            url?: string;
-            encryptionMethod?: string | null;
-            licenseUrl?: string | null;
-            drm?: components["schemas"]["DrmInfo"] | null;
-        };
-        DrmInfo: {
-            widevineUrl?: string | null;
-            playReadyUrl?: string | null;
-            token?: string | null;
-        };
+  headers: never;
+  parameters: never;
+  pathItems: never;
+  requestBodies: never;
+  responses: never;
+  schemas: {
+    RegisterDeviceResponse: {
+      /** Format: guid */
+      deviceId?: string;
     };
-    responses: never;
-    parameters: never;
-    requestBodies: never;
-    headers: never;
-    pathItems: never;
+    ProblemDetails: {
+      type?: string | null;
+      title?: string | null;
+      /** Format: int32 */
+      status?: number | null;
+      detail?: string | null;
+      instance?: string | null;
+      traceId?: string | null;
+    } & {
+      [key: string]: unknown;
+    };
+    RegisterDeviceRequest: {
+      deviceName?: string;
+      platform?: string;
+      publicKey?: string;
+    };
+    SetMainDeviceRequest: {
+      /** Format: guid */
+      deviceId?: string;
+    };
+    PrincipalDto: {
+      /** Format: guid */
+      id?: string;
+      username?: string;
+      name?: string;
+      principalType?: components["schemas"]["PrincipalType"];
+      principalScopeUrn?: string | null;
+    };
+    /** @enum {integer} */
+    PrincipalType: 0 | 1;
+    GetPrincipalsByResourceRequest: Record<string, never>;
+    PrincipalPoliciesDto: {
+      /** Format: guid */
+      principalId?: string;
+      inlinePolicies?: components["schemas"]["PolicyDto"][];
+      managedPolicies?: components["schemas"]["ManagedPolicyDto"][];
+    };
+    PolicyDto: {
+      /** Format: guid */
+      id?: string;
+      name?: string;
+      statements?: components["schemas"]["PolicyStatement"][];
+    };
+    PolicyStatement: {
+      sid?: string;
+      actions?: string[];
+      effect?: boolean;
+      resources?: components["schemas"]["ResourcePattern"][];
+      condition?: components["schemas"]["IConditionNode"] | null;
+    };
+    ResourcePattern: {
+      value?: string;
+      service?: string;
+      tenantIdString?: string;
+      resourcePath?: string;
+    };
+    IConditionNode: {
+      type?: components["schemas"]["ConditionType"];
+    };
+    /** @enum {integer} */
+    ConditionType: 0 | 1 | 2 | 3 | 4;
+    ManagedPolicyDto: {
+      /** Format: guid */
+      id?: string;
+      name?: string;
+      statements?: components["schemas"]["ManagedPolicyStatement"][];
+    };
+    ManagedPolicyStatement: {
+      sid?: string;
+      actions?: string[];
+      effect?: boolean;
+      condition?: components["schemas"]["IConditionNode"] | null;
+    };
+    GetPrincipalPoliciesRequest: Record<string, never>;
+    DetachManagedPolicyRequest: Record<string, never>;
+    DetachInlinePolicyRequest: Record<string, never>;
+    CreatePrincipalResponse: {
+      /** Format: guid */
+      id?: string;
+    };
+    CreatePrincipalRequest: {
+      username?: string;
+      password?: string;
+      principalType?: string;
+      principalScope?: string | null;
+      name?: string;
+    };
+    AttachManagedPolicyRequest: Record<string, never>;
+    AttachInlinePolicyRequest: {
+      policyName?: string;
+      statements?: components["schemas"]["PolicyStatement"][];
+    };
+    DeleteManagedPolicyRequest: Record<string, never>;
+    CreateManagedPolicyResponse: {
+      /** Format: guid */
+      id?: string;
+    };
+    CreateManagedPolicyRequest: {
+      name?: string;
+      statements?: components["schemas"]["ManagedPolicyStatement"][];
+    };
+    RegisterStudentResponse: {
+      /** Format: guid */
+      id?: string;
+    };
+    RegisterStudentRequest: {
+      /** Format: guid */
+      tenantId?: string;
+      username?: string;
+      password?: string;
+      name?: string;
+    };
+    TokenResponse: {
+      token?: string;
+      /** Format: guid */
+      tenantUserId?: string;
+      /** Format: guid */
+      deviceId?: string | null;
+    };
+    LoginPrincipalRequest: {
+      /** Format: guid */
+      tenantId?: string;
+      username?: string;
+      password?: string;
+    };
+    LoginAsTenantUserRequest: {
+      /** Format: guid */
+      tenantId?: string;
+      publicKey?: string;
+      deviceName?: string;
+      platform?: string;
+    };
+    GetVideoKeyRequest: Record<string, never>;
+    UpdateTenantRequest: {
+      name?: string;
+      logoUrl?: string | null;
+      primaryColor?: string | null;
+      secondaryColor?: string | null;
+    };
+    LookupTenantResponse: {
+      /** Format: guid */
+      id?: string;
+      subdomain?: string;
+      name?: string;
+      branding?: components["schemas"]["LookupTenantBranding"];
+    };
+    LookupTenantBranding: {
+      primaryColor?: string | null;
+      secondaryColor?: string | null;
+      logoUrl?: string | null;
+    };
+    LookupTenantRequest: Record<string, never>;
+    PagedResultOfTenantDto: {
+      items?: components["schemas"]["TenantDto"][];
+      /** Format: int32 */
+      totalCount?: number;
+      /** Format: int32 */
+      currentPage?: number;
+      /** Format: int32 */
+      pageSize?: number;
+      /** Format: int32 */
+      totalPages?: number;
+      hasNextPage?: boolean;
+      hasPreviousPage?: boolean;
+    };
+    TenantDto: {
+      /** Format: guid */
+      id?: string;
+      name?: string;
+      subdomain?: string;
+      logoUrl?: string | null;
+      primaryColor?: string | null;
+      secondaryColor?: string | null;
+      status?: string;
+      /** Format: date-time */
+      createdAt?: string;
+    };
+    ListTenantsRequest: Record<string, never>;
+    GetTenantRequest: Record<string, never>;
+    DeleteTenantRequest: Record<string, never>;
+    CreateTenantResponse: {
+      /** Format: guid */
+      id?: string;
+    };
+    CreateTenantRequest: {
+      name?: string;
+      subdomain?: string;
+      logoUrl?: string | null;
+      primaryColor?: string | null;
+      secondaryColor?: string | null;
+    };
+    SubmitAssessmentResponse: {
+      /** Format: decimal */
+      score?: number | null;
+      status?: string;
+    };
+    SubmitAssessmentRequest: {
+      responses?: components["schemas"]["AssessmentSubmissionResponses"];
+    };
+    AssessmentSubmissionResponses: {
+      answers?: {
+        [key: string]: unknown;
+      };
+    };
+    PagedResultOfSubmissionSummaryDto: {
+      items?: components["schemas"]["SubmissionSummaryDto"][];
+      /** Format: int32 */
+      totalCount?: number;
+      /** Format: int32 */
+      currentPage?: number;
+      /** Format: int32 */
+      pageSize?: number;
+      /** Format: int32 */
+      totalPages?: number;
+      hasNextPage?: boolean;
+      hasPreviousPage?: boolean;
+    };
+    SubmissionSummaryDto: {
+      /** Format: guid */
+      id?: string;
+      /** Format: guid */
+      assessmentId?: string;
+      /** Format: guid */
+      studentId?: string;
+      status?: string;
+      /** Format: decimal */
+      totalScore?: number | null;
+      /** Format: date-time */
+      submittedAt?: string;
+    };
+    ListSubmissionsRequest: Record<string, never>;
+    UpdateAssessmentContentRequest: {
+      content?: components["schemas"]["AssessmentContent"];
+    };
+    AssessmentContent: {
+      version?: string;
+      items?: components["schemas"]["AssessmentItem"][];
+    };
+    AssessmentItem: {
+      id?: string;
+      type?: components["schemas"]["ItemType"];
+      renderData?: unknown;
+      questionType?: components["schemas"]["QuestionType"] | null;
+      /** Format: decimal */
+      points?: number | null;
+      gradingData?: components["schemas"]["GradingData"] | null;
+    };
+    /** @enum {integer} */
+    ItemType: 0 | 1;
+    /** @enum {integer} */
+    QuestionType: 0 | 1 | 2 | 3;
+    GradingData: {
+      choices?: components["schemas"]["Choice"][] | null;
+      correctChoiceId?: string | null;
+      shuffleOptions?: boolean;
+      rubric?: string | null;
+      aiHint?: string | null;
+    };
+    Choice: {
+      id?: string;
+      renderData?: unknown;
+    };
+    PagedResultOfAssessmentDto: {
+      items?: components["schemas"]["AssessmentDto"][];
+      /** Format: int32 */
+      totalCount?: number;
+      /** Format: int32 */
+      currentPage?: number;
+      /** Format: int32 */
+      pageSize?: number;
+      /** Format: int32 */
+      totalPages?: number;
+      hasNextPage?: boolean;
+      hasPreviousPage?: boolean;
+    };
+    AssessmentDto: {
+      /** Format: guid */
+      id?: string;
+      title?: string;
+      description?: string | null;
+      type?: string;
+      /** Format: decimal */
+      passingScore?: number;
+      status?: string;
+    };
+    ListAssessmentsRequest: Record<string, never>;
+    AssessmentDetailsDto: {
+      /** Format: guid */
+      id?: string;
+      title?: string;
+      description?: string | null;
+      type?: string;
+      /** Format: decimal */
+      passingScore?: number;
+      status?: string;
+      /** Format: int32 */
+      versionNumber?: number;
+      content?: components["schemas"]["AssessmentContent"] | null;
+    };
+    GetAssessmentRequest: Record<string, never>;
+    CreateAssessmentResponse: {
+      /** Format: guid */
+      id?: string;
+    };
+    CreateAssessmentRequest: {
+      title?: string;
+      description?: string | null;
+      type?: string;
+      /** Format: decimal */
+      passingScore?: number;
+      initialContent?: components["schemas"]["AssessmentContent"] | null;
+    };
+    CompleteItemRequest: {
+      /** Format: int32 */
+      bitIndex?: number;
+    };
+    PagedResultOfSubjectDto: {
+      items?: components["schemas"]["SubjectDto"][];
+      /** Format: int32 */
+      totalCount?: number;
+      /** Format: int32 */
+      currentPage?: number;
+      /** Format: int32 */
+      pageSize?: number;
+      /** Format: int32 */
+      totalPages?: number;
+      hasNextPage?: boolean;
+      hasPreviousPage?: boolean;
+    };
+    SubjectDto: {
+      /** Format: guid */
+      id?: string;
+      name?: string;
+      description?: string | null;
+    };
+    ListSubjectsRequest: Record<string, never>;
+    GetSubjectRequest: Record<string, never>;
+    CreateSubjectResponse: {
+      /** Format: guid */
+      id?: string;
+    };
+    /**
+     * @example {
+     *       "name": "Mathematics",
+     *       "description": "General mathematics curriculum for high school."
+     *     }
+     */
+    CreateSubjectRequest: {
+      /** @example Mathematics */
+      name?: string;
+      /** @example General mathematics curriculum for high school. */
+      description?: string | null;
+    };
+    EnrollementResponse: {
+      /** Format: guid */
+      id?: string;
+      /** Format: guid */
+      studentId?: string;
+      /** Format: guid */
+      courseId?: string;
+      status?: string;
+      /** Format: double */
+      completionPercentage?: number;
+      /** Format: date-time */
+      enrolledOn?: string;
+      /** Format: guid */
+      tenantId?: string;
+    };
+    GetEnrollementRequest: Record<string, never>;
+    EnrollInCourseResponse: {
+      /** Format: guid */
+      enrollmentId?: string;
+    };
+    /**
+     * @example {
+     *       "studentId": "b1731a2a-5d27-4d19-9eb0-1c29b10769b9",
+     *       "courseId": "a6d845c6-a3d8-454e-88da-66307b980d73"
+     *     }
+     */
+    EnrollInCourseRequest: {
+      /**
+       * Format: guid
+       * @example b1731a2a-5d27-4d19-9eb0-1c29b10769b9
+       */
+      studentId?: string;
+      /**
+       * Format: guid
+       * @example a6d845c6-a3d8-454e-88da-66307b980d73
+       */
+      courseId?: string;
+    };
+    DashboardResponse: {
+      academies?: {
+        [key: string]: components["schemas"]["EnrollmentDto"][];
+      };
+    };
+    EnrollmentDto: {
+      /** Format: guid */
+      enrollmentId?: string;
+      /** Format: guid */
+      courseId?: string;
+      status?: string;
+      /** Format: double */
+      completionPercentage?: number;
+      /** Format: date-time */
+      enrolledOn?: string;
+    };
+    GetStudentDashboardRequest: Record<string, never>;
+    ApproveCourseRequest: Record<string, never>;
+    PublishCourseRequest: Record<string, never>;
+    RejectCourseRequest: {
+      reason?: string;
+    };
+    SubmitForReviewRequest: Record<string, never>;
+    ReorderSectionsRequest: {
+      sectionIds?: string[];
+    };
+    ReorderItemsRequest: {
+      itemIds?: string[];
+    };
+    UpdatePlanRequest: {
+      name?: string;
+      /** Format: guid */
+      principalId?: string;
+    };
+    RemovePlanRequest: Record<string, never>;
+    AddPlanResponse: {
+      /** Format: guid */
+      planId?: string;
+    };
+    AddPlanRequest: {
+      name?: string;
+      /** Format: guid */
+      principalId?: string;
+    };
+    PagedResultOfCourseSummaryDto: {
+      items?: components["schemas"]["CourseSummaryDto"][];
+      /** Format: int32 */
+      totalCount?: number;
+      /** Format: int32 */
+      currentPage?: number;
+      /** Format: int32 */
+      pageSize?: number;
+      /** Format: int32 */
+      totalPages?: number;
+      hasNextPage?: boolean;
+      hasPreviousPage?: boolean;
+    };
+    CourseSummaryDto: {
+      /** Format: guid */
+      id?: string;
+      title?: string;
+      description?: string | null;
+      /** Format: guid */
+      subjectId?: string;
+      status?: string;
+    };
+    ListCoursesRequest: Record<string, never>;
+    CourseResponse: {
+      /** Format: guid */
+      id?: string;
+      title?: string;
+      description?: string | null;
+      /** Format: guid */
+      subjectId?: string;
+      status?: string;
+      sections?: components["schemas"]["SectionResponse"][];
+    };
+    SectionResponse: {
+      /** Format: guid */
+      id?: string;
+      title?: string;
+      /** Format: int32 */
+      order?: number;
+      items?: components["schemas"]["ItemResponse"][];
+    };
+    ItemResponse: {
+      /** Format: guid */
+      id?: string;
+      title?: string;
+      type?: string;
+      /** Format: int32 */
+      order?: number;
+      /** Format: int32 */
+      bitIndex?: number;
+      resources?: components["schemas"]["ResourceResponse"][];
+    };
+    ResourceResponse: {
+      arn?: string;
+      type?: string;
+      /** Format: int32 */
+      order?: number;
+      metadata?: unknown;
+    };
+    GetCourseRequest: Record<string, never>;
+    CreateCourseResponse: {
+      /** Format: guid */
+      id?: string;
+    };
+    /**
+     * @example {
+     *       "title": "Introduction to Algebra",
+     *       "description": "A basic course covering algebraic foundations.",
+     *       "subjectId": "00000000-0000-0000-0000-000000000001"
+     *     }
+     */
+    CreateCourseRequest: {
+      /** @example Introduction to Algebra */
+      title?: string;
+      /** @example A basic course covering algebraic foundations. */
+      description?: string | null;
+      /**
+       * Format: guid
+       * @example 00000000-0000-0000-0000-000000000001
+       */
+      subjectId?: string;
+    };
+    AddSectionRequest: {
+      title?: string;
+    };
+    AddLessonRequest: {
+      title?: string;
+      /** Format: guid */
+      videoId?: string;
+    };
+    AddAssessmentRequest: {
+      title?: string;
+      /** Format: guid */
+      assessmentId?: string;
+      type?: string;
+      /** Format: decimal */
+      passingScore?: number;
+      description?: string | null;
+    };
+    CourseAnalyticsDto: {
+      /** Format: guid */
+      courseId?: string;
+      /** Format: int32 */
+      totalEnrollments?: number;
+      /** Format: double */
+      averageCompletionPercentage?: number;
+      itemCompletionRates?: components["schemas"]["ItemCompletionDto"][];
+    };
+    ItemCompletionDto: {
+      /** Format: int32 */
+      bitIndex?: number;
+      /** Format: int32 */
+      completedCount?: number;
+      /** Format: double */
+      completionPercentage?: number;
+    };
+    GetCourseAnalyticsRequest: Record<string, never>;
+    PagedResultOfEnrollmentDto: {
+      items?: components["schemas"]["EnrollmentDto2"][];
+      /** Format: int32 */
+      totalCount?: number;
+      /** Format: int32 */
+      currentPage?: number;
+      /** Format: int32 */
+      pageSize?: number;
+      /** Format: int32 */
+      totalPages?: number;
+      hasNextPage?: boolean;
+      hasPreviousPage?: boolean;
+    };
+    EnrollmentDto2: {
+      /** Format: guid */
+      id?: string;
+      /** Format: guid */
+      studentId?: string;
+      /** Format: guid */
+      courseId?: string;
+      status?: string;
+      /** Format: double */
+      completionPercentage?: number;
+      /** Format: date-time */
+      enrolledOn?: string;
+      /** Format: guid */
+      tenantId?: string;
+    };
+    ListStudentProgressRequest: Record<string, never>;
+    PagedResultOfRedemptionAuditLogDto: {
+      items?: components["schemas"]["RedemptionAuditLogDto"][];
+      /** Format: int32 */
+      totalCount?: number;
+      /** Format: int32 */
+      currentPage?: number;
+      /** Format: int32 */
+      pageSize?: number;
+      /** Format: int32 */
+      totalPages?: number;
+      hasNextPage?: boolean;
+      hasPreviousPage?: boolean;
+    };
+    RedemptionAuditLogDto: {
+      /** Format: guid */
+      id?: string;
+      /** Format: guid */
+      accessCodeId?: string;
+      /** Format: guid */
+      libraryId?: string | null;
+      /** Format: guid */
+      redeemedByUserId?: string;
+      strategyId?: string;
+      targetResourceArn?: string;
+      /** Format: date-time */
+      redeemedAt?: string;
+      ipAddress?: string | null;
+      deviceFingerprint?: string | null;
+    };
+    GetRedemptionLogsRequest: Record<string, never>;
+    RedeemCodeRequest: {
+      rawCode?: string;
+    };
+    UpdateLibraryRequest: {
+      name?: string;
+      address?: string;
+      contactNumber?: string;
+    };
+    PagedResultOfLibraryDto: {
+      items?: components["schemas"]["LibraryDto"][];
+      /** Format: int32 */
+      totalCount?: number;
+      /** Format: int32 */
+      currentPage?: number;
+      /** Format: int32 */
+      pageSize?: number;
+      /** Format: int32 */
+      totalPages?: number;
+      hasNextPage?: boolean;
+      hasPreviousPage?: boolean;
+    };
+    LibraryDto: {
+      /** Format: guid */
+      id?: string;
+      name?: string;
+      address?: string;
+      contactNumber?: string;
+      allowedResources?: string[];
+    };
+    ListLibrariesRequest: Record<string, never>;
+    GetLibraryRequest: Record<string, never>;
+    DeleteLibraryRequest: Record<string, never>;
+    DeauthorizeResourceRequest: {
+      resourceArn?: string;
+    };
+    CreateLibraryResponse: {
+      /** Format: guid */
+      id?: string;
+    };
+    CreateLibraryRequest: {
+      name?: string;
+      address?: string;
+      contactNumber?: string;
+    };
+    AuthorizeResourceRequest: {
+      resourceArn?: string;
+    };
+    VoidCodeRequest: {
+      rawCode?: string;
+      reason?: string;
+    };
+    GenerateBatchResponse: {
+      codes?: string[];
+    };
+    GenerateBatchRequest: {
+      /** Format: int32 */
+      quantity?: number;
+      strategyId?: string;
+      targetResourceArn?: string;
+      metadata?: {
+        [key: string]: unknown;
+      };
+    };
+    GenerateAdminCodeResponse: {
+      code?: string;
+    };
+    GenerateAdminCodeRequest: {
+      targetResourceArn?: string;
+      metadata?: {
+        [key: string]: unknown;
+      } | null;
+    };
+    DistributeBatchRequest: Record<string, never>;
+    PagedResultOfVideoResponse: {
+      items?: components["schemas"]["Debug_VideoResponse"][];
+      /** Format: int32 */
+      totalCount?: number;
+      /** Format: int32 */
+      currentPage?: number;
+      /** Format: int32 */
+      pageSize?: number;
+      /** Format: int32 */
+      totalPages?: number;
+      hasNextPage?: boolean;
+      hasPreviousPage?: boolean;
+    };
+    Debug_VideoResponse: {
+      /** Format: guid */
+      id?: string;
+      title?: string;
+      description?: string | null;
+      status?: string;
+      thumbnailUrl?: string | null;
+      streamingUrl?: string | null;
+      metadata?: components["schemas"]["VideoMetadata"];
+      specifications?: components["schemas"]["VideoSpecifications"];
+      sourceKey?: string;
+      outputFolder?: string | null;
+      /** Format: date-time */
+      createdOn?: string;
+      /** Format: date-time */
+      publishedOn?: string | null;
+    };
+    VideoMetadata: {
+      originalFileName?: string;
+      contentType?: string;
+      /** Format: int64 */
+      fileSize?: number;
+      transcodingMethod?: string;
+      encryptionMethod?: string | null;
+    };
+    VideoSpecifications: {
+      /** Format: duration */
+      duration?: string;
+      resolution?: components["schemas"]["Resolution"];
+    };
+    Resolution: {
+      /** Format: int32 */
+      width?: number;
+      /** Format: int32 */
+      height?: number;
+    };
+    VideoStateDto: {
+      /** Format: guid */
+      correlationId?: string;
+      /** Format: guid */
+      tenantId?: string;
+      currentState?: string;
+      mediaConverterJobId?: string | null;
+      key?: string | null;
+      customThumbnailKey?: string | null;
+      isFailed?: boolean;
+      /** Format: int32 */
+      version?: number;
+    };
+    UpdateVideoInfo_Request: {
+      title?: string;
+      description?: string | null;
+    };
+    Upload_Response: {
+      /** Format: guid */
+      videoId?: string;
+      /** Format: guid */
+      tenantId?: string;
+      key?: string;
+      preSignedUrl?: string;
+      transcodingMethod?: string;
+      encryptionMethod?: string;
+      headers?: {
+        [key: string]: string;
+      };
+      thumbnailKey?: string | null;
+      thumbnailPreSignedUrl?: string | null;
+      thumbnailHeaders?: {
+        [key: string]: string;
+      } | null;
+    };
+    Upload_Request: {
+      fileName?: string;
+      contentType?: string;
+      title?: string;
+      description?: string | null;
+      transcodingMethod?: string | null;
+      encryptionMethod?: string | null;
+      generateCustomThumbnailUrl?: boolean | null;
+      targetResourceArn?: string | null;
+    };
+    StreamingInfoResponseDTO: {
+      url?: string;
+      encryptionMethod?: string | null;
+      licenseUrl?: string | null;
+      drm?: components["schemas"]["DrmInfo"] | null;
+    };
+    DrmInfo: {
+      widevineUrl?: string | null;
+      playReadyUrl?: string | null;
+      token?: string | null;
+    };
+  };
 }
 export type $defs = Record<string, never>;
 export interface operations {
-    AlphaZeroModulesIdentityPresentationUsersDevicesRegisterDeviceEndpoint: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["RegisterDeviceRequest"];
-            };
-        };
-        responses: {
-            /** @description Device registered successfully */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["RegisterDeviceResponse"];
-                };
-            };
-            /** @description Validation failure (DeviceName empty/too long, PublicKey empty, Platform invalid) */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Device already registered (Device.Exists) */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-        };
-    };
-    AlphaZeroModulesIdentityPresentationUsersDevicesSetMainDeviceEndpoint: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["SetMainDeviceRequest"];
-            };
-        };
-        responses: {
-            /** @description Main device updated successfully */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Device not found (Device.NotFound) */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-        };
-    };
-    AlphaZeroModulesIdentityPresentationPrincipalsQueriesGetPrincipalsByResourceGetPrincipalsByResourceEndpoint: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                resourceType: string;
-                resourceId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Principals retrieved successfully */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PrincipalDto"][];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Forbidden (Missing identity:ManagePrincipals permission) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-        };
-    };
-    AlphaZeroModulesIdentityPresentationPrincipalsQueriesGetPrincipalPoliciesGetPrincipalPoliciesEndpoint: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                principalId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Principal policies retrieved successfully */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PrincipalPoliciesDto"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Forbidden (Missing identity:ManagePrincipals permission) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Principal not found (Principal.NotFound) */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-        };
-    };
-    AlphaZeroModulesIdentityPresentationPrincipalsCommandsAttachManagedPolicyAttachManagedPolicyEndpoint: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                principalId: string;
-                managedPolicyId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Managed policy attached successfully */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation failure (PrincipalId or ManagedPolicyId empty) */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Forbidden (Missing identity:ManagePrincipals permission) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Principal or managed policy not found (Principal.NotFound, ManagedPolicy.NotFound) */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-        };
-    };
-    AlphaZeroModulesIdentityPresentationPrincipalsCommandsDetachManagedPolicyDetachManagedPolicyEndpoint: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                principalId: string;
-                managedPolicyId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Managed policy detached successfully */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation failure (PrincipalId or ManagedPolicyId empty) */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Forbidden (Missing identity:ManagePrincipals permission) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Principal not found (Principal.NotFound) */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-        };
-    };
-    AlphaZeroModulesIdentityPresentationPrincipalsCommandsDetachInlinePolicyDetachInlinePolicyEndpoint: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                principalId: string;
-                policyId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Inline policy detached successfully */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation failure (PrincipalId or PolicyId empty) */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Forbidden (Missing identity:ManagePrincipals permission) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Principal not found (Principal.NotFound) */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-        };
-    };
-    AlphaZeroModulesIdentityPresentationPrincipalsCommandsCreatePrincipalCreatePrincipalEndpoint: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CreatePrincipalRequest"];
-            };
-        };
-        responses: {
-            /** @description Principal created successfully */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CreatePrincipalResponse"];
-                };
-            };
-            /** @description Validation failure (Username empty, Password < 8 chars, Name empty/too long, PrincipalType invalid) */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Unauthorized (Tenant not found or invalid credentials) */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Forbidden (Missing identity:ManagePrincipals permission) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-        };
-    };
-    AlphaZeroModulesIdentityPresentationPrincipalsCommandsAttachInlinePolicyAttachInlinePolicyEndpoint: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                principalId: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["AttachInlinePolicyRequest"];
-            };
-        };
-        responses: {
-            /** @description Inline policy attached successfully */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation failure (PrincipalId empty, PolicyName empty/too long, Statements empty) */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Unauthorized (Tenant not found or invalid token) */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Forbidden (Missing identity:ManagePrincipals permission) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Principal not found (Principal.NotFound) */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-        };
-    };
-    AlphaZeroModulesIdentityPresentationPoliciesCommandsDeleteManagedPolicyDeleteManagedPolicyEndpoint: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                policyId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Managed policy deleted successfully */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation failure (PolicyId empty) */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Forbidden (Missing identity:ManagePolicies permission) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Managed policy not found (ManagedPolicy.NotFound) */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-        };
-    };
-    AlphaZeroModulesIdentityPresentationPoliciesCommandsCreateManagedPolicyCreateManagedPolicyEndpoint: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CreateManagedPolicyRequest"];
-            };
-        };
-        responses: {
-            /** @description Managed policy created successfully */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CreateManagedPolicyResponse"];
-                };
-            };
-            /** @description Validation failure (Name empty/too long, Statements empty) */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Forbidden (Missing identity:ManagePolicies permission) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-        };
-    };
-    AlphaZeroModulesIdentityPresentationAuthCommandsRegisterStudentRegisterStudentEndpoint: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["RegisterStudentRequest"];
-            };
-        };
-        responses: {
-            /** @description Student successfully registered */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["RegisterStudentResponse"];
-                };
-            };
-            /** @description Validation failure (TenantId empty, Username empty/too long, Password < 8 chars, Name empty/too long) */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description StudentAccess policy not found (ManagedPolicy.NotFound) */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description User already exists */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-        };
-    };
-    AlphaZeroModulesIdentityPresentationAuthCommandsLoginPrincipalLoginPrincipalEndpoint: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["LoginPrincipalRequest"];
-            };
-        };
-        responses: {
-            /** @description Authentication successful */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["TokenResponse"];
-                };
-            };
-            /** @description Invalid credentials (Auth.NotFoundCredentials, Auth.InvalidCredentials) */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-        };
-    };
-    AlphaZeroModulesIdentityPresentationAuthCommandsLoginAsTenantUserLoginAsTenantUserEndpoint: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["LoginAsTenantUserRequest"];
-            };
-        };
-        responses: {
-            /** @description Token exchange successful */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["TokenResponse"];
-                };
-            };
-            /** @description Validation failure (Invalid Platform) */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Unauthorized (Missing or invalid IDP claims) */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Forbidden */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-        };
-    };
-    AlphaZeroModulesVideoUploadingPresentationFeaturesGetVideoKeyEndpoint: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                videoId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Decryption key binary stream (application/octet-stream) */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Forbidden (Missing video:Stream permission) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Video secret not found (VideoSecret.NotFound) */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Invalid key format stored (VideoSecret.InvalidFormat) */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-        };
-    };
-    AlphaZeroModulesTenantsPresentationEndpointsGetTenantGetTenantEndpoint: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Tenant retrieved successfully */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["TenantDto"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Forbidden (Missing tenants:Manage permission) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Tenant not found (Tenant.NotFound) */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-        };
-    };
-    AlphaZeroModulesTenantsPresentationEndpointsUpdateTenantUpdateTenantEndpoint: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["UpdateTenantRequest"];
-            };
-        };
-        responses: {
-            /** @description Tenant updated successfully */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation failure (Id empty, Name empty/too long) */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Forbidden (Missing tenants:Manage permission) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Tenant not found (Tenant.NotFound) */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-        };
-    };
-    AlphaZeroModulesTenantsPresentationEndpointsDeleteTenantDeleteTenantEndpoint: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Tenant deleted successfully */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Forbidden (Missing tenants:Manage permission) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Tenant not found (Tenant.NotFound) */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-        };
-    };
-    AlphaZeroModulesTenantsPresentationEndpointsLookupTenantLookupTenantEndpoint: {
-        parameters: {
-            query: {
-                subdomain: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Tenant details and branding retrieved successfully */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["LookupTenantResponse"];
-                };
-            };
-            /** @description Tenant not found (Tenant.NotFound) */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-        };
-    };
-    AlphaZeroModulesTenantsPresentationEndpointsListTenantsListTenantsEndpoint: {
-        parameters: {
-            query: {
-                q?: string | null;
-                page: number;
-                perPage: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Tenants retrieved successfully */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PagedResultOfTenantDto"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Forbidden (Missing tenants:Manage permission) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-        };
-    };
-    AlphaZeroModulesTenantsPresentationEndpointsCreateTenantCreateTenantEndpoint: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CreateTenantRequest"];
-            };
-        };
-        responses: {
-            /** @description Tenant created successfully */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CreateTenantResponse"];
-                };
-            };
-            /** @description Validation failure (Name empty/too long, Subdomain empty/too long/invalid characters) */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Forbidden (Missing tenants:Manage permission) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Subdomain already taken (Tenant.SubdomainNotUnique) */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-        };
-    };
-    AlphaZeroModulesAssessmentsPresentationEndpointsSubmissionsSubmitSubmitAssessmentEndpoint: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                submissionId: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["SubmitAssessmentRequest"];
-            };
-        };
-        responses: {
-            /** @description Assessment submitted successfully */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SubmitAssessmentResponse"];
-                };
-            };
-            /** @description Validation failure (Submission.Empty) */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Forbidden (Missing assessments:Submit permission) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Not found (Submission.NotFound, Assessment.NotFound) */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Conflict (Submission.Status - only in-progress submissions can be submitted) */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-        };
-    };
-    AlphaZeroModulesAssessmentsPresentationEndpointsSubmissionsListListSubmissionsEndpoint: {
-        parameters: {
-            query: {
-                assessmentId?: string | null;
-                status?: string | null;
-                page: number;
-                perPage: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Submissions retrieved successfully */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PagedResultOfSubmissionSummaryDto"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Forbidden (Missing assessments:ViewSubmissions permission) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-        };
-    };
-    AlphaZeroModulesAssessmentsPresentationEndpointsAssessmentsUpdateContentUpdateAssessmentContentEndpoint: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                assessmentId: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["UpdateAssessmentContentRequest"];
-            };
-        };
-        responses: {
-            /** @description Assessment content updated successfully */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation failure (AssessmentId empty, Content null, or invalid questions) */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Forbidden (Missing assessments:Edit permission) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Assessment not found (Assessment.NotFound) */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Conflict (Assessment.Status - archived assessment cannot be modified) */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-        };
-    };
-    AlphaZeroModulesAssessmentsPresentationEndpointsAssessmentsListListAssessmentsEndpoint: {
-        parameters: {
-            query: {
-                page: number;
-                perPage: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Assessments retrieved successfully */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PagedResultOfAssessmentDto"];
-                };
-            };
-        };
-    };
-    AlphaZeroModulesAssessmentsPresentationEndpointsAssessmentsCreateCreateAssessmentEndpoint: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CreateAssessmentRequest"];
-            };
-        };
-        responses: {
-            /** @description Assessment successfully created */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CreateAssessmentResponse"];
-                };
-            };
-            /** @description Validation failure (Assessment.Title, Assessment.PassingScore, or invalid Type) */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Unauthorized (Tenant.NotFound or unauthenticated) */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Forbidden (Missing assessments:Create permission) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-        };
-    };
-    AlphaZeroModulesAssessmentsPresentationEndpointsAssessmentsGetGetAssessmentEndpoint: {
-        parameters: {
-            query?: {
-                version?: number | null;
-            };
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Assessment details retrieved successfully */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["AssessmentDetailsDto"];
-                };
-            };
-            /** @description Assessment or version not found (Assessment.NotFound, Assessment.VersionNotFound) */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-        };
-    };
-    AlphaZeroModulesIdentityPresentationEnrollementsCompleteItemCompleteItemEndpoint: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                enrollmentId: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CompleteItemRequest"];
-            };
-        };
-        responses: {
-            /** @description Item marked as completed successfully */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Forbidden (Missing enrollments:Complete permission) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Not found (Enrollment.NotFound, Course.Item) */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Conflict (Enrollement.Status - cannot complete items in inactive enrollment) */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-        };
-    };
-    AlphaZeroModulesCoursesPresentationSubjectsListListSubjectsEndpoint: {
-        parameters: {
-            query: {
-                page: number;
-                perPage: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Subjects retrieved successfully */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PagedResultOfSubjectDto"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Forbidden (Missing subjects:List permission) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-        };
-    };
-    AlphaZeroModulesCoursesPresentationSubjectsCreateCreateSubjectEndpoint: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CreateSubjectRequest"];
-            };
-        };
-        responses: {
-            /** @description Subject successfully created */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CreateSubjectResponse"];
-                };
-            };
-            /** @description Validation failure (Name empty/too long, Subject.Validation) */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Unauthorized (Tenant.NotFound) */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Forbidden (Missing subjects:Create permission) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-        };
-    };
-    AlphaZeroModulesCoursesPresentationSubjectsGetGetSubjectEndpoint: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Subject retrieved successfully */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SubjectDto"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Forbidden (Missing subjects:View permission) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Subject not found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-        };
-    };
-    AlphaZeroModulesCoursesPresentationEnrollementsGetGetEnrollementEndpoint: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Enrollment retrieved successfully */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["EnrollementResponse"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Forbidden (Missing enrollments:View permission) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Enrollment not found (Enrollment.NotFound) */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-        };
-    };
-    AlphaZeroModulesCoursesPresentationEnrollementsEnrollEnrollInCourseEndpoint: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["EnrollInCourseRequest"];
-            };
-        };
-        responses: {
-            /** @description Student successfully enrolled */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["EnrollInCourseResponse"];
-                };
-            };
-            /** @description Validation failure (Enrollement.StudentId, Enrollement.CourseId) */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Unauthorized (Tenant.NotFound) */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Forbidden (Missing courses:Enroll permission) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Course not found (Course.NotFound) */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Student is already enrolled in this course (Enrollment.Exists) */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-        };
-    };
-    AlphaZeroModulesCoursesPresentationEnrollementsDashboardGetStudentDashboardEndpoint: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                studentId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Dashboard retrieved successfully */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DashboardResponse"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Forbidden (Missing enrollments:View permission) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-        };
-    };
-    AlphaZeroModulesCoursesPresentationCoursesStateApproveCourseEndpoint: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                courseId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Course approved successfully */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Forbidden (Missing courses:Approve permission) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Course not found (Course.NotFound) */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Conflict (Course.Status - only courses under review can be approved) */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-        };
-    };
-    AlphaZeroModulesCoursesPresentationCoursesStatePublishCourseEndpoint: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                courseId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Course published successfully */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation failure (Course.NoPlans - course must have at least one plan before publishing) */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Forbidden (Missing courses:Publish permission) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Course not found (Course.NotFound) */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Conflict (Course.Status - only approved courses can be published) */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-        };
-    };
-    AlphaZeroModulesCoursesPresentationCoursesStateRejectCourseEndpoint: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                courseId: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["RejectCourseRequest"];
-            };
-        };
-        responses: {
-            /** @description Course rejected successfully */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation failure (Course.RejectionReason - rejection reason is required) */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Forbidden (Missing courses:Reject permission) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Course not found (Course.NotFound) */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Conflict (Course.Status - only courses under review can be rejected) */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-        };
-    };
-    AlphaZeroModulesCoursesPresentationCoursesStateSubmitForReviewEndpoint: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                courseId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Course submitted for review successfully */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation failure (Course.Empty - course must have content before review) */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Forbidden (Missing courses:Submit permission) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Course not found (Course.NotFound) */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Conflict (Course.Status - only draft courses can be reviewed) */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-        };
-    };
-    AlphaZeroModulesCoursesPresentationCoursesReorderSectionsReorderSectionsEndpoint: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                courseId: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ReorderSectionsRequest"];
-            };
-        };
-        responses: {
-            /** @description Sections reordered successfully */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Forbidden (Missing courses:Edit permission) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Course not found (Course.NotFound) */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Conflict (Course.Status - cannot reorder sections once published) */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-        };
-    };
-    AlphaZeroModulesCoursesPresentationCoursesReorderItemsReorderItemsEndpoint: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                courseId: string;
-                sectionId: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ReorderItemsRequest"];
-            };
-        };
-        responses: {
-            /** @description Items reordered successfully */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Forbidden (Missing courses:Edit permission) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Not found (Course.NotFound, Course.Section) */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-        };
-    };
-    AlphaZeroModulesCoursesPresentationCoursesPlansUpdatePlanUpdatePlanEndpoint: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                courseId: string;
-                planId: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["UpdatePlanRequest"];
-            };
-        };
-        responses: {
-            /** @description Plan updated successfully */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation failure (CourseId, PlanId, Name, PrincipalId empty or Course.PlanName) */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Forbidden (Missing courses:Edit permission) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Not found (Course.NotFound, Course.Plan) */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-        };
-    };
-    AlphaZeroModulesCoursesPresentationCoursesPlansRemovePlanRemovePlanEndpoint: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                courseId: string;
-                planId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Plan removed successfully */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation failure (CourseId or PlanId empty) */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Forbidden (Missing courses:Edit permission) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Not found (Course.NotFound, Course.Plan) */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-        };
-    };
-    AlphaZeroModulesCoursesPresentationCoursesPlansAddPlanAddPlanEndpoint: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                courseId: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["AddPlanRequest"];
-            };
-        };
-        responses: {
-            /** @description Plan added successfully */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["AddPlanResponse"];
-                };
-            };
-            /** @description Validation failure (CourseId, Name, PrincipalId empty or Course.PlanName) */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Forbidden (Missing courses:Edit permission) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Course not found (Course.NotFound) */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-        };
-    };
-    AlphaZeroModulesCoursesPresentationCoursesListListCoursesEndpoint: {
-        parameters: {
-            query: {
-                subjectId?: string | null;
-                page: number;
-                perPage: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Courses retrieved successfully */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PagedResultOfCourseSummaryDto"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Forbidden (Missing courses:View permission) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-        };
-    };
-    AlphaZeroModulesCoursesPresentationCoursesCreateCreateCourseEndpoint: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CreateCourseRequest"];
-            };
-        };
-        responses: {
-            /** @description Course successfully created */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CreateCourseResponse"];
-                };
-            };
-            /** @description Validation failure (Course.Title, SubjectId empty) */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Unauthorized (Tenant.NotFound) */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Forbidden (Missing courses:Create permission) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Subject not found (Course.SubjectId) */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-        };
-    };
-    AlphaZeroModulesCoursesPresentationCoursesGetGetCourseEndpoint: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Course structure retrieved successfully */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CourseResponse"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Forbidden (Missing courses:View permission) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Course not found (Course.NotFound) */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-        };
-    };
-    AlphaZeroModulesCoursesPresentationCoursesAddSectionAddSectionEndpoint: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                courseId: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["AddSectionRequest"];
-            };
-        };
-        responses: {
-            /** @description Section added successfully */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation failure (CourseId empty, Title empty/too long) */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Forbidden (Missing courses:Edit permission) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Course not found (Course.NotFound) */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-        };
-    };
-    AlphaZeroModulesCoursesPresentationCoursesAddItemAddLessonEndpoint: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                courseId: string;
-                sectionId: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["AddLessonRequest"];
-            };
-        };
-        responses: {
-            /** @description Lesson added successfully */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation failure (CourseId, SectionId, Title, VideoId) */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Forbidden (Missing courses:Edit permission) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Not found (Course.NotFound, Course.Section) */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-        };
-    };
-    AlphaZeroModulesCoursesPresentationCoursesAddItemAddAssessmentEndpoint: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                courseId: string;
-                sectionId: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["AddAssessmentRequest"];
-            };
-        };
-        responses: {
-            /** @description Assessment added successfully */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation failure (CourseId, SectionId, Title empty or invalid) */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Unauthorized (No TenantID provided or unauthenticated) */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Forbidden (Missing courses:Edit permission) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Not found (Course.NotFound, Course.Section, or Assessment.NotFound) */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-        };
-    };
-    AlphaZeroModulesCoursesPresentationAnalyticsGetCourseAnalyticsEndpoint: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                courseId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Analytics retrieved successfully */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CourseAnalyticsDto"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Forbidden (Missing courses:ViewAnalytics permission) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Analytics not found (CourseAnalytics.NotFound) */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-        };
-    };
-    AlphaZeroModulesCoursesPresentationAnalyticsListStudentProgressEndpoint: {
-        parameters: {
-            query: {
-                page: number;
-                perPage: number;
-            };
-            header?: never;
-            path: {
-                courseId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Progress list retrieved successfully */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PagedResultOfEnrollmentDto"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Forbidden (Missing courses:ViewAnalytics permission) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-        };
-    };
-    AlphaZeroModulesLibraryPresentationEndpointsRedemptionAuditLogsGetRedemptionLogsEndpoint: {
-        parameters: {
-            query?: {
-                from?: string | null;
-                to?: string | null;
-                page?: number;
-                pageSize?: number;
-            };
-            header?: never;
-            path: {
-                libraryId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Redemption audit logs retrieved successfully */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PagedResultOfRedemptionAuditLogDto"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Forbidden (Missing library:Audit permission) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-        };
-    };
-    AlphaZeroModulesLibraryPresentationEndpointsRedeemCodeRedeemCodeEndpoint: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["RedeemCodeRequest"];
-            };
-        };
-        responses: {
-            /** @description Access code redeemed successfully */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Unauthorized (User must be logged in) */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Forbidden (AccessCode.TenantMismatch or missing courses:Enroll permission) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Access code not found (AccessCode.NotFound) */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Invalid code status (AccessCode.InvalidStatus) */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-        };
-    };
-    AlphaZeroModulesLibraryPresentationEndpointsLibrariesGetLibraryGetLibraryEndpoint: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Library retrieved successfully */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["LibraryDto"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Forbidden (Missing library:Audit permission) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Library not found (Library.NotFound) */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-        };
-    };
-    AlphaZeroModulesLibraryPresentationEndpointsLibrariesDeleteLibraryDeleteLibraryEndpoint: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Library deleted successfully */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Forbidden (Missing library:Audit permission) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Library not found (Library.NotFound) */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-        };
-    };
-    AlphaZeroModulesLibraryPresentationEndpointsLibrariesUpdateLibraryUpdateLibraryEndpoint: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["UpdateLibraryRequest"];
-            };
-        };
-        responses: {
-            /** @description Library updated successfully */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation failure (Id, Name, Address, ContactNumber empty or too long) */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Forbidden (Missing library:Audit permission) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Library not found (Library.NotFound) */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-        };
-    };
-    AlphaZeroModulesLibraryPresentationEndpointsLibrariesListLibrariesListLibrariesEndpoint: {
-        parameters: {
-            query: {
-                page: number;
-                perPage: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Libraries retrieved successfully */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PagedResultOfLibraryDto"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Forbidden (Missing library:Audit permission) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-        };
-    };
-    AlphaZeroModulesLibraryPresentationEndpointsLibrariesCreateLibraryCreateLibraryEndpoint: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CreateLibraryRequest"];
-            };
-        };
-        responses: {
-            /** @description Library created successfully */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CreateLibraryResponse"];
-                };
-            };
-            /** @description Validation failure (Name, Address, ContactNumber empty or too long) */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Unauthorized (Tenant not found or unauthenticated) */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Forbidden (Missing library:Audit permission) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-        };
-    };
-    AlphaZeroModulesLibraryPresentationEndpointsLibrariesAuthorizeResourceAuthorizeResourceEndpoint: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["AuthorizeResourceRequest"];
-            };
-        };
-        responses: {
-            /** @description Resource authorized for library successfully */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation failure (LibraryId or ResourceArn empty) */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Forbidden (Missing library:AttachCourses permission) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Library not found (Library.NotFound) */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Resource already authorized (Library.ResourceAlreadyAuthorized) */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-        };
-    };
-    AlphaZeroModulesLibraryPresentationEndpointsLibrariesDeauthorizeResourceDeauthorizeResourceEndpoint: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "*/*": components["schemas"]["DeauthorizeResourceRequest"];
-                "application/json": components["schemas"]["DeauthorizeResourceRequest"];
-            };
-        };
-        responses: {
-            /** @description Resource deauthorized from library successfully */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation failure (LibraryId or ResourceArn empty) */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Forbidden (Missing library:AttachCourses permission) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Library not found or resource not authorized (Library.NotFound, Library.ResourceNotAuthorized) */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-        };
-    };
-    AlphaZeroModulesLibraryPresentationEndpointsAccessCodesVoidCodeVoidCodeEndpoint: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["VoidCodeRequest"];
-            };
-        };
-        responses: {
-            /** @description Access code voided successfully */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation failure (RawCode or Reason empty/too long) */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Forbidden (Missing library:Audit permission) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Access code not found (AccessCode.NotFound) */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Access code already voided (AccessCode.AlreadyVoided) */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-        };
-    };
-    AlphaZeroModulesLibraryPresentationEndpointsAccessCodesGenerateBatchGenerateBatchEndpoint: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                libraryId: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["GenerateBatchRequest"];
-            };
-        };
-        responses: {
-            /** @description Access codes generated successfully */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["GenerateBatchResponse"];
-                };
-            };
-            /** @description Validation failure (Quantity <= 0 or > 1000, StrategyId or TargetResourceArn empty) */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Unauthorized (Tenant not found or unauthenticated) */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Forbidden (Missing library:GenerateCodes or library not authorized for resource) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Library not found (Library.NotFound) */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-        };
-    };
-    AlphaZeroModulesLibraryPresentationEndpointsAccessCodesGenerateAdminCodeGenerateAdminCodeEndpoint: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["GenerateAdminCodeRequest"];
-            };
-        };
-        responses: {
-            /** @description Admin access code generated successfully */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["GenerateAdminCodeResponse"];
-                };
-            };
-            /** @description Validation failure (TargetResourceArn or StrategyId empty) */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Unauthorized (Tenant not found or unauthenticated) */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Forbidden (Missing library:Audit permission) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-        };
-    };
-    AlphaZeroModulesLibraryPresentationEndpointsAccessCodesDistributeBatchDistributeBatchEndpoint: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                batchId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Batch distributed successfully */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation failure (BatchId empty) */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Forbidden (Missing library:SellCodes permission) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Invalid code status (AccessCode.InvalidStatus) */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-        };
-    };
-    GetApiVideoUploadingDebugVideos: {
-        parameters: {
-            query?: {
-                page?: number | null;
-                perPage?: number | null;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PagedResultOfVideoResponse"];
-                };
-            };
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-        };
-    };
-    GetApiVideoUploadingDebugVideos2: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Debug_VideoResponse"];
-                };
-            };
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-        };
-    };
-    DeleteApiVideoUploadingDebugVideos: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-        };
-    };
-    PatchApiVideoUploadingDebugVideos: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["UpdateVideoInfo_Request"];
-            };
-        };
-        responses: {
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-        };
-    };
-    GetApiVideoUploadingDebugVideosState: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["VideoStateDto"];
-                };
-            };
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-        };
-    };
-    PostApiVideoUploadingUpload: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["Upload_Request"];
-            };
-        };
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Upload_Response"];
-                };
-            };
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-        };
-    };
-    GetApiVideo: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                videoId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["StreamingInfoResponseDTO"];
-                };
-            };
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemDetails"];
-                };
-            };
-        };
-    };
-    GetUsersMe: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        [key: string]: string;
-                    };
-                };
-            };
-        };
-    };
+  AlphaZeroModulesAssessmentsPresentationEndpointsAssessmentsCreateCreateAssessmentEndpoint: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CreateAssessmentRequest"];
+      };
+    };
+    responses: {
+      /** @description Assessment successfully created */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CreateAssessmentResponse"];
+        };
+      };
+      /** @description Validation failure (Assessment.Title, Assessment.PassingScore, or invalid Type) */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Unauthorized (Tenant.NotFound or unauthenticated) */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Forbidden (Missing assessments:Create permission) */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+    };
+  };
+  AlphaZeroModulesAssessmentsPresentationEndpointsAssessmentsGetGetAssessmentEndpoint: {
+    parameters: {
+      query?: {
+        version?: number | null;
+      };
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Assessment details retrieved successfully */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["AssessmentDetailsDto"];
+        };
+      };
+      /** @description Assessment or version not found (Assessment.NotFound, Assessment.VersionNotFound) */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+    };
+  };
+  AlphaZeroModulesAssessmentsPresentationEndpointsAssessmentsListListAssessmentsEndpoint: {
+    parameters: {
+      query: {
+        page: number;
+        perPage: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Assessments retrieved successfully */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PagedResultOfAssessmentDto"];
+        };
+      };
+    };
+  };
+  AlphaZeroModulesAssessmentsPresentationEndpointsAssessmentsUpdateContentUpdateAssessmentContentEndpoint: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        assessmentId: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["UpdateAssessmentContentRequest"];
+      };
+    };
+    responses: {
+      /** @description Assessment content updated successfully */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Validation failure (AssessmentId empty, Content null, or invalid questions) */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Forbidden (Missing assessments:Edit permission) */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Assessment not found (Assessment.NotFound) */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Conflict (Assessment.Status - archived assessment cannot be modified) */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+    };
+  };
+  AlphaZeroModulesAssessmentsPresentationEndpointsSubmissionsListListSubmissionsEndpoint: {
+    parameters: {
+      query: {
+        assessmentId?: string | null;
+        status?: string | null;
+        page: number;
+        perPage: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Submissions retrieved successfully */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PagedResultOfSubmissionSummaryDto"];
+        };
+      };
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Forbidden (Missing assessments:ViewSubmissions permission) */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+    };
+  };
+  AlphaZeroModulesAssessmentsPresentationEndpointsSubmissionsSubmitSubmitAssessmentEndpoint: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        submissionId: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["SubmitAssessmentRequest"];
+      };
+    };
+    responses: {
+      /** @description Assessment submitted successfully */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["SubmitAssessmentResponse"];
+        };
+      };
+      /** @description Validation failure (Submission.Empty) */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Forbidden (Missing assessments:Submit permission) */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Not found (Submission.NotFound, Assessment.NotFound) */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Conflict (Submission.Status - only in-progress submissions can be submitted) */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+    };
+  };
+  AlphaZeroModulesCoursesPresentationAnalyticsGetCourseAnalyticsEndpoint: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        courseId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Analytics retrieved successfully */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CourseAnalyticsDto"];
+        };
+      };
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Forbidden (Missing courses:ViewAnalytics permission) */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Analytics not found (CourseAnalytics.NotFound) */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+    };
+  };
+  AlphaZeroModulesCoursesPresentationAnalyticsListStudentProgressEndpoint: {
+    parameters: {
+      query: {
+        page: number;
+        perPage: number;
+      };
+      header?: never;
+      path: {
+        courseId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Progress list retrieved successfully */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PagedResultOfEnrollmentDto"];
+        };
+      };
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Forbidden (Missing courses:ViewAnalytics permission) */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+    };
+  };
+  AlphaZeroModulesCoursesPresentationCoursesAddItemAddAssessmentEndpoint: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        courseId: string;
+        sectionId: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["AddAssessmentRequest"];
+      };
+    };
+    responses: {
+      /** @description Assessment added successfully */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Validation failure (CourseId, SectionId, Title empty or invalid) */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Unauthorized (No TenantID provided or unauthenticated) */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Forbidden (Missing courses:Edit permission) */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Not found (Course.NotFound, Course.Section, or Assessment.NotFound) */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+    };
+  };
+  AlphaZeroModulesCoursesPresentationCoursesAddItemAddLessonEndpoint: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        courseId: string;
+        sectionId: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["AddLessonRequest"];
+      };
+    };
+    responses: {
+      /** @description Lesson added successfully */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Validation failure (CourseId, SectionId, Title, VideoId) */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Forbidden (Missing courses:Edit permission) */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Not found (Course.NotFound, Course.Section) */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+    };
+  };
+  AlphaZeroModulesCoursesPresentationCoursesAddSectionAddSectionEndpoint: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        courseId: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["AddSectionRequest"];
+      };
+    };
+    responses: {
+      /** @description Section added successfully */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Validation failure (CourseId empty, Title empty/too long) */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Forbidden (Missing courses:Edit permission) */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Course not found (Course.NotFound) */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+    };
+  };
+  AlphaZeroModulesCoursesPresentationCoursesCreateCreateCourseEndpoint: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CreateCourseRequest"];
+      };
+    };
+    responses: {
+      /** @description Course successfully created */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CreateCourseResponse"];
+        };
+      };
+      /** @description Validation failure (Course.Title, SubjectId empty) */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Unauthorized (Tenant.NotFound) */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Forbidden (Missing courses:Create permission) */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Subject not found (Course.SubjectId) */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+    };
+  };
+  AlphaZeroModulesCoursesPresentationCoursesGetGetCourseEndpoint: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Course structure retrieved successfully */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CourseResponse"];
+        };
+      };
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Forbidden (Missing courses:View permission) */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Course not found (Course.NotFound) */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+    };
+  };
+  AlphaZeroModulesCoursesPresentationCoursesListListCoursesEndpoint: {
+    parameters: {
+      query: {
+        subjectId?: string | null;
+        page: number;
+        perPage: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Courses retrieved successfully */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PagedResultOfCourseSummaryDto"];
+        };
+      };
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Forbidden (Missing courses:View permission) */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+    };
+  };
+  AlphaZeroModulesCoursesPresentationCoursesPlansAddPlanAddPlanEndpoint: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        courseId: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["AddPlanRequest"];
+      };
+    };
+    responses: {
+      /** @description Plan added successfully */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["AddPlanResponse"];
+        };
+      };
+      /** @description Validation failure (CourseId, Name, PrincipalId empty or Course.PlanName) */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Forbidden (Missing courses:Edit permission) */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Course not found (Course.NotFound) */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+    };
+  };
+  AlphaZeroModulesCoursesPresentationCoursesPlansRemovePlanRemovePlanEndpoint: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        courseId: string;
+        planId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Plan removed successfully */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Validation failure (CourseId or PlanId empty) */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Forbidden (Missing courses:Edit permission) */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Not found (Course.NotFound, Course.Plan) */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+    };
+  };
+  AlphaZeroModulesCoursesPresentationCoursesPlansUpdatePlanUpdatePlanEndpoint: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        courseId: string;
+        planId: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["UpdatePlanRequest"];
+      };
+    };
+    responses: {
+      /** @description Plan updated successfully */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Validation failure (CourseId, PlanId, Name, PrincipalId empty or Course.PlanName) */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Forbidden (Missing courses:Edit permission) */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Not found (Course.NotFound, Course.Plan) */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+    };
+  };
+  AlphaZeroModulesCoursesPresentationCoursesReorderItemsReorderItemsEndpoint: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        courseId: string;
+        sectionId: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ReorderItemsRequest"];
+      };
+    };
+    responses: {
+      /** @description Items reordered successfully */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Forbidden (Missing courses:Edit permission) */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Not found (Course.NotFound, Course.Section) */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+    };
+  };
+  AlphaZeroModulesCoursesPresentationCoursesReorderSectionsReorderSectionsEndpoint: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        courseId: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ReorderSectionsRequest"];
+      };
+    };
+    responses: {
+      /** @description Sections reordered successfully */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Forbidden (Missing courses:Edit permission) */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Course not found (Course.NotFound) */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Conflict (Course.Status - cannot reorder sections once published) */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+    };
+  };
+  AlphaZeroModulesCoursesPresentationCoursesStateApproveCourseEndpoint: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        courseId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Course approved successfully */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Forbidden (Missing courses:Approve permission) */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Course not found (Course.NotFound) */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Conflict (Course.Status - only courses under review can be approved) */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+    };
+  };
+  AlphaZeroModulesCoursesPresentationCoursesStatePublishCourseEndpoint: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        courseId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Course published successfully */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Validation failure (Course.NoPlans - course must have at least one plan before publishing) */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Forbidden (Missing courses:Publish permission) */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Course not found (Course.NotFound) */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Conflict (Course.Status - only approved courses can be published) */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+    };
+  };
+  AlphaZeroModulesCoursesPresentationCoursesStateRejectCourseEndpoint: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        courseId: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["RejectCourseRequest"];
+      };
+    };
+    responses: {
+      /** @description Course rejected successfully */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Validation failure (Course.RejectionReason - rejection reason is required) */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Forbidden (Missing courses:Reject permission) */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Course not found (Course.NotFound) */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Conflict (Course.Status - only courses under review can be rejected) */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+    };
+  };
+  AlphaZeroModulesCoursesPresentationCoursesStateSubmitForReviewEndpoint: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        courseId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Course submitted for review successfully */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Validation failure (Course.Empty - course must have content before review) */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Forbidden (Missing courses:Submit permission) */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Course not found (Course.NotFound) */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Conflict (Course.Status - only draft courses can be reviewed) */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+    };
+  };
+  AlphaZeroModulesCoursesPresentationEnrollementsDashboardGetStudentDashboardEndpoint: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        studentId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Dashboard retrieved successfully */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["DashboardResponse"];
+        };
+      };
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Forbidden (Missing enrollments:View permission) */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+    };
+  };
+  AlphaZeroModulesCoursesPresentationEnrollementsEnrollEnrollInCourseEndpoint: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["EnrollInCourseRequest"];
+      };
+    };
+    responses: {
+      /** @description Student successfully enrolled */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["EnrollInCourseResponse"];
+        };
+      };
+      /** @description Validation failure (Enrollement.StudentId, Enrollement.CourseId) */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Unauthorized (Tenant.NotFound) */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Forbidden (Missing courses:Enroll permission) */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Course not found (Course.NotFound) */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Student is already enrolled in this course (Enrollment.Exists) */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+    };
+  };
+  AlphaZeroModulesCoursesPresentationEnrollementsGetGetEnrollementEndpoint: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Enrollment retrieved successfully */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["EnrollementResponse"];
+        };
+      };
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Forbidden (Missing enrollments:View permission) */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Enrollment not found (Enrollment.NotFound) */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+    };
+  };
+  AlphaZeroModulesCoursesPresentationSubjectsCreateCreateSubjectEndpoint: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CreateSubjectRequest"];
+      };
+    };
+    responses: {
+      /** @description Subject successfully created */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CreateSubjectResponse"];
+        };
+      };
+      /** @description Validation failure (Name empty/too long, Subject.Validation) */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Unauthorized (Tenant.NotFound) */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Forbidden (Missing subjects:Create permission) */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+    };
+  };
+  AlphaZeroModulesCoursesPresentationSubjectsGetGetSubjectEndpoint: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Subject retrieved successfully */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["SubjectDto"];
+        };
+      };
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Forbidden (Missing subjects:View permission) */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Subject not found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+    };
+  };
+  AlphaZeroModulesCoursesPresentationSubjectsListListSubjectsEndpoint: {
+    parameters: {
+      query: {
+        page: number;
+        perPage: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Subjects retrieved successfully */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PagedResultOfSubjectDto"];
+        };
+      };
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Forbidden (Missing subjects:List permission) */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+    };
+  };
+  AlphaZeroModulesIdentityPresentationAuthCommandsLoginAsTenantUserLoginAsTenantUserEndpoint: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["LoginAsTenantUserRequest"];
+      };
+    };
+    responses: {
+      /** @description Token exchange successful */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["TokenResponse"];
+        };
+      };
+      /** @description Validation failure (Invalid Platform) */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Unauthorized (Missing or invalid IDP claims) */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+    };
+  };
+  AlphaZeroModulesIdentityPresentationAuthCommandsLoginPrincipalLoginPrincipalEndpoint: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["LoginPrincipalRequest"];
+      };
+    };
+    responses: {
+      /** @description Authentication successful */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["TokenResponse"];
+        };
+      };
+      /** @description Invalid credentials (Auth.NotFoundCredentials, Auth.InvalidCredentials) */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+    };
+  };
+  AlphaZeroModulesIdentityPresentationAuthCommandsRegisterStudentRegisterStudentEndpoint: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["RegisterStudentRequest"];
+      };
+    };
+    responses: {
+      /** @description Student successfully registered */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["RegisterStudentResponse"];
+        };
+      };
+      /** @description Validation failure (TenantId empty, Username empty/too long, Password < 8 chars, Name empty/too long) */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description StudentAccess policy not found (ManagedPolicy.NotFound) */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description User already exists */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+    };
+  };
+  AlphaZeroModulesIdentityPresentationEnrollementsCompleteItemCompleteItemEndpoint: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        enrollmentId: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CompleteItemRequest"];
+      };
+    };
+    responses: {
+      /** @description Item marked as completed successfully */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Forbidden (Missing enrollments:Complete permission) */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Not found (Enrollment.NotFound, Course.Item) */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Conflict (Enrollement.Status - cannot complete items in inactive enrollment) */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+    };
+  };
+  AlphaZeroModulesIdentityPresentationPoliciesCommandsCreateManagedPolicyCreateManagedPolicyEndpoint: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CreateManagedPolicyRequest"];
+      };
+    };
+    responses: {
+      /** @description Managed policy created successfully */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CreateManagedPolicyResponse"];
+        };
+      };
+      /** @description Validation failure (Name empty/too long, Statements empty) */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Forbidden (Missing identity:ManagePolicies permission) */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+    };
+  };
+  AlphaZeroModulesIdentityPresentationPoliciesCommandsDeleteManagedPolicyDeleteManagedPolicyEndpoint: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        policyId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Managed policy deleted successfully */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Validation failure (PolicyId empty) */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Forbidden (Missing identity:ManagePolicies permission) */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Managed policy not found (ManagedPolicy.NotFound) */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+    };
+  };
+  AlphaZeroModulesIdentityPresentationPrincipalsCommandsAttachInlinePolicyAttachInlinePolicyEndpoint: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        principalId: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["AttachInlinePolicyRequest"];
+      };
+    };
+    responses: {
+      /** @description Inline policy attached successfully */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Validation failure (PrincipalId empty, PolicyName empty/too long, Statements empty) */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Unauthorized (Tenant not found or invalid token) */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Forbidden (Missing identity:ManagePrincipals permission) */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Principal not found (Principal.NotFound) */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+    };
+  };
+  AlphaZeroModulesIdentityPresentationPrincipalsCommandsAttachManagedPolicyAttachManagedPolicyEndpoint: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        principalId: string;
+        managedPolicyId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Managed policy attached successfully */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Validation failure (PrincipalId or ManagedPolicyId empty) */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Forbidden (Missing identity:ManagePrincipals permission) */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Principal or managed policy not found (Principal.NotFound, ManagedPolicy.NotFound) */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+    };
+  };
+  AlphaZeroModulesIdentityPresentationPrincipalsCommandsCreatePrincipalCreatePrincipalEndpoint: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CreatePrincipalRequest"];
+      };
+    };
+    responses: {
+      /** @description Principal created successfully */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CreatePrincipalResponse"];
+        };
+      };
+      /** @description Validation failure (Username empty, Password < 8 chars, Name empty/too long, PrincipalType invalid) */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Unauthorized (Tenant not found or invalid credentials) */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Forbidden (Missing identity:ManagePrincipals permission) */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+    };
+  };
+  AlphaZeroModulesIdentityPresentationPrincipalsCommandsDetachInlinePolicyDetachInlinePolicyEndpoint: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        principalId: string;
+        policyId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Inline policy detached successfully */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Validation failure (PrincipalId or PolicyId empty) */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Forbidden (Missing identity:ManagePrincipals permission) */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Principal not found (Principal.NotFound) */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+    };
+  };
+  AlphaZeroModulesIdentityPresentationPrincipalsCommandsDetachManagedPolicyDetachManagedPolicyEndpoint: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        principalId: string;
+        managedPolicyId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Managed policy detached successfully */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Validation failure (PrincipalId or ManagedPolicyId empty) */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Forbidden (Missing identity:ManagePrincipals permission) */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Principal not found (Principal.NotFound) */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+    };
+  };
+  AlphaZeroModulesIdentityPresentationPrincipalsQueriesGetPrincipalPoliciesGetPrincipalPoliciesEndpoint: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        principalId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Principal policies retrieved successfully */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PrincipalPoliciesDto"];
+        };
+      };
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Forbidden (Missing identity:ManagePrincipals permission) */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Principal not found (Principal.NotFound) */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+    };
+  };
+  AlphaZeroModulesIdentityPresentationPrincipalsQueriesGetPrincipalsByResourceGetPrincipalsByResourceEndpoint: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        resourceType: string;
+        resourceId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Principals retrieved successfully */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PrincipalDto"][];
+        };
+      };
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Forbidden (Missing identity:ManagePrincipals permission) */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+    };
+  };
+  AlphaZeroModulesIdentityPresentationUsersDevicesRegisterDeviceEndpoint: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["RegisterDeviceRequest"];
+      };
+    };
+    responses: {
+      /** @description Device registered successfully */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["RegisterDeviceResponse"];
+        };
+      };
+      /** @description Validation failure (DeviceName empty/too long, PublicKey empty, Platform invalid) */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Device already registered (Device.Exists) */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+    };
+  };
+  AlphaZeroModulesIdentityPresentationUsersDevicesSetMainDeviceEndpoint: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["SetMainDeviceRequest"];
+      };
+    };
+    responses: {
+      /** @description Main device updated successfully */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Device not found (Device.NotFound) */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+    };
+  };
+  AlphaZeroModulesLibraryPresentationEndpointsAccessCodesDistributeBatchDistributeBatchEndpoint: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        batchId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Batch distributed successfully */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Validation failure (BatchId empty) */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Forbidden (Missing library:SellCodes permission) */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Invalid code status (AccessCode.InvalidStatus) */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+    };
+  };
+  AlphaZeroModulesLibraryPresentationEndpointsAccessCodesGenerateAdminCodeGenerateAdminCodeEndpoint: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["GenerateAdminCodeRequest"];
+      };
+    };
+    responses: {
+      /** @description Admin access code generated successfully */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["GenerateAdminCodeResponse"];
+        };
+      };
+      /** @description Validation failure (TargetResourceArn or StrategyId empty) */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Unauthorized (Tenant not found or unauthenticated) */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Forbidden (Missing library:Audit permission) */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+    };
+  };
+  AlphaZeroModulesLibraryPresentationEndpointsAccessCodesGenerateBatchGenerateBatchEndpoint: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        libraryId: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["GenerateBatchRequest"];
+      };
+    };
+    responses: {
+      /** @description Access codes generated successfully */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["GenerateBatchResponse"];
+        };
+      };
+      /** @description Validation failure (Quantity <= 0 or > 1000, StrategyId or TargetResourceArn empty) */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Unauthorized (Tenant not found or unauthenticated) */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Forbidden (Missing library:GenerateCodes or library not authorized for resource) */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Library not found (Library.NotFound) */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+    };
+  };
+  AlphaZeroModulesLibraryPresentationEndpointsAccessCodesVoidCodeVoidCodeEndpoint: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["VoidCodeRequest"];
+      };
+    };
+    responses: {
+      /** @description Access code voided successfully */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Validation failure (RawCode or Reason empty/too long) */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Forbidden (Missing library:Audit permission) */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Access code not found (AccessCode.NotFound) */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Access code already voided (AccessCode.AlreadyVoided) */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+    };
+  };
+  AlphaZeroModulesLibraryPresentationEndpointsLibrariesAuthorizeResourceAuthorizeResourceEndpoint: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["AuthorizeResourceRequest"];
+      };
+    };
+    responses: {
+      /** @description Resource authorized for library successfully */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Validation failure (LibraryId or ResourceArn empty) */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Forbidden (Missing library:AttachCourses permission) */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Library not found (Library.NotFound) */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Resource already authorized (Library.ResourceAlreadyAuthorized) */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+    };
+  };
+  AlphaZeroModulesLibraryPresentationEndpointsLibrariesCreateLibraryCreateLibraryEndpoint: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CreateLibraryRequest"];
+      };
+    };
+    responses: {
+      /** @description Library created successfully */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CreateLibraryResponse"];
+        };
+      };
+      /** @description Validation failure (Name, Address, ContactNumber empty or too long) */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Unauthorized (Tenant not found or unauthenticated) */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Forbidden (Missing library:Audit permission) */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+    };
+  };
+  AlphaZeroModulesLibraryPresentationEndpointsLibrariesDeauthorizeResourceDeauthorizeResourceEndpoint: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "*/*": components["schemas"]["DeauthorizeResourceRequest"];
+        "application/json": components["schemas"]["DeauthorizeResourceRequest"];
+      };
+    };
+    responses: {
+      /** @description Resource deauthorized from library successfully */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Validation failure (LibraryId or ResourceArn empty) */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Forbidden (Missing library:AttachCourses permission) */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Library not found or resource not authorized (Library.NotFound, Library.ResourceNotAuthorized) */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+    };
+  };
+  AlphaZeroModulesLibraryPresentationEndpointsLibrariesDeleteLibraryDeleteLibraryEndpoint: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Library deleted successfully */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Forbidden (Missing library:Audit permission) */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Library not found (Library.NotFound) */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+    };
+  };
+  AlphaZeroModulesLibraryPresentationEndpointsLibrariesGetLibraryGetLibraryEndpoint: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Library retrieved successfully */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["LibraryDto"];
+        };
+      };
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Forbidden (Missing library:Audit permission) */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Library not found (Library.NotFound) */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+    };
+  };
+  AlphaZeroModulesLibraryPresentationEndpointsLibrariesListLibrariesListLibrariesEndpoint: {
+    parameters: {
+      query: {
+        page: number;
+        perPage: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Libraries retrieved successfully */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PagedResultOfLibraryDto"];
+        };
+      };
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Forbidden (Missing library:Audit permission) */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+    };
+  };
+  AlphaZeroModulesLibraryPresentationEndpointsLibrariesUpdateLibraryUpdateLibraryEndpoint: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["UpdateLibraryRequest"];
+      };
+    };
+    responses: {
+      /** @description Library updated successfully */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Validation failure (Id, Name, Address, ContactNumber empty or too long) */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Forbidden (Missing library:Audit permission) */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Library not found (Library.NotFound) */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+    };
+  };
+  AlphaZeroModulesLibraryPresentationEndpointsRedeemCodeRedeemCodeEndpoint: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["RedeemCodeRequest"];
+      };
+    };
+    responses: {
+      /** @description Access code redeemed successfully */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Unauthorized (User must be logged in) */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Forbidden (AccessCode.TenantMismatch or missing courses:Enroll permission) */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Access code not found (AccessCode.NotFound) */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Invalid code status (AccessCode.InvalidStatus) */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+    };
+  };
+  AlphaZeroModulesLibraryPresentationEndpointsRedemptionAuditLogsGetRedemptionLogsEndpoint: {
+    parameters: {
+      query?: {
+        from?: string | null;
+        to?: string | null;
+        page?: number;
+        pageSize?: number;
+      };
+      header?: never;
+      path: {
+        libraryId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Redemption audit logs retrieved successfully */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PagedResultOfRedemptionAuditLogDto"];
+        };
+      };
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Forbidden (Missing library:Audit permission) */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+    };
+  };
+  AlphaZeroModulesTenantsPresentationEndpointsCreateTenantCreateTenantEndpoint: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CreateTenantRequest"];
+      };
+    };
+    responses: {
+      /** @description Tenant created successfully */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CreateTenantResponse"];
+        };
+      };
+      /** @description Validation failure (Name empty/too long, Subdomain empty/too long/invalid characters) */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Forbidden (Missing tenants:Manage permission) */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Subdomain already taken (Tenant.SubdomainNotUnique) */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+    };
+  };
+  AlphaZeroModulesTenantsPresentationEndpointsDeleteTenantDeleteTenantEndpoint: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Tenant deleted successfully */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Forbidden (Missing tenants:Manage permission) */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Tenant not found (Tenant.NotFound) */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+    };
+  };
+  AlphaZeroModulesTenantsPresentationEndpointsGetTenantGetTenantEndpoint: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Tenant retrieved successfully */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["TenantDto"];
+        };
+      };
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Forbidden (Missing tenants:Manage permission) */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Tenant not found (Tenant.NotFound) */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+    };
+  };
+  AlphaZeroModulesTenantsPresentationEndpointsListTenantsListTenantsEndpoint: {
+    parameters: {
+      query: {
+        q?: string | null;
+        page: number;
+        perPage: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Tenants retrieved successfully */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PagedResultOfTenantDto"];
+        };
+      };
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Forbidden (Missing tenants:Manage permission) */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+    };
+  };
+  AlphaZeroModulesTenantsPresentationEndpointsLookupTenantLookupTenantEndpoint: {
+    parameters: {
+      query: {
+        subdomain: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Tenant details and branding retrieved successfully */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["LookupTenantResponse"];
+        };
+      };
+      /** @description Tenant not found (Tenant.NotFound) */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+    };
+  };
+  AlphaZeroModulesTenantsPresentationEndpointsUpdateTenantUpdateTenantEndpoint: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["UpdateTenantRequest"];
+      };
+    };
+    responses: {
+      /** @description Tenant updated successfully */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Validation failure (Id empty, Name empty/too long) */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Forbidden (Missing tenants:Manage permission) */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Tenant not found (Tenant.NotFound) */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+    };
+  };
+  AlphaZeroModulesVideoUploadingPresentationFeaturesGetVideoKeyEndpoint: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        videoId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Decryption key binary stream (application/octet-stream) */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Forbidden (Missing video:Stream permission) */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Video secret not found (VideoSecret.NotFound) */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      /** @description Invalid key format stored (VideoSecret.InvalidFormat) */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+    };
+  };
+  DeleteApiVideoUploadingDebugVideos: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+    };
+  };
+  GetApiVideo: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        videoId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["StreamingInfoResponseDTO"];
+        };
+      };
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+    };
+  };
+  GetApiVideoUploadingDebugVideos: {
+    parameters: {
+      query?: {
+        page?: number | null;
+        perPage?: number | null;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PagedResultOfVideoResponse"];
+        };
+      };
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+    };
+  };
+  GetApiVideoUploadingDebugVideos2: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Debug_VideoResponse"];
+        };
+      };
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+    };
+  };
+  GetApiVideoUploadingDebugVideosState: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["VideoStateDto"];
+        };
+      };
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+    };
+  };
+  GetUsersMe: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": {
+            [key: string]: string;
+          };
+        };
+      };
+    };
+  };
+  PatchApiVideoUploadingDebugVideos: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["UpdateVideoInfo_Request"];
+      };
+    };
+    responses: {
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+    };
+  };
+  PostApiVideoUploadingUpload: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Upload_Request"];
+      };
+    };
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Upload_Response"];
+        };
+      };
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProblemDetails"];
+        };
+      };
+    };
+  };
 }
