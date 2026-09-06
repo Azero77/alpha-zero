@@ -521,25 +521,6 @@ importers:
         specifier: 16.1.6
         version: 16.1.6(@babel/core@7.29.7(supports-color@8.1.1))(@opentelemetry/api@1.9.1)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
 
-  packages/lms-api-client:
-    dependencies:
-      '@repo/lms-types':
-        specifier: workspace:*
-        version: link:../lms-types
-      ky:
-        specifier: ^1.7.5
-        version: 1.14.3
-    devDependencies:
-      '@repo/typescript-config':
-        specifier: workspace:*
-        version: link:../typescript-config
-      '@types/node':
-        specifier: 25.3.5
-        version: 25.3.5
-      typescript:
-        specifier: ^5.9.3
-        version: 5.9.3
-
   packages/lms-types:
     dependencies:
       openapi-fetch:
@@ -5138,10 +5119,6 @@ packages:
   kind-of@6.0.3:
     resolution: {integrity: sha512-dcS1ul+9tmeD95T+x28/ehLgd9mENa3LsvDTtzm3vyBEO7RPptvAD+t44WVXaUjTBRcrpFeFlC8WCruUR456hw==}
     engines: {node: '>=0.10.0'}
-
-  ky@1.14.3:
-    resolution: {integrity: sha512-9zy9lkjac+TR1c2tG+mkNSVlyOpInnWdSMiue4F+kq8TwJSgv6o8jhLRg8Ho6SnZ9wOYUq/yozts9qQCfk7bIw==}
-    engines: {node: '>=18'}
 
   lightningcss-android-arm64@1.32.0:
     resolution: {integrity: sha512-YK7/ClTt4kAK0vo6w3X+Pnm0D2cf2vPHbhOXdoNti1Ga0al1P4TBZhwjATvjNwLEBCnKvjJc2jQgHXH0NEwlAg==}
@@ -11289,8 +11266,6 @@ snapshots:
       keycode: 2.2.1
 
   kind-of@6.0.3: {}
-
-  ky@1.14.3: {}
 
   lightningcss-android-arm64@1.32.0:
     optional: true

@@ -47,7 +47,7 @@ export type ApiErrorResponse = z.infer<typeof ApiErrorResponseSchema> &
  * Typed Exception thrown by the API client when an error response is received.
  */
 export class ApiErrorException extends Error {
-  public readonly response: ApiErrorResponse;
+  readonly response: ApiErrorResponse;
 
   constructor(response: ApiErrorResponse) {
     const primaryMessage =
@@ -65,7 +65,7 @@ export class ApiErrorException extends Error {
    * Reads propertyName from ErrorDto metadata (set by FluentValidation in C#)
    * or falls back to the error code prefix.
    */
-  public getFieldErrors(): Record<string, string> {
+  getFieldErrors(): Record<string, string> {
     const fieldErrors: Record<string, string> = {};
 
     for (const err of this.response.errors) {
@@ -92,14 +92,16 @@ export class ApiErrorException extends Error {
    * Helper to get the primary domain error code for bilingual dictionary lookup.
    * e.g. "Voucher.Expired", "Course.NotFound", "Validation.Failed"
    */
-  public getPrimaryCode(): string {
-    return this.response.errors[0]?.code || this.response.title || "UNKNOWN_ERROR";
+  getPrimaryCode(): string {
+    return (
+      this.response.errors[0]?.code || this.response.title || "UNKNOWN_ERROR"
+    );
   }
 
   /**
    * Helper to check if this error represents an authorization / IAM denial.
    */
-  public isForbidden(): boolean {
+  isForbidden(): boolean {
     return (
       this.response.status === 403 ||
       this.response.errors.some((e) => e.type === "Forbidden")
@@ -109,7 +111,7 @@ export class ApiErrorException extends Error {
   /**
    * Helper to check if this error is an authentication failure.
    */
-  public isUnauthorized(): boolean {
+  isUnauthorized(): boolean {
     return (
       this.response.status === 401 ||
       this.response.errors.some((e) => e.type === "Unauthorized")
@@ -119,7 +121,7 @@ export class ApiErrorException extends Error {
   /**
    * Helper to extract traceId from ASP.NET Core for support / Sentry.
    */
-  public getTraceId(): string | null | undefined {
+  getTraceId(): string | null | undefined {
     return this.response.traceId;
   }
 }
