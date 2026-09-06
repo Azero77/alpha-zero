@@ -2,8 +2,8 @@
 # Variables
 # ------------------------
 m ?= VideoUploading
-PROJECT = src/Modules/$(m)/Infrastructure/Infrastructure.csproj
-API = src/AlphaZero.API/AlphaZero.API.csproj
+PROJECT = src/alphazero-api/Modules/$(m)/Infrastructure/Infrastructure.csproj
+API = src/alphazero-api/AlphaZero.API/AlphaZero.API.csproj
 o = Migrations
 DbContext = AlphaZero.Modules.$(m).Infrastructure.Persistance.AppDbContext
 
@@ -43,4 +43,4 @@ migrations-clean:
 #-------------------------
 
 run:
-	dotnet run --project src/aspire/AlphaZero.AppHost/AlphaZero.AppHost.csproj
+	dotnet run --project src/alphazero-api/aspire/AlphaZero.AppHost/AlphaZero.AppHost.csproj
