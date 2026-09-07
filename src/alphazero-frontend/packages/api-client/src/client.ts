@@ -3,8 +3,8 @@ import createClient from "openapi-fetch";
 import {
   ApiErrorException,
   ApiErrorResponseSchema,
-  type paths,
-} from "../../lms-types/src";
+} from "@repo/lms-types";
+import type { paths } from "@repo/lms-types";
 
 export const errorHandlerMiddlware: Middleware = {
   async onResponse({ response }) {

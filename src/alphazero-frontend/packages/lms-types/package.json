@@ -5,6 +5,8 @@
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "scripts": {
+    "generate": "openapi-typescript http://localhost:5053/swagger/v1/swagger.json -o src/api.d.ts",
+    "generate:file": "openapi-typescript ../../swagger.json -o src/api.d.ts",
     "clean": "git clean -xdf .cache .turbo dist node_modules",
     "typecheck": "tsc --noEmit --emitDeclarationOnly false"
   },

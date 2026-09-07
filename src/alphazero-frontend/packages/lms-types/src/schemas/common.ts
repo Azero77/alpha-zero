@@ -39,3 +39,52 @@ export const createPagedResultSchema = <T extends z.ZodTypeAny>(itemSchema: T) =
     hasNextPage: z.boolean().optional(),
     hasPreviousPage: z.boolean().optional(),
   });
+
+/**
+ * AlphaZero Resource Name (ARN) schema validator
+ * Format: az:<service>:<tenantId>:<resource-path>
+ * Example: az:courses:tenant123:course/c1/section/s1/lesson/l1
+ */
+export const arnSchema = z
+  .string()
+  .trim()
+  .regex(
+    /^az:[a-z0-9-]+:[a-zA-Z0-9_-]+:.+$/,
+    "Invalid AlphaZero ARN format. Expected az:<service>:<tenantId>:<resource-path>"
+  );
+
+export type Arn = z.infer<typeof arnSchema>;
+
+export interface ParsedArn {
+  service: string;
+  tenantId: string;
+  resourcePath: string;
+}
+
+export function parseArn(arn: string): ParsedArn {
+  const parts = arn.split(":");
+  if (parts.length < 4 || parts[0] !== "az") {
+    throw new Error(`Invalid AlphaZero ARN format: ${arn}`);
+  }
+  return {
+    service: parts[1],
+    tenantId: parts[2],
+    resourcePath: parts.slice(3).join(":"),
+  };
+}
+
+export function buildArn(service: string, tenantId: string, resourcePath: string): string {
+  return `az:${service}:${tenantId}:${resourcePath}`;
+}
+
+export function buildCourseArn(
+  tenantId: string,
+  courseId: string,
+  sectionId?: string,
+  lessonId?: string
+): string {
+  let path = `course/${courseId}`;
+  if (sectionId) path += `/section/${sectionId}`;
+  if (lessonId) path += `/lesson/${lessonId}`;
+  return buildArn("courses", tenantId, path);
+}
