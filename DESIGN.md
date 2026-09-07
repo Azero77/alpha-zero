@@ -1,71 +1,93 @@
-# Linear — Style Reference
-> midnight precision instrument
+# AlphaZero — Design System & Style Reference
+> high-performance precision SaaS e-learning platform
 
-**Theme:** dark
+**Themes:** `dark` (command center default) & `light` (high-clarity study mode)
 
-Linear's design system is a midnight command center built on near-black surfaces (#08090a) with paper-white type and one electric acid-lime accent (#e4f222) that functions as a functional flashlight — small, high-contrast, and used sparingly to signal action. The interface treats darkness as a substrate rather than a theme: text is crisp white at tight tracking (-0.022em), weights sit in a low 400–510 band rather than bold, and borders are hairline-thin (0.5px) to let geometry do the work that shadows usually would. Components feel precision-machined — 6px and 12px radii, compact 8–12px paddings, and almost no decorative ornament — letting the product UI (issue cards, kanban boards, AI agent panels) be the only visual texture in an otherwise quiet system.
+AlphaZero is an enterprise-grade, multi-tenant SaaS e-learning platform optimized for low-bandwidth environments (Syria/MENA) using a unique physical library code economy. The design system is a precision-machined learning instrument built on pure neutral Zinc foundations with a crisp, accessible **Precision Blue** primary interactive scale (`#2563eb`). The interface pairs high typographic density with comfortable long-form readability: crisp high-contrast type, subtle 0.5px hairline borders, compact 4px spacing rhythm, and purposeful micro-interactions. Dark mode provides a focused nighttime study command center, while Light mode delivers high-clarity textbook legibility without eye fatigue.
 
-
+---
 
 ## Tokens — Colors
 
-| Name | Value | Token | Role |
-|------|-------|-------|------|
-| Void | `#08090a` | `--color-void` | Page canvas, full-bleed backgrounds — the default everything sits on |
-| Carbon | `#0f1011` | `--color-carbon` | Card surfaces, nav bars — one step above canvas for contained content |
-| Obsidian | `#161718` | `--color-obsidian` | Elevated surfaces, deeper card panels |
-| Graphite | `#23252a` | `--color-graphite` | Subtle borders, dividers, ghost button outlines — low-contrast structural edges |
-| Smoke | `#383b3f` | `--color-smoke` | Hairline borders at higher contrast than graphite — section separators |
-| Ash | `#62666d` | `--color-ash` | Muted body text, inactive icons, secondary metadata |
-| Fog | `#8a8f98` | `--color-fog` | Tertiary text, placeholder copy, icon fills |
-| Mist | `#d0d6e0` | `--color-mist` | Secondary headings, button text on dark surfaces |
-| Bone | `#e5e5e6` | `--color-bone` | Near-white surface fills, high-contrast button text |
-| Paper | `#ffffff` | `--color-paper` | Primary headings, hero type, max-contrast emphasis text |
-| Acid Lime | `#e4f222` | `--color-acid-lime` | Primary action buttons, active nav indicators — electric accent that breaks the monochrome system |
-| Pulse Green | `#27a644` | `--color-pulse-green` | Green outline accent for tags, dividers, and focused UI edges. Use as a supporting accent, not as a status color |
-| Coral Red | `#eb5757` | `--color-coral-red` | Red wash for highlight backgrounds, decorative bands, and soft emphasis behind content. Use as a supporting accent, not as a status color |
-| Signal Teal | `#02b8cc` | `--color-signal-teal` | Decorative accent, informational icon fills |
-| Iris Violet | `#6366f1` | `--color-iris-violet` | Tag/badge fills — soft chromatic punctuation on tags and labels |
-| Lavender | `#8b5cf6` | `--color-lavender` | Secondary tag fills, category indicators |
+### 1. Core Production Foundations (Pure Zinc Neutrals)
+Neutral foundations provide a zero-chroma, distraction-free substrate for prolonged reading and video learning.
+
+| Token | Dark Value | Light Value | OKLCH (Dark / Light) | CSS Variable | Semantic Role |
+|-------|------------|-------------|----------------------|--------------|---------------|
+| **Void** | `#09090b` | `#ffffff` | `oklch(0.145 0 0)` / `oklch(1 0 0)` | `--color-void`, `--background` | Page canvas, full-bleed backgrounds |
+| **Carbon** | `#121215` | `#f9fafb` | `oklch(0.18 0 0)` / `oklch(0.985 0 0)` | `--color-carbon`, `--card` | Card surfaces, course cards, navigation bars |
+| **Obsidian** | `#18181b` | `#f4f4f5` | `oklch(0.21 0 0)` / `oklch(0.96 0 0)` | `--color-obsidian`, `--popover` | Elevated panels, dialog sheets, modal drawers |
+| **Surface-Tint** | `#222226` | `#ececee` | `oklch(0.25 0 0)` / `oklch(0.93 0 0)` | `--color-surface-tint`, `--accent` | Hover backgrounds, subtle selection states |
+| **Graphite** | `#27272a` | `#e4e4e7` | `oklch(0.27 0 0)` / `oklch(0.92 0 0)` | `--color-graphite`, `--border` | Subtle hairline borders, ghost button outlines, dividers |
+| **Smoke** | `#3f3f46` | `#d4d4d8` | `oklch(0.35 0 0)` / `oklch(0.86 0 0)` | `--color-smoke`, `--input` | Interactive borders, form input outlines, separators |
+| **Ash** | `#71717a` | `#71717a` | `oklch(0.55 0 0)` / `oklch(0.55 0 0)` | `--color-ash`, `--muted-foreground` | Muted body copy, inactive icons, secondary metadata |
+| **Fog** | `#a1a1aa` | `#52525b` | `oklch(0.71 0 0)` / `oklch(0.44 0 0)` | `--color-fog` | Tertiary metadata, placeholder text, lesson index numbers |
+| **Mist** | `#e4e4e7` | `#27272a` | `oklch(0.92 0 0)` / `oklch(0.27 0 0)` | `--color-mist`, `--foreground` | Secondary headings, body text, button text on dark surfaces |
+| **Paper** | `#ffffff` | `#09090b` | `oklch(1 0 0)` / `oklch(0.145 0 0)` | `--color-paper` | Primary headings, hero display type, max-contrast emphasis |
+
+### 2. Interactive Scale (Precision Blue)
+Shades of blue signal actionable, clickable affordances across the entire LMS. Precision Blue (`#2563eb`) serves as the primary visual flashlight.
+
+| Name | Hex Value | OKLCH | Token | Role |
+|------|-----------|-------|-------|------|
+| **Blue Subtle** | `#eff6ff` (Light) / `rgba(37,99,235,0.12)` (Dark) | `oklch(0.97 0.02 260)` | `--color-blue-subtle` | Active lesson highlight in syllabus, selected table row, pill background |
+| **Blue Light** | `#bfdbfe` | `oklch(0.88 0.08 260)` | `--color-blue-light` | Hover border for interactive cards, secondary badge text |
+| **Precision Blue (Primary)** | `#2563eb` | `oklch(0.55 0.22 260)` | `--color-precision-blue`, `--primary` | Primary action buttons ("Enroll", "Next Lesson", "Redeem Code", "Submit Quiz") |
+| **Blue Hover** | `#1d4ed8` | `oklch(0.48 0.22 260)` | `--color-blue-hover` | Hover state for primary action buttons |
+| **Blue Active** | `#1e40af` | `oklch(0.42 0.20 260)` | `--color-blue-active` | Pressed/active state for primary action buttons |
+| **Blue Focus Ring** | `rgba(37, 99, 235, 0.5)` | `oklch(0.55 0.22 260 / 0.5)` | `--color-blue-ring`, `--ring` | 3px focus ring for keyboard navigation and input focus |
+
+### 3. Functional LMS Status & Accent Tokens
+Unlike purely decorative palettes, LMS workflows require strict status semantics for grades, lesson progression, and voucher validity.
+
+| Name | Dark Hex | Light Hex | Token | Role |
+|------|----------|-----------|-------|------|
+| **Success Green** | `#22c55e` | `#16a34a` | `--color-success` | Completed lesson checkmark, quiz passed (≥80%), voucher successfully activated |
+| **Destructive Red** | `#ef4444` | `#dc2626` | `--color-destructive` | Quiz failed, invalid voucher PIN, session device-lock warning |
+| **Warning Amber** | `#f59e0b` | `#d97706` | `--color-warning` | Voucher expiring soon, assignment due date alert, low-bandwidth warning |
+| **Signal Teal** | `#38bdf8` | `#0284c7` | `--color-signal-teal` | Offline sync indicator, cached video indicator, informational banners |
+| **Iris Violet** | `#818cf8` | `#6366f1` | `--color-iris-violet` | Subject track tags (Mathematics, Computer Science, Languages) |
+
+---
 
 ## Tokens — Typography
 
-### Inter Variable — Primary UI and heading typeface — used across nav, body, headings, buttons, cards · `--font-inter-variable`
-- **Substitute:** Inter (variable), or system-ui as fallback
-- **Weights:** 300, 400, 510, 590
+### Inter Variable — Primary UI, headings, and reading typeface · `--font-inter-variable`
+- **Substitute:** Inter, or system-ui as fallback
+- **Weights:** 300 (Light), 400 (Regular), 510 (Medium-Display), 590 (Semibold-Heading)
 - **Sizes:** 10, 11, 12, 13, 14, 15, 16, 17, 20, 24, 32, 48, 64, 72
-- **Line height:** 1.0–2.75
-- **Letter spacing:** -0.022em at 48–72px, -0.012em at 20–32px, -0.011em at 15px, -0.010em at 13–16px
+- **Line height:** 1.0–1.7 (1.5–1.6 for long-form lesson reading)
+- **Letter spacing:** -0.022em at 48–72px, -0.012em at 20–32px, -0.010em at 13–16px
 - **OpenType features:** `"cv01" on, "ss03" on, "zero" on`
-- **Role:** Primary UI and heading typeface — used across nav, body, headings, buttons, cards
+- **Role:** Primary UI, course titles, navigation links, lesson body text, buttons
 
-### Berkeley Mono — Code-adjacent UI text — issue IDs (ENG-2703), keyboard shortcuts, monospaced metadata · `--font-berkeley-mono`
+### Berkeley Mono — Code, Lesson Indices, and Physical Library Vouchers · `--font-berkeley-mono`
 - **Substitute:** JetBrains Mono, IBM Plex Mono, or ui-monospace
-- **Weights:** 400
-- **Sizes:** 12, 14
-- **Line height:** 1.40–1.71
-- **Letter spacing:** -0.013em
+- **Weights:** 400, 500
+- **Sizes:** 12, 14, 16
+- **Letter spacing:** 0.05em on voucher PIN inputs, -0.013em on metadata
 - **OpenType features:** `"cv01" on, "ss03" on`
-- **Role:** Code-adjacent UI text — issue IDs (ENG-2703), keyboard shortcuts, monospaced metadata
+- **Role:** Code exercises, lesson sequence counter (`04/24`), duration timestamps (`08:42`), and physical Library Code vouchers (`AZ-9482-K92X`)
 
 ### Type Scale
 
-| Role | Size | Line Height | Letter Spacing | Token |
-|------|------|-------------|----------------|-------|
-| caption | 13px | 1.2 | — | `--text-caption` |
-| body-sm | 15px | 1.6 | -0.165px | `--text-body-sm` |
-| body-lg | 20px | 1.33 | -0.24px | `--text-body-lg` |
-| subheading | 24px | 1.33 | -0.288px | `--text-subheading` |
-| heading-sm | 32px | 1.13 | -0.704px | `--text-heading-sm` |
-| heading | 48px | 1 | -1.056px | `--text-heading` |
-| heading-lg | 64px | 1 | -1.408px | `--text-heading-lg` |
-| display | 72px | 1 | -1.584px | `--text-display` |
+| Role | Size | Line Height | Letter Spacing | Token | Context |
+|------|------|-------------|----------------|-------|---------|
+| caption | 13px | 1.2 | normal | `--text-caption` | Timestamps, author subtext, lesson count |
+| body-sm | 15px | 1.6 | -0.165px | `--text-body-sm` | Course descriptions, sidebar lesson tree |
+| body-lg | 20px | 1.4 | -0.24px | `--text-body-lg` | Course lead paragraphs, reading summary |
+| subheading | 24px | 1.33 | -0.288px | `--text-subheading` | Module titles, section headers |
+| heading-sm | 32px | 1.13 | -0.704px | `--text-heading-sm` | Course landing page titles, dashboard greeting |
+| heading | 48px | 1.05 | -1.056px | `--text-heading` | Academy marketing titles, major milestones |
+| heading-lg | 64px | 1.0 | -1.408px | `--text-heading-lg` | Marketing hero display type |
+| display | 72px | 1.0 | -1.584px | `--text-display` | Promotional hero numbers, completion certificate badge |
+
+---
 
 ## Tokens — Spacing & Shapes
 
-**Base unit:** 4px
-
-**Density:** compact
+**Base unit:** 4px  
+**Density:** Compact in dashboard navigation; comfortable in lesson reading and quiz interfaces.
 
 ### Spacing Scale
 
@@ -77,403 +99,226 @@ Linear's design system is a midnight command center built on near-black surfaces
 | 16 | 16px | `--spacing-16` |
 | 20 | 20px | `--spacing-20` |
 | 24 | 24px | `--spacing-24` |
-| 28 | 28px | `--spacing-28` |
 | 32 | 32px | `--spacing-32` |
-| 36 | 36px | `--spacing-36` |
-| 40 | 40px | `--spacing-40` |
 | 48 | 48px | `--spacing-48` |
-| 56 | 56px | `--spacing-56` |
 | 64 | 64px | `--spacing-64` |
-| 80 | 80px | `--spacing-80` |
 | 96 | 96px | `--spacing-96` |
-| 128 | 128px | `--spacing-128` |
 
 ### Border Radius
 
-| Element | Value |
-|---------|-------|
-| cards | 12px |
-| pills | 9999px |
-| small | 2px |
-| badges | 4px |
-| inputs | 6px |
-| buttons | 6px |
+| Element | Value | Purpose |
+|---------|-------|---------|
+| badges | 4px | Status tags, lesson index badges |
+| inputs / buttons | 6px | Precision buttons, PIN input blocks, form fields |
+| cards | 12px | Course cards, video player frame, modal dialogues |
+| pills | 9999px | Category filters, user avatar borders, active tab pills |
 
-### Shadows
+### Shadows & Hairline Elevation
+Elevation is achieved via subtle 0.5px–1px hairline borders (`--color-graphite`) combined with low-opacity dark ambient shadows. No floating heavy colored glows.
 
 | Name | Value | Token |
 |------|-------|-------|
-| sm | `rgba(0, 0, 0, 0.4) 0px 2px 4px 0px` | `--shadow-sm` |
-| md | `rgba(0, 0, 0, 0.2) 0px 0px 12px 0px inset` | `--shadow-md` |
-| subtle | `rgb(35, 37, 42) 0px 0px 0px 1px inset` | `--shadow-subtle` |
-| subtle-2 | `rgba(0, 0, 0, 0.2) 0px 0px 0px 1px` | `--shadow-subtle-2` |
-| subtle-3 | `rgba(0, 0, 0, 0.01) 0px 5px 2px 0px, rgba(0, 0, 0, 0.04) ...` | `--shadow-subtle-3` |
-| xl | `rgba(8, 9, 10, 0.6) 0px 4px 32px 0px` | `--shadow-xl` |
-| subtle-4 | `rgba(255, 255, 255, 0.03) 0px 0px 0px 1px inset, rgba(255...` | `--shadow-subtle-4` |
-| subtle-5 | `rgba(0, 0, 0, 0.1) 0px 0px 0px 2px` | `--shadow-subtle-5` |
+| sm | `rgba(0, 0, 0, 0.25) 0px 1px 3px 0px` | `--shadow-sm` |
+| md | `rgba(0, 0, 0, 0.3) 0px 4px 12px 0px` | `--shadow-md` |
+| subtle | `var(--color-graphite) 0px 0px 0px 1px inset` | `--shadow-subtle` |
+| xl | `rgba(0, 0, 0, 0.5) 0px 8px 32px 0px` | `--shadow-xl` |
 
-### Layout
-
-- **Page max-width:** 1200px
-- **Section gap:** 96px
-- **Card padding:** 24px
-- **Element gap:** 8px
+---
 
 ## Components
 
-### Primary Action Button (Acid Lime)
-**Role:** High-emphasis CTA — the one chromatic button in the system
+### 1. Primary Action Button (Precision Blue)
+**Role:** High-emphasis primary CTA — "Enroll in Academy", "Next Lesson", "Submit Quiz", "Redeem Code"
+- **Background:** `#2563eb` (`--color-precision-blue`)
+- **Hover / Active:** `#1d4ed8` / `#1e40af`
+- **Text:** `#ffffff` (`--color-paper` in dark / white)
+- **Border-radius:** 6px
+- **Padding:** 10px 16px
+- **Typography:** Inter 14px / weight 510, letter-spacing -0.011em
+- **Focus ring:** 3px `rgba(37, 99, 235, 0.5)` with 2px offset
 
-Background #e4f222, text #08090a, border-radius 6px, padding 10px 16px, Inter 14px / weight 510, letter-spacing -0.011em. Sits as the sole filled chromatic element — every other button on the site is neutral.
+### 2. Secondary / Ghost Outline Button
+**Role:** Secondary actions — "Preview Syllabus", "Download Offline Audio", "Previous Lesson"
+- **Background:** Transparent (dark: `rgba(255,255,255,0.02)`)
+- **Border:** 1px `var(--color-graphite)`
+- **Hover:** Background `var(--color-surface-tint)`, border `var(--color-smoke)`
+- **Text:** `var(--color-mist)`
+- **Border-radius:** 6px
+- **Padding:** 8px 14px, Inter 13px / weight 400
 
-### Nav Text Button
-**Role:** Top navigation items
+### 3. Course Card (LMS Core)
+**Role:** Primary card surface for catalog exploration and enrolled student dashboard
+- **Container:** Background `var(--color-carbon)`, border 1px `var(--color-graphite)`, radius 12px, padding 16px
+- **Thumbnail:** 16:9 aspect ratio, radius 8px, background `var(--color-obsidian)`, subtle inner hairline border
+- **Title:** Inter 16px / weight 510, color `var(--color-paper)`
+- **Instructor / Meta:** Inter 13px / weight 400, color `var(--color-ash)`
+- **Progress Slot:** Embedded Bitmask Progress Bar along the card bottom (or badge showing "12/20 Lessons")
 
-Transparent background, text #d0d6e0, padding 8px 12px, Inter 13px / weight 400. No border, no fill — pure typographic nav with underline on hover.
+### 4. Bitmask Progress Bar (LMS Core)
+**Role:** High-efficiency course completion indicator driven by database `VARBIT` completion bitmask
+- **Track:** Height 4px (or 6px for active view), background `var(--color-graphite)`, border-radius 9999px
+- **Fill:** Background `var(--color-precision-blue)` (or `var(--color-success)` when 100% complete)
+- **Counter:** Berkeley Mono 12px, color `var(--color-fog)`, e.g., `18/24 (75%)`
+- **Segmented Variant:** For individual module steps, renders N distinct pill segments (active: blue, done: green, uncompleted: graphite)
 
-### Pill Button
-**Role:** Tag chips, status pills, compact action triggers
+### 5. Physical Library Code Voucher Redeem Card (LMS Core)
+**Role:** Syria/MENA offline economy redemption modal/card for unlocking courses via physical scratch-off cards
+- **Container:** Card `var(--color-carbon)`, 12px radius, hairline border, padding 24px
+- **Header:** "Redeem Academy Access Code" with a subtle lock-to-unlock key icon
+- **PIN Input Field:** Monospace uppercase segmented text input (`input-otp` layout), font Berkeley Mono 18px, tracking 0.1em, background `var(--color-obsidian)`, border 1px `var(--color-smoke)`
+- **Validation State:**
+  - *Valid:* Border brightens to `var(--color-success)`, shows course title and instant unlock checkmark
+  - *Invalid / Expired:* Border shifts to `var(--color-destructive)`, helper text in Ash: "Code already used or invalid"
+- **CTA:** Full-width Primary Action Button: "Activate Course Access"
 
-Background rgba(255,255,255,0.05), text #d0d6e0, border-radius 9999px, padding 4px 12px, Inter 12–13px / weight 400.
+### 6. Video Stream Player HUD (LMS Core)
+**Role:** Minimalist, low-bandwidth video player container for serverless HLS streaming
+- **Container:** 16:9 ratio, full-bleed or framed in 12px card, canvas `var(--color-void)`
+- **Overlay HUD:** Autohides on play; background subtle dark gradient (`rgba(9,9,11,0.85)` to transparent)
+- **Controls:** Play/Pause, scrubber with Precision Blue buffered progress line, lesson chapter markers
+- **Bandwidth Selector:** Pill dropdown allowing quick switches: `240p`, `360p`, `720p`, `Auto (HLS)` — optimized for low-bandwidth connections
 
-### Ghost / Outline Button
-**Role:** Secondary actions, less prominent CTAs
+### 7. Badge & Tag System
+**Role:** Course categories, difficulty levels, lesson status
+- **Default:** Background `var(--color-surface-tint)`, text `var(--color-mist)`, radius 4px, padding 2px 8px, Inter 12px
+- **Status Variants:**
+  - *Completed:* Green tint `rgba(34,197,94,0.12)`, text `var(--color-success)`
+  - *In Progress:* Blue tint `rgba(37,99,235,0.12)`, text `var(--color-precision-blue)`
+  - *Quiz Required:* Amber tint `rgba(245,158,11,0.12)`, text `var(--color-warning)`
 
-Transparent background, border 1px #23252a, text #d0d6e0, border-radius 6px, padding 8px 12px, Inter 13px / weight 400.
-
-### Sign-up Button (Rounded Pill, Neutral)
-**Role:** High-emphasis nav CTA
-
-Background #ffffff, text #08090a, border-radius 9999px, padding 8px 16px, Inter 13px / weight 510. White pill against the dark nav bar — the second highest-contrast element after the acid-lime CTA.
-
-### Card (Product Screenshot Frame)
-**Role:** Large showcase surface for product UI screenshots
-
-Background #0f1011, border-radius 12px, inset shadow rgb(35,37,42) 0 0 0 1px, padding 24px. Hairline inner border defines the card edge — no outer shadow, no glow.
-
-### Card (Subtle)
-**Role:** Small content cards, nested panels
-
-Background rgba(255,255,255,0.02), border-radius 6px, shadow rgba(0,0,0,0.4) 0 2px 4px, padding 8px. Almost invisible — the card barely separates from the canvas.
-
-### Text Input
-**Role:** Form fields, search inputs
-
-Background rgba(255,255,255,0.02), border 1px rgba(255,255,255,0.08), text #d0d6e0, border-radius 6px, padding 12px 14px, Inter 14px / weight 400. Focus ring: border brightens to #d0d6e0.
-
-### Badge / Status Tag
-**Role:** Issue status, category labels, inline metadata
-
-Background rgba(255,255,255,0.05), text #8a8f98, border-radius 4px, padding 0px 6px, Inter 12px / weight 400. Color-coded variants use Pulse Green, Coral Red, Iris Violet, or Lavender fills.
-
-### Logo Mark
-**Role:** Brand identification in nav
-
-Linear wordmark + geometric glyph, Inter 16px / weight 510, color #ffffff. Glyph rendered as inline SVG in white.
-
-### Logo Bar (Customer Strip)
-**Role:** Social proof — customer logos in a horizontal row
-
-Neutral grey logos (Vercel, Cursor, Oscar, OpenAI, Coinbase, Cash App, Boom, Ramp) at #8a8f98–#d0d6e0, evenly spaced with 48–64px gaps, no card backgrounds.
-
-### Hero Gradient Floor
-**Role:** Atmospheric base under the product screenshot
-
-Linear gradient from rgb(8,9,10) at 10% to rgb(208,214,224) at 100% — a subtle light wash that grounds the floating product UI against the void.
+---
 
 ## Do's and Don'ts
 
 ### Do
-- Use Inter Variable with font-feature-settings 'cv01' on, 'ss03' on, 'zero' on — these alternate glyphs define Linear's typographic identity
-- Use #e4f222 exclusively for the single primary action per view — never for decoration, never for secondary buttons
-- Set body text at 16px Inter weight 400 with line-height 1.5 — larger reading sizes (17px+ at weight 590) are reserved for body emphasis blocks
-- Use letter-spacing -0.022em at 48px and above — tight tracking is non-negotiable for display type
-- Set card radius to 12px, button radius to 6px, pill radius to 9999px — three radii is the entire radius vocabulary
-- Use 0.5px hairline borders (#23252a or #383b3f) instead of shadows for surface separation — Linear's elevation comes from borders and subtle inner shadows
-- Keep section gaps at 96px and element gaps at 8px — the 8/12/24/96 spacing ladder is the rhythm
+- Use **Precision Blue (`#2563eb`)** exclusively for the primary interactive action per section.
+- Keep background surfaces strictly on the **neutral Zinc spectrum** (`#09090b` dark / `#ffffff` light) to prevent color pollution during long study sessions.
+- Use **Berkeley Mono** for voucher PIN codes, lesson progress counters (`12/24`), timestamps, and code exercises.
+- Ensure all interactive elements have visible focus rings (`rgba(37, 99, 235, 0.5)`) for full keyboard accessibility.
+- Design every empty state with context, helpful copy, and a primary blue CTA ("Browse Catalog", "Enter Voucher Code").
+- Keep hairline borders at 0.5px–1px (`--color-graphite`) to maintain precision elevation without muddy shadow stacks.
 
 ### Don't
-- Do not use bold weights (700+) — Linear's type scale caps at weight 590, the system deliberately avoids heavy display weights
-- Do not use decorative gradients on buttons, cards, or text — gradients are reserved for the hero atmospheric floor only
-- Do not introduce additional chromatic accent colors as actions — the acid-lime button is the only chromatic UI element
-- Do not use large radii (16px+) on cards or panels — 12px is the max card radius in this system
-- Do not use shadows to separate cards from the canvas — use hairline borders (#23252a) and inner inset shadows instead
-- Do not use chromatic text colors for body copy — all body text sits in the #d0d6e0 / #8a8f98 / #62666d grey scale
-- Do not use Berkeley Mono for headings or marketing copy — it is reserved for issue IDs, keyboard shortcuts, and technical metadata
+- Do not use neon acid-lime or harsh yellow for primary actions — use Precision Blue.
+- Do not apply saturated chromatic colors to card or page backgrounds; all canvas foundations must remain pure neutral Zinc.
+- Do not hide empty states behind raw strings like "No courses found"; empty states must guide the learner.
+- Do not omit the bitrate selector on video player frames — low-bandwidth Syrian/MENA users require manual 240p/360p controls.
+- Do not use decorative gradients on buttons or content cards; keep surfaces flat, crisp, and quiet.
+- Do not use fonts below 13px for instructional body copy.
 
-## Surfaces
+---
 
-| Level | Name | Value | Purpose |
-|-------|------|-------|---------|
-| 0 | Void | `#08090a` | Page canvas — the default full-bleed background |
-| 1 | Carbon | `#0f1011` | Card surfaces, product screenshot frames, nav containers |
-| 2 | Obsidian | `#161718` | Elevated panels, deeper nested surfaces |
-| 3 | Slate | `#23252a` | Interactive surface tint, ghost button fills, border-adjacent backgrounds |
+## Surfaces & Elevation
 
-## Elevation
+### Dark Mode (Command Center)
+- **Level 0 (Void `#09090b`):** Page background, full-bleed canvas
+- **Level 1 (Carbon `#121215`):** Course cards, sidebar navigation, top header
+- **Level 2 (Obsidian `#18181b`):** Modal dialogs, dropdown menus, voucher input backgrounds
+- **Level 3 (Surface-Tint `#222226`):** Active lesson rows, hover states, ghost button fills
+- **Border Definition:** 0.5px–1px hairline border (`#27272a` Graphite) separates surfaces without relying on ambient shadows.
 
-Elevation in Linear's system is achieved almost entirely through hairline borders (0.5px #23252a or 1px inset #23252a) and subtle dark drop shadows (rgba(0,0,0,0.4) 0 2px 4px) rather than layered shadow stacks. The visual hierarchy comes from the surface-level progression (#08090a → #0f1011 → #161718 → #23252a) and border definition, not from ambient shadow. The acid-lime CTA button uses an inset shadow stack (0px 5px 2px / 0px 3px 2px / 0px 1px 1px) — the only place in the system where a real shadow is applied to a chrome element.
+### Light Mode (High-Clarity Study Mode)
+- **Level 0 (Void `#ffffff`):** Page background, reading canvas
+- **Level 1 (Carbon `#f9fafb`):** Cards, lesson navigation panels, lesson content blocks
+- **Level 2 (Obsidian `#f4f4f5`):** Dialog sheets, dropdown menus, search command palette
+- **Level 3 (Surface-Tint `#ececee`):** Hover states, subtle table header fills
+- **Border Definition:** 1px hairline border (`#e4e4e7` Graphite) defines clean boundaries.
 
-## Imagery
+---
 
-Linear's visual language is product-screenshot-first: the hero and section illustrations are real Linear app UI captured at full fidelity — issue cards, kanban boards, AI agent panels, command palettes — placed inside framed card containers with hairline borders. No stock photography, no lifestyle imagery, no abstract illustration. Logos appear as a customer strip in neutral grey (#8a8f98) at uniform size. Icons are minimal line-art SVGs in single-color grey scale. The hero screenshot floats on a subtle linear gradient (dark-to-light) that creates atmospheric depth without literal scenery. Every visual element is a functional artifact of the product itself.
+## Quick Start: Codebase Synchronization
 
-## Layout
-
-Layout is max-width contained at ~1200px, centered, with full-bleed dark backgrounds extending to viewport edges. The hero is a left-aligned oversized headline (64–72px) paired with a right-aligned link CTA, followed by a large product screenshot that bleeds beyond the max-width slightly. Section rhythm alternates between text-left/image-right 2-column compositions and full-width product showcase bands, separated by 96px vertical gaps. The customer logo strip is a single horizontal row. The page never uses 3-column card grids or masonry — information density stays low, with most sections using generous whitespace and a single focal point per screen. Navigation is a fixed top bar with left-aligned logo and right-aligned links, no sidebar, no mega-menu.
-
-## Agent Prompt Guide
-
-**Quick Color Reference:**
-- text (primary heading): #ffffff
-- text (body): #d0d6e0
-- text (muted): #8a8f98
-- background (canvas): #08090a
-- background (card): #0f1011
-- border (hairline): #23252a
-- accent (CTA): #e4f222
-- primary action: #e4f222 (filled action)
-
-**3-5 Example Component Prompts:**
-
-1. **Hero headline block:** Full-bleed #08090a canvas. Headline at 64px Inter Variable weight 510, color #ffffff, letter-spacing -0.022em, line-height 1.0. Subtext at 16px Inter weight 400, color #8a8f98. No button — secondary link text in #d0d6e0 with arrow glyph.
-
-2. **Product screenshot card:** Background #0f1011, border-radius 12px, inset border 1px #23252a via box-shadow, padding 24px. Contains a simulated app UI at full opacity over the card surface. No outer drop shadow.
-
-3. **Acid-lime primary action button:** Background #e4f222, text #08090a, border-radius 6px, padding 10px 16px, Inter 14px weight 510, letter-spacing -0.011em. Only one per view.
-
-4. **Nav top bar:** Background #08090a (transparent over canvas), padding 16px horizontal, max-width 1200px centered. Logo wordmark #ffffff at 16px weight 510 left-aligned. Nav links #d0d6e0 at 13px weight 400, 8px gaps. Right-aligned white pill sign-up button: bg #ffffff, text #08090a, border-radius 9999px, padding 8px 16px.
-
-5. **Status badge row:** Horizontal flex, 8px gap. Each badge: background rgba(255,255,255,0.05), text #8a8f98, border-radius 4px, padding 0px 6px, Inter 12px weight 400. Color-coded variants: #27a644 for success, #eb5757 for error, #6366f1 for tags.
-
-## Type Scale Detail
-
-Display: 72px / 510 / lh 1.0 / ls -0.022em
-Hero: 64px / 510 / lh 1.0 / ls -0.022em
-Section heading: 48px / 510 / lh 1.0 / ls -0.022em
-Subheading: 32px / 400 / lh 1.13 / ls -0.022em
-Heading: 24px / 400 / lh 1.33 / ls -0.012em
-Body emphasis: 20px / 590 / lh 1.33 / ls -0.012em
-Body large: 17px / 590 / lh 1.6 / ls default
-Body: 16px / 400 / lh 1.5 / ls default
-Body small: 15px / 400 / lh 1.6 / ls -0.011em
-Caption: 13px / 400 / lh 1.2 / ls default
-Label: 12px / 400 / lh 1.4 / ls default
-Micro: 10px / 510 / lh 1.5 / ls default
-
-## Similar Brands
-
-- **Vercel** — Same dark-canvas-first approach with hairline borders, tight Inter typography, and product-screenshot-as-hero layout — both treat the product UI as the visual content rather than illustration
-- **Cursor** — Identical midnight dark mode with acid-lime accent CTA, compact Inter type at 400–510 weights, and product-screenshot showcase cards at 12px radius
-- **Raycast** — Shared dark precision-instrument aesthetic — compact spacing, 6px button radius, monochromatic chrome with a single functional accent color for active states
-- **Framer** — Same dark-canvas layout language with large 48–64px Inter headings at tight tracking, product-screenshot hero cards, and minimal ornament between sections
-
-## Quick Start
-
-### CSS Custom Properties
+### CSS Custom Properties (`globals.css`)
 
 ```css
 :root {
-  /* Colors */
-  --color-void: #08090a;
-  --color-carbon: #0f1011;
-  --color-obsidian: #161718;
-  --color-graphite: #23252a;
-  --color-smoke: #383b3f;
-  --color-ash: #62666d;
-  --color-fog: #8a8f98;
-  --color-mist: #d0d6e0;
-  --color-bone: #e5e5e6;
-  --color-paper: #ffffff;
-  --color-acid-lime: #e4f222;
-  --color-pulse-green: #27a644;
-  --color-coral-red: #eb5757;
-  --color-signal-teal: #02b8cc;
-  --color-iris-violet: #6366f1;
-  --color-lavender: #8b5cf6;
+  /* Foundations — Light Mode */
+  --background: oklch(1 0 0);          /* #ffffff */
+  --foreground: oklch(0.145 0 0);      /* #09090b */
+  --card: oklch(0.985 0 0);            /* #f9fafb */
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(0.96 0 0);          /* #f4f4f5 */
+  --popover-foreground: oklch(0.145 0 0);
+  --muted: oklch(0.96 0 0);
+  --muted-foreground: oklch(0.55 0 0); /* #71717a */
+  --border: oklch(0.92 0 0);           /* #e4e4e7 */
+  --input: oklch(0.86 0 0);            /* #d4d4d8 */
 
-  /* Typography — Font Families */
-  --font-inter-variable: 'Inter Variable', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  --font-berkeley-mono: 'Berkeley Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  /* Interactive Primary — Precision Blue */
+  --primary: oklch(0.55 0.22 260);     /* #2563eb */
+  --primary-foreground: oklch(1 0 0);  /* #ffffff */
+  --ring: oklch(0.55 0.22 260 / 0.5);
 
-  /* Typography — Scale */
-  --text-caption: 13px;
-  --leading-caption: 1.2;
-  --text-body-sm: 15px;
-  --leading-body-sm: 1.6;
-  --tracking-body-sm: -0.165px;
-  --text-body-lg: 20px;
-  --leading-body-lg: 1.33;
-  --tracking-body-lg: -0.24px;
-  --text-subheading: 24px;
-  --leading-subheading: 1.33;
-  --tracking-subheading: -0.288px;
-  --text-heading-sm: 32px;
-  --leading-heading-sm: 1.13;
-  --tracking-heading-sm: -0.704px;
-  --text-heading: 48px;
-  --leading-heading: 1;
-  --tracking-heading: -1.056px;
-  --text-heading-lg: 64px;
-  --leading-heading-lg: 1;
-  --tracking-heading-lg: -1.408px;
-  --text-display: 72px;
-  --leading-display: 1;
-  --tracking-display: -1.584px;
+  /* Status Semantics */
+  --success: oklch(0.62 0.19 145);     /* #16a34a */
+  --destructive: oklch(0.57 0.22 27);  /* #dc2626 */
+  --warning: oklch(0.68 0.18 75);      /* #d97706 */
 
-  /* Typography — Weights */
-  --font-weight-light: 300;
-  --font-weight-regular: 400;
-  --font-weight-w510: 510;
-  --font-weight-w590: 590;
+  --radius: 0.375rem; /* 6px */
+}
 
-  /* Spacing */
-  --spacing-unit: 4px;
-  --spacing-4: 4px;
-  --spacing-8: 8px;
-  --spacing-12: 12px;
-  --spacing-16: 16px;
-  --spacing-20: 20px;
-  --spacing-24: 24px;
-  --spacing-28: 28px;
-  --spacing-32: 32px;
-  --spacing-36: 36px;
-  --spacing-40: 40px;
-  --spacing-48: 48px;
-  --spacing-56: 56px;
-  --spacing-64: 64px;
-  --spacing-80: 80px;
-  --spacing-96: 96px;
-  --spacing-128: 128px;
+.dark {
+  /* Foundations — Dark Mode */
+  --background: oklch(0.145 0 0);      /* #09090b */
+  --foreground: oklch(0.985 0 0);      /* #ffffff */
+  --card: oklch(0.18 0 0);             /* #121215 */
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.21 0 0);          /* #18181b */
+  --popover-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.21 0 0);
+  --muted-foreground: oklch(0.55 0 0); /* #71717a */
+  --border: oklch(0.27 0 0);           /* #27272a */
+  --input: oklch(0.35 0 0);            /* #3f3f46 */
 
-  /* Layout */
-  --page-max-width: 1200px;
-  --section-gap: 96px;
-  --card-padding: 24px;
-  --element-gap: 8px;
+  /* Interactive Primary — Precision Blue */
+  --primary: oklch(0.55 0.22 260);     /* #2563eb */
+  --primary-foreground: oklch(1 0 0);  /* #ffffff */
+  --ring: oklch(0.55 0.22 260 / 0.5);
 
-  /* Border Radius */
-  --radius-sm: 2px;
-  --radius-md: 6px;
-  --radius-xl: 12px;
-  --radius-2xl: 16px;
-  --radius-2xl-2: 22px;
-  --radius-full: 400px;
-  --radius-full-2: 9999px;
-
-  /* Named Radii */
-  --radius-cards: 12px;
-  --radius-pills: 9999px;
-  --radius-small: 2px;
-  --radius-badges: 4px;
-  --radius-inputs: 6px;
-  --radius-buttons: 6px;
-
-  /* Shadows */
-  --shadow-sm: rgba(0, 0, 0, 0.4) 0px 2px 4px 0px;
-  --shadow-md: rgba(0, 0, 0, 0.2) 0px 0px 12px 0px inset;
-  --shadow-subtle: rgb(35, 37, 42) 0px 0px 0px 1px inset;
-  --shadow-subtle-2: rgba(0, 0, 0, 0.2) 0px 0px 0px 1px;
-  --shadow-subtle-3: rgba(0, 0, 0, 0.01) 0px 5px 2px 0px, rgba(0, 0, 0, 0.04) 0px 3px 2px 0px, rgba(0, 0, 0, 0.07) 0px 1px 1px 0px, rgba(0, 0, 0, 0.08) 0px 0px 1px 0px;
-  --shadow-xl: rgba(8, 9, 10, 0.6) 0px 4px 32px 0px;
-  --shadow-subtle-4: rgba(255, 255, 255, 0.03) 0px 0px 0px 1px inset, rgba(255, 255, 255, 0.04) 0px 1px 0px 0px inset, rgba(0, 0, 0, 0.6) 0px 0px 0px 1px, rgba(0, 0, 0, 0.1) 0px 4px 4px 0px;
-  --shadow-subtle-5: rgba(0, 0, 0, 0.1) 0px 0px 0px 2px;
-
-  /* Surfaces */
-  --surface-void: #08090a;
-  --surface-carbon: #0f1011;
-  --surface-obsidian: #161718;
-  --surface-slate: #23252a;
+  /* Status Semantics */
+  --success: oklch(0.72 0.19 145);     /* #22c55e */
+  --destructive: oklch(0.63 0.22 27);  /* #ef4444 */
+  --warning: oklch(0.75 0.18 75);      /* #f59e0b */
 }
 ```
 
-### Tailwind v4
+### Tailwind v4 Theme Tokens
 
 ```css
 @theme {
-  /* Colors */
-  --color-void: #08090a;
-  --color-carbon: #0f1011;
-  --color-obsidian: #161718;
-  --color-graphite: #23252a;
-  --color-smoke: #383b3f;
-  --color-ash: #62666d;
-  --color-fog: #8a8f98;
-  --color-mist: #d0d6e0;
-  --color-bone: #e5e5e6;
+  /* Colors — Neutrals */
+  --color-void: #09090b;
+  --color-carbon: #121215;
+  --color-obsidian: #18181b;
+  --color-surface-tint: #222226;
+  --color-graphite: #27272a;
+  --color-smoke: #3f3f46;
+  --color-ash: #71717a;
+  --color-fog: #a1a1aa;
+  --color-mist: #e4e4e7;
   --color-paper: #ffffff;
-  --color-acid-lime: #e4f222;
-  --color-pulse-green: #27a644;
-  --color-coral-red: #eb5757;
-  --color-signal-teal: #02b8cc;
+
+  /* Colors — Interactive Precision Blue */
+  --color-precision-blue: #2563eb;
+  --color-blue-hover: #1d4ed8;
+  --color-blue-active: #1e40af;
+  --color-blue-subtle: #eff6ff;
+
+  /* Colors — Educational Status */
+  --color-success: #16a34a;
+  --color-destructive: #dc2626;
+  --color-warning: #d97706;
+  --color-signal-teal: #0284c7;
   --color-iris-violet: #6366f1;
-  --color-lavender: #8b5cf6;
 
   /* Typography */
-  --font-inter-variable: 'Inter Variable', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  --font-berkeley-mono: 'Berkeley Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  --font-inter-variable: 'Inter Variable', ui-sans-serif, system-ui, sans-serif;
+  --font-berkeley-mono: 'Berkeley Mono', ui-monospace, monospace;
 
-  /* Typography — Scale */
-  --text-caption: 13px;
-  --leading-caption: 1.2;
-  --text-body-sm: 15px;
-  --leading-body-sm: 1.6;
-  --tracking-body-sm: -0.165px;
-  --text-body-lg: 20px;
-  --leading-body-lg: 1.33;
-  --tracking-body-lg: -0.24px;
-  --text-subheading: 24px;
-  --leading-subheading: 1.33;
-  --tracking-subheading: -0.288px;
-  --text-heading-sm: 32px;
-  --leading-heading-sm: 1.13;
-  --tracking-heading-sm: -0.704px;
-  --text-heading: 48px;
-  --leading-heading: 1;
-  --tracking-heading: -1.056px;
-  --text-heading-lg: 64px;
-  --leading-heading-lg: 1;
-  --tracking-heading-lg: -1.408px;
-  --text-display: 72px;
-  --leading-display: 1;
-  --tracking-display: -1.584px;
-
-  /* Spacing */
-  --spacing-4: 4px;
-  --spacing-8: 8px;
-  --spacing-12: 12px;
-  --spacing-16: 16px;
-  --spacing-20: 20px;
-  --spacing-24: 24px;
-  --spacing-28: 28px;
-  --spacing-32: 32px;
-  --spacing-36: 36px;
-  --spacing-40: 40px;
-  --spacing-48: 48px;
-  --spacing-56: 56px;
-  --spacing-64: 64px;
-  --spacing-80: 80px;
-  --spacing-96: 96px;
-  --spacing-128: 128px;
-
-  /* Border Radius */
+  /* Border Radii */
   --radius-sm: 2px;
   --radius-md: 6px;
   --radius-xl: 12px;
-  --radius-2xl: 16px;
-  --radius-2xl-2: 22px;
-  --radius-full: 400px;
-  --radius-full-2: 9999px;
-
-  /* Shadows */
-  --shadow-sm: rgba(0, 0, 0, 0.4) 0px 2px 4px 0px;
-  --shadow-md: rgba(0, 0, 0, 0.2) 0px 0px 12px 0px inset;
-  --shadow-subtle: rgb(35, 37, 42) 0px 0px 0px 1px inset;
-  --shadow-subtle-2: rgba(0, 0, 0, 0.2) 0px 0px 0px 1px;
-  --shadow-subtle-3: rgba(0, 0, 0, 0.01) 0px 5px 2px 0px, rgba(0, 0, 0, 0.04) 0px 3px 2px 0px, rgba(0, 0, 0, 0.07) 0px 1px 1px 0px, rgba(0, 0, 0, 0.08) 0px 0px 1px 0px;
-  --shadow-xl: rgba(8, 9, 10, 0.6) 0px 4px 32px 0px;
-  --shadow-subtle-4: rgba(255, 255, 255, 0.03) 0px 0px 0px 1px inset, rgba(255, 255, 255, 0.04) 0px 1px 0px 0px inset, rgba(0, 0, 0, 0.6) 0px 0px 0px 1px, rgba(0, 0, 0, 0.1) 0px 4px 4px 0px;
-  --shadow-subtle-5: rgba(0, 0, 0, 0.1) 0px 0px 0px 2px;
+  --radius-full: 9999px;
 }
 ```
-
