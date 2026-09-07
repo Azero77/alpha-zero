@@ -1,4 +1,3 @@
-import { authMiddleware } from "@repo/auth/proxy";
 import { internationalizationMiddleware } from "@repo/internationalization/proxy";
 import { parseError } from "@repo/observability/error";
 import { secure } from "@repo/security";
@@ -45,7 +44,7 @@ const arcjetMiddleware = async (request: NextRequest) => {
   }
 };
 
-// Compose non-Clerk middleware with Nemo
+// Compose middleware with Nemo
 const composedMiddleware = createNEMO(
   {},
   {
@@ -53,17 +52,8 @@ const composedMiddleware = createNEMO(
   }
 );
 
-// Clerk middleware wraps other middleware in its callback
-export default authMiddleware(async (_auth, request, event) => {
-  // Run security headers first
+export default (async (request: NextRequest, event: any) => {
   const headersResponse = securityHeaders();
-
-  // Then run composed middleware (i18n + arcjet)
-  const middlewareResponse = await composedMiddleware(
-    request as unknown as NextRequest,
-    event
-  );
-
-  // Return middleware response if it exists, otherwise headers response
+  const middlewareResponse = await composedMiddleware(request, event);
   return middlewareResponse || headersResponse;
 }) as unknown as NextProxy;

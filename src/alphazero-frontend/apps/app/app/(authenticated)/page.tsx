@@ -1,6 +1,4 @@
-import { auth } from "@repo/auth/server";
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
 import { Header } from "./components/header";
 
 const title = "AlphaZero Academy";
@@ -12,12 +10,6 @@ export const metadata: Metadata = {
 };
 
 const App = async () => {
-  const { orgId } = await auth();
-
-  if (!orgId) {
-    notFound();
-  }
-
   const pages = [
     { id: "1", name: "Courses & Curricula" },
     { id: "2", name: "Students & Enrollments" },

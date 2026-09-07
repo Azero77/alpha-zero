@@ -1,5 +1,4 @@
-import { auth } from "@repo/auth/server";
-import { notFound, redirect } from "next/navigation";
+import { redirect } from "next/navigation";
 import { Header } from "../components/header";
 
 interface SearchPageProperties {
@@ -29,11 +28,6 @@ const SearchPage = async ({ searchParams }: SearchPageProperties) => {
   const pages = mockPages.filter((item) =>
     item.name.toLowerCase().includes((q ?? "").toLowerCase())
   );
-  const { orgId } = await auth();
-
-  if (!orgId) {
-    notFound();
-  }
 
   if (!q) {
     redirect("/");

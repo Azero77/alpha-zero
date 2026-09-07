@@ -29,7 +29,9 @@ export type PaginationQuery = z.infer<typeof paginationQuerySchema>;
 /**
  * Generic factory for PagedResult<T> responses matching ASP.NET PagedResult
  */
-export const createPagedResultSchema = <T extends z.ZodTypeAny>(itemSchema: T) =>
+export const createPagedResultSchema = <T extends z.ZodTypeAny>(
+  itemSchema: T
+) =>
   z.object({
     items: z.array(itemSchema).default([]),
     totalCount: z.number().int().min(0),
@@ -56,9 +58,9 @@ export const arnSchema = z
 export type Arn = z.infer<typeof arnSchema>;
 
 export interface ParsedArn {
+  resourcePath: string;
   service: string;
   tenantId: string;
-  resourcePath: string;
 }
 
 export function parseArn(arn: string): ParsedArn {
@@ -73,7 +75,11 @@ export function parseArn(arn: string): ParsedArn {
   };
 }
 
-export function buildArn(service: string, tenantId: string, resourcePath: string): string {
+export function buildArn(
+  service: string,
+  tenantId: string,
+  resourcePath: string
+): string {
   return `az:${service}:${tenantId}:${resourcePath}`;
 }
 
@@ -84,7 +90,11 @@ export function buildCourseArn(
   lessonId?: string
 ): string {
   let path = `course/${courseId}`;
-  if (sectionId) path += `/section/${sectionId}`;
-  if (lessonId) path += `/lesson/${lessonId}`;
+  if (sectionId) {
+    path += `/section/${sectionId}`;
+  }
+  if (lessonId) {
+    path += `/lesson/${lessonId}`;
+  }
   return buildArn("courses", tenantId, path);
 }

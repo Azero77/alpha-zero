@@ -1,4 +1,3 @@
-import { authMiddleware } from "@repo/auth/proxy";
 import {
   noseconeOptions,
   noseconeOptionsWithToolbar,
@@ -11,10 +10,7 @@ const securityHeaders = env.FLAGS_SECRET
   ? securityMiddleware(noseconeOptionsWithToolbar)
   : securityMiddleware(noseconeOptions);
 
-// Clerk middleware wraps other middleware in its callback
-// For apps using Clerk, compose middleware inside authMiddleware callback
-// For apps without Clerk, use createNEMO for composition (see apps/web)
-export default authMiddleware(() => securityHeaders()) as unknown as NextProxy;
+export default securityHeaders as unknown as NextProxy;
 
 export const config = {
   matcher: [
