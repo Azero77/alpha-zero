@@ -38,13 +38,11 @@ public static class DependencyInjection
         services.AddScoped<IUnitOfWork, UnitOfWork<AppDbContext>>();
         services.AddScoped<AlphaZero.Modules.Tenants.Application.Queries.ITenantQueryService, AlphaZero.Modules.Tenants.Infrastructure.Queries.TenantQueryService>();
 
-        services.AddHttpClient("FrontendRevalidation");
-
         var applicationAssembly = typeof(AlphaZero.Modules.Tenants.Application.Tenants.Commands.CreateTenant.CreateTenantCommand).Assembly;
         
         services.AddMediatR(opts =>
         {
-            opts.RegisterServicesFromAssemblies(applicationAssembly, typeof(DependencyInjection).Assembly);
+            opts.RegisterServicesFromAssemblies(applicationAssembly);
             opts.AddOpenBehavior(typeof(ValidationBehavior<,>));
             opts.AddOpenBehavior(typeof(UnitOfWorkDecoratorCommandHandler<,>));
         });
