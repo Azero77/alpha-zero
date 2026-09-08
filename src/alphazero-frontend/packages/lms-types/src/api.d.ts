@@ -1137,8 +1137,8 @@ export interface paths {
      */
     get: operations["AlphaZeroModulesTenantsPresentationEndpointsGetTenantGetTenantEndpoint"];
     /**
-     * Updates tenant details
-     * @description Updates the name, logo, or theme colors of an academy tenant.
+     * Updates tenant details and branding
+     * @description Updates the name, logos, favicon, and dynamic brand colors of an academy tenant.
      */
     put: operations["AlphaZeroModulesTenantsPresentationEndpointsUpdateTenantUpdateTenantEndpoint"];
     post?: never;
@@ -1161,7 +1161,7 @@ export interface paths {
     };
     /**
      * Looks up tenant by subdomain
-     * @description Publicly resolves academy branding and metadata based on the subdomain.
+     * @description Publicly resolves academy branding and metadata based on the subdomain. Response is cached at the edge.
      */
     get: operations["AlphaZeroModulesTenantsPresentationEndpointsLookupTenantLookupTenantEndpoint"];
     put?: never;
@@ -1208,7 +1208,6 @@ export interface components {
       status?: number | null;
       detail?: string | null;
       instance?: string | null;
-      traceId?: string | null;
     } & {
       [key: string]: unknown;
     };
@@ -1336,9 +1335,11 @@ export interface components {
     GetVideoKeyRequest: Record<string, never>;
     UpdateTenantRequest: {
       name?: string;
-      logoUrl?: string | null;
       primaryColor?: string | null;
       secondaryColor?: string | null;
+      logoUrl?: string | null;
+      darkModeLogoUrl?: string | null;
+      faviconUrl?: string | null;
     };
     LookupTenantResponse: {
       /** Format: guid */
@@ -1348,9 +1349,11 @@ export interface components {
       branding?: components["schemas"]["LookupTenantBranding"];
     };
     LookupTenantBranding: {
-      primaryColor?: string | null;
+      primaryColor?: string;
       secondaryColor?: string | null;
       logoUrl?: string | null;
+      darkModeLogoUrl?: string | null;
+      faviconUrl?: string | null;
     };
     LookupTenantRequest: Record<string, never>;
     PagedResultOfTenantDto: {
@@ -1374,6 +1377,8 @@ export interface components {
       logoUrl?: string | null;
       primaryColor?: string | null;
       secondaryColor?: string | null;
+      darkModeLogoUrl?: string | null;
+      faviconUrl?: string | null;
       status?: string;
       /** Format: date-time */
       createdAt?: string;
@@ -1391,6 +1396,8 @@ export interface components {
       logoUrl?: string | null;
       primaryColor?: string | null;
       secondaryColor?: string | null;
+      darkModeLogoUrl?: string | null;
+      faviconUrl?: string | null;
     };
     SubmitAssessmentResponse: {
       /** Format: decimal */
@@ -1576,19 +1583,19 @@ export interface components {
     };
     /**
      * @example {
-     *       "studentId": "b1731a2a-5d27-4d19-9eb0-1c29b10769b9",
-     *       "courseId": "a6d845c6-a3d8-454e-88da-66307b980d73"
+     *       "studentId": "b37991b4-aeb9-4822-9286-f77abbf08074",
+     *       "courseId": "c7449dbd-d1ff-4e06-bb0e-68d4349b6f9f"
      *     }
      */
     EnrollInCourseRequest: {
       /**
        * Format: guid
-       * @example b1731a2a-5d27-4d19-9eb0-1c29b10769b9
+       * @example b37991b4-aeb9-4822-9286-f77abbf08074
        */
       studentId?: string;
       /**
        * Format: guid
-       * @example a6d845c6-a3d8-454e-88da-66307b980d73
+       * @example c7449dbd-d1ff-4e06-bb0e-68d4349b6f9f
        */
       courseId?: string;
     };
@@ -5059,7 +5066,7 @@ export interface operations {
           "application/json": components["schemas"]["CreateTenantResponse"];
         };
       };
-      /** @description Validation failure (Name empty/too long, Subdomain empty/too long/invalid characters) */
+      /** @description Validation failure (Name empty/too long, Subdomain invalid, Invalid hex colors) */
       400: {
         headers: {
           [name: string]: unknown;
@@ -5246,7 +5253,7 @@ export interface operations {
     };
     requestBody?: never;
     responses: {
-      /** @description Tenant details and branding retrieved successfully */
+      /** @description Tenant details and dynamic branding retrieved successfully */
       200: {
         headers: {
           [name: string]: unknown;
@@ -5288,7 +5295,7 @@ export interface operations {
         };
         content?: never;
       };
-      /** @description Validation failure (Id empty, Name empty/too long) */
+      /** @description Validation failure (Id empty, Name empty/too long, Invalid hex colors) */
       400: {
         headers: {
           [name: string]: unknown;

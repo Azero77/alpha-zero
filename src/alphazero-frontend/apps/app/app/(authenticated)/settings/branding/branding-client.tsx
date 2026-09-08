@@ -140,6 +140,7 @@ export function BrandingClient({ initialTenant }: BrandingClientProps) {
     startTransition(async () => {
       const result = await updateTenantBrandingAction({
         tenantId: initialTenant.id,
+        subdomain: initialTenant.subdomain,
         name,
         primaryColor: safePrimary,
         secondaryColor: enableSecondary ? safeSecondary : null,

@@ -1,9 +1,11 @@
 "use server";
 
+import { revalidateTag } from "next/cache";
 import { getAccessToken, getTenantId } from "@/lib/session";
 
 export interface UpdateBrandingInput {
   tenantId?: string;
+  subdomain?: string;
   name: string;
   primaryColor?: string | null;
   secondaryColor?: string | null;
@@ -52,6 +54,16 @@ export async function updateTenantBrandingAction(input: UpdateBrandingInput) {
           errorData?.detail ||
           `Failed to update tenant branding (HTTP ${response.status})`,
       };
+    }
+
+    // Direct Next.js cache invalidation right after successful API response
+    if (input.subdomain) {
+      try {
+        const normalizedSubdomain = input.subdomain.toLowerCase().trim();
+        (revalidateTag as (tag: string, profile?: any) => void)(`tenant-${normalizedSubdomain}`, "default");
+      } catch (err) {
+        console.warn("Direct Next.js revalidation notice:", err);
+      }
     }
 
     return { success: true };
