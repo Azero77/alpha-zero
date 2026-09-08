@@ -7,9 +7,7 @@ public class Tenant : AggregateRoot
 {
     public string Name { get; private set; } = default!;
     public string Subdomain { get; private set; } = default!;
-    public string? LogoUrl { get; private set; }
-    public string? PrimaryColor { get; private set; }
-    public string? SecondaryColor { get; private set; }
+    public TenantBranding Branding { get; private set; } = default!;
     public TenantStatus Status { get; private set; }
     public DateTime CreatedAt { get; private set; }
 
@@ -19,17 +17,13 @@ public class Tenant : AggregateRoot
         Guid id,
         string name,
         string subdomain,
-        string? logoUrl,
-        string? primaryColor,
-        string? secondaryColor,
+        TenantBranding branding,
         TenantStatus status,
         DateTime createdAt) : base(id)
     {
         Name = name;
         Subdomain = subdomain;
-        LogoUrl = logoUrl;
-        PrimaryColor = primaryColor;
-        SecondaryColor = secondaryColor;
+        Branding = branding;
         Status = status;
         CreatedAt = createdAt;
     }
@@ -37,17 +31,13 @@ public class Tenant : AggregateRoot
     public static Tenant Create(
         string name,
         string subdomain,
-        string? logoUrl = null,
-        string? primaryColor = null,
-        string? secondaryColor = null)
+        TenantBranding? branding = null)
     {
         var tenant = new Tenant(
             Guid.NewGuid(),
             name,
             subdomain.ToLowerInvariant(),
-            logoUrl,
-            primaryColor,
-            secondaryColor,
+            branding ?? TenantBranding.Default,
             TenantStatus.Active,
             DateTime.UtcNow);
 
@@ -56,16 +46,16 @@ public class Tenant : AggregateRoot
         return tenant;
     }
 
-    public void UpdateDetails(string name, string? logoUrl)
+    public void UpdateDetails(string name)
     {
         Name = name;
-        LogoUrl = logoUrl;
     }
 
-    public void UpdateTheme(string? primaryColor, string? secondaryColor)
+    public ErrorOr<Success> UpdateBranding(TenantBranding branding)
     {
-        PrimaryColor = primaryColor;
-        SecondaryColor = secondaryColor;
+        Branding = branding;
+        AddDomainEvent(new TenantBrandingUpdatedDomainEvent(Id, Subdomain, Branding));
+        return Result.Success;
     }
 
     public ErrorOr<Success> Suspend()
@@ -87,6 +77,7 @@ public class Tenant : AggregateRoot
         return Result.Success;
     }
 }
+
 public class TenantCreatedDomainEvent : DomainEvent
 {
     public Guid TenantId { get; }
@@ -98,6 +89,20 @@ public class TenantCreatedDomainEvent : DomainEvent
         TenantId = tenantId;
         Name = name;
         Subdomain = subdomain;
+    }
+}
+
+public class TenantBrandingUpdatedDomainEvent : DomainEvent
+{
+    public Guid TenantId { get; }
+    public string Subdomain { get; }
+    public TenantBranding Branding { get; }
+
+    public TenantBrandingUpdatedDomainEvent(Guid tenantId, string subdomain, TenantBranding branding)
+    {
+        TenantId = tenantId;
+        Subdomain = subdomain;
+        Branding = branding;
     }
 }
 

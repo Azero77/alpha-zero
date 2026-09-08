@@ -11,19 +11,21 @@ public record UpdateTenantRequest
 {
     public Guid Id { get; init; }
     public string Name { get; init; } = default!;
-    public string? LogoUrl { get; init; }
     public string? PrimaryColor { get; init; }
     public string? SecondaryColor { get; init; }
+    public string? LogoUrl { get; init; }
+    public string? DarkModeLogoUrl { get; init; }
+    public string? FaviconUrl { get; init; }
 }
 
 public class UpdateTenantSummary : Summary<UpdateTenantEndpoint>
 {
     public UpdateTenantSummary()
     {
-        Summary = "Updates tenant details";
-        Description = "Updates the name, logo, or theme colors of an academy tenant.";
+        Summary = "Updates tenant details and branding";
+        Description = "Updates the name, logos, favicon, and dynamic brand colors of an academy tenant.";
         Response(204, "Tenant updated successfully");
-        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(400, "Validation failure (Id empty, Name empty/too long)");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(400, "Validation failure (Id empty, Name empty/too long, Invalid hex colors)");
         Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(401, "Unauthorized");
         Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(403, "Forbidden (Missing tenants:Manage permission)");
         Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(404, "Tenant not found (Tenant.NotFound)");
@@ -42,7 +44,15 @@ public class UpdateTenantEndpoint(TenantsModule module) : Endpoint<UpdateTenantR
 
     public override async Task HandleAsync(UpdateTenantRequest req, CancellationToken ct)
     {
-        var command = new UpdateTenantCommand(req.Id, req.Name, req.LogoUrl, req.PrimaryColor, req.SecondaryColor);
+        var command = new UpdateTenantCommand(
+            req.Id,
+            req.Name,
+            req.PrimaryColor,
+            req.SecondaryColor,
+            req.LogoUrl,
+            req.DarkModeLogoUrl,
+            req.FaviconUrl);
+
         var result = await module.Send(command, ct);
 
         if (result.IsError)

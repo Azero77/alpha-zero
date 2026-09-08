@@ -21,14 +21,30 @@ public class TenantConfiguration : IEntityTypeConfiguration<Tenant>
 
         builder.HasIndex(x => x.Subdomain).IsUnique();
 
-        builder.Property(x => x.LogoUrl)
-            .HasMaxLength(512);
+        builder.OwnsOne(x => x.Branding, b =>
+        {
+            b.Property(p => p.PrimaryColor)
+                .HasColumnName("PrimaryColor")
+                .HasMaxLength(32)
+                .IsRequired()
+                .HasDefaultValue(TenantBranding.DefaultPrimaryColor);
 
-        builder.Property(x => x.PrimaryColor)
-            .HasMaxLength(32);
+            b.Property(p => p.SecondaryColor)
+                .HasColumnName("SecondaryColor")
+                .HasMaxLength(32);
 
-        builder.Property(x => x.SecondaryColor)
-            .HasMaxLength(32);
+            b.Property(p => p.LogoUrl)
+                .HasColumnName("LogoUrl")
+                .HasMaxLength(512);
+
+            b.Property(p => p.DarkModeLogoUrl)
+                .HasColumnName("DarkModeLogoUrl")
+                .HasMaxLength(512);
+
+            b.Property(p => p.FaviconUrl)
+                .HasColumnName("FaviconUrl")
+                .HasMaxLength(512);
+        });
 
         builder.Property(x => x.Status)
             .HasConversion<string>()

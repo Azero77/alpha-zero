@@ -111,6 +111,10 @@
   --color-secondary: var(--secondary);
   --color-primary-foreground: var(--primary-foreground);
   --color-primary: var(--primary);
+  --color-precision-blue: var(--color-precision-blue, var(--primary));
+  --color-blue-subtle: var(--color-blue-subtle);
+  --color-blue-hover: var(--color-blue-hover);
+  --color-blue-active: var(--color-blue-active);
   --color-popover-foreground: var(--popover-foreground);
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);

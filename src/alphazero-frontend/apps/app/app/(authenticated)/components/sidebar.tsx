@@ -137,6 +137,10 @@ const data = {
           url: "#",
         },
         {
+          title: "Branding",
+          url: "/settings/branding",
+        },
+        {
           title: "Team",
           url: "#",
         },

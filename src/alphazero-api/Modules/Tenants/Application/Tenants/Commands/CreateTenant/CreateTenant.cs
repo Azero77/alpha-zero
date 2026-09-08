@@ -12,7 +12,9 @@ public record CreateTenantCommand(
     string Subdomain,
     string? LogoUrl = null,
     string? PrimaryColor = null,
-    string? SecondaryColor = null) : ICommand<Guid>;
+    string? SecondaryColor = null,
+    string? DarkModeLogoUrl = null,
+    string? FaviconUrl = null) : ICommand<Guid>;
 
 public class CreateTenantCommandValidator : AbstractValidator<CreateTenantCommand>
 {
@@ -21,6 +23,20 @@ public class CreateTenantCommandValidator : AbstractValidator<CreateTenantComman
         RuleFor(x => x.Name).NotEmpty().MaximumLength(256);
         RuleFor(x => x.Subdomain).NotEmpty().MaximumLength(64).Matches("^[a-z0-9-]+$")
             .WithMessage("Subdomain can only contain lowercase letters, numbers, and hyphens.");
+
+        RuleFor(x => x.PrimaryColor)
+            .Matches(@"^#([0-9A-Fa-f]{6})$")
+            .When(x => !string.IsNullOrWhiteSpace(x.PrimaryColor))
+            .WithMessage("Primary color must be a valid 6-character hex color (e.g. #2563eb).");
+
+        RuleFor(x => x.SecondaryColor)
+            .Matches(@"^#([0-9A-Fa-f]{6})$")
+            .When(x => !string.IsNullOrWhiteSpace(x.SecondaryColor))
+            .WithMessage("Secondary color must be a valid 6-character hex color (e.g. #2563eb).");
+
+        RuleFor(x => x.LogoUrl).MaximumLength(512).IsValidUrl();
+        RuleFor(x => x.DarkModeLogoUrl).MaximumLength(512).IsValidUrl();
+        RuleFor(x => x.FaviconUrl).MaximumLength(512).IsValidUrl();
     }
 }
 
@@ -35,12 +51,22 @@ public sealed class CreateTenantCommandHandler(
             return Error.Conflict("Tenant.SubdomainNotUnique", $"The subdomain '{request.Subdomain}' is already in use.");
         }
 
+        var brandingResult = TenantBranding.Create(
+            request.PrimaryColor,
+            request.SecondaryColor,
+            request.LogoUrl,
+            request.DarkModeLogoUrl,
+            request.FaviconUrl);
+
+        if (brandingResult.IsError)
+        {
+            return brandingResult.Errors;
+        }
+
         var tenant = Tenant.Create(
             request.Name,
             request.Subdomain,
-            request.LogoUrl,
-            request.PrimaryColor,
-            request.SecondaryColor);
+            brandingResult.Value);
 
         tenantRepository.Add(tenant);
         

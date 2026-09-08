@@ -14,6 +14,8 @@ public record CreateTenantRequest
     public string? LogoUrl { get; init; }
     public string? PrimaryColor { get; init; }
     public string? SecondaryColor { get; init; }
+    public string? DarkModeLogoUrl { get; init; }
+    public string? FaviconUrl { get; init; }
 }
 
 public record CreateTenantResponse(Guid Id);
@@ -25,7 +27,7 @@ public class CreateTenantSummary : Summary<CreateTenantEndpoint>
         Summary = "Creates a new academy tenant";
         Description = "Provisions an isolated tenant/academy instance with its own subdomain and branding.";
         Response<CreateTenantResponse>(201, "Tenant created successfully");
-        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(400, "Validation failure (Name empty/too long, Subdomain empty/too long/invalid characters)");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(400, "Validation failure (Name empty/too long, Subdomain invalid, Invalid hex colors)");
         Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(401, "Unauthorized");
         Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(403, "Forbidden (Missing tenants:Manage permission)");
         Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(409, "Subdomain already taken (Tenant.SubdomainNotUnique)");
@@ -45,7 +47,15 @@ public class CreateTenantEndpoint(TenantsModule module) : Endpoint<CreateTenantR
 
     public override async Task HandleAsync(CreateTenantRequest req, CancellationToken ct)
     {
-        var command = new CreateTenantCommand(req.Name, req.Subdomain, req.LogoUrl, req.PrimaryColor, req.SecondaryColor);
+        var command = new CreateTenantCommand(
+            req.Name,
+            req.Subdomain,
+            req.LogoUrl,
+            req.PrimaryColor,
+            req.SecondaryColor,
+            req.DarkModeLogoUrl,
+            req.FaviconUrl);
+
         var result = await module.Send(command, ct);
 
         if (result.IsError)

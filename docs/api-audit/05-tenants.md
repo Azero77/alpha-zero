@@ -7,16 +7,21 @@ This file details all audited endpoints, request/response models, FluentValidati
 ### 1. `POST /tenants`
 - **File:** `src/alphazero-api/Modules/Tenants/Presentation/Endpoints/CreateTenant/CreateTenantEndpoint.cs`
 - **Endpoint:** `CreateTenantEndpoint`
-- **Command:** `CreateTenantCommand(string Name, string Subdomain, string? LogoUrl, string? PrimaryColor, string? SecondaryColor)`
-- **Request DTO:** `CreateTenantRequest { string Name, string Subdomain, string? LogoUrl, string? PrimaryColor, string? SecondaryColor }`
+- **Command:** `CreateTenantCommand(string Name, string Subdomain, string? LogoUrl, string? PrimaryColor, string? SecondaryColor, string? DarkModeLogoUrl, string? FaviconUrl)`
+- **Request DTO:** `CreateTenantRequest { string Name, string Subdomain, string? LogoUrl, string? PrimaryColor, string? SecondaryColor, string? DarkModeLogoUrl, string? FaviconUrl }`
 - **Response DTO:** `CreateTenantResponse(Guid Id)`
 - **Success Status:** `201 Created`
 - **Authorization:** `tenants:Manage` on `ResourceArn.ForRoot()`
 - **FluentValidation Rules (`CreateTenantCommandValidator`):**
   - `Name`: NotEmpty, MaximumLength(256)
   - `Subdomain`: NotEmpty, MaximumLength(64), Matches `^[a-z0-9-]+$`
+  - `PrimaryColor`: Matches `^#([0-9A-Fa-f]{6})$` (when not empty)
+  - `SecondaryColor`: Matches `^#([0-9A-Fa-f]{6})$` (when not empty)
+  - `LogoUrl`: MaximumLength(512)
+  - `DarkModeLogoUrl`: MaximumLength(512)
+  - `FaviconUrl`: MaximumLength(512)
 - **Error Codes & Status Mappings:**
-  - `400 Bad Request` (`ProblemDetails`): FluentValidation rules
+  - `400 Bad Request` (`ProblemDetails`): FluentValidation rules, `Branding.InvalidHexFormat`
   - `401 Unauthorized` (`ProblemDetails`): Unauthenticated request
   - `403 Forbidden` (`ProblemDetails`): Missing `tenants:Manage` permission
   - `409 Conflict` (`ProblemDetails`): `Tenant.SubdomainNotUnique` ("The subdomain '{Subdomain}' is already in use.")
@@ -57,8 +62,8 @@ This file details all audited endpoints, request/response models, FluentValidati
 - **Endpoint:** `LookupTenantEndpoint`
 - **Query:** `GetTenantBySubdomainQuery(string Subdomain)`
 - **Request DTO:** `LookupTenantRequest { string Subdomain }`
-- **Response DTO:** `TenantDto`
-- **Success Status:** `200 OK`
+- **Response DTO:** `LookupTenantResponse(Guid Id, string Subdomain, string Name, LookupTenantBranding Branding)`
+- **Success Status:** `200 OK` (with `Cache-Control: public, max-age=300, s-maxage=86400, stale-while-revalidate=86400`)
 - **Authorization:** `AllowAnonymous()`
 - **Error Codes & Status Mappings:**
   - `404 Not Found` (`ProblemDetails`): `Tenant.NotFound` ("No academy found for subdomain '{Subdomain}'.")
@@ -68,16 +73,21 @@ This file details all audited endpoints, request/response models, FluentValidati
 ### 5. `PUT /tenants/{Id}`
 - **File:** `src/alphazero-api/Modules/Tenants/Presentation/Endpoints/UpdateTenant/UpdateTenantEndpoint.cs`
 - **Endpoint:** `UpdateTenantEndpoint`
-- **Command:** `UpdateTenantCommand(Guid Id, string Name, string? LogoUrl, string? PrimaryColor, string? SecondaryColor)`
-- **Request DTO:** `UpdateTenantRequest { Guid Id, string Name, string? LogoUrl, string? PrimaryColor, string? SecondaryColor }`
+- **Command:** `UpdateTenantCommand(Guid Id, string Name, string? PrimaryColor, string? SecondaryColor, string? LogoUrl, string? DarkModeLogoUrl, string? FaviconUrl)`
+- **Request DTO:** `UpdateTenantRequest { Guid Id, string Name, string? PrimaryColor, string? SecondaryColor, string? LogoUrl, string? DarkModeLogoUrl, string? FaviconUrl }`
 - **Response DTO:** None (`Send.NoContentAsync`)
 - **Success Status:** `204 NoContent`
 - **Authorization:** `tenants:Manage` on `ResourceArn.ForTenant(req.Id)`
 - **FluentValidation Rules (`UpdateTenantCommandValidator`):**
   - `Id`: NotEmpty
   - `Name`: NotEmpty, MaximumLength(256)
+  - `PrimaryColor`: Matches `^#([0-9A-Fa-f]{6})$` (when not empty)
+  - `SecondaryColor`: Matches `^#([0-9A-Fa-f]{6})$` (when not empty)
+  - `LogoUrl`: MaximumLength(512)
+  - `DarkModeLogoUrl`: MaximumLength(512)
+  - `FaviconUrl`: MaximumLength(512)
 - **Error Codes & Status Mappings:**
-  - `400 Bad Request` (`ProblemDetails`): FluentValidation rules
+  - `400 Bad Request` (`ProblemDetails`): FluentValidation rules, `Branding.InvalidHexFormat`
   - `401 Unauthorized` (`ProblemDetails`): Unauthenticated request
   - `403 Forbidden` (`ProblemDetails`): Missing `tenants:Manage` permission
   - `404 Not Found` (`ProblemDetails`): `Tenant.NotFound` ("Tenant not found.")

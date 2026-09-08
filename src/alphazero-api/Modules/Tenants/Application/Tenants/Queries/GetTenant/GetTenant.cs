@@ -11,6 +11,8 @@ public record TenantDto(
     string? LogoUrl,
     string? PrimaryColor,
     string? SecondaryColor,
+    string? DarkModeLogoUrl,
+    string? FaviconUrl,
     string Status,
     DateTime CreatedAt);
 
@@ -27,9 +29,11 @@ public sealed class GetTenantQueryHandler(ITenantRepository tenantRepository) : 
             tenant.Id,
             tenant.Name,
             tenant.Subdomain,
-            tenant.LogoUrl,
-            tenant.PrimaryColor,
-            tenant.SecondaryColor,
+            tenant.Branding.LogoUrl,
+            tenant.Branding.PrimaryColor,
+            tenant.Branding.SecondaryColor,
+            tenant.Branding.DarkModeLogoUrl,
+            tenant.Branding.FaviconUrl,
             tenant.Status.ToString(),
             tenant.CreatedAt);
     }

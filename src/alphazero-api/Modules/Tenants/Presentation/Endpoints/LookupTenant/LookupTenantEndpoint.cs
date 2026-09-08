@@ -1,5 +1,5 @@
 using AlphaZero.Modules.Tenants.Application.Tenants.Queries.GetBySubdomain;
-using AlphaZero.Modules.Tenants.Application.Tenants.Queries.GetTenant;
+using AlphaZero.Modules.Tenants.Domain;
 using AlphaZero.Shared.Presentation.Extensions;
 using FastEndpoints;
 using Microsoft.AspNetCore.Http;
@@ -8,16 +8,26 @@ namespace AlphaZero.Modules.Tenants.Presentation.Endpoints.LookupTenant;
 
 public record LookupTenantRequest { public string Subdomain { get; init; } = default!; }
 
-public record LookupTenantBranding(string? PrimaryColor, string? SecondaryColor, string? LogoUrl);
-public record LookupTenantResponse(Guid Id, string Subdomain, string Name, LookupTenantBranding Branding);
+public record LookupTenantBranding(
+    string PrimaryColor,
+    string? SecondaryColor,
+    string? LogoUrl,
+    string? DarkModeLogoUrl,
+    string? FaviconUrl);
+
+public record LookupTenantResponse(
+    Guid Id,
+    string Subdomain,
+    string Name,
+    LookupTenantBranding Branding);
 
 public class LookupTenantSummary : Summary<LookupTenantEndpoint>
 {
     public LookupTenantSummary()
     {
         Summary = "Looks up tenant by subdomain";
-        Description = "Publicly resolves academy branding and metadata based on the subdomain.";
-        Response<LookupTenantResponse>(200, "Tenant details and branding retrieved successfully");
+        Description = "Publicly resolves academy branding and metadata based on the subdomain. Response is cached at the edge.";
+        Response<LookupTenantResponse>(200, "Tenant details and dynamic branding retrieved successfully");
         Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(404, "Tenant not found (Tenant.NotFound)");
     }
 }
@@ -48,8 +58,15 @@ public class LookupTenantEndpoint(TenantsModule module) : Endpoint<LookupTenantR
             tenant.Id,
             tenant.Subdomain,
             tenant.Name,
-            new LookupTenantBranding(tenant.PrimaryColor, tenant.SecondaryColor, tenant.LogoUrl)
+            new LookupTenantBranding(
+                tenant.PrimaryColor ?? TenantBranding.DefaultPrimaryColor,
+                tenant.SecondaryColor,
+                tenant.LogoUrl,
+                tenant.DarkModeLogoUrl,
+                tenant.FaviconUrl)
         );
+
+        HttpContext.Response.Headers.CacheControl = "public, max-age=300, s-maxage=86400, stale-while-revalidate=86400";
 
         await Send.OkAsync(response, ct);
     }

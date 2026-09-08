@@ -24,3 +24,7 @@ export const DesignSystemProvider = ({
     </AuthProvider>
   </ThemeProvider>
 );
+
+export * from "./lib/color-utils";
+export * from "./lib/tenant-utils";
+

@@ -36,9 +36,11 @@ public class TenantQueryService : ITenantQueryService
                 t.Id,
                 t.Name,
                 t.Subdomain,
-                t.LogoUrl,
-                t.PrimaryColor,
-                t.SecondaryColor,
+                t.Branding.LogoUrl,
+                t.Branding.PrimaryColor,
+                t.Branding.SecondaryColor,
+                t.Branding.DarkModeLogoUrl,
+                t.Branding.FaviconUrl,
                 t.Status.ToString(),
                 t.CreatedAt))
             .ToListAsync(cancellationToken);

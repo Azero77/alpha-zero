@@ -20,9 +20,11 @@ public sealed class GetTenantBySubdomainQueryHandler(ITenantRepository tenantRep
             tenant.Id,
             tenant.Name,
             tenant.Subdomain,
-            tenant.LogoUrl,
-            tenant.PrimaryColor,
-            tenant.SecondaryColor,
+            tenant.Branding.LogoUrl,
+            tenant.Branding.PrimaryColor,
+            tenant.Branding.SecondaryColor,
+            tenant.Branding.DarkModeLogoUrl,
+            tenant.Branding.FaviconUrl,
             tenant.Status.ToString(),
             tenant.CreatedAt);
     }
