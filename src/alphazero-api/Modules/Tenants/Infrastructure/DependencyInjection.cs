@@ -42,7 +42,7 @@ public static class DependencyInjection
         
         services.AddMediatR(opts =>
         {
-            opts.RegisterServicesFromAssemblies(applicationAssembly);
+            opts.RegisterServicesFromAssemblies(applicationAssembly, typeof(DependencyInjection).Assembly);
             opts.AddOpenBehavior(typeof(ValidationBehavior<,>));
             opts.AddOpenBehavior(typeof(UnitOfWorkDecoratorCommandHandler<,>));
         });

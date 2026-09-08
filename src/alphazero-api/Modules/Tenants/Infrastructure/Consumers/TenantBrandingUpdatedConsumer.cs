@@ -2,24 +2,21 @@ using AlphaZero.Modules.Tenants.Domain;
 using MassTransit;
 using MediatR;
 using Microsoft.Extensions.Caching.Hybrid;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
 namespace AlphaZero.Modules.Tenants.Infrastructure.Consumers;
 
 public class TenantBrandingUpdatedConsumer : 
-    IConsumer<TenantBrandingUpdatedDomainEvent>
+    IConsumer<TenantBrandingUpdatedDomainEvent>,
+    INotificationHandler<TenantBrandingUpdatedDomainEvent>
 {
     private readonly HybridCache? _cache;
-    private readonly IConfiguration _configuration;
     private readonly ILogger<TenantBrandingUpdatedConsumer> _logger;
 
     public TenantBrandingUpdatedConsumer(
-        IConfiguration configuration,
         ILogger<TenantBrandingUpdatedConsumer> logger,
         HybridCache? cache = null)
     {
-        _configuration = configuration;
         _logger = logger;
         _cache = cache;
     }
@@ -27,6 +24,12 @@ public class TenantBrandingUpdatedConsumer :
     {
         await ProcessInvalidationAsync(context.Message.Subdomain, context.CancellationToken);
     }
+
+    public async Task Handle(TenantBrandingUpdatedDomainEvent notification, CancellationToken cancellationToken)
+    {
+        await ProcessInvalidationAsync(notification.Subdomain, cancellationToken);
+    }
+
 
     private async Task ProcessInvalidationAsync(string subdomain, CancellationToken cancellationToken)
     {
