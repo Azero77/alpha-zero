@@ -67,6 +67,11 @@ public class AccessCode : AggregateRoot, IDomainTenantOwned
 
     public ErrorOr<Success> Redeem(Guid userId)
     {
+        if (Status == AccessCodeStatus.Redeemed && RedeemedByUserId == userId)
+        {
+            return Result.Success;
+        }
+
         if (Status != AccessCodeStatus.Minted && Status != AccessCodeStatus.Distributed)
         {
             return Error.Conflict("AccessCode.InvalidStatus", $"Code cannot be redeemed. Current status: {Status}");

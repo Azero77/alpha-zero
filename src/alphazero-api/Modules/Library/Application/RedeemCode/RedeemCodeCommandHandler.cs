@@ -62,6 +62,12 @@ public class RedeemCodeCommandHandler : IRequestHandler<RedeemCodeCommand, Error
             return Error.Unauthorized("User.Unauthenticated", "User must be logged in to redeem codes.");
         }
 
+        // 🛡️ Natural Idempotency: If this exact student already redeemed this code, safely return Success
+        if (accessCode.Status == AccessCodeStatus.Redeemed && accessCode.RedeemedByUserId == currentUser.UserId)
+        {
+            return Result.Success;
+        }
+
         // 5. Redeem in Domain
         var redeemResult = accessCode.Redeem(currentUser.UserId);
         if (redeemResult.IsError)

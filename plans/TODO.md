@@ -190,3 +190,32 @@
      - Crimson (`#A51C30`) -> Primary Foreground must be `#FFFFFF` [Passed]
      - Precision Blue (`#2563eb`) -> Primary Foreground must be `#FFFFFF` [Passed]
      - Inline CSS size validation: ~200-400 bytes [Passed]
+
+---
+
+## 🚨 Realistic Production Failure Scenarios & Mitigations
+
+The following resilience and fault-tolerance mitigations must be implemented across the LMS frontend and backend communication channels to guarantee reliable operation in low-bandwidth, high-latency environments (Syria/MENA):
+
+- [ ] **Scenario A: Unstable Syrian 3G/DSL Packet Drop Mid-Voucher Redemption**
+  - **Failure Mode:** Network connection drops or times out after the student clicks "Redeem", but before the client receives the HTTP response, risking duplicate activation attempts or false failure feedback.
+  - **Mitigation:**
+    - **Client:** Generate an idempotency key (`Idempotency-Key: <uuid>`) on voucher form submission.
+    - **UI:** Display optimistic pending state with disabled submit buttons to prevent duplicate submissions.
+    - **Retry Logic:** Automatic retry with exponential backoff and random jitter implemented in `src/alphazero-frontend/packages/api-client/src/client.ts` (lines 73–98) for retryable status codes (502/503/504) and connection timeouts.
+    - **Backend:** Library module checks the idempotency key so replayed requests safely return the existing redemption outcome.
+
+- [ ] **Scenario B: Keycloak Token Expiry During a 45-Minute Video Lecture**
+  - **Failure Mode:** A student is watching an extended lecture or taking a quiz. The short-lived (e.g. 15-minute) access token expires silently, causing subsequent progress updates or lesson transitions to fail with HTTP 401.
+  - **Mitigation:**
+    - **BFF Session Management:** Implement `getSession()` in `src/alphazero-frontend/packages/auth/server.ts` to inspect token expiry (`exp`) timestamps before delegating requests.
+    - **Silent Token Rotation:** Automatically invoke Keycloak's token endpoint (`/protocol/openid-connect/token`) using the encrypted refresh token before serving any Server Action or Server Component (RSC) request.
+    - **Seamless Playback:** The student's video session is never interrupted by full-page login redirects or jarring session expiration modals.
+
+- [ ] **Scenario C: Student Attempts Unauthorized Lesson Access (403 Forbidden)**
+  - **Failure Mode:** A student attempts to directly navigate to or stream a locked course lesson without having redeemed a valid access voucher. Unmitigated handling results in unhandled exceptions, page crashes, or cascading network request retry loops.
+  - **Mitigation:**
+    - **Server-Side Enforcement:** FastEndpoints emits a standardized RFC 7807 `UnifiedErrorBody` with domain error code `Courses.Unauthorized` (HTTP 403).
+    - **Exception Mapping:** The frontend API client catches `ApiErrorException` via `errorHandlerMiddlware`.
+    - **Cache Update:** TanStack Query client locally marks the specific lesson/course as locked (`isLocked: true`) to immediately cease further background polling or video chunk fetches.
+    - **Contextual UI Recovery:** Surfaces the `<VoucherInput />` unlock sheet with clear localized instructions in Arabic/English ("Redeem Voucher to Unlock Course"), preventing cascading error toasts and unhandled crashes.

@@ -51,6 +51,10 @@ public class LibraryTests(ApiFactory factory) : BaseIntegrationTest(factory)
         var redeemRes = await Client.PostAsJsonAsync("/library/redeem", redeemReq);
         redeemRes.EnsureSuccessStatusCode();
 
+        // 5b. Act: Re-Redeem exact same Code (Simulating Syrian 3G network packet drop & retry)
+        var retryRes = await Client.PostAsJsonAsync("/library/redeem", redeemReq);
+        retryRes.EnsureSuccessStatusCode(); // Must succeed idempotently with 200 OK
+
         // 6. Assert: Verify DB state
         var codeInDb = await DbContext.AccessCodes.IgnoreQueryFilters().FirstOrDefaultAsync(x => x.TenantId == tenantId);
         codeInDb.Should().NotBeNull();
