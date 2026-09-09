@@ -1,9 +1,27 @@
 import { cn } from '@repo/design-system/lib/utils';
-import { GeistMono } from 'geist/font/mono';
-import { GeistSans } from 'geist/font/sans';
+import { Cairo, Inter, JetBrains_Mono } from 'next/font/google';
+
+export const fontSans = Inter({
+  subsets: ['latin'],
+  variable: '--font-sans',
+  display: 'swap',
+});
+
+export const fontArabic = Cairo({
+  subsets: ['arabic'],
+  variable: '--font-arabic',
+  display: 'swap',
+});
+
+export const fontMono = JetBrains_Mono({
+  subsets: ['latin'],
+  variable: '--font-mono',
+  display: 'swap',
+});
 
 export const fonts = cn(
-  GeistSans.variable,
-  GeistMono.variable,
+  fontSans.variable,
+  fontArabic.variable,
+  fontMono.variable,
   'touch-manipulation font-sans antialiased'
 );

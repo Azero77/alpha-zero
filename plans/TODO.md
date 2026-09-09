@@ -198,12 +198,11 @@
 The following resilience and fault-tolerance mitigations must be implemented across the LMS frontend and backend communication channels to guarantee reliable operation in low-bandwidth, high-latency environments (Syria/MENA):
 
 - [ ] **Scenario A: Unstable Syrian 3G/DSL Packet Drop Mid-Voucher Redemption**
-  - **Failure Mode:** Network connection drops or times out after the student clicks "Redeem", but before the client receives the HTTP response, risking duplicate activation attempts or false failure feedback.
-  - **Mitigation:**
-    - **Client:** Generate an idempotency key (`Idempotency-Key: <uuid>`) on voucher form submission.
-    - **UI:** Display optimistic pending state with disabled submit buttons to prevent duplicate submissions.
-    - **Retry Logic:** Automatic retry with exponential backoff and random jitter implemented in `src/alphazero-frontend/packages/api-client/src/client.ts` (lines 73–98) for retryable status codes (502/503/504) and connection timeouts.
-    - **Backend:** Library module checks the idempotency key so replayed requests safely return the existing redemption outcome.
+  - **Failure Mode:** Network connection drops or times out after the student clicks "Redeem", but before the client receives the HTTP response, risking perceived lost vouchers or duplicate retries.
+  - **Mitigation (Natural Domain Idempotency):**
+    - **Natural Invariant:** The voucher code (`AZ-XXXX-XXXX`) is itself a unique, permanent natural key hashed (`CodeHash`) with unique PostgreSQL constraints. No synthetic `Idempotency-Key` headers or Redis coordination needed.
+    - **Saga Choreography:** Backend `RedeemCodeCommandHandler` and `CourseRedemptionSaga` guarantee idempotent enrollment (`StudentId` + `CourseId` unique constraint). If replayed or already redeemed by the student, the system returns idempotent success or clear domain conflict (`Enrollment.Exists`).
+    - **Client UI:** Optimistic pending submission state with disabled buttons; standard retry in `client.ts` with exponential backoff safely replays the request knowing the backend handles it idempotently.
 
 - [ ] **Scenario B: Keycloak Token Expiry During a 45-Minute Video Lecture**
   - **Failure Mode:** A student is watching an extended lecture or taking a quiz. The short-lived (e.g. 15-minute) access token expires silently, causing subsequent progress updates or lesson transitions to fail with HTTP 401.

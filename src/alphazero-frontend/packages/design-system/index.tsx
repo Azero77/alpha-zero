@@ -27,4 +27,5 @@ export const DesignSystemProvider = ({
 
 export * from "./lib/color-utils";
 export * from "./lib/tenant-utils";
+export * from "./components/lms";
 

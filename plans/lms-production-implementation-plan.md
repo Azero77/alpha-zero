@@ -85,27 +85,29 @@ Before writing any UI code, prune the boilerplate to keep only what your LMS nee
 
 ---
 
-## Step 3: Design System & Arabic/RTL Styling (`packages/design-system`) (Days 4–5)
+## Step 3: Design System & Arabic/RTL Styling (`packages/design-system`) (COMPLETED ✅)
 
 **Goal:** Ready-to-use accessible components with native Arabic (RTL) and English (LTR) support.
 
 ### Tasks:
-1. **Configure Fonts:**
-   - Configure **Inter Variable** for English and UI foundations.
-   - Configure **Cairo** for Arabic using `next/font/google` (selected over IBM Plex Sans Arabic for Syrian educational clarity at 13–16px).
-   - Configure **JetBrains Mono** as fallback for Berkeley Mono for voucher codes and monospace counters.
-   - Expose CSS variables: `--font-sans`, `--font-arabic`, `--font-mono` in `globals.css`.
-2. **RTL Setup in Tailwind:**
-   - Audit `packages/design-system/styles/globals.css`.
-   - Ensure all spacing uses logical properties: `ps-*` (padding-inline-start), `pe-*` (padding-inline-end), `text-start`, `text-end`.
-3. **Download Required Shadcn Primitives:**
-   ```bash
-   pnpm dlx shadcn@latest add button dialog form input alert-dialog dropdown-menu skeleton sonner -c packages/design-system
-   ```
-4. **Build Custom LMS Domain Components (`packages/design-system/components/lms/`):**
-   - `<BitmaskProgressBar bitmask={string} totalLessons={number} />`: Bitwise completion tracker driven by PostgreSQL `VARBIT` (`"11100010"` -> 75% complete).
-   - `<VoucherInput />`: Segmented OTP-style code input formatted for physical scratch vouchers (`AZ-XXXX-XXXX`), auto-uppercase, paste normalization.
-   - `<CourseCard />`: Course thumbnail, title, instructor, embedded bitmask progress bar, and enrollment CTA.
+1. [x] **Configure Fonts:**
+   - Configured **Inter Variable** for English and UI foundations.
+   - Configured **Cairo** for Arabic using `next/font/google` (selected over IBM Plex Sans Arabic for Syrian educational clarity at 13–16px).
+   - Configured **JetBrains Mono** as fallback for Berkeley Mono for voucher codes and monospace counters.
+   - Exposed CSS variables: `--font-sans`, `--font-arabic`, `--font-mono` in `globals.css` with `html[dir="rtl"]` font inheritance.
+2. [x] **RTL Setup in Tailwind:**
+   - Audited `packages/design-system/styles/globals.css`.
+   - Ensured all spacing uses logical properties: `ps-*`, `pe-*`, `ms-*`, `me-*`, `text-start`, `text-end`.
+3. [x] **Download Required Shadcn Primitives:**
+   - Verified 50+ primitives in `packages/design-system/components/ui/` including button, dialog, form, input-otp, alert-dialog, skeleton, sonner.
+4. [x] **Build Custom LMS Domain Components (`packages/design-system/components/lms/`):**
+   - `<BitmaskProgressBar bitmask={string} totalLessons={number} />`: Bitwise completion tracker supporting both Continuous 6px Rail and Discrete Bit-Pill Array variants with monospace counters.
+   - `<VoucherInput />`: Segmented OTP-style code input with locked `[AZ]` prefix badge, two 4-slot groups (`[XXXX]-[XXXX]`), clipboard paste auto-dash-stripping, auto-uppercase, and validation states.
+   - `<CourseCard />`: Course thumbnail, title, instructor, embedded bitmask progress bar, and enrollment CTA supporting both vertical 16:9 grid and horizontal row layouts.
+5. [x] **Verification & Test Suite:**
+   - Decoupled `lib/utils.ts` from Sentry bundler plugins.
+   - Added 10 unit tests in `apps/app/__tests__/lms-components.test.tsx` (26/26 tests passing).
+   - Verified clean monorepo typecheck (15/15 packages passing).
 
 ---
 

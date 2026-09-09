@@ -42,6 +42,10 @@
     "@types/react": "^19.2.14",
     "postcss": "^8.5.8",
     "tailwindcss": "^4.2.1",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "next": "16.1.6"
+  },
+  "peerDependencies": {
+    "next": ">=15.0.0"
   }
 }
