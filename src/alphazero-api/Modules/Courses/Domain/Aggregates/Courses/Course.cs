@@ -107,6 +107,10 @@ public class Course : TenantOwnedAggregate, ISoftDeletable
     }
 
     public int TotalTrackedItems => NextAvailableBitIndex;
+    public int ActiveTrackedItems => _sections
+        .Where(s => !s.IsDeleted)
+        .SelectMany(s => s.Items)
+        .Count(i => !i.IsDeleted);
 
     public void UpdateInformation(string title, string? description, Guid subjectId)
     {

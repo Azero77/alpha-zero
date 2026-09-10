@@ -25,6 +25,8 @@ public class EnrollementConfiguration : IEntityTypeConfiguration<Enrollement>
                 .HasColumnType("varbit");
             p.Property(p => p.TotalItems)
                 .HasColumnName("ProgressTotalItems");
+            p.Property(p => p.ActiveItems)
+                .HasColumnName("ProgressActiveItems");
         });
     }
 }

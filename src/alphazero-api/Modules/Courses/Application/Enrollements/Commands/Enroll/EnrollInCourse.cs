@@ -45,7 +45,7 @@ public sealed class EnrollInCourseCommandHandler : IRequestHandler<EnrollInCours
         if (tenantId is null) return Error.Unauthorized("Tenant.NotFound", "Tenant not found.");
 
         // Verify course exists
-        var course = await _courseRepository.GetFirst(c => c.Id == request.CourseId, cancellationToken);
+        var course = await _courseRepository.GetByIdWithSectionsAsync(request.CourseId, cancellationToken);
         if (course is null) return Error.NotFound("Course.NotFound", "Course not found.");
 
         // Check if already enrolled
@@ -53,7 +53,7 @@ public sealed class EnrollInCourseCommandHandler : IRequestHandler<EnrollInCours
         if (existingEnrollment is not null) return Error.Conflict("Enrollment.Exists", "Student is already enrolled in this course.");
 
         var enrollmentId = Guid.NewGuid();
-        var enrollmentResult = Enrollement.Create(enrollmentId, tenantId.Value, request.StudentId, request.CourseId, course.TotalTrackedItems);
+        var enrollmentResult = Enrollement.Create(enrollmentId, tenantId.Value, request.StudentId, request.CourseId, course.TotalTrackedItems, course.ActiveTrackedItems);
 
         if (enrollmentResult.IsError) return enrollmentResult.Errors;
 

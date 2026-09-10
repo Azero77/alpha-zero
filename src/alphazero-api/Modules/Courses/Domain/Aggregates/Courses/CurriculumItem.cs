@@ -39,6 +39,10 @@ public class CurriculumItem : TenantOwnedEntity, ISoftDeletable
         if (type == "Primary")
         {
             var expectedService = GetExpectedServiceForMainType(MainType);
+            if (expectedService is null)
+            {
+                return Error.Validation("CurriculumItem.InvalidMainType", $"Unsupported curriculum item MainType '{MainType}'.");
+            }
             if (!arn.Service.Equals(expectedService, StringComparison.OrdinalIgnoreCase))
             {
                 return Error.Validation("CurriculumItem.ResourceTypeMismatch", $"Primary resource service '{arn.Service}' does not match item MainType '{MainType}'. Expected '{expectedService}'.");
@@ -100,16 +104,15 @@ public class CurriculumItem : TenantOwnedEntity, ISoftDeletable
         return Result.Success;
     }
 
-    private static string GetExpectedServiceForMainType(string mainType)
+    private static string? GetExpectedServiceForMainType(string mainType)
     {
         return mainType.ToLowerInvariant() switch
         {
             "video" => "video",
-            "quiz" => "assessment",
-            "assessment" => "assessment",
+            "quiz" or "assessment" => "assessment",
             "document" => "document",
             "inline" => "inline",
-            _ => mainType.ToLowerInvariant()
+            _ => null
         };
     }
 }

@@ -17,24 +17,25 @@ public class Enrollement : TenantOwnedAggregate
         // EF
     }
 
-    private Enrollement(Guid id, Guid tenantId, Guid studentId, Guid courseId, int totalTrackedItems) : base(id, tenantId)
+    private Enrollement(Guid id, Guid tenantId, Guid studentId, Guid courseId, int totalTrackedItems, int? activeTrackedItems = null) : base(id, tenantId)
     {
         StudentId = studentId;
         CourseId = courseId;
         Status = EnrollementStatus.Active;
-        Progress = Progress.Create(totalTrackedItems);
+        Progress = Progress.Create(totalTrackedItems, activeTrackedItems ?? totalTrackedItems);
         EnrolledOn = DateTime.UtcNow;
 
         AddDomainEvent(new EnrollementCreatedDomainEvent(Id, StudentId, CourseId));
     }
 
-    public static ErrorOr<Enrollement> Create(Guid id, Guid tenantId, Guid studentId, Guid courseId, int totalTrackedItems)
+    public static ErrorOr<Enrollement> Create(Guid id, Guid tenantId, Guid studentId, Guid courseId, int totalTrackedItems, int? activeTrackedItems = null)
     {
         if (studentId == Guid.Empty) return Error.Validation("Enrollement.StudentId", "StudentId is required.");
         if (courseId == Guid.Empty) return Error.Validation("Enrollement.CourseId", "CourseId is required.");
         if (totalTrackedItems < 0) return Error.Validation("Enrollement.Progress", "Total tracked items cannot be negative.");
+        if (activeTrackedItems.HasValue && activeTrackedItems.Value < 0) return Error.Validation("Enrollement.Progress", "Active tracked items cannot be negative.");
 
-        return new Enrollement(id, tenantId, studentId, courseId, totalTrackedItems);
+        return new Enrollement(id, tenantId, studentId, courseId, totalTrackedItems, activeTrackedItems);
     }
 
     public ErrorOr<Success> CompleteItem(int bitIndex)

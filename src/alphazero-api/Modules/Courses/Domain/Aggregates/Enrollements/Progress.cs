@@ -8,30 +8,33 @@ public record Progress
     // The bitmask as a BitArray to represent completed items
     public BitArray Bitmask { get; private set; }
     public int TotalItems { get; private set; }
+    public int ActiveItems { get; private set; }
 
     private Progress() { } // For EF Core or serialization
 
-    private Progress(int totalItems)
+    private Progress(int totalItems, int? activeItems = null)
     {
         TotalItems = totalItems;
+        ActiveItems = activeItems ?? totalItems;
         Bitmask = new BitArray(totalItems, false);
     }
 
-    private Progress(BitArray bitmask)
+    private Progress(BitArray bitmask, int? activeItems = null)
     {
         Bitmask = bitmask;
         TotalItems = bitmask.Length;
+        ActiveItems = activeItems ?? bitmask.Length;
     }
 
-    public static Progress Create(int totalItems)
+    public static Progress Create(int totalItems, int? activeItems = null)
     {
-        return new Progress(totalItems);
+        return new Progress(totalItems, activeItems);
     }
 
     // Re-creating from DB storage (BitArray is easy to store as byte[] or bit strings)
-    public static Progress FromBitmask(BitArray bitmask)
+    public static Progress FromBitmask(BitArray bitmask, int? activeItems = null)
     {
-        return new Progress(bitmask);
+        return new Progress(bitmask, activeItems);
     }
 
     public ErrorOr<Progress> MarkAsComplete(int bitIndex)
@@ -42,7 +45,7 @@ public record Progress
         }
         var newBitMask = new BitArray(Bitmask);
         newBitMask.Set(bitIndex, true);
-        return new Progress(newBitMask);
+        return new Progress(newBitMask, ActiveItems);
     }
 
     public bool IsComplete(int bitIndex)
@@ -55,13 +58,13 @@ public record Progress
     {
         get
         {
-            if (TotalItems == 0) return 0;
+            if (ActiveItems <= 0) return 0;
             int completedCount = 0;
             for (int i = 0; i < Bitmask.Length; i++)
             {
                 if (Bitmask[i]) completedCount++;
             }
-            return (double)completedCount / TotalItems * 100;
+            return Math.Min(100.0, (double)completedCount / ActiveItems * 100);
         }
     }
 
@@ -69,11 +72,13 @@ public record Progress
     {
         get
         {
+            if (ActiveItems <= 0) return true;
+            int completedCount = 0;
             for (int i = 0; i < Bitmask.Length; i++)
             {
-                if (!Bitmask[i]) return false;
+                if (Bitmask[i]) completedCount++;
             }
-            return true;
+            return completedCount >= ActiveItems;
         }
     }
 }
