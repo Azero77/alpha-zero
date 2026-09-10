@@ -141,6 +141,10 @@ const data = {
           url: "/settings/branding",
         },
         {
+          title: "LMS Components Lab",
+          url: "/components-showcase",
+        },
+        {
           title: "Team",
           url: "#",
         },

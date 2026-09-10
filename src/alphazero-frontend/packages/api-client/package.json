@@ -5,7 +5,7 @@
   "exports": {
     ".": "./src/client.ts",
     "./server": "./src/server.ts",
-    "./keys": "./src/utilities/keys.ts"
+    "./keys": "./keys.ts"
   },
   "scripts": {
     "clean": "git clean -xdf .cache .turbo dist node_modules",

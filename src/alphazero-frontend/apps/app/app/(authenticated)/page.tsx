@@ -9,6 +9,9 @@ export const metadata: Metadata = {
   description,
 };
 
+import Link from "next/link";
+import { SparklesIcon, ArrowRightIcon } from "lucide-react";
+
 const App = async () => {
   const pages = [
     { id: "1", name: "Courses & Curricula" },
@@ -20,6 +23,29 @@ const App = async () => {
     <>
       <Header page="Dashboard" pages={["Academy Overview"]} />
       <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
+        {/* Component Showcase Banner */}
+        <Link
+          href="/components-showcase"
+          className="flex items-center justify-between p-4 rounded-xl border border-primary/30 bg-primary/5 hover:bg-primary/10 transition-colors group cursor-pointer"
+        >
+          <div className="flex items-center gap-3">
+            <span className="p-2 rounded-lg bg-primary/20 text-primary">
+              <SparklesIcon className="size-5" />
+            </span>
+            <div>
+              <h3 className="font-semibold text-sm text-foreground group-hover:text-primary transition-colors">
+                LMS Domain Components Showcase
+              </h3>
+              <p className="text-xs text-muted-foreground">
+                Interactive laboratory for BitmaskProgressBar, VoucherInput, and CourseCard with RTL/LTR bilingual testing.
+              </p>
+            </div>
+          </div>
+          <span className="flex items-center gap-1 text-xs font-semibold text-primary">
+            Open Laboratory <ArrowRightIcon className="size-3.5 transition-transform group-hover:translate-x-0.5" />
+          </span>
+        </Link>
+
         <div className="grid auto-rows-min gap-4 md:grid-cols-3">
           {pages.map((page) => (
             <div
