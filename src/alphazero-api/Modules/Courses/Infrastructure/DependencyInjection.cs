@@ -1,4 +1,5 @@
 using AlphaZero.Modules.Courses.Application.Courses.Commands.Assets;
+using AlphaZero.Modules.Courses.Application.Courses.Commands.SyncResourceMetadata;
 using AlphaZero.Modules.Courses.Application.Repositories;
 using AlphaZero.Modules.Courses.Application.Services;
 using AlphaZero.Modules.Courses.Domain.Aggregates.Courses;
@@ -54,6 +55,11 @@ public static class DependencyInjection
         moduleServices.AddScoped<ICourseAssetReadinessStrategy, VideoAssetReadinessStrategy>();
         moduleServices.AddScoped<ICourseAssetReadinessStrategy, DocumentAssetReadinessStrategy>();
         moduleServices.AddScoped<ICourseAssetReadinessStrategy, AssessmentAssetReadinessStrategy>();
+
+        // Course Metadata Sync Handlers
+        moduleServices.AddScoped<ICourseMetadataSyncCommandHandler, VideoCourseMetadataSyncCommandHandler>();
+        moduleServices.AddScoped<ICourseMetadataSyncCommandHandler, DocumentCourseMetadataSyncCommandHandler>();
+        moduleServices.AddScoped<ICourseMetadataSyncCommandHandler, AssessmentCourseMetadataSyncCommandHandler>();
 
         moduleServices.AddScoped<AlphaZero.Modules.Courses.Application.Queries.ICourseQueryService, AlphaZero.Modules.Courses.Infrastructure.Queries.CourseQueryService>();
         moduleServices.AddScoped<AlphaZero.Modules.Courses.Application.Queries.ISubjectQueryService, AlphaZero.Modules.Courses.Infrastructure.Queries.SubjectQueryService>();
