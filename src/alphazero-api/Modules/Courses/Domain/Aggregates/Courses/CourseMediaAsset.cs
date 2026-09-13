@@ -6,49 +6,30 @@ using System.Text.Json;
 public abstract class CourseAsset : TenantOwnedEntity
 {
 
-    private CourseAsset(Guid id,Guid tenantId,ResourceArn resourceArn, string title, Guid courseId, DateTime uploadedUtcAt)
+    private CourseAsset(Guid id,Guid tenantId,ResourceArn resourceArn, string title, Guid courseId, DateTime uploadedUtcAt, CourseAssetState state)
     : base(id, tenantId)
     {
         ResourceArn = resourceArn;
         Title = title;
         CourseId = courseId;
         UploadedUtcAt = uploadedUtcAt;
+        State  = state;
     }
     public abstract CourseAssetType CourseAssetType {get;}
     public ResourceArn ResourceArn {get;private set;}
     public string Title { get;private  set; }
     public Guid CourseId {get;private set;}
+    public CourseAssetState State {get;private set;}
     public DateTime UploadedUtcAt {get;private set;}
-
-    
-
 }
 
-public enum CourseMediaStatus
+public enum CourseAssetState
 {
-    /// <summary>
-    /// The file or video hasn't been uploaded yet, 
-    /// </summary>
     Pending,
-    /// <summary>
-    /// The file has benn uploaded but not yet processed, like transcoding for a video, zipping for folder,...
-    /// </summary>
-    Uploaded,
-
-    /// <summary>
-    /// The file is ready to be assigned to the course item
-    /// </summary>
-    Ready,
-
-    /// <summary>
-    /// it is being used inside the course
-    /// </summary>
+    Available,
+    Archived,
     InUse,
-
-    /// <summary>
-    /// Archived, Deleted from the course but yet still can be referenced in the future
-    /// </summary>
-    Archive
+    Failed
 }
 public enum CourseAssetType
 {
@@ -61,31 +42,50 @@ public enum CourseAssetType
 public class VideoCourseAsset : CourseAsset
 {
     public override CourseAssetType CourseAssetType => CourseAssetType.Video;
+    public TimeSpan Duration {get;private set;}
+    public string? thumbnailUrl {get;private set;}
+
+    public static ErrorOr<VideoCourseAsset> Create(){}
+
 
 }
 
-public class Document : CourseAsset
+public class DocumentCourseAsset : CourseAsset
 {
     public override CourseAssetType CourseAssetType => CourseAssetType.Document;
-    public TimeSpan Duration {get;private set;}
+    
+    public string FileName { get; private set; } = null!;
+
+    public long Size { get; private set; }
+
+    public string ContentType { get; private set; } = null!;
+
+    public static ErrorOr<DocumentCourseAsset> Create(){}
 }
 
-public class AssessmentAsset : CourseAsset
+public class AssessmentCourseAsset : CourseAsset
 {
     public override CourseAssetType CourseAssetType => CourseAssetType.Assessment;
     public int QuestionsNumber {get;private set;}
+    public AssessmentType Type {get;private set;}
+
+    public static ErrorOr<AssessmentCourseAsset> Create(){}
 }
 
 public enum AssessmentType
 {
     /// <summary>
-    /// Usually in course lesson for testing the learning of a concept
+    /// Used during learning to practice or assess understanding of a lesson or concept.
     /// </summary>
-    Optional,
+    Practice,
 
     /// <summary>
-    /// 
+    /// Formal assessment conducted during the course to evaluate progress.
     /// </summary>
-    Mid,
+    Midterm,
+
+    /// <summary>
+    /// Formal assessment conducted at the end of the course.
+    /// </summary>
     Final
 }
