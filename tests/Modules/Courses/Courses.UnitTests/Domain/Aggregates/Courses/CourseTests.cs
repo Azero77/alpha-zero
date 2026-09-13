@@ -42,7 +42,10 @@ public class CourseTests : DomainTest
         // Arrange
         var course = Course.Create(Guid.NewGuid(), TenantId, "Title", null, SubjectId).Value;
         course.AddSection("Section 1");
-        course.AddCurriculumItem(course.Sections.First().Id, "Lesson 1", "Video", ResourceArn.ForVideo(TenantId, Guid.NewGuid()), JsonElement.Parse("{}"));
+        var videoId = Guid.NewGuid();
+        course.AddVideoAsset(videoId, ResourceArn.ForVideo(TenantId, videoId), "Video 1");
+        course.MarkAssetAvailable(videoId);
+        course.AssignAssetToCurriculum(videoId, course.Sections.First().Id, "Lesson 1", JsonDocument.Parse("{}").RootElement);
         course.SubmitForReview();
         course.Approve();
 
@@ -60,7 +63,10 @@ public class CourseTests : DomainTest
         // Arrange
         var course = Course.Create(Guid.NewGuid(), TenantId, "Title", null, SubjectId).Value;
         course.AddSection("Section 1");
-        course.AddCurriculumItem(course.Sections.First().Id, "Lesson 1", "Video", ResourceArn.ForVideo(TenantId, Guid.NewGuid()), JsonElement.Parse("{}"));
+        var videoId = Guid.NewGuid();
+        course.AddVideoAsset(videoId, ResourceArn.ForVideo(TenantId, videoId), "Video 1");
+        course.MarkAssetAvailable(videoId);
+        course.AssignAssetToCurriculum(videoId, course.Sections.First().Id, "Lesson 1", JsonDocument.Parse("{}").RootElement);
         course.AddPlan("Standard", Guid.NewGuid());
         course.SubmitForReview();
         course.Approve();
@@ -81,7 +87,10 @@ public class CourseTests : DomainTest
         var course = Course.Create(Guid.NewGuid(), TenantId, "Title", null, SubjectId).Value;
         course.AddSection("S1");
         course.AddSection("S2");
-        course.AddCurriculumItem(course.Sections.First().Id, "L1", "Video", ResourceArn.ForVideo(TenantId, Guid.NewGuid()), JsonElement.Parse("{}"));
+        var videoId = Guid.NewGuid();
+        course.AddVideoAsset(videoId, ResourceArn.ForVideo(TenantId, videoId), "Video 1");
+        course.MarkAssetAvailable(videoId);
+        course.AssignAssetToCurriculum(videoId, course.Sections.First().Id, "L1", JsonDocument.Parse("{}").RootElement);
         course.AddPlan("Standard", Guid.NewGuid());
         course.SubmitForReview();
         course.Approve();

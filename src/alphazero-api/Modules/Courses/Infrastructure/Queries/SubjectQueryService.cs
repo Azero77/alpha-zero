@@ -20,6 +20,12 @@ public class SubjectQueryService : ISubjectQueryService
     public async Task<PagedResult<SubjectDto>> ListSubjectsAsync(int page, int perPage, CancellationToken cancellationToken = default)
     {
         var query = _context.Set<Subject>().AsNoTracking();
+
+        if (_context.TenantId.HasValue)
+        {
+            query = query.Where(s => s.TenantId == _context.TenantId.Value);
+        }
+
         var totalCount = await query.CountAsync(cancellationToken);
 
         var items = await query

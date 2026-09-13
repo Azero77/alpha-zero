@@ -1,6 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
-using AlphaZero.Modules.Courses.Presentation.Courses.AddItem;
+using AlphaZero.Modules.Courses.Presentation.Courses.AddSection;
 using AlphaZero.Shared.Authorization;
 using AlphaZero.Shared.Domain;
 using AlphaZero.Shared.Infrastructure.Tenats;
@@ -126,15 +126,13 @@ public class IAMPreprocessorTests : IClassFixture<SecurityApiFactory>
         // We set evaluator to return Forbidden to simulate horizontal breakout prevention
         _factory.Evaluator.ResultToReturn = Error.Forbidden("Access.Denied", "Cannot access cross-tenant resource");
 
-        var request = new AddLessonRequest
+        var request = new AddSectionRequest
         {
             CourseId = courseId,
-            SectionId = Guid.NewGuid(),
-            Title = "Hacked Lesson",
-            VideoId = Guid.NewGuid()
+            Title = "Hacked Section"
         };
 
-        var response = await _client.PostAsJsonAsync($"/courses/{courseId}/sections/{request.SectionId}/lessons", request);
+        var response = await _client.PostAsJsonAsync($"/courses/{courseId}/sections", request);
 
         // 3. Assert
         response.StatusCode.Should().Be(HttpStatusCode.Forbidden);

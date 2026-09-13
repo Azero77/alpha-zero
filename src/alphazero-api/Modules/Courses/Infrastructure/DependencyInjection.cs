@@ -1,10 +1,15 @@
-using AlphaZero.Modules.Courses.Application.Courses.Commands.AddAssessment;
+using AlphaZero.Modules.Courses.Application.Courses.Commands.Assets;
 using AlphaZero.Modules.Courses.Application.Repositories;
+using AlphaZero.Modules.Courses.Application.Services;
+using AlphaZero.Modules.Courses.Domain.Aggregates.Courses;
+using AlphaZero.Modules.Courses.Infrastructure.Authorization;
 using AlphaZero.Modules.Courses.Infrastructure.Persistance;
 using AlphaZero.Modules.Courses.Infrastructure.Repositories;
 using AlphaZero.Modules.Courses.Infrastructure.RequestResponseMessaging;
 using AlphaZero.Shared.Application;
+using AlphaZero.Shared.Authorization;
 using AlphaZero.Shared.Infrastructure;
+using AlphaZero.Shared.Infrastructure.Repositores;
 using AlphaZero.Shared.Infrastructure.SoftDelete;
 using Application;
 using FluentValidation;
@@ -29,12 +34,14 @@ public static class DependencyInjection
             });
             opts.AddInterceptors(sp.GetRequiredService<SoftDeleteInterceptor>());
         });
-        
+
+        services.AddScoped<IArnResolver, CourseArnResolver>();
     }
 
     public static void AddCoursesPrivateInfrastructure(this IServiceCollection moduleServices, IConfiguration configuration)
     {
         moduleServices.AddScoped<ICourseRepository, CourseRepository>();
+        moduleServices.AddScoped<IRepository<CourseAsset>, BaseRepository<AppDbContext, CourseAsset>>();
         moduleServices.AddScoped<ISubjectRepository, SubjectRepository>();
         moduleServices.AddScoped<IEnrollementRepository, EnrollementRepository>();
         moduleServices.AddScoped<ICourseAnalyticsRepository, CourseAnalyticsRepository>();
@@ -42,6 +49,12 @@ public static class DependencyInjection
         moduleServices.AddScoped<ICurriculumItemRepository, CurriculumItemRepository>();
         moduleServices.AddScoped<IAssessmentService, AssessmentService>();
         moduleServices.AddScoped<IUnitOfWork, UnitOfWork<AppDbContext>>();
+
+        // Asset Readiness Strategies
+        moduleServices.AddScoped<ICourseAssetReadinessStrategy, VideoAssetReadinessStrategy>();
+        moduleServices.AddScoped<ICourseAssetReadinessStrategy, DocumentAssetReadinessStrategy>();
+        moduleServices.AddScoped<ICourseAssetReadinessStrategy, AssessmentAssetReadinessStrategy>();
+
         moduleServices.AddScoped<AlphaZero.Modules.Courses.Application.Queries.ICourseQueryService, AlphaZero.Modules.Courses.Infrastructure.Queries.CourseQueryService>();
         moduleServices.AddScoped<AlphaZero.Modules.Courses.Application.Queries.ISubjectQueryService, AlphaZero.Modules.Courses.Infrastructure.Queries.SubjectQueryService>();
         moduleServices.AddScoped<AlphaZero.Modules.Courses.Application.Queries.IEnrollmentQueryService, AlphaZero.Modules.Courses.Infrastructure.Queries.EnrollmentQueryService>();

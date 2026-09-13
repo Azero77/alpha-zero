@@ -23,6 +23,7 @@ public class AppDbContext : DbContext,ITenantDbContext
     public DbSet<Enrollement> Enrollements => Set<Enrollement>();
     public DbSet<CourseSection> CourseSections => Set<CourseSection>();
     public DbSet<CoursePlan> CoursePlans => Set<CoursePlan>();
+    public DbSet<CourseAsset> CourseAssets => Set<CourseAsset>();
     public DbSet<CourseRedemptionState> CourseRedemptionStates => Set<CourseRedemptionState>();
     public DbSet<CourseRevocationState> CourseRevocationStates => Set<Sagas.CourseRevocation.CourseRevocationState>();
     public DbSet<CourseAnalytics> CourseAnalytics => Set<CourseAnalytics>();

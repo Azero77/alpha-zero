@@ -30,17 +30,11 @@ public class CurriculumItemConfiguration : IEntityTypeConfiguration<CurriculumIt
             rb.Property<Guid>("Id").ValueGeneratedOnAdd();
             rb.HasKey("Id");
 
-            // Safe Value Converter for ResourceArn Value Object
-            rb.Property(r => r.Arn)
-                .HasConversion(
-                    arn => arn == null ? string.Empty : arn.Value,
-                    val => string.IsNullOrEmpty(val) ? null : ResourceArn.Create(val).Value)
-                .IsRequired()
-                .HasMaxLength(500);
-
-            rb.Property(r => r.Type)
-                .IsRequired()
-                .HasMaxLength(50);
+            rb.Property(r => r.CourseAssetId).IsRequired();
+            rb.HasOne(r => r.Asset)
+                .WithMany()
+                .HasForeignKey(r => r.CourseAssetId)
+                .OnDelete(DeleteBehavior.Restrict);
 
             rb.Property(r => r.Order)
                 .IsRequired();

@@ -12,6 +12,8 @@ public interface IRepository<TEntity>
     void Remove(TEntity entity);
     void Update(TEntity entity);
     Task<TEntity?> GetFirst(Expression<Func<TEntity, bool>> filter, CancellationToken token = default);
+    Task<IReadOnlyCollection<TEntity>> Get(Expression<Func<TEntity, bool>> filter, CancellationToken token = default);
+    Task<IReadOnlyCollection<TEntity>> GetAll(CancellationToken token = default);
     Task<bool> Any(Expression<Func<TEntity, bool>> filter, CancellationToken token = default);
     Task<int> Count(Expression<Func<TEntity, bool>>? filter = null, CancellationToken token = default);
 

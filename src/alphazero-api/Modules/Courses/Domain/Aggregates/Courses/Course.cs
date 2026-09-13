@@ -20,8 +20,16 @@ public class Course : TenantOwnedAggregate, ISoftDeletable
     public IReadOnlyCollection<CoursePlan> Plans => _plans.AsReadOnly();
     private readonly List<CoursePlan> _plans = new();
 
+    private readonly List<CourseAsset> _assets = new();
+    public IReadOnlyCollection<CourseAsset> Assets => _assets.AsReadOnly();
+
+    public IEnumerable<CourseAsset> PoolAssets => _assets.Where(a => a.State == CourseAssetState.Available);
+    public IEnumerable<CourseAsset> PendingAssets => _assets.Where(a => a.State == CourseAssetState.Pending);
+
     public bool IsDeleted { get; private set; }
     public DateTime? OnDeleted { get; private set; }
+
+    private Course() : base(default, default) { } // EF Core
 
     private Course(Guid id, Guid tenantId, string title, string? description, Guid subjectId) : base(id, tenantId)
     {
@@ -40,7 +48,7 @@ public class Course : TenantOwnedAggregate, ISoftDeletable
 
     public void AddSection(string title)
     {
-        var section = CourseSection.Create(TenantId, title, _sections.Count,this.Id);
+        var section = CourseSection.Create(TenantId, title, _sections.Count, this.Id);
         _sections.Add(section);
     }
 
@@ -81,17 +89,131 @@ public class Course : TenantOwnedAggregate, ISoftDeletable
         return Result.Success;
     }
 
-    public ErrorOr<Success> AddCurriculumItem(Guid sectionId, string title, string mainType, ResourceArn primaryResourceArn, JsonElement metadata)
-    {
-        var section = _sections.FirstOrDefault(s => s.Id == sectionId);
-        if (section == null) return Error.NotFound("Course.Section", "Section not found.");
+    // ─── 1. Asset Creation ───
 
-        var item = new CurriculumItem(Guid.NewGuid(), TenantId, sectionId, title, section.Items.Count, NextAvailableBitIndex++, mainType);
-        var result = item.AddResource(primaryResourceArn, "Primary", metadata);
+    public ErrorOr<VideoCourseAsset> AddVideoAsset(Guid videoId, ResourceArn videoArn, string title)
+    {
+        // Idempotency
+        if (_assets.Any(a => a.Id == videoId))
+            return (VideoCourseAsset)_assets.First(a => a.Id == videoId);
+
+        var result = VideoCourseAsset.Create(videoId, TenantId, videoArn, title, Id);
         if (result.IsError) return result.Errors;
 
+        _assets.Add(result.Value);
+        return result.Value;
+    }
+
+    public ErrorOr<DocumentCourseAsset> AddDocumentAsset(
+        Guid docId, ResourceArn docArn, string title, string fileName, long size, string contentType)
+    {
+        if (_assets.Any(a => a.Id == docId))
+            return (DocumentCourseAsset)_assets.First(a => a.Id == docId);
+
+        var result = DocumentCourseAsset.Create(docId, TenantId, docArn, title, Id, fileName, size, contentType);
+        if (result.IsError) return result.Errors;
+
+        _assets.Add(result.Value);
+        return result.Value;
+    }
+
+    public ErrorOr<AssessmentCourseAsset> AddAssessmentAsset(
+        Guid assessmentId, ResourceArn assessmentArn, string title, int questionsNumber, AssessmentType type)
+    {
+        if (_assets.Any(a => a.Id == assessmentId))
+            return (AssessmentCourseAsset)_assets.First(a => a.Id == assessmentId);
+
+        var result = AssessmentCourseAsset.Create(assessmentId, TenantId, assessmentArn, title, Id, questionsNumber, type);
+        if (result.IsError) return result.Errors;
+
+        _assets.Add(result.Value);
+        return result.Value;
+    }
+
+    // ─── 2. Asset State Transitions ───
+
+    public ErrorOr<Success> MarkAssetAvailable(Guid assetId, TimeSpan? duration = null, string? relativeUrl = null, string? thumbnailUrl = null)
+    {
+        var asset = _assets.FirstOrDefault(a => a.Id == assetId);
+        if (asset is null)
+            return Error.NotFound("CourseAsset.NotFound", "Asset not found in this course.");
+
+        if (asset is VideoCourseAsset video && (duration.HasValue || relativeUrl is not null))
+            video.UpdateStreamingInfo(duration ?? TimeSpan.Zero, relativeUrl, thumbnailUrl);
+
+        return asset.MarkAvailable();
+    }
+
+    public ErrorOr<Success> MarkAssetFailed(Guid assetId)
+    {
+        var asset = _assets.FirstOrDefault(a => a.Id == assetId);
+        if (asset is null)
+            return Error.NotFound("CourseAsset.NotFound", "Asset not found in this course.");
+
+        return asset.MarkFailed();
+    }
+
+    // ─── 3. Pool Operations (teacher-facing) ───
+
+    public ErrorOr<CurriculumItem> AssignAssetToCurriculum(Guid assetId, Guid sectionId, string title, JsonElement metadata)
+    {
+        var asset = _assets.FirstOrDefault(a => a.Id == assetId);
+        if (asset is null)
+            return Error.NotFound("CourseAsset.NotFound", "Asset not found in this course.");
+        if (asset.State != CourseAssetState.Available)
+            return Error.Conflict("CourseAsset.NotAvailable",
+                $"Asset is in state '{asset.State}', must be Available to assign.");
+
+        var section = _sections.FirstOrDefault(s => s.Id == sectionId);
+        if (section is null)
+            return Error.NotFound("Course.Section", "Section not found.");
+
+        var mainType = asset.CourseAssetType.ToString();
+        var item = new CurriculumItem(
+            Guid.NewGuid(), TenantId, sectionId, title,
+            section.Items.Count, NextAvailableBitIndex++, mainType);
+
+        var addResult = item.AddResource(asset, metadata);
+        if (addResult.IsError) return addResult.Errors;
+
         section.AddItem(item);
+
+        var stateResult = asset.MarkInUse();
+        if (stateResult.IsError) return stateResult.Errors;
+
+        return item;
+    }
+
+    public ErrorOr<Success> UnassignFromCurriculum(Guid itemId)
+    {
+        var section = _sections.FirstOrDefault(s => s.Items.Any(i => i.Id == itemId));
+        if (section is null)
+            return Error.NotFound("Section.NotFound", "No section contains this item.");
+
+        var item = section.Items.FirstOrDefault(i => i.Id == itemId);
+        if (item is null)
+            return Error.NotFound("CurriculumItem.NotFound");
+
+        foreach (var resource in item.Resources)
+        {
+            var asset = _assets.FirstOrDefault(a => a.Id == resource.CourseAssetId);
+            if (asset is not null && asset.State == CourseAssetState.InUse)
+            {
+                asset.ReturnToPool();
+            }
+        }
+
+        item.Delete();
         return Result.Success;
+    }
+
+    public ErrorOr<Success> DismissAsset(Guid assetId)
+    {
+        var asset = _assets.FirstOrDefault(a => a.Id == assetId);
+        if (asset is null)
+            return Error.NotFound("CourseAsset.NotFound");
+
+        return asset.Archive();
     }
 
     public ErrorOr<Success> ReorderItems(Guid sectionId, List<Guid> itemIds)
@@ -143,7 +265,6 @@ public class Course : TenantOwnedAggregate, ISoftDeletable
             return Error.Conflict("Course.Status", "Only courses under review can be rejected.");
         if(string.IsNullOrEmpty(reason))
             return Error.Validation("Course.RejectionReason", "Rejection reason is required.");
-        // Moves back to Draft for fixes
         Status = CourseStatus.Draft;
         return Result.Success;
     }
@@ -185,28 +306,4 @@ public class Course : TenantOwnedAggregate, ISoftDeletable
         }
         return Result.Success;
     }
-    
-
-    public ErrorOr<Success> LinkResourceToItem(Guid itemId, ResourceArn resourceArn, string type, JsonElement metadata)
-    {
-        var item = _sections.SelectMany(s => s.Items).FirstOrDefault(i => i.Id == itemId);
-        if (item == null) return Error.NotFound("Course.Item", "Item not found in this course.");
-
-        return item.AddResource(resourceArn, type, metadata);
-    }
-
-    public void UpdateResourceMetadata(Guid resourceId, JsonElement metadata)
-    {
-        var resourceIdStr = resourceId.ToString().ToLowerInvariant();
-        var resources = _sections.SelectMany(s => s.Items)
-            .SelectMany(i => i.Resources)
-            .Where(r => r.Arn.Value.Contains(resourceIdStr));
-
-        foreach (var resource in resources)
-        {
-            resource.UpdateMetadata(metadata);
-        }
-    }
 }
-
-

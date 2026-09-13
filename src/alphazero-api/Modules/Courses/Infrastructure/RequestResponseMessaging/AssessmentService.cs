@@ -1,5 +1,5 @@
-﻿using AlphaZero.Modules.Assessments.IntegrationEvents;
-using AlphaZero.Modules.Courses.Application.Courses.Commands.AddAssessment;
+using AlphaZero.Modules.Assessments.IntegrationEvents;
+using AlphaZero.Modules.Courses.Application.Services;
 using AlphaZero.Shared.Application;
 using ErrorOr;
 using MassTransit;

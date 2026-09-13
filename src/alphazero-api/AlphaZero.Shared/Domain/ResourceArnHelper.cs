@@ -80,6 +80,24 @@ public static class ResourceArnHelper
         return GetByKey(GetSegments(arn), "course");
     }
 
+    public static Guid? ExtractCourseId(this ResourceArn arn)
+    {
+        try
+        {
+            var segments = GetSegments(arn);
+            for (int i = 0; i < segments.Length - 1; i++)
+            {
+                if (segments[i].Equals("course", StringComparison.OrdinalIgnoreCase) && Guid.TryParse(segments[i + 1], out var guid))
+                    return guid;
+            }
+            return null;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
     public static Guid GetSectionId(this ResourceArn arn)
     {
         return GetByKey(GetSegments(arn), "section");

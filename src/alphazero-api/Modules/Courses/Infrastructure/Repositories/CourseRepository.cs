@@ -22,11 +22,10 @@ public class CourseRepository : BaseRepository<AppDbContext, Course>, ICourseRep
 
     public async Task<(Guid CourseId, int BitIndex)?> GetItemBitIndexByResourceIdAsync(Guid resourceId, CancellationToken cancellationToken = default)
     {
-        var resourceIdStr = resourceId.ToString().ToLowerInvariant();
         var itemInfo = await _context.Courses
             .SelectMany(c => c.Sections)
             .SelectMany(s => s.Items)
-            .Where(i => i.Resources.Any(r => EF.Property<string>(r, "Arn").Contains(resourceIdStr)))
+            .Where(i => i.Resources.Any(r => r.CourseAssetId == resourceId))
             .Select(i => new { i.SectionId, i.BitIndex })
             .FirstOrDefaultAsync(cancellationToken);
 
@@ -42,14 +41,14 @@ public class CourseRepository : BaseRepository<AppDbContext, Course>, ICourseRep
 
     public async Task<List<Course>> GetCoursesByResourceIdAsync(Guid resourceId, CancellationToken cancellationToken = default)
     {
-        var resourceIdStr = resourceId.ToString().ToLowerInvariant();
         return await _context.Courses
             .Include(c => c.Sections)
                 .ThenInclude(s => s.Items)
-            .Where(c => c.Sections.Any(s => s.Items.Any(i => i.Resources.Any(r => EF.Property<string>(r, "Arn").Contains(resourceIdStr)))))
+            .Where(c => c.Sections.Any(s => s.Items.Any(i => i.Resources.Any(r => r.CourseAssetId == resourceId))))
             .ToListAsync(cancellationToken);
     }
-    public async Task<Course?> GetCourseAsync(Guid courseId, CancellationToken token =default)
+
+    public async Task<Course?> GetCourseAsync(Guid courseId, CancellationToken token = default)
     {
         return await _context.Courses
             .Include(c => c.Sections)
@@ -58,4 +57,12 @@ public class CourseRepository : BaseRepository<AppDbContext, Course>, ICourseRep
             .Include(c => c.Plans)
             .FirstOrDefaultAsync(c => c.Id == courseId, token);
     }
+
+    public async Task<Course?> GetByIdWithSectionsAndAssetsAsync(Guid courseId, CancellationToken ct = default)
+        => await _context.Courses
+            .Include(c => c.Sections)
+                .ThenInclude(s => s.Items)
+                    .ThenInclude(i => i.Resources)
+            .Include(c => c.Assets)
+            .FirstOrDefaultAsync(c => c.Id == courseId, ct);
 }

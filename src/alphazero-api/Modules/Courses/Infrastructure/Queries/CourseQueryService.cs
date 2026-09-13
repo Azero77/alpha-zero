@@ -41,8 +41,8 @@ public class CourseQueryService : ICourseQueryService
                         i.Order,
                         i.BitIndex,
                         i.Resources.OrderBy(r => r.Order).Select(r => new ResourceDto(
-                            r.Arn.Value,
-                            r.Type,
+                            r.Asset.ResourceArn.Value,
+                            r.Asset.CourseAssetType.ToString(),
                             r.Order,
                             r.Metadata)).ToList())).ToList())).ToList()))
             .FirstOrDefaultAsync(cancellationToken);

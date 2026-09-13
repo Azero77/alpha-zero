@@ -1,5 +1,6 @@
-using AlphaZero.Modules.Courses.Application.Repositories;
+using AlphaZero.Modules.Courses.Domain.Aggregates.Courses;
 using AlphaZero.Shared.Application;
+using AlphaZero.Shared.Infrastructure.Repositores;
 using ErrorOr;
 using MediatR;
 using Microsoft.Extensions.Logging;
@@ -11,32 +12,41 @@ public record SyncResourceMetadataCommand(Guid ResourceId, JsonElement Metadata)
 
 public sealed class SyncResourceMetadataCommandHandler : IRequestHandler<SyncResourceMetadataCommand, ErrorOr<Success>>
 {
-    private readonly ICourseRepository _courseRepository;
+    private readonly IRepository<CourseAsset> _assetRepository;
     private readonly ILogger<SyncResourceMetadataCommandHandler> _logger;
 
-    public SyncResourceMetadataCommandHandler(ICourseRepository courseRepository, ILogger<SyncResourceMetadataCommandHandler> logger)
+    public SyncResourceMetadataCommandHandler(
+        IRepository<CourseAsset> assetRepository, 
+        ILogger<SyncResourceMetadataCommandHandler> logger)
     {
-        _courseRepository = courseRepository;
+        _assetRepository = assetRepository;
         _logger = logger;
     }
 
     public async Task<ErrorOr<Success>> Handle(SyncResourceMetadataCommand request, CancellationToken ct)
     {
-        var courses = await _courseRepository.GetCoursesByResourceIdAsync(request.ResourceId, ct);
-        
-        if (courses.Count == 0)
+        var asset = await _assetRepository.GetById(request.ResourceId, ct);
+        if (asset is null)
         {
-            _logger.LogDebug("No courses found linked to resource {ResourceId}", request.ResourceId);
+            _logger.LogDebug("No course asset found for resource {ResourceId}", request.ResourceId);
             return Result.Success;
         }
 
-        foreach (var course in courses)
+        if (request.Metadata.TryGetProperty("Title", out var titleProp) && titleProp.GetString() is string title && !string.IsNullOrWhiteSpace(title))
         {
-            course.UpdateResourceMetadata(request.ResourceId, request.Metadata);
-            _courseRepository.Update(course);
+            asset.UpdateTitle(title);
         }
 
-        _logger.LogInformation("Synchronized metadata for Resource {ResourceId} across {Count} courses.", request.ResourceId, courses.Count);
+        if (asset is AssessmentCourseAsset assessment)
+        {
+            if (request.Metadata.TryGetProperty("Type", out var typeProp) && Enum.TryParse<AssessmentType>(typeProp.GetString(), out var type))
+            {
+                assessment.UpdateAssessmentInfo(assessment.QuestionsNumber, type);
+            }
+        }
+
+        _assetRepository.Update(asset);
+        _logger.LogInformation("Synchronized metadata for Resource {ResourceId}.", request.ResourceId);
 
         return Result.Success;
     }

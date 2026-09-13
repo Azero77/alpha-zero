@@ -44,7 +44,7 @@ public sealed class CreateCourseCommandHandler : IRequestHandler<CreateCourseCom
         var tenantId = _tenantProvider.GetTenant();
         if (tenantId is null) return Error.Unauthorized("Tenant.NotFound", "Tenant not found.");
 
-        var subjectExists = await _subjectRepository.Any(s => s.Id == request.SubjectId, cancellationToken);
+        var subjectExists = await _subjectRepository.Any(s => s.Id == request.SubjectId && s.TenantId == tenantId.Value, cancellationToken);
         if (!subjectExists) return Error.NotFound("Course.SubjectId", "Provided SubjectId does not exist.");
 
         var courseId = Guid.NewGuid();

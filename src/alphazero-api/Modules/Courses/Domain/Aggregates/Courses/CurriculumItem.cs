@@ -17,6 +17,7 @@ public class CurriculumItem : TenantOwnedEntity, ISoftDeletable
 
     private readonly List<CurriculumResource> _resources = new();
     public IReadOnlyCollection<CurriculumResource> Resources => _resources.AsReadOnly();
+
     public CurriculumItem(Guid id, Guid tenantId, Guid sectionId, string title, int order, int bitIndex, string mainType)
         : base(id, tenantId)
     {
@@ -27,58 +28,45 @@ public class CurriculumItem : TenantOwnedEntity, ISoftDeletable
         MainType = mainType;
     }
 
-    public ErrorOr<Success> AddResource(ResourceArn arn, string type, JsonElement metadata)
+    public ErrorOr<Success> AddResource(CourseAsset asset, JsonElement metadata)
     {
-        // BOLA check: validate resource tenant matches active TenantId
-        if (arn.TenantIdString != TenantId.ToString().ToLowerInvariant() && arn.TenantIdString != ResourceArn.GlobalTenant)
-        {
-            return Error.Validation("CurriculumItem.TenantMismatch", "Resource tenant must match active tenant.");
-        }
+        // BOLA check: validate resource tenant matches item tenant
+        if (asset.TenantId != TenantId)
+            return Error.Validation("CurriculumItem.TenantMismatch", "Asset tenant must match item tenant.");
 
-        // Validate MainType invariant for primary resources
-        if (type == "Primary")
+        // First resource validates type compatibility with MainType
+        if (_resources.Count == 0)
         {
-            var expectedService = GetExpectedServiceForMainType(MainType);
-            if (expectedService is null)
-            {
-                return Error.Validation("CurriculumItem.InvalidMainType", $"Unsupported curriculum item MainType '{MainType}'.");
-            }
-            if (!arn.Service.Equals(expectedService, StringComparison.OrdinalIgnoreCase))
-            {
-                return Error.Validation("CurriculumItem.ResourceTypeMismatch", $"Primary resource service '{arn.Service}' does not match item MainType '{MainType}'. Expected '{expectedService}'.");
-            }
+            if (!IsCompatibleType(MainType, asset.CourseAssetType))
+                return Error.Validation("CurriculumItem.TypeMismatch", 
+                    $"Asset type '{asset.CourseAssetType}' does not match item MainType '{MainType}'.");
         }
 
         var order = _resources.Count;
-        var resource = new CurriculumResource(arn, type, order, metadata);
+        var resource = new CurriculumResource(asset, order, metadata);
         _resources.Add(resource);
-
         return Result.Success;
     }
 
-    public void ReorderResources(List<ResourceArn> orderedArns)
+    public void ReorderResources(List<Guid> orderedAssetIds)
     {
         var temp = _resources.ToList();
         _resources.Clear();
 
-        for (int i = 0; i < orderedArns.Count; i++)
+        for (int i = 0; i < orderedAssetIds.Count; i++)
         {
-            var res = temp.FirstOrDefault(r => r.Arn.Equals(orderedArns[i]));
+            var res = temp.FirstOrDefault(r => r.CourseAssetId == orderedAssetIds[i]);
             if (res != null)
             {
                 res.UpdateOrder(i);
                 _resources.Add(res);
             }
         }
-        
-        // Add any remaining resources that were not in the reordered list at the end
-        foreach (var res in temp)
+
+        foreach (var res in temp.Where(r => !_resources.Contains(r)))
         {
-            if (!_resources.Contains(res))
-            {
-                res.UpdateOrder(_resources.Count);
-                _resources.Add(res);
-            }
+            res.UpdateOrder(_resources.Count);
+            _resources.Add(res);
         }
     }
 
@@ -104,15 +92,14 @@ public class CurriculumItem : TenantOwnedEntity, ISoftDeletable
         return Result.Success;
     }
 
-    private static string? GetExpectedServiceForMainType(string mainType)
+    private static bool IsCompatibleType(string mainType, CourseAssetType assetType)
     {
         return mainType.ToLowerInvariant() switch
         {
-            "video" => "video",
-            "quiz" or "assessment" => "assessment",
-            "document" => "document",
-            "inline" => "inline",
-            _ => null
+            "video" => assetType == CourseAssetType.Video,
+            "quiz" or "assessment" => assetType == CourseAssetType.Assessment,
+            "document" => assetType == CourseAssetType.Document,
+            _ => false
         };
     }
 }

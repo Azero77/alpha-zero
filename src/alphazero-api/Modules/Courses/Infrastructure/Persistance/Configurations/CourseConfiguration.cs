@@ -34,6 +34,18 @@ public class CourseConfiguration : IEntityTypeConfiguration<Course>
 
         builder.Navigation(c => c.Plans)
             .UsePropertyAccessMode(PropertyAccessMode.Field);
+
+        builder.HasMany(c => c.Assets)
+            .WithOne()
+            .HasForeignKey(a => a.CourseId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.Ignore(c => c.PoolAssets);
+        builder.Ignore(c => c.PendingAssets);
+
+        builder.Navigation(c => c.Assets)
+            .UsePropertyAccessMode(PropertyAccessMode.Field);
+
         builder.Property(c => c.Id)
             .ValueGeneratedNever();
     }

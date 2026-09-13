@@ -1,12 +1,14 @@
 using System.Net;
 using System.Net.Http.Json;
-using AlphaZero.Modules.Courses.Presentation.Courses.AddItem;
+using AlphaZero.Modules.Courses.Domain.Aggregates.Courses;
 using AlphaZero.Modules.Courses.Presentation.Courses.AddSection;
 using AlphaZero.Modules.Courses.Presentation.Courses.Create;
 using AlphaZero.Modules.Courses.Presentation.Courses.Get;
 using AlphaZero.Modules.Courses.Presentation.Courses.Plans.AddPlan;
+using AlphaZero.Modules.Courses.Presentation.Courses.Pool;
 using AlphaZero.Modules.Courses.Presentation.Courses.Reorder.Sections;
 using AlphaZero.Modules.Courses.Presentation.Subjects.Create;
+using AlphaZero.Shared.Domain;
 using Courses.Tests.Integration.Abstractions;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
@@ -29,6 +31,18 @@ public class CourseTests : BaseIntegrationTest
         });
         var result = await response.Content.ReadFromJsonAsync<CreateSubjectResponse>();
         return result!.Id;
+    }
+
+    private async Task<Guid> SeedAvailableVideoAsset(Guid courseId, Guid tenantId, string title = "Test Video")
+    {
+        var videoId = Guid.NewGuid();
+        var videoArn = ResourceArn.ForVideo(tenantId, videoId);
+        var asset = VideoCourseAsset.Create(videoId, tenantId, videoArn, title, courseId).Value;
+        asset.MarkAvailable();
+
+        DbContext.CourseAssets.Add(asset);
+        await DbContext.SaveChangesAsync();
+        return videoId;
     }
 
     [Fact]
@@ -71,12 +85,18 @@ public class CourseTests : BaseIntegrationTest
         var courseResponse = await Client.GetFromJsonAsync<CourseResponse>($"/courses/{courseId}");
         var sectionId = courseResponse!.Sections.First().Id;
 
-        // Act: Add Lesson
-        await Client.PostAsJsonAsync($"/courses/{courseId}/sections/{sectionId}/lessons", new AddLessonRequest 
+        // Seed available asset in pool
+        var videoId = await SeedAvailableVideoAsset(courseId, tenantId, "Hello World");
+
+        // Act: Assign asset to curriculum section
+        var assignResponse = await Client.PostAsJsonAsync($"/courses/{courseId}/pool/{videoId}/assign", new AssignAssetRequest 
         { 
-            Title = "Hello World", 
-            VideoId = Guid.NewGuid() 
+            CourseId = courseId,
+            AssetId = videoId,
+            SectionId = sectionId,
+            Title = "Hello World" 
         });
+        assignResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
         // Assert
         var updatedCourseResponse = await Client.GetFromJsonAsync<CourseResponse>($"/courses/{courseId}");
@@ -128,8 +148,11 @@ public class CourseTests : BaseIntegrationTest
         var courseResponse = await Client.GetFromJsonAsync<CourseResponse>($"/courses/{courseId}");
         var sectionId = courseResponse!.Sections.First().Id;
 
-        await Client.PostAsJsonAsync($"/courses/{courseId}/sections/{sectionId}/lessons", new AddLessonRequest { Title = "L1", VideoId = Guid.NewGuid() });
-        await Client.PostAsJsonAsync($"/courses/{courseId}/sections/{sectionId}/lessons", new AddLessonRequest { Title = "L2", VideoId = Guid.NewGuid() });
+        var v1Id = await SeedAvailableVideoAsset(courseId, tenantId, "L1");
+        var v2Id = await SeedAvailableVideoAsset(courseId, tenantId, "L2");
+
+        await Client.PostAsJsonAsync($"/courses/{courseId}/pool/{v1Id}/assign", new AssignAssetRequest { CourseId = courseId, AssetId = v1Id, SectionId = sectionId, Title = "L1" });
+        await Client.PostAsJsonAsync($"/courses/{courseId}/pool/{v2Id}/assign", new AssignAssetRequest { CourseId = courseId, AssetId = v2Id, SectionId = sectionId, Title = "L2" });
 
         var sectionResponse = (await Client.GetFromJsonAsync<CourseResponse>($"/courses/{courseId}"))!.Sections.First();
         var l1Id = sectionResponse.Items.First(i => i.Title == "L1").Id;
@@ -160,7 +183,7 @@ public class CourseTests : BaseIntegrationTest
         var response = await Client.PostAsJsonAsync("/courses", request);
 
         // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.NotFound); // Subject not found in Tenant B's context
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
     [Fact]
@@ -172,12 +195,14 @@ public class CourseTests : BaseIntegrationTest
         SetTenant(tenantId);
         var createResp = await Client.PostAsJsonAsync("/courses", new CreateCourseRequest { Title = "ToReject", SubjectId = subjectId });
         var courseId = (await createResp.Content.ReadFromJsonAsync<CreateCourseResponse>())!.Id;
-            //submit for review
-            // Add content (required to submit)
+
+        // Add content (required to submit)
         await Client.PostAsJsonAsync($"/courses/{courseId}/sections", new AddSectionRequest { Title = "S1" });
         var courseResponse = await Client.GetFromJsonAsync<CourseResponse>($"/courses/{courseId}");
         var sectionId = courseResponse!.Sections.First().Id;
-        await Client.PostAsJsonAsync($"/courses/{courseId}/sections/{sectionId}/lessons", new AddLessonRequest { Title = "L1", VideoId = Guid.NewGuid() });
+
+        var v1Id = await SeedAvailableVideoAsset(courseId, tenantId, "L1");
+        await Client.PostAsJsonAsync($"/courses/{courseId}/pool/{v1Id}/assign", new AssignAssetRequest { CourseId = courseId, AssetId = v1Id, SectionId = sectionId, Title = "L1" });
 
         var submitResp = await Client.PatchAsJsonAsync($"/courses/{courseId}/review", new { });
         submitResp.StatusCode.Should().Be(HttpStatusCode.NoContent);
@@ -190,7 +215,6 @@ public class CourseTests : BaseIntegrationTest
     }
 
     [Fact]
-
     public async Task CourseLifecycle_Should_TransitionCorrectly()
     {
         // Arrange
@@ -200,11 +224,14 @@ public class CourseTests : BaseIntegrationTest
         var httpResponse = await Client.PostAsJsonAsync("/courses", new CreateCourseRequest { Title = "LifeCycle", SubjectId = subjectId });
         var createCourseResponse = await httpResponse.Content.ReadFromJsonAsync<CreateCourseResponse>();
         var courseId = createCourseResponse!.Id;
+
         // Add content (required to submit)
         await Client.PostAsJsonAsync($"/courses/{courseId}/sections", new AddSectionRequest { Title = "S1" });
         var courseResponse = await Client.GetFromJsonAsync<CourseResponse>($"/courses/{courseId}");
         var sectionId = courseResponse!.Sections.First().Id;
-        await Client.PostAsJsonAsync($"/courses/{courseId}/sections/{sectionId}/lessons", new AddLessonRequest { Title = "L1", VideoId = Guid.NewGuid() });
+
+        var v1Id = await SeedAvailableVideoAsset(courseId, tenantId, "L1");
+        await Client.PostAsJsonAsync($"/courses/{courseId}/pool/{v1Id}/assign", new AssignAssetRequest { CourseId = courseId, AssetId = v1Id, SectionId = sectionId, Title = "L1" });
 
         // Act: Submit
         var submitResp = await Client.PatchAsJsonAsync($"/courses/{courseId}/review", new { });
@@ -229,5 +256,50 @@ public class CourseTests : BaseIntegrationTest
         // Assert
         var finalCourseResponse = await Client.GetFromJsonAsync<CourseResponse>($"/courses/{courseId}");
         finalCourseResponse!.Status.Should().Be("Published");
+    }
+
+    [Fact]
+    public async Task CoursePool_Should_SupportGetAssignAndDismiss()
+    {
+        // Arrange
+        var tenantId = Guid.NewGuid();
+        var subjectId = await SeedSubject(tenantId);
+        SetTenant(tenantId);
+        var createResp = await Client.PostAsJsonAsync("/courses", new CreateCourseRequest { Title = "PoolTest", SubjectId = subjectId });
+        var courseId = (await createResp.Content.ReadFromJsonAsync<CreateCourseResponse>())!.Id;
+
+        await Client.PostAsJsonAsync($"/courses/{courseId}/sections", new AddSectionRequest { Title = "S1" });
+        var courseResponse = await Client.GetFromJsonAsync<CourseResponse>($"/courses/{courseId}");
+        var sectionId = courseResponse!.Sections.First().Id;
+
+        var v1Id = await SeedAvailableVideoAsset(courseId, tenantId, "Available Video 1");
+        var v2Id = await SeedAvailableVideoAsset(courseId, tenantId, "Available Video 2");
+
+        // Act 1: GET pool
+        var poolResp = await Client.GetFromJsonAsync<List<AlphaZero.Modules.Courses.Application.Courses.Queries.CourseAssetDto>>($"/courses/{courseId}/pool");
+        poolResp.Should().HaveCount(2);
+
+        // Act 2: Assign v1
+        var assignResp = await Client.PostAsJsonAsync($"/courses/{courseId}/pool/{v1Id}/assign", new AssignAssetRequest
+        {
+            CourseId = courseId,
+            AssetId = v1Id,
+            SectionId = sectionId,
+            Title = "Assigned Item"
+        });
+        assignResp.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        // Pool should now only have v2
+        poolResp = await Client.GetFromJsonAsync<List<AlphaZero.Modules.Courses.Application.Courses.Queries.CourseAssetDto>>($"/courses/{courseId}/pool");
+        poolResp.Should().HaveCount(1);
+        poolResp!.First().Id.Should().Be(v2Id);
+
+        // Act 3: Dismiss v2
+        var dismissResp = await Client.DeleteAsync($"/courses/{courseId}/pool/{v2Id}/dismiss");
+        dismissResp.StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+        // Pool is now empty
+        poolResp = await Client.GetFromJsonAsync<List<AlphaZero.Modules.Courses.Application.Courses.Queries.CourseAssetDto>>($"/courses/{courseId}/pool");
+        poolResp.Should().BeEmpty();
     }
 }

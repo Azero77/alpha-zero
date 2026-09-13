@@ -18,4 +18,6 @@ public interface ICourseRepository : IRepository<Course>
     /// <returns></returns>
     /// 
     Task<Course?> GetCourseAsync(Guid courseId, CancellationToken cancellationToken = default);
+
+    Task<Course?> GetByIdWithSectionsAndAssetsAsync(Guid courseId, CancellationToken cancellationToken = default);
 }

@@ -1,7 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
 using AlphaZero.Modules.Courses.Infrastructure.Persistance;
-using AlphaZero.Modules.Courses.Presentation.Courses.AddItem;
 using AlphaZero.Modules.Courses.Presentation.Courses.AddSection;
 using AlphaZero.Modules.Courses.Presentation.Courses.Create;
 using AlphaZero.Modules.Courses.Presentation.Courses.Get;

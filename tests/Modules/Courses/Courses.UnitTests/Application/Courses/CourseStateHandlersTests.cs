@@ -69,7 +69,10 @@ public class CourseStateHandlersTests
         var subjectId = Guid.NewGuid();
         var course = Course.Create(Guid.NewGuid(), tenantId, "Title", "Desc", subjectId).Value;
         course.AddSection("S1");
-        course.AddCurriculumItem(course.Sections.First().Id, "L1", "Video", ResourceArn.ForVideo(tenantId, Guid.NewGuid()), JsonElement.Parse("{}"));
+        var v1Id = Guid.NewGuid();
+        course.AddVideoAsset(v1Id, ResourceArn.ForVideo(tenantId, v1Id), "L1");
+        course.MarkAssetAvailable(v1Id);
+        course.AssignAssetToCurriculum(v1Id, course.Sections.First().Id, "L1", JsonDocument.Parse("{}").RootElement);
         course.SubmitForReview(); // Now UnderReview
 
         _courseRepository.GetCourseAsync(course.Id, Arg.Any<CancellationToken>()).Returns(course);
@@ -91,7 +94,10 @@ public class CourseStateHandlersTests
         var subjectId = Guid.NewGuid();
         var course = Course.Create(Guid.NewGuid(), tenantId, "Title", "Desc", subjectId).Value;
         course.AddSection("S1");
-        course.AddCurriculumItem(course.Sections.First().Id, "L1", "Video", ResourceArn.ForVideo(tenantId, Guid.NewGuid()), JsonElement.Parse("{}"));
+        var v2Id = Guid.NewGuid();
+        course.AddVideoAsset(v2Id, ResourceArn.ForVideo(tenantId, v2Id), "L1");
+        course.MarkAssetAvailable(v2Id);
+        course.AssignAssetToCurriculum(v2Id, course.Sections.First().Id, "L1", JsonDocument.Parse("{}").RootElement);
         course.SubmitForReview();
 
         _courseRepository.GetCourseAsync(course.Id, Arg.Any<CancellationToken>()).Returns(course);
