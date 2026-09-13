@@ -149,7 +149,7 @@ public class DocumentCourseMetadataSyncCommandHandler(ILogger<DocumentCourseMeta
             ?? (payload.TryGetProperty("fileName", out var f) || payload.TryGetProperty("FileName", out f) ? f.GetString() : null) 
             ?? documentCourseAsset.FileName;
 
-        var fileSize = metadata?.FileSize 
+        var fileSize = (metadata?.FileSize > 0 ? metadata.FileSize : (long?)null)
             ?? (payload.TryGetProperty("fileSize", out var s) || payload.TryGetProperty("FileSize", out s) || payload.TryGetProperty("size", out s) || payload.TryGetProperty("Size", out s) ? s.GetInt64() : documentCourseAsset.Size);
 
         var contentType = metadata?.ContentType 

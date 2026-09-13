@@ -71,7 +71,7 @@ public class IAMPreprocessorTests : IClassFixture<SecurityApiFactory>
     }
 
     [Fact]
-    public async Task AddLesson_Should_EvaluateContext_With_SessionTenant()
+    public async Task AddSection_Should_EvaluateContext_With_SessionTenant()
     {
         // 1. Arrange: Setup Course in Tenant A
 
