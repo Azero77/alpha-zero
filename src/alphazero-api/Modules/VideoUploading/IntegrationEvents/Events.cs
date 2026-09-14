@@ -65,3 +65,9 @@ public record VideoProcessingFailedEvent(Guid VideoId, string Reason, string? Ke
 // LIFECYCLE
 public record VideoDeletedFromS3Event(string Key);
 public record VideoMetadataUpdatedEvent(string Key);
+
+// METADATA SYNC
+public record VideoMetadataChangedIntegrationEvent(
+    Guid VideoId,
+    string Title,
+    string? Description);

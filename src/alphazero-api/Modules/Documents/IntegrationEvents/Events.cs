@@ -18,3 +18,14 @@ public record DocumentDownloadUrlResponse(
     string DownloadUrl,
     string FileName,
     TimeSpan ExpiresIn);
+
+/// <summary>
+/// Fact: Document metadata has changed.
+/// Used by Courses module to sync its materialized view (Read Model).
+/// </summary>
+public record DocumentMetadataChangedIntegrationEvent(
+    Guid DocumentId,
+    string Title,
+    string? Description,
+    string FileType,
+    long FileSizeBytes);

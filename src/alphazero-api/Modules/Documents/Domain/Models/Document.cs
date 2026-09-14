@@ -1,5 +1,6 @@
 using AlphaZero.Shared.Domain;
 using ErrorOr;
+using AlphaZero.Modules.Documents.Domain.Events;
 
 namespace AlphaZero.Modules.Documents.Domain.Models;
 
@@ -68,6 +69,19 @@ public class Document : AggregateRoot, IDomainTenantOwned, ISoftDeletable
     {
         IsDeleted = true;
         OnDeleted = clock.Now;
+    }
+
+    public ErrorOr<Success> UpdateInformation(string title, string? description)
+    {
+        if (string.IsNullOrWhiteSpace(title))
+            return Error.Validation("Document.Title", "Title is required.");
+
+        Title = title;
+        Description = description;
+
+        AddDomainEvent(new DocumentMetadataUpdatedDomainEvent(Id, Title, Description));
+
+        return Result.Success;
     }
 
     public ResourceArn Arn => ResourceArn.ForDocument(TenantId, Id);

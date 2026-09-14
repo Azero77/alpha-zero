@@ -2,6 +2,9 @@ using System.Text.Json;
 using AlphaZero.Modules.Courses.Application;
 using AlphaZero.Modules.Courses.Application.Courses.Commands.SyncResourceMetadata;
 using AlphaZero.Modules.Courses.Domain.Aggregates.Courses;
+using AlphaZero.Modules.Documents.IntegrationEvents;
+using AlphaZero.Modules.VideoUploading.IntegrationEvents;
+using AlphaZero.Shared.Application;
 using AlphaZero.Shared.Domain;
 using Courses.Tests.Integration.Abstractions;
 using FluentAssertions;
@@ -168,5 +171,89 @@ public class SyncResourceMetadataIntegrationTests : BaseIntegrationTest
         updatedAsset!.Title.Should().Be("Semester Midterm Exam");
         updatedAsset.QuestionsNumber.Should().Be(40);
         updatedAsset.Type.Should().Be(AssessmentType.Midterm);
+    }
+
+    [Fact]
+    public async Task VideoMetadataChangedConsumer_Should_SyncMetadata_WhenIntegrationEventPublished()
+    {
+        // Arrange
+        var tenantId = Guid.NewGuid();
+        SetTenant(tenantId);
+        var courseId = await SeedCourse(tenantId);
+
+        var videoId = Guid.NewGuid();
+        var videoArn = ResourceArn.ForVideo(tenantId, videoId);
+        var videoAsset = VideoCourseAsset.Create(videoId, tenantId, videoArn, "Original Video Name", courseId).Value;
+        DbContext.CourseAssets.Add(videoAsset);
+        await DbContext.SaveChangesAsync();
+
+        using var scope = Factory.Services.CreateScope();
+        var bus = scope.ServiceProvider.GetRequiredService<IModuleBus>();
+
+        // Act: Publish integration event
+        await bus.Publish(new VideoMetadataChangedIntegrationEvent(
+            videoId,
+            "Updated Video Name via Bus",
+            "Updated Description via Bus"));
+
+        // Assert: Poll until consumer processes and updates DB
+        VideoCourseAsset? updatedAsset = null;
+        for (int i = 0; i < 30; i++)
+        {
+            updatedAsset = await DbContext.CourseAssets
+                .OfType<VideoCourseAsset>()
+                .AsNoTracking()
+                .FirstOrDefaultAsync(a => a.Id == videoId && a.Title == "Updated Video Name via Bus");
+
+            if (updatedAsset is not null) break;
+            await Task.Delay(100);
+        }
+
+        updatedAsset.Should().NotBeNull();
+        updatedAsset!.Title.Should().Be("Updated Video Name via Bus");
+    }
+
+    [Fact]
+    public async Task DocumentMetadataChangedConsumer_Should_SyncMetadata_WhenIntegrationEventPublished()
+    {
+        // Arrange
+        var tenantId = Guid.NewGuid();
+        SetTenant(tenantId);
+        var courseId = await SeedCourse(tenantId);
+
+        var docId = Guid.NewGuid();
+        var docArn = ResourceArn.ForDocument(tenantId, docId);
+        var docAsset = DocumentCourseAsset.Create(
+            docId, tenantId, docArn, "Original Doc Name", courseId, "syllabus.pdf", 1024, "application/pdf").Value;
+        DbContext.CourseAssets.Add(docAsset);
+        await DbContext.SaveChangesAsync();
+
+        using var scope = Factory.Services.CreateScope();
+        var bus = scope.ServiceProvider.GetRequiredService<IModuleBus>();
+
+        // Act: Publish integration event
+        await bus.Publish(new DocumentMetadataChangedIntegrationEvent(
+            docId,
+            "Updated Doc Name via Bus",
+            "New Doc Desc",
+            "application/pdf",
+            2048576));
+
+        // Assert: Poll until consumer processes and updates DB
+        DocumentCourseAsset? updatedAsset = null;
+        for (int i = 0; i < 30; i++)
+        {
+            updatedAsset = await DbContext.CourseAssets
+                .OfType<DocumentCourseAsset>()
+                .AsNoTracking()
+                .FirstOrDefaultAsync(a => a.Id == docId && a.Title == "Updated Doc Name via Bus");
+
+            if (updatedAsset is not null) break;
+            await Task.Delay(100);
+        }
+
+        updatedAsset.Should().NotBeNull();
+        updatedAsset!.Title.Should().Be("Updated Doc Name via Bus");
+        updatedAsset.Size.Should().Be(2048576);
     }
 }

@@ -28,7 +28,10 @@ public sealed class MarkCourseAssetFailedCommandHandler
     {
         var asset = await _assetRepository.GetById(request.AssetId, ct);
         if (asset is null)
-            return Error.NotFound("CourseAsset.NotFound", "Course asset not found.");
+        {
+            _logger.LogDebug("No course asset found for resource {AssetId}, skipping", request.AssetId);
+            return Result.Success;
+        }
 
         var result = asset.MarkFailed();
         if (result.IsError) return result.Errors;

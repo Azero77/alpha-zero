@@ -13,3 +13,17 @@ public class VideoPublishedDomainEvent : DomainEvent
         PublishedOn = publishedOn;
     }
 }
+
+public class VideoMetadataUpdatedDomainEvent : DomainEvent
+{
+    public Guid VideoId { get; }
+    public string Title { get; }
+    public string? Description { get; }
+
+    public VideoMetadataUpdatedDomainEvent(Guid videoId, string title, string? description)
+    {
+        VideoId = videoId;
+        Title = title;
+        Description = description;
+    }
+}

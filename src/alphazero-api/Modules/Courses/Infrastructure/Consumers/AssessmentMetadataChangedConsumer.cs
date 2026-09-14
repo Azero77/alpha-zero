@@ -5,31 +5,20 @@ using System.Text.Json;
 
 namespace AlphaZero.Modules.Courses.Infrastructure.Consumers;
 
-public class AssessmentMetadataChangedConsumer : IConsumer<AssessmentMetadataChangedIntegrationEvent>
+public class AssessmentMetadataChangedConsumer : MetadataChangedConsumerBase<AssessmentMetadataChangedIntegrationEvent>
 {
-    private readonly ICoursesModule _coursesModule;
-
     public AssessmentMetadataChangedConsumer(ICoursesModule coursesModule)
-    {
-        _coursesModule = coursesModule;
-    }
+        : base(coursesModule) { }
 
-    public async Task Consume(ConsumeContext<AssessmentMetadataChangedIntegrationEvent> context)
-    {
-        var msg = context.Message;
+    protected override Guid ExtractResourceId(AssessmentMetadataChangedIntegrationEvent message)
+        => message.AssessmentId;
 
-        // Use JsonSerializer to create a JsonElement snapshot
-        var metadataJson = JsonSerializer.SerializeToElement(new
+    protected override object BuildMetadataPayload(AssessmentMetadataChangedIntegrationEvent message)
+        => new
         {
-            msg.Title,
-            msg.Type,
-            msg.PassingScore,
-            msg.Status
-        });
-
-        var command = new SyncResourceMetadataCommand(msg.AssessmentId, metadataJson);
-        
-        // Use the module's Send method which uses the internal scope/mediator
-        await _coursesModule.Send(command, context.CancellationToken);
-    }
+            message.Title,
+            message.Type,
+            message.PassingScore,
+            message.Status
+        };
 }

@@ -30,6 +30,7 @@
 		<ProjectReference Include="..\..\..\AlphaZero.Shared\AlphaZero.Shared.csproj" />
 		<ProjectReference Include="..\..\..\aspire\Aspire.Shared\Aspire.Shared.csproj" />
 		<ProjectReference Include="..\..\Assessments\IntegrationEvents\IntegrationEvents.csproj" />
+		<ProjectReference Include="..\..\Documents\IntegrationEvents\IntegrationEvents.csproj" />
 		<ProjectReference Include="..\..\Library\IntegrationEvents\IntegrationEvents.csproj" />
 		<ProjectReference Include="..\..\VideoUploading\IntegrationEvents\IntegrationEvents.csproj" />
 		<ProjectReference Include="..\Application\Application.csproj" />

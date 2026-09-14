@@ -146,4 +146,59 @@ public class DocumentTests
         result.IsError.Should().BeFalse();
         result.Value.FileType.Should().Be("pdf");
     }
+
+    [Fact]
+    public void UpdateInformation_Should_UpdateTitleAndDescription_AndRaiseDomainEvent_WhenValid()
+    {
+        // Arrange
+        var doc = Document.Create(
+            Guid.NewGuid(),
+            Guid.NewGuid(),
+            "Original Title",
+            "Original Desc",
+            "pdf",
+            "s3/key",
+            100,
+            _clock).Value;
+
+        // Act
+        var result = doc.UpdateInformation("Updated Title", "Updated Desc");
+
+        // Assert
+        result.IsError.Should().BeFalse();
+        doc.Title.Should().Be("Updated Title");
+        doc.Description.Should().Be("Updated Desc");
+
+        var domainEvents = doc.PopDomainEvents().ToList();
+        domainEvents.Should().ContainSingle(e => e is AlphaZero.Modules.Documents.Domain.Events.DocumentMetadataUpdatedDomainEvent);
+        var domainEvent = domainEvents.OfType<AlphaZero.Modules.Documents.Domain.Events.DocumentMetadataUpdatedDomainEvent>().Single();
+        domainEvent.DocumentId.Should().Be(doc.Id);
+        domainEvent.Title.Should().Be("Updated Title");
+        domainEvent.Description.Should().Be("Updated Desc");
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData(" ")]
+    [InlineData(null)]
+    public void UpdateInformation_Should_Fail_WhenTitleIsEmpty(string? title)
+    {
+        // Arrange
+        var doc = Document.Create(
+            Guid.NewGuid(),
+            Guid.NewGuid(),
+            "Original Title",
+            "Original Desc",
+            "pdf",
+            "s3/key",
+            100,
+            _clock).Value;
+
+        // Act
+        var result = doc.UpdateInformation(title!, "Some Desc");
+
+        // Assert
+        result.IsError.Should().BeTrue();
+        result.FirstError.Code.Should().Be("Document.Title");
+    }
 }
