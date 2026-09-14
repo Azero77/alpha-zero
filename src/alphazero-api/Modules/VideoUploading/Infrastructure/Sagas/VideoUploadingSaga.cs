@@ -55,7 +55,8 @@ public class VideoUploadingSaga : MassTransitStateMachine<VideoState>
                 })
                 .Publish(context => new AnalyzeVideoCommand(
                     context.Message.VideoId, 
-                    context.Message.Key))
+                    context.Message.Key,
+                    context.Saga.TargetResourceArn))
                 .TransitionTo(Analyzing));
 
         During(Pending,
@@ -70,7 +71,8 @@ public class VideoUploadingSaga : MassTransitStateMachine<VideoState>
                 })
                 .Publish(context => new AnalyzeVideoCommand(
                     context.Message.VideoId, 
-                    context.Message.Key))
+                    context.Message.Key,
+                    context.Saga.TargetResourceArn))
                 .TransitionTo(Analyzing),
                 
             When(VideoMetadataProcessedEvent)
@@ -84,7 +86,8 @@ public class VideoUploadingSaga : MassTransitStateMachine<VideoState>
                     context.Saga.Key!, 
                     context.Message.Width,
                     context.Message.Height,
-                    context.Saga.EncryptionMethod))
+                    context.Saga.EncryptionMethod,
+                    context.Saga.TargetResourceArn))
                 .TransitionTo(Transcoding));
 
         During(Analyzing,
@@ -99,7 +102,8 @@ public class VideoUploadingSaga : MassTransitStateMachine<VideoState>
                     context.Saga.Key!, 
                     context.Message.Width,
                     context.Message.Height,
-                    context.Saga.EncryptionMethod))
+                    context.Saga.EncryptionMethod,
+                    context.Saga.TargetResourceArn))
                 .TransitionTo(Transcoding));
 
         During(Transcoding,
@@ -113,7 +117,8 @@ public class VideoUploadingSaga : MassTransitStateMachine<VideoState>
                 .Publish(context => new SyncVideoToCdnCommand(
                     context.Saga.CorrelationId, 
                     context.Saga.S3OutputPrefix!,
-                    context.Saga.CustomThumbnailKey))
+                    context.Saga.CustomThumbnailKey,
+                    context.Saga.TargetResourceArn))
                 .TransitionTo(Distributing));
 
         During(Distributing,

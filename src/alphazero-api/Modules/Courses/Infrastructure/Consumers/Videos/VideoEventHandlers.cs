@@ -73,6 +73,15 @@ public class VideoUploadingFailedEventHandler : IConsumer<VideoProcessingFailedE
     {
         var msg = context.Message;
 
+        if (string.IsNullOrEmpty(msg.TargetResourceArn))
+            return;
+
+        var arnResult = ResourceArn.Create(msg.TargetResourceArn);
+        if (arnResult.IsError) return;
+
+        var courseId = arnResult.Value.ExtractCourseId();
+        if (courseId is null) return;
+
         var command = new MarkCourseAssetFailedCommand(msg.VideoId, msg.Reason);
         var result = await _coursesModule.Send(command, context.CancellationToken);
 

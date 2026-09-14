@@ -5,11 +5,11 @@ namespace AlphaZero.Modules.VideoUploading.IntegrationEvents;
  * These are sent to specific consumers to perform a task.
  */
 
-public record AnalyzeVideoCommand(Guid VideoId, string Key);
+public record AnalyzeVideoCommand(Guid VideoId, string Key, string? TargetResourceArn = null);
 
-public record TranscodeVideoCommand(Guid VideoId, string Key, int Width, int Height, string? EncryptionMethod = "None");
+public record TranscodeVideoCommand(Guid VideoId, string Key, int Width, int Height, string? EncryptionMethod = "None", string? TargetResourceArn = null);
 
-public record SyncVideoToCdnCommand(Guid VideoId, string S3KeyPrefix, string? CustomThumbnailKey = null);
+public record SyncVideoToCdnCommand(Guid VideoId, string S3KeyPrefix, string? CustomThumbnailKey = null, string? TargetResourceArn = null);
 
 
 /* 
@@ -60,7 +60,7 @@ public record VideoMetadataResponse(
 
 public record VideoMetaDataNotFoundResponse(Guid VideoId);
 
-public record VideoProcessingFailedEvent(Guid VideoId, string Reason, string? Key);
+public record VideoProcessingFailedEvent(Guid VideoId, string Reason, string? Key, string? TargetResourceArn = null);
 
 // LIFECYCLE
 public record VideoDeletedFromS3Event(string Key);

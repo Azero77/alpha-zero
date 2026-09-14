@@ -43,7 +43,8 @@ public class TranscodeVideoCommandHandler : IConsumer<TranscodeVideoCommand>
             await context.Publish(new VideoProcessingFailedEvent(
                 context.Message.VideoId, 
                 $"Transcoding failed to start: {result.FirstError.Description}",
-                context.Message.Key));
+                context.Message.Key,
+                context.Message.TargetResourceArn));
             return;
         }
 

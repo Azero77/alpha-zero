@@ -1,4 +1,4 @@
-﻿using AlphaZero.Modules.VideoUploading.Application.Services;
+using AlphaZero.Modules.VideoUploading.Application.Services;
 using AlphaZero.Modules.VideoUploading.IntegrationEvents;
 using Aspire.Shared;
 using MassTransit;
@@ -42,7 +42,8 @@ public class SyncVideoToCdnCommandHandler : IConsumer<SyncVideoToCdnCommand>
             await context.Publish(new VideoProcessingFailedEvent(
                 context.Message.VideoId, 
                 $"CDN Sync failed: {syncResult.FirstError.Description}", 
-                context.Message.S3KeyPrefix));
+                context.Message.S3KeyPrefix,
+                context.Message.TargetResourceArn));
             return;
         }
 

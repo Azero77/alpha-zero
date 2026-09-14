@@ -92,6 +92,66 @@ public class MetadataConsumerTests
             It.IsAny<CancellationToken>()), Times.Once);
     }
 
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    public async Task VideoUploadingFailedEventHandler_Should_ReturnEarly_WhenTargetResourceArnIsNullOrEmpty(string? arn)
+    {
+        // Arrange
+        var consumer = new VideoUploadingFailedEventHandler(_coursesModuleMock.Object, new Mock<ILogger<VideoUploadingFailedEventHandler>>().Object);
+        var contextMock = new Mock<ConsumeContext<VideoProcessingFailedEvent>>();
+        var msg = new VideoProcessingFailedEvent(Guid.NewGuid(), "failed", "s3/key", arn);
+        contextMock.Setup(x => x.Message).Returns(msg);
+
+        // Act
+        await consumer.Consume(contextMock.Object);
+
+        // Assert
+        _coursesModuleMock.Verify(x => x.Send(It.IsAny<MarkCourseAssetFailedCommand>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task VideoUploadingFailedEventHandler_Should_ReturnEarly_WhenTargetResourceArnIsNotCourse()
+    {
+        // Arrange
+        var consumer = new VideoUploadingFailedEventHandler(_coursesModuleMock.Object, new Mock<ILogger<VideoUploadingFailedEventHandler>>().Object);
+        var contextMock = new Mock<ConsumeContext<VideoProcessingFailedEvent>>();
+        var nonCourseArn = ResourceArn.ForVideo(Guid.NewGuid(), Guid.NewGuid()).Value;
+        var msg = new VideoProcessingFailedEvent(Guid.NewGuid(), "failed", "s3/key", nonCourseArn);
+        contextMock.Setup(x => x.Message).Returns(msg);
+
+        // Act
+        await consumer.Consume(contextMock.Object);
+
+        // Assert
+        _coursesModuleMock.Verify(x => x.Send(It.IsAny<MarkCourseAssetFailedCommand>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task VideoUploadingFailedEventHandler_Should_SendCommand_WhenTargetResourceArnIsCourse()
+    {
+        // Arrange
+        var consumer = new VideoUploadingFailedEventHandler(_coursesModuleMock.Object, new Mock<ILogger<VideoUploadingFailedEventHandler>>().Object);
+        var contextMock = new Mock<ConsumeContext<VideoProcessingFailedEvent>>();
+        var tenantId = Guid.NewGuid();
+        var courseId = Guid.NewGuid();
+        var videoId = Guid.NewGuid();
+        var courseArn = ResourceArn.ForCourse(tenantId, courseId).Value;
+        var msg = new VideoProcessingFailedEvent(videoId, "failed", "s3/key", courseArn);
+        contextMock.Setup(x => x.Message).Returns(msg);
+
+        _coursesModuleMock.Setup(x => x.Send(It.IsAny<MarkCourseAssetFailedCommand>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Success);
+
+        // Act
+        await consumer.Consume(contextMock.Object);
+
+        // Assert
+        _coursesModuleMock.Verify(x => x.Send(
+            It.Is<MarkCourseAssetFailedCommand>(cmd => cmd.AssetId == videoId),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
     [Fact]
     public async Task MarkCourseAssetFailedCommandHandler_Should_ReturnSuccess_WhenAssetNotFound()
     {

@@ -33,7 +33,8 @@ public class AnalyzeVideoCommandHandler : IConsumer<AnalyzeVideoCommand>
             await context.Publish(new VideoProcessingFailedEvent(
                 context.Message.VideoId, 
                 $"Analysis failed: {specResult.FirstError.Description}",
-                context.Message.Key));
+                context.Message.Key,
+                context.Message.TargetResourceArn));
             return;
         }
 
