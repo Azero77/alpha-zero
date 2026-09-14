@@ -6,6 +6,9 @@ namespace AlphaZero.Shared.Application;
 /// <summary>
 /// A unified cross-module communication bus. 
 /// Handles Commands (Send), Events (Publish), and Queries (GetResponse) in-memory.
+/// TODO (Broker Selection): When transitioning to a dedicated external broker (e.g. AWS SNS/SQS or RabbitMQ),
+/// configure topic-based routing using TargetResourceArn segments (e.g., "courses.video", "tenant.video")
+/// so module queues subscribe only to topics relevant to their domain.
 /// </summary>
 public interface IModuleBus : IBus
 {

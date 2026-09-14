@@ -84,6 +84,8 @@ public class VideoUploadingFailedEventHandler : IConsumer<VideoProcessingFailedE
 
 /// <summary>
 /// Video published (transcoding done) → Mark the CourseAsset as Available via strategy payload.
+/// TODO (Broker Selection): When a production message broker (e.g. SQS/SNS, RabbitMQ) is configured,
+/// route these lifecycle events using topics (e.g. "courses.video") so only the courses queue consumes them.
 /// </summary>
 public class VideoUploadedEventHandler : IConsumer<VideoPublishedEvent>
 {
