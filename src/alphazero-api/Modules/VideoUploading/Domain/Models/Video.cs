@@ -215,3 +215,25 @@ public sealed class S3Uri : IEquatable<S3Uri>
     public static bool operator !=(S3Uri? left, S3Uri? right) =>
         !Equals(left, right);
 }
+
+
+public static class VideoConstants
+{
+    public static readonly string[] AllowedVideoFormats = [
+    ".mp4",
+    ".mov",
+    ".mkv",
+    ".webm"];
+
+    public static readonly string[] AllowedMIMETypes = [  
+    "video/mp4",
+    "video/quicktime",
+    "video/x-matroska",
+    "video/webm"
+    ];
+
+    public static string GetInputVideoSourceKey(string videoId, string tenantId)
+    {
+        return $"{tenantId}/{videoId}/";
+    }
+} 

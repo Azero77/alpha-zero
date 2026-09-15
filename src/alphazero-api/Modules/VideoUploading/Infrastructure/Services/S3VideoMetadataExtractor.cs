@@ -29,7 +29,6 @@ public class S3VideoSpecificationExtractor(IUploadService service) : IVideoSpeci
         {
             return Error.Failure("VideoUploading.Infrastructure.Media", "No Primary VideoStream for video at " + sourceKey);
         }
-
         return new VideoSpecifications(mediaInfo.Duration,
             new Resolution(videoStream.Width, videoStream.Height));
     }

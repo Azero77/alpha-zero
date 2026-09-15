@@ -58,6 +58,19 @@ public class ResourceArn
         return new ResourceArn(value);
     }
 
+    public static bool TryParse(string value, out ResourceArn output)
+    {
+        output = new ResourceArn();
+        if(string.IsNullOrWhiteSpace(value))
+            return false;
+        
+        var match = ConcreteRegex.IsMatch(value);
+        if(!match)
+            return false;
+        output = new ResourceArn(value);
+        return match;
+        
+    }
     public override string ToString() => Value;
 
     public Guid? ExtractResourceId()

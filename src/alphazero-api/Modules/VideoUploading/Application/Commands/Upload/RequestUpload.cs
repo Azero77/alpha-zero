@@ -10,6 +10,7 @@ using FluentValidation;
 using MassTransit;
 using MassTransit.Mediator;
 using MediatR;
+using System.Data;
 
 namespace AlphaZero.Modules.VideoUploading.Application.Commands.Upload;
 
@@ -18,10 +19,11 @@ public record UploadCommand(
     string contentType, 
     string title, 
     string? description, 
-    string? VideoTranscodingMetehod = null, 
-    string? VideoEncryptionMethod = null,
-    bool generateCustomThumbnailUrl = false,
-    string? TargetResourceArn = null): ICommand<UploadCommandResponse>;
+    string TargetResourceArn,
+    string VideoTranscodingMetehod, 
+    string VideoEncryptionMethod,
+    bool generateCustomThumbnailUrl = false
+    ): ICommand<UploadCommandResponse>;
 
 public class UploadCommandValidator : AbstractValidator<UploadCommand>
 {
@@ -41,19 +43,17 @@ public class UploadCommandValidator : AbstractValidator<UploadCommand>
             .NotEmpty()
             .MaximumLength(255);
 
-        When(x => !string.IsNullOrEmpty(x.VideoTranscodingMetehod), () =>
-        {
-            RuleFor(x => x.VideoTranscodingMetehod)
-                .IsEnumName(typeof(VideoTranscodingMetehod), caseSensitive: false)
-                .WithMessage("Invalid video transcoding method.");
-        });
+        RuleFor(x => x.VideoTranscodingMetehod)
+            .IsEnumName(typeof(VideoTranscodingMetehod), caseSensitive: false)
+            .WithMessage("Invalid video transcoding method.");
+        RuleFor(x => x.VideoEncryptionMethod)
+            .IsEnumName(typeof(VideoEncryptionMethod), caseSensitive: false)
+            .WithMessage("Invalid video encryption method.");
 
-        When(x => !string.IsNullOrEmpty(x.VideoEncryptionMethod), () =>
-        {
-            RuleFor(x => x.VideoEncryptionMethod)
-                .IsEnumName(typeof(VideoEncryptionMethod), caseSensitive: false)
-                .WithMessage("Invalid video encryption method.");
-        });
+        RuleFor(x => x.TargetResourceArn)
+            .NotEmpty()
+            .NotNull()
+            .Must(y =>  ResourceArn.TryParse(y,out _));
     }
 }
 
@@ -71,18 +71,13 @@ public record UploadCommandResponse(
 
 public sealed class UploadCommandHandler(IUploadService uploadService, IModuleBus moduleBus, IClock clock, ITenantProvider tenantProvider) : IRequestHandler<UploadCommand, ErrorOr<UploadCommandResponse>>
 {
+
     public async Task<ErrorOr<UploadCommandResponse>> Handle(UploadCommand request, CancellationToken cancellationToken)
     {
         Guid? tenantId = tenantProvider.GetTenant();
         if (tenantId is null) return Error.Failure("Tenant.NotFound", "Tenant not found in context.");
 
-        var transcodingMethod = !string.IsNullOrWhiteSpace(request.VideoTranscodingMetehod) && Enum.TryParse<VideoTranscodingMetehod>(request.VideoTranscodingMetehod, ignoreCase: true, out var parsedTranscoding)
-            ? parsedTranscoding
-            : VideoTranscodingMetehod.FFMPEG;
 
-        var encryptionMethod = !string.IsNullOrWhiteSpace(request.VideoEncryptionMethod) && Enum.TryParse<VideoEncryptionMethod>(request.VideoEncryptionMethod, ignoreCase: true, out var parsedEncryption)
-            ? parsedEncryption
-            : VideoEncryptionMethod.ClearKey;
 
         Guid videoId = Guid.NewGuid();
         var response = await uploadService.UploadFile(request.fileName, request.contentType, new Dictionary<string, string>()
@@ -91,8 +86,8 @@ public sealed class UploadCommandHandler(IUploadService uploadService, IModuleBu
             { "TenantId", tenantId.Value.ToString() },
             { "Title", request.title },
             { "Description", request.description ?? string.Empty },
-            { "VideoTranscodingMetehod", transcodingMethod.ToString() },
-            { "VideoEncryptionMethod", encryptionMethod.ToString() },
+            { "VideoTranscodingMetehod", request.VideoTranscodingMetehod.ToString() },
+            { "VideoEncryptionMethod", request.VideoEncryptionMethod.ToString() },
             { "TargetResourceArn", request.TargetResourceArn ?? string.Empty }
         });
         if (response.IsError) return response.Errors;
@@ -109,7 +104,6 @@ public sealed class UploadCommandHandler(IUploadService uploadService, IModuleBu
                 { "TenantId", tenantId.Value.ToString() },
                 { "IsThumbnail", "true" }
             });
-
             if (!thumbResponse.IsError)
             {
                 thumbnailKey = thumbResponse.Value.key;
@@ -122,7 +116,7 @@ public sealed class UploadCommandHandler(IUploadService uploadService, IModuleBu
             videoId, 
             tenantId.Value, 
             clock.Now, 
-            encryptionMethod.ToString(),
+            request.VideoEncryptionMethod.ToString(),
             thumbnailKey,
             request.TargetResourceArn));
 
@@ -131,8 +125,8 @@ public sealed class UploadCommandHandler(IUploadService uploadService, IModuleBu
             tenantId.Value, 
             response.Value.key, 
             response.Value.presignedUrl, 
-            transcodingMethod.ToString(),
-            encryptionMethod.ToString(),
+            request.VideoTranscodingMetehod.ToString(),
+            request.VideoEncryptionMethod.ToString(),
             response.Value.headers,
             thumbnailKey,
             thumbnailPreSignedUrl,
