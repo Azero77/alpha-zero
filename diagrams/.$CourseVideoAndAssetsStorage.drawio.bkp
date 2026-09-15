@@ -1,6 +1,6 @@
 <mxfile host="Electron">
   <diagram name="Page-1" id="AAQ_jDSkcDyPRwCPwCVN">
-    <mxGraphModel dx="2231" dy="2095" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+    <mxGraphModel dx="3354" dy="3517" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
@@ -797,12 +797,6 @@
             </mxGeometry>
           </mxCell>
         </UserObject>
-        <mxCell id="zv3H3yIb0KvCdj69SzyI-1" parent="1" style="swimlane;startSize=0;" value="" vertex="1">
-          <mxGeometry height="200" width="200" x="-100" y="80" as="geometry" />
-        </mxCell>
-        <mxCell id="zv3H3yIb0KvCdj69SzyI-2" edge="1" parent="1" source="5Op3Avf0GMEXD0SM4r9O-128" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="zv3H3yIb0KvCdj69SzyI-1" value="">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
       </root>
     </mxGraphModel>
   </diagram>
