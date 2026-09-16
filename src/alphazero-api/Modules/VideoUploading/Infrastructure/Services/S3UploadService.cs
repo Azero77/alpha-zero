@@ -88,12 +88,11 @@ public class S3UploadService : IUploadService
         return tasks.Select(r => r.IsCompletedSuccessfully ? r.Result : null).ToList();
     }
 
-    public async Task<ErrorOr<GetPresignedUrlResponse>> UploadFile(string fileName, string contentType, Dictionary<string,string>? metadata = null)
+    public async Task<ErrorOr<GetPresignedUrlResponse>> UploadFile(string fileName, string key, string contentType, Dictionary<string,string>? metadata = null)
     {
         try
         {
-            Guid guid = Guid.NewGuid();
-            string key = $"{FilesFolder}/{guid}";
+            //string key = $"{FilesFolder}/{guid}";
             var headersToSign = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
                 { "content-type", contentType }

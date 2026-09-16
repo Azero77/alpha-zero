@@ -7,7 +7,7 @@ namespace AlphaZero.Modules.VideoUploading.IntegrationEvents;
 
 public record AnalyzeVideoCommand(Guid VideoId, string Key, string? TargetResourceArn = null);
 
-public record TranscodeVideoCommand(Guid VideoId, string Key, int Width, int Height, string? EncryptionMethod = "None", string? TargetResourceArn = null);
+public record TranscodeVideoCommand(Guid VideoId, Guid TenantId,string Key, int Width, int Height, string? EncryptionMethod = "None", string? TargetResourceArn = null);
 
 public record SyncVideoToCdnCommand(Guid VideoId, string S3KeyPrefix, string? CustomThumbnailKey = null, string? TargetResourceArn = null);
 

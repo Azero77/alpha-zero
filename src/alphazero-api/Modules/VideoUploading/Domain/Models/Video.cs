@@ -217,7 +217,7 @@ public sealed class S3Uri : IEquatable<S3Uri>
 }
 
 
-public static class VideoConstants
+public class VideoConstants
 {
     public static readonly string[] AllowedVideoFormats = [
     ".mp4",
@@ -235,5 +235,25 @@ public static class VideoConstants
     public static string GetInputVideoSourceKey(string videoId, string tenantId)
     {
         return $"{tenantId}/{videoId}/";
+    }
+
+    public static string GetInputS3Url(string bucketName,string videoId, string tenantId)
+    {
+        return $"s3://{bucketName}/{GetInputVideoSourceKey(videoId,tenantId)}";
+    }
+
+    public static string GetThumbnailVideoSourceKey(string videoId, string tenantId)
+    {
+        return $"{tenantId}/{videoId}/thumbnail/thumbnail.jpg";
+    } 
+
+    public static string GetOutputVideoKey(string videoId, string tenantId)
+    {
+        return $"streaming/{tenantId}/{videoId}/master";
+    }
+
+    public static string GetOutputPathS3Url(string bucketName,string videoId, string tenantId)
+    {
+        return $"s3://{bucketName}/{GetOutputVideoKey(videoId,tenantId)}";
     }
 } 

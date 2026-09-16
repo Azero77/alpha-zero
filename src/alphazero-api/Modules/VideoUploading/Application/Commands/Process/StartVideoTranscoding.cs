@@ -10,13 +10,15 @@ using FluentValidation;
 using MassTransit;
 using MediatR;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Primitives;
 
 namespace AlphaZero.Modules.VideoUploading.Application.Commands.Process;
 
 public record StartVideoTranscodingCommand(
-    Guid VideoId, 
+    Guid VideoId,
+    Guid TenantId, 
     string Key, 
-    int SourceWidth, 
+    int SourceWidth,
     int SourceHeight,
     string? EncryptionMethod = "None") : ICommand<string>;
 
@@ -53,10 +55,10 @@ public sealed class StartVideoTranscodingCommandHandler : IRequestHandler<StartV
         string sourceBucket = _aWSResources.InputS3?.BucketName 
             ?? throw new ArgumentException("Input S3 bucket is not configured");
 
-        string sourceS3 = $"s3://{sourceBucket}/{request.Key}";
+        string sourceS3 = VideoConstants.GetInputS3Url(sourceBucket,request.VideoId.ToString(), request.TenantId.ToString());
         string destinationBucket = _aWSResources.OutputS3?.BucketName 
             ?? throw new ArgumentException("Output S3 bucket is not configured");
-        string outputPath = $"s3://{destinationBucket}/streaming/{request.VideoId}/master";
+        string outputPath = VideoConstants.GetOutputPathS3Url(destinationBucket, request.VideoId.ToString(), request.TenantId.ToString());
 
         var metadataResponse = await _uploadService.GetMetadata(request.Key);
         if (metadataResponse.IsError) return metadataResponse.Errors;

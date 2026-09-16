@@ -36,8 +36,8 @@ public class FFmpegTranscodingService : IVideoTranscodingService
         _logger.LogInformation("[FFmpegService] Initiating background transcoding for Video: {VideoId}", videoId);
 
 
-        // inputS3Uri is s3://bucket/key
-        // outputPathS3Uri is s3://bucket/streaming/videoId/master.m3u8
+        // inputS3Uri is s3://bucket/<TenantId>/key
+        // outputPathS3Uri is s3://bucket/streaming/tenantId/videoId/master.m3u8
 
         // Extract the key from inputS3Uri
         string sourceKey = S3Uri.Parse(inputS3Uri).Key;

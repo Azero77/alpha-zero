@@ -33,7 +33,7 @@ public class VideoUploadingSaga : MassTransitStateMachine<VideoState>
         Event(() => VideoProcessingFailedEvent, e => e.CorrelateById(x => x.Message.VideoId));
 
         InstanceState(x => x.CurrentState);
-        SetCompletedWhenFinalized();
+        //SetCompletedWhenFinalized(); we don't delete the entity to handle duplicate after the video publish is made , we delete with a background job later TODO
         Initially(
             When(UploadVideoRequestedEvent)
                 .Then(context => {
@@ -47,58 +47,22 @@ public class VideoUploadingSaga : MassTransitStateMachine<VideoState>
             When(VideoDeliveredToInputEvent)
                 .Then(context => {
                     context.Saga.Key = context.Message.Key;
-                    context.Saga.TenantId = context.Message.TenantId;
-                    if (!string.IsNullOrEmpty(context.Message.TargetResourceArn))
-                    {
-                        context.Saga.TargetResourceArn = context.Message.TargetResourceArn;
-                    }
                 })
                 .Publish(context => new AnalyzeVideoCommand(
                     context.Message.VideoId, 
                     context.Message.Key,
                     context.Saga.TargetResourceArn))
                 .TransitionTo(Analyzing));
-
-        During(Pending,
-            When(VideoDeliveredToInputEvent)
-                .Then(context => {
-                    context.Saga.Key = context.Message.Key;
-                    context.Saga.TenantId = context.Message.TenantId;
-                    if (!string.IsNullOrEmpty(context.Message.TargetResourceArn))
-                    {
-                        context.Saga.TargetResourceArn = context.Message.TargetResourceArn;
-                    }
-                })
-                .Publish(context => new AnalyzeVideoCommand(
-                    context.Message.VideoId, 
-                    context.Message.Key,
-                    context.Saga.TargetResourceArn))
-                .TransitionTo(Analyzing),
-                
-            When(VideoMetadataProcessedEvent)
-                .Then(context => {
-                    context.Saga.SourceWidth = context.Message.Width;
-                    context.Saga.SourceHeight = context.Message.Height;
-                    context.Saga.Duration = context.Message.Duration;
-                })
-                .Publish(context => new TranscodeVideoCommand(
-                    context.Saga.CorrelationId,
-                    context.Saga.Key!, 
-                    context.Message.Width,
-                    context.Message.Height,
-                    context.Saga.EncryptionMethod,
-                    context.Saga.TargetResourceArn))
-                .TransitionTo(Transcoding));
-
         During(Analyzing,
             When(VideoMetadataProcessedEvent)
-                .Then(context => {
+             .Then(context => {
                     context.Saga.SourceWidth = context.Message.Width;
                     context.Saga.SourceHeight = context.Message.Height;
                     context.Saga.Duration = context.Message.Duration;
                 })
                 .Publish(context => new TranscodeVideoCommand(
                     context.Saga.CorrelationId,
+                    context.Saga.TenantId,
                     context.Saga.Key!, 
                     context.Message.Width,
                     context.Message.Height,

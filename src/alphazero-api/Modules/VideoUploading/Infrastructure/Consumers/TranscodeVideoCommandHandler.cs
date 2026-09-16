@@ -31,6 +31,7 @@ public class TranscodeVideoCommandHandler : IConsumer<TranscodeVideoCommand>
         var result = await _module.Send<Application.Commands.Process.StartVideoTranscodingCommand, ErrorOr<string>>(
             new Application.Commands.Process.StartVideoTranscodingCommand(
                 context.Message.VideoId, 
+                context.Message.TenantId,
                 context.Message.Key, 
                 context.Message.Width,
                 context.Message.Height,

@@ -80,7 +80,8 @@ public sealed class UploadCommandHandler(IUploadService uploadService, IModuleBu
 
 
         Guid videoId = Guid.NewGuid();
-        var response = await uploadService.UploadFile(request.fileName, request.contentType, new Dictionary<string, string>()
+        
+        var response = await uploadService.UploadFile(request.fileName,VideoConstants.GetInputVideoSourceKey(videoId.ToString(), tenantId.ToString()!) ,request.contentType, new Dictionary<string, string>()
         {
             { "VideoId" , videoId.ToString()},
             { "TenantId", tenantId.Value.ToString() },
@@ -98,18 +99,17 @@ public sealed class UploadCommandHandler(IUploadService uploadService, IModuleBu
 
         if (request.generateCustomThumbnailUrl)
         {
-            var thumbResponse = await uploadService.UploadFile("thumbnail.jpg", "image/jpeg", new Dictionary<string, string>()
+            var thumbResponse = await uploadService.UploadFile("thumbnail.jpg", VideoConstants.GetThumbnailVideoSourceKey(videoId.ToString(), tenantId.ToString()!),"image/jpeg", new Dictionary<string, string>()
             {
                 { "VideoId" , videoId.ToString()},
                 { "TenantId", tenantId.Value.ToString() },
                 { "IsThumbnail", "true" }
             });
-            if (!thumbResponse.IsError)
-            {
-                thumbnailKey = thumbResponse.Value.key;
-                thumbnailPreSignedUrl = thumbResponse.Value.presignedUrl;
-                thumbnailHeaders = thumbResponse.Value.headers;
-            }
+            if(thumbResponse.IsError)
+                return thumbResponse.Errors;
+            thumbnailKey = thumbResponse.Value.key;
+            thumbnailPreSignedUrl = thumbResponse.Value.presignedUrl;
+            thumbnailHeaders = thumbResponse.Value.headers;
         }
 
         await moduleBus.Publish(new UploadVideoRequestedEvent(
