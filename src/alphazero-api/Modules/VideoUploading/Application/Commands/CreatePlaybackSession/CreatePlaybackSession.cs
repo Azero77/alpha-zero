@@ -94,36 +94,36 @@ public class CreatePlaybackSessionCommandHandler : IRequestHandler<CreatePlaybac
             return Error.Unauthorized("Identity.Unauthorized", "User is not authenticated.");
         }
 
-        // 2. If Course Context is provided, verify curriculum enrollment via Courses module
-        if (request.CourseId.HasValue)
-        {
-            try
-            {
-                var requestClient = _moduleBus.CreateRequestClient<VerifyCoursePlaybackAccessRequest>();
-                var verificationResponse = await requestClient.GetResponse<VerifyCoursePlaybackAccessResponse>(
-                    new VerifyCoursePlaybackAccessRequest(
-                        request.CourseId.Value,
-                        request.ItemId,
-                        request.VideoId,
-                        currentUser.UserId),
-                    cancellationToken);
+        // // 2. If Course Context is provided, verify curriculum enrollment via Courses module
+        // if (request.CourseId.HasValue)
+        // {
+        //     try
+        //     {
+        //         var requestClient = _moduleBus.CreateRequestClient<VerifyCoursePlaybackAccessRequest>();
+        //         var verificationResponse = await requestClient.GetResponse<VerifyCoursePlaybackAccessResponse>(
+        //             new VerifyCoursePlaybackAccessRequest(
+        //                 request.CourseId.Value,
+        //                 request.ItemId,
+        //                 request.VideoId,
+        //                 currentUser.UserId),
+        //             cancellationToken);
 
-                if (!verificationResponse.Message.IsAllowed)
-                {
-                    _logger.LogWarning(
-                        "Course playback access denied for User {UserId} in Course {CourseId}: {Reason}",
-                        currentUser.UserId, request.CourseId.Value, verificationResponse.Message.Reason);
-                    return Error.Forbidden(
-                        "Course.AccessDenied",
-                        verificationResponse.Message.Reason ?? "Access to course video is denied.");
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error communicating with Courses module during access verification.");
-                return Error.Failure("Courses.VerificationFailure", "Could not verify course access.");
-            }
-        }
+        //         if (!verificationResponse.Message.IsAllowed)
+        //         {
+        //             _logger.LogWarning(
+        //                 "Course playback access denied for User {UserId} in Course {CourseId}: {Reason}",
+        //                 currentUser.UserId, request.CourseId.Value, verificationResponse.Message.Reason);
+        //             return Error.Forbidden(
+        //                 "Course.AccessDenied",
+        //                 verificationResponse.Message.Reason ?? "Access to course video is denied.");
+        //         }
+        //     }
+        //     catch (Exception ex)
+        //     {
+        //         _logger.LogError(ex, "Error communicating with Courses module during access verification.");
+        //         return Error.Failure("Courses.VerificationFailure", "Could not verify course access.");
+        //     }
+        // }
 
         // 3. Verify Video Existence and Readiness in VideoUploading DB
         var video = await _videoRepository.GetByIdAsync(request.VideoId, cancellationToken);

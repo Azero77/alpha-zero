@@ -25,6 +25,7 @@
     <PackageReference Include="Testcontainers.PostgreSql" />
     <PackageReference Include="Respawn" />
     <PackageReference Include="Bogus" />
+    <PackageReference Include="Moq" />
   </ItemGroup>
 
   <ItemGroup>

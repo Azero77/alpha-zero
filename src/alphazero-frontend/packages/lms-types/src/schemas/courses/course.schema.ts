@@ -68,7 +68,6 @@ export const PagedCoursesResponseSchema = createPagedResultSchema(CourseSummaryD
 export type PagedCoursesResponse = z.infer<typeof PagedCoursesResponseSchema>;
 
 export const ResourceDtoSchema = z.object({
-  assetId: guidSchema,
   arn: z.string(),
   type: z.string(),
   order: z.number(),

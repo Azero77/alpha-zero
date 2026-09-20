@@ -130,7 +130,6 @@ public sealed class UploadCommandHandler(
         if (videoResult.IsError) return videoResult.Errors;
 
         await videoRepository.AddAsync(videoResult.Value, cancellationToken);
-        await unitOfWork.SaveChangesAsync(cancellationToken);
 
         await moduleBus.Publish(new UploadVideoRequestedEvent(
             videoId, 

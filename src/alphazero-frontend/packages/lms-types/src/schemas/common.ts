@@ -98,3 +98,45 @@ export function buildCourseArn(
   }
   return buildArn("courses", tenantId, path);
 }
+
+/**
+ * Builds a concrete video ARN (e.g. az:video:{tenantId}:video/{videoId})
+ */
+export function buildVideoArn(tenantId: string, videoId: string): string {
+  return buildArn("video", tenantId, `video/${videoId}`);
+}
+
+/**
+ * Extracts the trailing resource GUID from an ARN resource path
+ * e.g. az:video:tenant-1:video/7fa85f64-5717-4562-b3fc-2c963f66afa6 -> "7fa85f64-5717-4562-b3fc-2c963f66afa6"
+ */
+export function extractResourceId(arn: string): string | null {
+  try {
+    const parsed = parseArn(arn);
+    const segments = parsed.resourcePath.split("/");
+    const last = segments[segments.length - 1];
+    return guidSchema.safeParse(last).success ? last : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Extracts the videoId specifically from a video or coursevideo ARN
+ * Supports:
+ * - az:video:{tenantId}:video/{videoId}
+ * - az:coursevideo:{tenantId}:course/{courseId}/video/{videoId}
+ */
+export function extractVideoId(arn: string): string | null {
+  try {
+    const parsed = parseArn(arn);
+    if (parsed.service === "video" || parsed.service === "coursevideo") {
+      const segments = parsed.resourcePath.split("/");
+      const last = segments[segments.length - 1];
+      return guidSchema.safeParse(last).success ? last : null;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}

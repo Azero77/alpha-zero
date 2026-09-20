@@ -119,7 +119,7 @@ public class LoginPrincipalCommandHandlerTests
             passwordHash,
             "Admin User",
             PrincipalType.User,
-            null,
+            "az:course:*:*",
             TenantId).Value;
 
         _principalRepository.GetFirst(Arg.Any<Expression<Func<Principal, bool>>>(), Arg.Any<CancellationToken>())
