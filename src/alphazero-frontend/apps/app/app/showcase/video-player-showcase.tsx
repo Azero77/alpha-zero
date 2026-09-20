@@ -34,6 +34,7 @@ import {
   EyeOffIcon,
   GlobeIcon,
   KeyRoundIcon,
+  KeyboardIcon,
   LaptopIcon,
   LayersIcon,
   LockIcon,
@@ -53,12 +54,23 @@ interface StreamPreset {
   nameEn: string;
   nameAr: string;
   url: string;
+  poster?: string;
   badge: string;
   descriptionEn: string;
   descriptionAr: string;
 }
 
 const STREAM_PRESETS: StreamPreset[] = [
+  {
+    id: "user-sketchy-sample",
+    nameEn: "AlphaZero Sample: Sketchy Video (Local Multi-Bitrate)",
+    nameAr: "عينة ألفا زيرو: Sketchy Video (متعدد الدقات محلياً)",
+    url: "/samples/testSketchyVideo/master.m3u8",
+    poster: "/samples/testSketchyVideo/poster.jpg",
+    badge: "Local Sample • 720p / 480p / 360p + Audio",
+    descriptionEn: "Multi-bitrate HLS packaged with Shaka Packager. Tests custom player resolution switching across 720p, 480p, and 360p tiers.",
+    descriptionAr: "بث محلي متعدد الدقات تم حزمه عبر Shaka Packager لاختبار التبديل السلس بين دقات 720p و 480p و 360p.",
+  },
   {
     id: "mux-demo",
     nameEn: "Mux Adaptive Multi-Bitrate HLS",
@@ -93,9 +105,12 @@ export function VideoPlayerShowcaseClient() {
   const isRtl = direction === "rtl";
 
   // Stream state
-  const [selectedPreset, setSelectedPreset] = React.useState<string>("mux-demo");
+  const [selectedPreset, setSelectedPreset] = React.useState<string>("user-sketchy-sample");
   const [manifestUrl, setManifestUrl] = React.useState<string>(
     STREAM_PRESETS[0].url
+  );
+  const [posterUrl, setPosterUrl] = React.useState<string | undefined>(
+    STREAM_PRESETS[0].poster
   );
   const [customUrlInput, setCustomUrlInput] = React.useState<string>("");
 
@@ -140,6 +155,7 @@ export function VideoPlayerShowcaseClient() {
   const handleSelectPreset = (preset: StreamPreset) => {
     setSelectedPreset(preset.id);
     setManifestUrl(preset.url);
+    setPosterUrl(preset.poster);
     setPlayerKey((k) => k + 1);
     toast.info(isRtl ? `تم تبديل البث: ${preset.nameAr}` : `Switched stream: ${preset.nameEn}`);
   };
@@ -151,6 +167,7 @@ export function VideoPlayerShowcaseClient() {
     }
     setSelectedPreset("custom");
     setManifestUrl(customUrlInput.trim());
+    setPosterUrl(undefined);
     setPlayerKey((k) => k + 1);
     toast.success(isRtl ? "تم تحميل الرابط المخصص" : "Loaded custom stream URL");
   };
@@ -296,6 +313,12 @@ export function VideoPlayerShowcaseClient() {
                   <VideoPlayer
                     key={playerKey}
                     manifestUrl={manifestUrl}
+                    poster={posterUrl}
+                    title={
+                      STREAM_PRESETS.find((p) => p.id === selectedPreset)?.[
+                        isRtl ? "nameAr" : "nameEn"
+                      ] ?? (isRtl ? "بث مخصص" : "Custom Stream")
+                    }
                     watermarkContext={watermarkContext}
                     watermarkOpacity={watermarkOpacity}
                     showWatermark={showWatermark}
@@ -443,6 +466,132 @@ export function VideoPlayerShowcaseClient() {
                   <RadioIcon className="size-3.5" />
                   <span>{isRtl ? "فحص إعدادات الباندويث المنخفض" : "Check Low-Bandwidth Profile"}</span>
                 </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Keyboard Shortcuts & Player Controls Guide */}
+          <Card className="border-border/80 shadow-xs">
+            <CardHeader className="pb-3 text-start">
+              <CardTitle className="text-base font-semibold flex items-center gap-2">
+                <KeyboardIcon className="size-4 text-primary" />
+                <span>
+                  {isRtl
+                    ? "اختصارات لوحة المفاتيح والتحكم المتقدم"
+                    : "Keyboard Hotkeys & Pro Player Controls"}
+                </span>
+              </CardTitle>
+              <CardDescription className="text-xs">
+                {isRtl
+                  ? "تحكم احترافي بالكامل عبر الكيبورد مع تبديل الدقات بدون إعادة تحميل، وضع توفير البيانات، ومؤشر التخزين المؤقت."
+                  : "Fully accessible keyboard shortcuts, smooth timeline scrubbing, live buffer metrics, and on-the-fly multi-bitrate resolution switching."}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3 text-start">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+                <div className="p-2 rounded-lg bg-muted/40 border border-border/50 flex flex-col justify-between gap-1">
+                  <span className="text-[10px] text-muted-foreground font-semibold">
+                    {isRtl ? "تشغيل / إيقاف" : "Play / Pause"}
+                  </span>
+                  <div className="flex items-center gap-1 font-mono font-bold text-foreground">
+                    <kbd className="px-1.5 py-0.5 rounded bg-background border border-border text-[11px]">
+                      Space
+                    </kbd>
+                    <span className="text-muted-foreground">/</span>
+                    <kbd className="px-1.5 py-0.5 rounded bg-background border border-border text-[11px]">
+                      K
+                    </kbd>
+                  </div>
+                </div>
+
+                <div className="p-2 rounded-lg bg-muted/40 border border-border/50 flex flex-col justify-between gap-1">
+                  <span className="text-[10px] text-muted-foreground font-semibold">
+                    {isRtl ? "قفز ١٠ ثوانٍ" : "Seek ±10s"}
+                  </span>
+                  <div className="flex items-center gap-1 font-mono font-bold text-foreground">
+                    <kbd className="px-1.5 py-0.5 rounded bg-background border border-border text-[11px]">
+                      J
+                    </kbd>
+                    <span className="text-muted-foreground">/</span>
+                    <kbd className="px-1.5 py-0.5 rounded bg-background border border-border text-[11px]">
+                      L
+                    </kbd>
+                  </div>
+                </div>
+
+                <div className="p-2 rounded-lg bg-muted/40 border border-border/50 flex flex-col justify-between gap-1">
+                  <span className="text-[10px] text-muted-foreground font-semibold">
+                    {isRtl ? "قفز ٥ ثوانٍ" : "Seek ±5s"}
+                  </span>
+                  <div className="flex items-center gap-1 font-mono font-bold text-foreground">
+                    <kbd className="px-1.5 py-0.5 rounded bg-background border border-border text-[11px]">
+                      ←
+                    </kbd>
+                    <span className="text-muted-foreground">/</span>
+                    <kbd className="px-1.5 py-0.5 rounded bg-background border border-border text-[11px]">
+                      →
+                    </kbd>
+                  </div>
+                </div>
+
+                <div className="p-2 rounded-lg bg-muted/40 border border-border/50 flex flex-col justify-between gap-1">
+                  <span className="text-[10px] text-muted-foreground font-semibold">
+                    {isRtl ? "مستوى الصوت ±١٠٪" : "Volume ±10%"}
+                  </span>
+                  <div className="flex items-center gap-1 font-mono font-bold text-foreground">
+                    <kbd className="px-1.5 py-0.5 rounded bg-background border border-border text-[11px]">
+                      ↑
+                    </kbd>
+                    <span className="text-muted-foreground">/</span>
+                    <kbd className="px-1.5 py-0.5 rounded bg-background border border-border text-[11px]">
+                      ↓
+                    </kbd>
+                  </div>
+                </div>
+
+                <div className="p-2 rounded-lg bg-muted/40 border border-border/50 flex flex-col justify-between gap-1">
+                  <span className="text-[10px] text-muted-foreground font-semibold">
+                    {isRtl ? "كتم الصوت" : "Mute Toggle"}
+                  </span>
+                  <div className="flex items-center gap-1 font-mono font-bold text-foreground">
+                    <kbd className="px-1.5 py-0.5 rounded bg-background border border-border text-[11px]">
+                      M
+                    </kbd>
+                  </div>
+                </div>
+
+                <div className="p-2 rounded-lg bg-muted/40 border border-border/50 flex flex-col justify-between gap-1">
+                  <span className="text-[10px] text-muted-foreground font-semibold">
+                    {isRtl ? "ملء الشاشة" : "Fullscreen"}
+                  </span>
+                  <div className="flex items-center gap-1 font-mono font-bold text-foreground">
+                    <kbd className="px-1.5 py-0.5 rounded bg-background border border-border text-[11px]">
+                      F
+                    </kbd>
+                  </div>
+                </div>
+
+                <div className="p-2 rounded-lg bg-muted/40 border border-border/50 flex flex-col justify-between gap-1">
+                  <span className="text-[10px] text-muted-foreground font-semibold">
+                    {isRtl ? "وضع السينما" : "Theater Mode"}
+                  </span>
+                  <div className="flex items-center gap-1 font-mono font-bold text-foreground">
+                    <kbd className="px-1.5 py-0.5 rounded bg-background border border-border text-[11px]">
+                      T
+                    </kbd>
+                  </div>
+                </div>
+
+                <div className="p-2 rounded-lg bg-muted/40 border border-border/50 flex flex-col justify-between gap-1">
+                  <span className="text-[10px] text-muted-foreground font-semibold">
+                    {isRtl ? "توفير البيانات" : "Data-Saver"}
+                  </span>
+                  <div className="flex items-center gap-1 font-mono font-bold text-foreground">
+                    <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold">
+                      {isRtl ? "سقف 480p" : "≤ 480p Cap"}
+                    </span>
+                  </div>
+                </div>
               </div>
             </CardContent>
           </Card>

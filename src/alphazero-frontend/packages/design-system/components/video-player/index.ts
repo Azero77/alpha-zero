@@ -1,2 +1,11 @@
-export { VideoPlayer, type VideoPlayerProps } from "./video-player";
-export { DynamicVisibleWatermark, type WatermarkData } from "./dynamic-visible-watermark";
+export { VideoPlayer } from "./video-player";
+export type {
+  VideoPlayerProps,
+  VideoQualityLevel,
+  PlaybackRate,
+} from "./video-player-types";
+export {
+  DynamicVisibleWatermark,
+  type WatermarkData,
+  type DynamicVisibleWatermarkProps,
+} from "./dynamic-visible-watermark";
