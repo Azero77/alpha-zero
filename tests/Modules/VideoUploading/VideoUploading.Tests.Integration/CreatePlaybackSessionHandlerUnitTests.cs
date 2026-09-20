@@ -90,7 +90,6 @@ public class CreatePlaybackSessionHandlerUnitTests
             _cookieSigner,
             _userRepo,
             _tenantProvider,
-            null!, // moduleBus not reached
             NullLogger<CreatePlaybackSessionCommandHandler>.Instance);
 
         var command = new CreatePlaybackSessionCommand(Guid.NewGuid());
@@ -117,7 +116,6 @@ public class CreatePlaybackSessionHandlerUnitTests
             _cookieSigner,
             _userRepo,
             _tenantProvider,
-            null!,
             NullLogger<CreatePlaybackSessionCommandHandler>.Instance);
 
         var videoId = Guid.NewGuid();
@@ -151,7 +149,6 @@ public class CreatePlaybackSessionHandlerUnitTests
             _cookieSigner,
             _userRepo,
             _tenantProvider,
-            null!,
             NullLogger<CreatePlaybackSessionCommandHandler>.Instance);
 
         var command = new CreatePlaybackSessionCommand(video.Id);
@@ -176,9 +173,8 @@ public class CreatePlaybackSessionHandlerUnitTests
         var clock = new FakeClock();
         var metadata = new VideoMetadata("test.mp4", "video/mp4", 1000, "ffmpeg");
         var thumbnail = ThumbnailInfo.Empty;
-        var video = Video.Create(Guid.NewGuid(), tenantId, "Test Title", "Desc", "source-key", metadata, thumbnail, clock).Value;
-
         // Transition video to Published
+        var video = Video.Create(Guid.NewGuid(), tenantId, "Test Title", "Desc", "source-key", metadata, thumbnail, clock).Value;
         video.MarkAsPublished("streaming/1080p", VideoSpecifications.Empty, clock);
         _videoRepo.VideoToReturn = video;
 
@@ -187,7 +183,6 @@ public class CreatePlaybackSessionHandlerUnitTests
             _cookieSigner,
             _userRepo,
             _tenantProvider,
-            null!,
             NullLogger<CreatePlaybackSessionCommandHandler>.Instance);
 
         var command = new CreatePlaybackSessionCommand(video.Id);
