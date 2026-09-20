@@ -12,7 +12,9 @@ import { Label } from "@repo/design-system/components/ui/label";
 import { Badge } from "@repo/design-system/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@repo/design-system/components/ui/card";
 import { toast } from "@repo/design-system/components/ui/sonner";
+import Link from "next/link";
 import {
+  ArrowRightIcon,
   CheckCircle2Icon,
   CopyIcon,
   GlobeIcon,
@@ -20,6 +22,7 @@ import {
   LayersIcon,
   PlayCircleIcon,
   RefreshCwIcon,
+  ShieldCheckIcon,
   SlidersIcon,
   SparklesIcon,
 } from "lucide-react";
@@ -477,6 +480,60 @@ export function ComponentsShowcaseClient() {
                 }}
               />
             </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* ========================================================================= */}
+      {/* COMPONENT 4: Video Player & Watermark Engine */}
+      {/* ========================================================================= */}
+      <Card className="border-border/80 shadow-xs border-primary/30 bg-card/80">
+        <CardHeader className="pb-3 text-start">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <CardTitle className="text-base font-semibold flex items-center gap-2">
+                  <PlayCircleIcon className="size-4 text-primary" />
+                  <span>{isRtl ? "٤. مشغل الفيديو الآمن ومحرك العلامات المائية" : "4. Secure Video Player & Dynamic Watermark"}</span>
+                </CardTitle>
+                <Badge variant="default" className="text-xs bg-emerald-600 text-white">
+                  Zero-Trust HLS
+                </Badge>
+              </div>
+              <CardDescription className="text-xs">
+                {isRtl
+                  ? "مشغل HLS المشفر مع دعم الكوكيز الموقعة من Cloudflare وعلامة مائية عائمة لمنع التسريب والتصوير."
+                  : "Encrypted HLS player with Cloudflare signed capability cookies and 2D Brownian anti-piracy watermark."}
+              </CardDescription>
+            </div>
+
+            <Link href="/showcase/video-player">
+              <Button size="sm" className="gap-1.5 text-xs font-semibold cursor-pointer">
+                <span>{isRtl ? "فتح مختبر الفيديو التفاعلي" : "Open Video Laboratory"}</span>
+                <ArrowRightIcon className="size-3.5" />
+              </Button>
+            </Link>
+          </div>
+        </CardHeader>
+
+        <CardContent className="space-y-4 text-start">
+          <div className="p-4 rounded-xl border border-border/60 bg-muted/20 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2 text-xs font-semibold text-foreground">
+                <ShieldCheckIcon className="size-4 text-primary" />
+                <span>{isRtl ? "الهيكل الأمني المتكامل لمشغل الفيديو" : "Full Security Architecture Active"}</span>
+              </div>
+              <p className="text-[11px] text-muted-foreground">
+                {isRtl
+                  ? "يتضمن المشغل تكامل كوكيز الحافة، وإعادة كتابة القوائم في BFF، وتذاكر فك التشفير اللحظية (١٢٠ ثانية)، وحركة براونية ديناميكية."
+                  : "Includes Cloudflare Edge Cookies, BFF manifest rewriting, 120s ephemeral AES key tickets, and dual-layer canvas watermarking."}
+              </p>
+            </div>
+            <Link href="/showcase/video-player">
+              <Button variant="outline" size="sm" className="text-xs h-8 whitespace-nowrap">
+                {isRtl ? "تجربة البث والعلامة المائية ←" : "Explore Stream & Watermark →"}
+              </Button>
+            </Link>
           </div>
         </CardContent>
       </Card>

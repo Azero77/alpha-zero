@@ -6,6 +6,8 @@ import { DynamicVisibleWatermark, type WatermarkData } from "./dynamic-visible-w
 export interface VideoPlayerProps {
   manifestUrl: string;
   watermarkContext: WatermarkData;
+  watermarkOpacity?: number;
+  showWatermark?: boolean;
   poster?: string;
   autoPlay?: boolean;
   onEnded?: () => void;
@@ -53,6 +55,8 @@ declare global {
 export function VideoPlayer({
   manifestUrl,
   watermarkContext,
+  watermarkOpacity = 0.22,
+  showWatermark = true,
   poster,
   autoPlay = false,
   onEnded,
@@ -183,7 +187,9 @@ export function VideoPlayer({
       />
 
       {/* Floating Dynamic Visible Watermark Layer */}
-      {watermarkContext && <DynamicVisibleWatermark data={watermarkContext} />}
+      {showWatermark && watermarkContext && (
+        <DynamicVisibleWatermark data={watermarkContext} opacity={watermarkOpacity} />
+      )}
 
       {/* Loading Overlay */}
       {isLoading && (

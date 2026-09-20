@@ -1,4 +1,3 @@
-using AlphaZero.Modules.Courses.IntegrationEvents;
 using AlphaZero.Modules.VideoUploading.Application.Repositories;
 using AlphaZero.Modules.VideoUploading.Domain.Models;
 using AlphaZero.Shared.Application;
@@ -7,7 +6,6 @@ using AlphaZero.Shared.Infrastructure.Tenats;
 using AlphaZero.Shared.Security;
 using ErrorOr;
 using FluentValidation;
-using MassTransit;
 using MediatR;
 using Microsoft.Extensions.Logging;
 
@@ -63,7 +61,6 @@ public class CreatePlaybackSessionCommandHandler : IRequestHandler<CreatePlaybac
     private readonly ICloudflareCookieSigner _cookieSigner;
     private readonly ICurrentTenantUserRepository _currentUserRepository;
     private readonly ITenantProvider _tenantProvider;
-    private readonly IModuleBus _moduleBus;
     private readonly ILogger<CreatePlaybackSessionCommandHandler> _logger;
 
     public CreatePlaybackSessionCommandHandler(
@@ -71,14 +68,12 @@ public class CreatePlaybackSessionCommandHandler : IRequestHandler<CreatePlaybac
         ICloudflareCookieSigner cookieSigner,
         ICurrentTenantUserRepository currentUserRepository,
         ITenantProvider tenantProvider,
-        IModuleBus moduleBus,
         ILogger<CreatePlaybackSessionCommandHandler> logger)
     {
         _videoRepository = videoRepository;
         _cookieSigner = cookieSigner;
         _currentUserRepository = currentUserRepository;
         _tenantProvider = tenantProvider;
-        _moduleBus = moduleBus;
         _logger = logger;
     }
 
@@ -86,7 +81,7 @@ public class CreatePlaybackSessionCommandHandler : IRequestHandler<CreatePlaybac
         CreatePlaybackSessionCommand request,
         CancellationToken cancellationToken)
     {
-        // 1. Resolve User Context
+        // 1. Resolve User Context (Identity IAM already enforces video:Stream access control at endpoint level)
         var currentUser = await _currentUserRepository.GetCurrentUser();
         if (currentUser is null)
         {
@@ -94,38 +89,7 @@ public class CreatePlaybackSessionCommandHandler : IRequestHandler<CreatePlaybac
             return Error.Unauthorized("Identity.Unauthorized", "User is not authenticated.");
         }
 
-        // // 2. If Course Context is provided, verify curriculum enrollment via Courses module
-        // if (request.CourseId.HasValue)
-        // {
-        //     try
-        //     {
-        //         var requestClient = _moduleBus.CreateRequestClient<VerifyCoursePlaybackAccessRequest>();
-        //         var verificationResponse = await requestClient.GetResponse<VerifyCoursePlaybackAccessResponse>(
-        //             new VerifyCoursePlaybackAccessRequest(
-        //                 request.CourseId.Value,
-        //                 request.ItemId,
-        //                 request.VideoId,
-        //                 currentUser.UserId),
-        //             cancellationToken);
-
-        //         if (!verificationResponse.Message.IsAllowed)
-        //         {
-        //             _logger.LogWarning(
-        //                 "Course playback access denied for User {UserId} in Course {CourseId}: {Reason}",
-        //                 currentUser.UserId, request.CourseId.Value, verificationResponse.Message.Reason);
-        //             return Error.Forbidden(
-        //                 "Course.AccessDenied",
-        //                 verificationResponse.Message.Reason ?? "Access to course video is denied.");
-        //         }
-        //     }
-        //     catch (Exception ex)
-        //     {
-        //         _logger.LogError(ex, "Error communicating with Courses module during access verification.");
-        //         return Error.Failure("Courses.VerificationFailure", "Could not verify course access.");
-        //     }
-        // }
-
-        // 3. Verify Video Existence and Readiness in VideoUploading DB
+        // 2. Verify Video Existence and Readiness in VideoUploading DB
         var video = await _videoRepository.GetByIdAsync(request.VideoId, cancellationToken);
         if (video is null)
         {

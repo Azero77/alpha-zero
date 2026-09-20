@@ -10,8 +10,9 @@ export interface WatermarkData {
   sessionId?: string;
 }
 
-interface DynamicVisibleWatermarkProps {
+export interface DynamicVisibleWatermarkProps {
   data: WatermarkData;
+  opacity?: number;
   className?: string;
 }
 
@@ -20,7 +21,7 @@ interface DynamicVisibleWatermarkProps {
  * Renders subtle, semi-transparent identity markers that drift slowly
  * to deter screen recording and attribution leaks while resisting static video masks.
  */
-export function DynamicVisibleWatermark({ data, className }: DynamicVisibleWatermarkProps) {
+export function DynamicVisibleWatermark({ data, opacity = 0.22, className }: DynamicVisibleWatermarkProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   useEffect(() => {
@@ -88,7 +89,8 @@ export function DynamicVisibleWatermark({ data, className }: DynamicVisibleWater
       // Draw subtle watermark text
       ctx.save();
       ctx.font = "11px Inter, system-ui, sans-serif";
-      ctx.fillStyle = "rgba(255, 255, 255, 0.22)";
+      const baseOpacity = Math.max(0.02, Math.min(1.0, opacity));
+      ctx.fillStyle = `rgba(255, 255, 255, ${baseOpacity})`;
       ctx.shadowColor = "rgba(0, 0, 0, 0.4)";
       ctx.shadowBlur = 2;
       ctx.shadowOffsetX = 1;
@@ -104,7 +106,7 @@ export function DynamicVisibleWatermark({ data, className }: DynamicVisibleWater
       // Render secondary ghost watermark at opposite quadrant to prevent cropping
       const ghostX = (posX + width / 2) % (width - 150) + 20;
       const ghostY = (posY + height / 2) % (height - 60) + 30;
-      ctx.fillStyle = "rgba(255, 255, 255, 0.15)";
+      ctx.fillStyle = `rgba(255, 255, 255, ${baseOpacity * 0.65})`;
       ctx.fillText(line1, ghostX, ghostY);
       ctx.fillText(line2, ghostX, ghostY + 14);
 
@@ -119,7 +121,7 @@ export function DynamicVisibleWatermark({ data, className }: DynamicVisibleWater
       cancelAnimationFrame(animationFrameId);
       window.removeEventListener("resize", handleResize);
     };
-  }, [data]);
+  }, [data, opacity]);
 
   return (
     <canvas
