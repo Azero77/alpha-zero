@@ -52,14 +52,14 @@ public static class Upload
         private async Task<IResult> Handler(Request request, VideoUploadingModule module, HttpContext context)
         {
             var command = new UploadCommand(
-                request.fileName,
-                request.contentType,
-                request.title,
-                request.description,
-                request.transcodingMethod,
-                request.encryptionMethod,
-                request.generateCustomThumbnailUrl ?? false,
-                request.targetResourceArn);
+                fileName: request.fileName,
+                contentType: request.contentType,
+                title: request.title,
+                description: request.description,
+                TargetResourceArn: request.targetResourceArn,
+                VideoTranscodingMetehod: request.transcodingMethod,
+                VideoEncryptionMethod: request.encryptionMethod,
+                generateCustomThumbnailUrl: request.generateCustomThumbnailUrl ?? false);
             var response = await module.Send<UploadCommand, ErrorOr<UploadCommandResponse>>(command);
             return response.Match(
                 res => Results.Ok(new Response(

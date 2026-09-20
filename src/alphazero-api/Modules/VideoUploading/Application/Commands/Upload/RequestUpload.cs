@@ -1,3 +1,4 @@
+using AlphaZero.Modules.VideoUploading.Application.Repositories;
 using AlphaZero.Modules.VideoUploading.Application.Services;
 using AlphaZero.Modules.VideoUploading.Domain.Models;
 using AlphaZero.Modules.VideoUploading.IntegrationEvents;
@@ -69,15 +70,18 @@ public record UploadCommandResponse(
     string? ThumbnailPreSignedUrl = null,
     Dictionary<string, string>? ThumbnailHeaders = null);
 
-public sealed class UploadCommandHandler(IUploadService uploadService, IModuleBus moduleBus, IClock clock, ITenantProvider tenantProvider) : IRequestHandler<UploadCommand, ErrorOr<UploadCommandResponse>>
+public sealed class UploadCommandHandler(
+    IUploadService uploadService,
+    IVideoRepository videoRepository,
+    IUnitOfWork unitOfWork,
+    IModuleBus moduleBus,
+    IClock clock,
+    ITenantProvider tenantProvider) : IRequestHandler<UploadCommand, ErrorOr<UploadCommandResponse>>
 {
-
     public async Task<ErrorOr<UploadCommandResponse>> Handle(UploadCommand request, CancellationToken cancellationToken)
     {
         Guid? tenantId = tenantProvider.GetTenant();
         if (tenantId is null) return Error.Failure("Tenant.NotFound", "Tenant not found in context.");
-
-
 
         Guid videoId = Guid.NewGuid();
         
@@ -111,6 +115,22 @@ public sealed class UploadCommandHandler(IUploadService uploadService, IModuleBu
             thumbnailPreSignedUrl = thumbResponse.Value.presignedUrl;
             thumbnailHeaders = thumbResponse.Value.headers;
         }
+
+        var thumbnail = new ThumbnailInfo(thumbnailKey, null, thumbnailKey != null);
+        var videoResult = Video.Create(
+            videoId,
+            tenantId.Value,
+            request.title,
+            request.description,
+            response.Value.key,
+            new VideoMetadata(request.fileName, request.contentType, 0, request.VideoTranscodingMetehod, request.VideoEncryptionMethod),
+            thumbnail,
+            clock);
+
+        if (videoResult.IsError) return videoResult.Errors;
+
+        await videoRepository.AddAsync(videoResult.Value, cancellationToken);
+        await unitOfWork.SaveChangesAsync(cancellationToken);
 
         await moduleBus.Publish(new UploadVideoRequestedEvent(
             videoId, 

@@ -66,3 +66,41 @@ export type CourseSummaryDto = z.infer<typeof CourseSummaryDtoSchema>;
 
 export const PagedCoursesResponseSchema = createPagedResultSchema(CourseSummaryDtoSchema);
 export type PagedCoursesResponse = z.infer<typeof PagedCoursesResponseSchema>;
+
+export const ResourceDtoSchema = z.object({
+  assetId: guidSchema,
+  arn: z.string(),
+  type: z.string(),
+  order: z.number(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
+});
+export type ResourceDto = z.infer<typeof ResourceDtoSchema>;
+
+export const ItemDtoSchema = z.object({
+  id: guidSchema,
+  title: z.string(),
+  type: z.string(),
+  order: z.number(),
+  bitIndex: z.number(),
+  resources: z.array(ResourceDtoSchema),
+});
+export type ItemDto = z.infer<typeof ItemDtoSchema>;
+
+export const SectionDtoSchema = z.object({
+  id: guidSchema,
+  title: z.string(),
+  order: z.number(),
+  items: z.array(ItemDtoSchema),
+});
+export type SectionDto = z.infer<typeof SectionDtoSchema>;
+
+export const CourseDetailsDtoSchema = z.object({
+  id: guidSchema,
+  title: z.string(),
+  description: z.string().nullable().optional(),
+  subjectId: guidSchema,
+  status: z.string(),
+  sections: z.array(SectionDtoSchema),
+});
+export type CourseDetailsDto = z.infer<typeof CourseDetailsDtoSchema>;
+

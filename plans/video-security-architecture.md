@@ -10,17 +10,19 @@ The architecture protects educational video assets against automated ripping (`y
 
 ## 2. Core Architectural Decisions
 
-1. **Resource-Level Authorization (Not CourseItem):**
-   - Authorization targets the specific `CurriculumResource` / `VideoCourseAsset` inside a `CurriculumItem`. Course items can contain multiple heterogeneous resources (e.g., video lecture + supplementary PDF + homework assessment). Playback authorization evaluates access specifically for the requested video resource.
+1. **Resource-Level Authorization in Video Module (Decoupled from Courses):**
+   - Playback session creation belongs to the **Video Module** (`Modules/VideoUploading`), not the Courses module.
+   - Video is an autonomous domain asset that can be streamed in any context (course curriculum, library asset, preview teaser, or standalone webinar).
+   - If a video is accessed within a course lesson, the client passes optional course context (`courseId`, `itemId`). The Video Module queries the Courses module via internal MassTransit request/response (`VerifyCoursePlaybackAccessRequest`) to verify active enrollment and drip completion.
    
 2. **Decoupled Conditional Device Security (Policy-Driven Asymmetric Proof):**
    - Generic device fingerprints (`X-Device-Fingerprint`) are completely removed from the video streaming data plane.
    - Device verification occurs exclusively during the initial business authorization phase **if and only if** an assigned access policy contains an `Operator.IsMainDevice` condition.
-   - Device proof uses AlphaZero's existing asymmetric cryptography (RSA-SHA256 signature over a server timestamp challenge verified against the student's registered public key).
+   - Device proof uses AlphaZero's existing asymmetric cryptography (RSA-SHA256 signature over a server timestamp challenge verified against the student's registered public key in `Modules/Identity/Domain/Services/DeviceSignatureVerifiier.cs`).
    - Once authorized, downstream video streaming infrastructure (CDN tokens, playlist rewrites, key tickets, media segments) is completely agnostic to whether device proof was required.
 
-3. **First-Class PlaybackSession:**
-   - Introduces an authoritative `PlaybackSession` that bridges domain authorization (enrollment, publication state, drip schedules, device proof) with edge streaming authorization.
+3. **First-Class PlaybackSession in Video Module:**
+   - Introduces an authoritative `PlaybackSession` owned by the Video Module that bridges domain authorization with edge streaming capability.
    - The session generates a scoped, cryptographically signed capability for edge CDN access and media playlist resolution.
 
 4. **Stateless, Cryptographically Signed Key Tickets (Replacing Redis GETDEL):**
@@ -113,18 +115,26 @@ A course item is **not** a video. A course item (e.g., "Lesson 3: Advanced Graph
 - Resource 3: Supplemental Walkthrough Video (`VideoCourseAsset`)
 
 Playback authorization answers:
-> **"Is the current principal authorized to play this specific `CurriculumResource` (`VideoCourseAsset`) within Course `{courseId}` and Item `{itemId}`?"**
+> **"Is the current principal authorized to play Video asset `{videoId}` (and if accessed in a course context, is enrollment active and prerequisite drip completed for Course `{courseId}` and Item `{itemId}`)?"**
 
 ### 3.3 Selected Endpoint Architecture
 
 ```http
-POST /api/courses/{courseId}/items/{itemId}/resources/{resourceId}/playback-session
+POST /api/videos/{videoId}/playback-session
 ```
 
-**Why this fits AlphaZero best:**
-1. **Domain Aggregate Scoping:** In AlphaZero, `Course` is the aggregate root governing enrollment status, section ordering, and curriculum item unlocking (via bitmask progress).
-2. **Bitmask Completion Integration:** Tracking lesson completion requires knowing the `CurriculumItem.BitIndex`. Having `itemId` in the route ensures seamless progression validation and auto-completion events.
-3. **Multi-Resource Disambiguation:** A single curriculum item may contain multiple video resources. Supplying `resourceId` (referencing `CurriculumResource.CourseAssetId`) allows exact resolution of the requested video asset.
+**Request Body (Optional Context):**
+```json
+{
+  "courseId": "optional-guid",
+  "itemId": "optional-guid"
+}
+```
+
+**Why this fits AlphaZero Modular Architecture best:**
+1. **Module Autonomy & Single Responsibility:** Video streaming, manifest rewriting, key delivery, and CDN edge cookies belong entirely to the **Video Module** (`Modules/VideoUploading`). The Courses module is relieved of streaming/infrastructure concerns.
+2. **Context-Aware Flexibility:** If `courseId` and `itemId` are provided, the Video Module queries the Courses module via internal MassTransit Request/Response (`VerifyCoursePlaybackAccessRequest`) to ensure the student is actively enrolled and has unlocked the prerequisite bitmask. If omitted, it allows standalone video playback (e.g. promotional videos, library assets).
+3. **IAM ARN Alignment:** The endpoint evaluates `AccessControl("video:Stream", (req, tenantId) => req.CourseId.HasValue ? ResourceArn.ForCourseVideo(tenantId, req.VideoId, req.CourseId.Value) : ResourceArn.ForVideo(tenantId, req.VideoId))`.
 
 ---
 
@@ -137,44 +147,50 @@ sequenceDiagram
     autonumber
     actor Student as Student Browser
     participant BFF as Next.js BFF (apps/app)
-    participant API as .NET Courses Module
+    participant VideoMod as .NET Video Module (VideoUploading)
     participant Identity as .NET Identity Module
-    participant VideoMod as .NET VideoUploading Module
+    participant CoursesMod as .NET Courses Module
 
-    Student->>BFF: 1. Click "Play Video Resource"<br/>POST /api/courses/{cId}/items/{iId}/resources/{rId}/playback-session
+    Student->>BFF: 1. Click "Play Video Resource"<br/>POST /api/player/{videoId}/session { courseId, itemId }
     Note over Student, BFF: Sends az-session cookie (+ optional X-Signature if challenged)
-    BFF->>API: 2. CreatePlaybackSessionCommand(courseId, itemId, resourceId)
+    BFF->>VideoMod: 2. POST /api/videos/{vId}/playback-session { courseId, itemId }
+    Note over VideoMod, Identity: FastEndpoints AccessControl("video:Stream")
     
-    %% Step 1: Aggregate Validation
-    Note over API: Step A: Validate Course, Item, Resource<br/>Ensure resource is VideoCourseAsset & state == InUse
-    
-    %% Step 2: Enrollment & Drip
-    Note over API: Step B: Verify Student Enrollment<br/>Check Enrollment.Status == Active<br/>Check prerequisite bitmask completion (drip)
-    
-    %% Step 3: Identity Policy Evaluation
-    API->>Identity: 3. Evaluate Policies(az:coursevideo:{tenantId}:course/{cId}/video/{vId})
-    Identity->>Identity: 4. Check Policy Statements & Conditions
+    %% Step 1: Optional Course Context Check
+    opt If courseId and itemId provided
+        VideoMod->>CoursesMod: 3. VerifyCoursePlaybackAccess(studentId, courseId, itemId)
+        CoursesMod->>CoursesMod: 4. Check Enrollment.Status == Active & Bitmask Drip
+        alt Enrollment Inactive or Item Locked
+            CoursesMod-->>VideoMod: 5a. Error.Forbidden("Course.AccessDenied")
+            VideoMod-->>BFF: 5b. 403 Forbidden
+            BFF-->>Student: 5c. 403 Forbidden ("Complete prerequisite lessons first")
+        else Access Allowed
+            CoursesMod-->>VideoMod: 5d. Success
+        end
+    end
+
+    %% Step 2: Identity Policy Evaluation
+    VideoMod->>Identity: 6. Evaluate Policies (az:video:... or az:coursevideo:...)
+    Identity->>Identity: 7. Check Policy Statements & Conditions
     
     alt Policy contains Operator.IsMainDevice
-        Identity->>Identity: 5. Verify RSA-SHA256 signature against UserDevice.PublicKey
+        Identity->>Identity: 8. Verify RSA-SHA256 signature against UserDevice.PublicKey
         alt Signature Missing or Invalid
-            Identity-->>API: 6a. Error.Forbidden("Condition.IsMainDeviceFailed")
-            API-->>BFF: 6b. 403 Forbidden (Requires Main Device Proof)
-            BFF-->>Student: 6c. Challenge: Please sign request with main device key
+            Identity-->>VideoMod: 9a. Error.Forbidden("Condition.IsMainDeviceFailed")
+            VideoMod-->>BFF: 9b. 403 Forbidden (Requires Main Device Proof)
+            BFF-->>Student: 9c. Challenge: Please sign request with main device key
         end
     end
     
-    Identity-->>API: 7. Authorization Success
+    Identity-->>VideoMod: 10. Authorization Success
     
-    %% Step 4: Resolve Streaming Coordinates & Mint Capability
-    API->>VideoMod: 8. Get Video Details(videoId)
-    VideoMod-->>API: 9. Return S3 OutputFolder ("streaming/{tenantId}/{videoId}/")
+    %% Step 3: Resolve Streaming Coordinates & Mint Capability
+    Note over VideoMod: 11. Read Video.OutputFolder ("streaming/{tenantId}/{videoId}/") directly from DB
+    VideoMod->>VideoMod: 12. Mint PlaybackSession + Cloudflare CDN Cookie Token (cf_video_token)
+    VideoMod-->>BFF: 13. Return PlaybackSessionDto (SessionId, VideoId, MasterPlaylistPath, CdnCookie)
     
-    API->>API: 10. Mint PlaybackSession + Cloudflare CDN Cookie Token
-    API-->>BFF: 11. Return PlaybackSessionDto (SessionId, VideoId, MasterPlaylistPath, CdnCookie)
-    
-    Note over BFF: 12. Set HttpOnly Edge Cookie (cf_video_token)<br/>Domain: .alphazero.academy, Path: /streaming/{tenantId}/{videoId}/
-    BFF-->>Student: 13. 200 OK: { sessionId, playerManifestUrl: "/api/player/{cId}/{iId}/resources/{rId}/master.m3u8" }
+    Note over BFF: 14. Set HttpOnly Edge Cookie (cf_video_token)<br/>Domain: (dynamic/localhost safe), Path: /streaming/{tenantId}/{videoId}/
+    BFF-->>Student: 15. 200 OK: { sessionId, playerManifestUrl: "/api/player/{vId}/master.m3u8" }
 ```
 
 ---
@@ -275,10 +291,10 @@ cf_video_token = sid={sessionId}&v={videoId}&exp={expiryTimestamp}&sig={hmacSign
 ### 7.2 Cookie Attributes
 
 - **Name:** `cf_video_token`
-- **Domain:** `.alphazero.academy` (or tenant CDN domain)
+- **Domain:** Dynamic (Omitted on `localhost` for local dev; set to `.alphazero.academy` or tenant root domain in production)
 - **Path:** `/streaming/{tenantId}/{videoId}/`
 - **SameSite:** `None`
-- **Secure:** `true` (HTTPS only)
+- **Secure:** `true` (HTTPS only, except local dev)
 - **HttpOnly:** `true` (JavaScript cannot inspect or alter)
 
 ### 7.3 Cloudflare Worker Execution Logic (`video-auth-worker.js`)
@@ -287,6 +303,24 @@ cf_video_token = sid={sessionId}&v={videoId}&exp={expiryTimestamp}&sig={hmacSign
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
+    const origin = request.headers.get("Origin") || "";
+
+    const corsHeaders = {
+      "Access-Control-Allow-Origin": origin || "*",
+      "Access-Control-Allow-Credentials": "true",
+      "Access-Control-Allow-Methods": "GET, HEAD, OPTIONS",
+      "Access-Control-Allow-Headers": "Range, Cookie, Content-Type, Accept, Origin",
+      "Access-Control-Expose-Headers": "Content-Length, Content-Range, Date",
+      "Vary": "Origin",
+    };
+
+    // 1. Handle CORS preflight
+    if (request.method === "OPTIONS") {
+      return new Response(null, {
+        status: 204,
+        headers: corsHeaders,
+      });
+    }
 
     // Only authenticate streaming media paths
     if (!url.pathname.startsWith("/streaming/")) {
@@ -304,7 +338,10 @@ export default {
 
     const tokenStr = cookies["cf_video_token"];
     if (!tokenStr) {
-      return new Response("Forbidden: Missing video authorization capability", { status: 403 });
+      return new Response("Forbidden: Missing video authorization capability", { 
+        status: 403, 
+        headers: corsHeaders 
+      });
     }
 
     const params = new URLSearchParams(tokenStr);
@@ -314,21 +351,30 @@ export default {
     const sig = params.get("sig");
 
     if (!sid || !videoId || !exp || !sig) {
-      return new Response("Forbidden: Malformed capability token", { status: 403 });
+      return new Response("Forbidden: Malformed capability token", { 
+        status: 403, 
+        headers: corsHeaders 
+      });
     }
 
-    // 1. Expiration Check
+    // 2. Expiration Check
     const now = Math.floor(Date.now() / 1000);
     if (parseInt(exp, 10) < now) {
-      return new Response("Forbidden: Streaming capability expired", { status: 403 });
+      return new Response("Forbidden: Streaming capability expired", { 
+        status: 403, 
+        headers: corsHeaders 
+      });
     }
 
-    // 2. Path Scoping Check: URL must be /streaming/{tenantId}/{videoId}/...
+    // 3. Path Scoping Check: URL must be /streaming/{tenantId}/{videoId}/...
     if (!url.pathname.includes(`/${videoId}/`)) {
-      return new Response("Forbidden: Token not scoped to this video asset", { status: 403 });
+      return new Response("Forbidden: Token not scoped to this video asset", { 
+        status: 403, 
+        headers: corsHeaders 
+      });
     }
 
-    // 3. HMAC Verification (SubtleCrypto)
+    // 4. HMAC Verification (SubtleCrypto)
     const message = `sid=${sid}&v=${videoId}&exp=${exp}`;
     const encoder = new TextEncoder();
     const key = await crypto.subtle.importKey(
@@ -345,13 +391,22 @@ export default {
 
     const isValid = await crypto.subtle.verify("HMAC", key, sigBytes, encoder.encode(message));
     if (!isValid) {
-      return new Response("Forbidden: Invalid capability signature", { status: 403 });
+      return new Response("Forbidden: Invalid capability signature", { 
+        status: 403, 
+        headers: corsHeaders 
+      });
     }
 
-    // 4. Authorized -> Pass to S3 Origin with Origin Secret Header
+    // 5. Authorized -> Pass to S3 Origin with Origin Secret Header
     const originRequest = new Request(request);
     originRequest.headers.set("X-Origin-Auth", env.S3_ORIGIN_AUTH_SECRET);
-    return fetch(originRequest);
+    
+    const response = await fetch(originRequest);
+    const modifiedResponse = new Response(response.body, response);
+    for (const [k, v] of Object.entries(corsHeaders)) {
+      modifiedResponse.headers.set(k, v);
+    }
+    return modifiedResponse;
   }
 };
 ```
@@ -816,48 +871,54 @@ flowchart LR
 ### 19.1 Backend (.NET Core)
 
 #### [NEW] `src/alphazero-api/Shared/Security/ICloudflareCookieSigner.cs`
-Defines contracts for generating HMAC-SHA256 signed edge capabilities.
+Defines contracts for generating HMAC-SHA256 signed edge capabilities:
+- `CloudflareCookiePayload GenerateSignedCookie(Guid tenantId, Guid videoId, TimeSpan ttl, string? clientIp = null)`
+- `bool VerifySignature(string token, out CloudflareTokenData data)`
 
 #### [NEW] `src/alphazero-api/Shared/Infrastructure/Security/CloudflareCookieSigner.cs`
 Implements `ICloudflareCookieSigner` using `HMACSHA256` and configuration settings (`Cloudflare:VideoHmacSecret`).
+Zero-allocation span-based hexadecimal encoding, ensuring sub-millisecond execution.
 
-#### [NEW] `src/alphazero-api/Modules/Courses/Presentation/Features/CreatePlaybackSession.cs`
-FastEndpoints endpoint implementing `POST /api/courses/{CourseId}/items/{ItemId}/resources/{ResourceId}/playback-session`.
+#### [NEW] `src/alphazero-api/Modules/VideoUploading/Presentation/Features/CreatePlaybackSession.cs`
+FastEndpoints endpoint implementing `POST /api/videos/{VideoId:guid}/playback-session`.
 
 ```csharp
-using AlphaZero.Modules.Courses.Application.Courses.Queries.CreatePlaybackSession;
+using AlphaZero.Modules.VideoUploading.Application.Videos.Commands.CreatePlaybackSession;
 using AlphaZero.Shared.Presentation.Extensions;
 using FastEndpoints;
 using Microsoft.AspNetCore.Http;
 
-namespace AlphaZero.Modules.Courses.Presentation.Features;
+namespace AlphaZero.Modules.VideoUploading.Presentation.Features;
 
 public record CreatePlaybackSessionRequest
 {
-    public Guid CourseId { get; init; }
-    public Guid ItemId { get; init; }
-    public Guid ResourceId { get; init; }
+    public Guid VideoId { get; init; }
+    public Guid? CourseId { get; init; }
+    public Guid? ItemId { get; init; }
 }
 
-public class CreatePlaybackSessionEndpoint : Endpoint<CreatePlaybackSessionRequest>
+public class CreatePlaybackSessionEndpoint : Endpoint<CreatePlaybackSessionRequest, PlaybackSessionDto>
 {
-    private readonly CoursesModule _module;
+    private readonly VideoUploadingModule _module;
 
-    public CreatePlaybackSessionEndpoint(CoursesModule module)
+    public CreatePlaybackSessionEndpoint(VideoUploadingModule module)
     {
         _module = module;
     }
 
     public override void Configure()
     {
-        Post("api/courses/{CourseId:guid}/items/{ItemId:guid}/resources/{ResourceId:guid}/playback-session");
-        this.AccessControl("courses:View", (req, tenantId) => ResourceArn.ForCourse(tenantId, req.CourseId));
-        Description(d => d.WithTags("Courses Streaming"));
+        Post("api/videos/{VideoId:guid}/playback-session");
+        this.AccessControl("video:Stream", (req, tenantId) =>
+            req.CourseId.HasValue
+                ? ResourceArn.ForCourseVideo(tenantId, req.VideoId, req.CourseId.Value)
+                : ResourceArn.ForVideo(tenantId, req.VideoId));
+        Description(d => d.WithTags("Video Streaming"));
     }
 
     public override async Task HandleAsync(CreatePlaybackSessionRequest req, CancellationToken ct)
     {
-        var command = new CreatePlaybackSessionCommand(req.CourseId, req.ItemId, req.ResourceId);
+        var command = new CreatePlaybackSessionCommand(req.VideoId, req.CourseId, req.ItemId);
         var result = await _module.Send(command, ct);
 
         if (result.IsError)
@@ -871,20 +932,38 @@ public class CreatePlaybackSessionEndpoint : Endpoint<CreatePlaybackSessionReque
 }
 ```
 
-#### [NEW] `src/alphazero-api/Modules/Courses/Application/Courses/Commands/CreatePlaybackSession/CreatePlaybackSession.cs`
-MediatR Command Handler:
-1. Validates that `CurriculumItem` contains `CurriculumResource` matching `ResourceId`.
-2. Validates that the referenced asset is `VideoCourseAsset`.
-3. Verifies enrollment and bitmask completion prerequisites.
-4. Mints `PlaybackSession` and edge capability cookie payload using `ICloudflareCookieSigner`.
-5. Returns `PlaybackSessionDto`.
+#### [NEW] `src/alphazero-api/Modules/VideoUploading/Application/Videos/Commands/CreatePlaybackSession/CreatePlaybackSession.cs`
+MediatR Command Handler in `Modules/VideoUploading`:
+1. Validates that `Video` exists and has `VideoStatus.Ready`.
+2. Direct access to `Video.OutputFolder` from DB (zero inter-module DB join).
+3. If `CourseId.HasValue`:
+   - Sends internal MassTransit Request `VerifyCoursePlaybackAccessRequest(CourseId.Value, ItemId, VideoId, UserId)` to Courses Module.
+   - If response `IsAllowed == false`: returns `Error.Forbidden("Course.AccessDenied", response.Reason)`.
+4. Mints Cloudflare edge capability cookie using `ICloudflareCookieSigner` scoped to `/streaming/{tenantId}/{videoId}/`.
+5. Resolves user metadata for dynamic watermarking (Name, Masked Phone, User ID).
+6. Returns `PlaybackSessionDto` containing session GUID, video ID, CDN path, cookie payload, and watermark identity metadata.
+
+#### [NEW] `src/alphazero-api/Modules/Courses/Application/Courses/Consumers/VerifyCoursePlaybackAccessConsumer.cs`
+MassTransit in-memory consumer in `Modules/Courses`:
+1. Receives `VerifyCoursePlaybackAccessRequest(CourseId, ItemId, VideoId, UserId)`.
+2. Validates student enrollment in `CourseId`.
+3. Validates bitmask completion prerequisites for `ItemId`.
+4. Validates that `CurriculumItem` contains a resource referencing `VideoId`.
+5. Responds with `VerifyCoursePlaybackAccessResponse(IsAllowed, Reason)`.
+
+#### [EDIT] `src/alphazero-api/Modules/Courses/Infrastructure/Queries/CourseQueryService.cs`
+Exposes `Guid AssetId` in `ResourceDto` so frontend player components know the exact `videoId` required for `/api/videos/{videoId}/playback-session`.
 
 ---
 
 ### 19.2 Cloudflare Infrastructure
 
 #### [NEW] `infrastructure/cloudflare/video-auth-worker.js`
-Cloudflare Worker script intercepting `/streaming/*` and validating HMAC-SHA256 capability cookies.
+Cloudflare Worker script intercepting `/streaming/*`:
+- Preflight CORS handler (`OPTIONS` &rarr; 204 with `Access-Control-Allow-Origin: <origin>` and `Access-Control-Allow-Credentials: true`).
+- Validates HMAC-SHA256 capability cookies (`cf_video_token`).
+- Verifies path scoping (`token.path` prefix matches request path).
+- Injects `X-Origin-Auth` header when proxying to private S3 bucket.
 
 #### [NEW] `infrastructure/cloudflare/wrangler.toml`
 Cloudflare deployment configuration for worker routes and environment bindings.
@@ -893,13 +972,13 @@ Cloudflare deployment configuration for worker routes and environment bindings.
 
 ### 19.3 Frontend Next.js BFF (`src/alphazero-frontend/apps/app`)
 
-#### [NEW] `app/api/player/[courseId]/[itemId]/resources/[resourceId]/master/route.ts`
-Proxies `master.m3u8` from Cloudflare CDN and rewrites variant playlist URIs to point to the BFF media proxy.
+#### [NEW] `app/api/player/[videoId]/master/route.ts`
+Proxies `master.m3u8` from Cloudflare CDN using edge cookie and rewrites variant playlist URIs to `/api/player/[videoId]/media/[...path]`.
 
-#### [NEW] `app/api/player/[courseId]/[itemId]/resources/[resourceId]/media/[...path]/route.ts`
+#### [NEW] `app/api/player/[videoId]/media/[...path]/route.ts`
 Proxies media playlists (e.g. `1080p/playlist.m3u8`):
-1. Fetches raw playlist from Cloudflare CDN using edge cookie.
-2. Mints short-lived (120s) signed key ticket.
+1. Fetches raw playlist from Cloudflare CDN using edge capability cookie.
+2. Mints short-lived (120s) HMAC-SHA256 signed key ticket.
 3. Rewrites `#EXT-X-KEY URI="..."` to `/api/player/keys/{signedTicket}`.
 4. Rewrites `#EXT-X-MAP` and all media segments to absolute CDN URLs (`https://cdn.alphazero.academy/streaming/...`).
 5. Returns rewritten manifest with `Cache-Control: no-store`.
@@ -908,18 +987,18 @@ Proxies media playlists (e.g. `1080p/playlist.m3u8`):
 Stateless key retrieval endpoint:
 1. Verifies `az-session` user identity.
 2. Validates HMAC-SHA256 signature and expiration of `ticket`.
-3. Calls .NET backend `GET /api/video/keys/{videoId}` with internal service credentials.
-4. Streams 16 binary bytes directly to the browser.
+3. Calls .NET backend `GET /api/videos/{videoId}/key` using user's bearer token forwarded via `getApi()`.
+4. Streams 16 binary bytes directly to the browser (`application/octet-stream`).
 
 ---
 
 ### 19.4 Design System & Video Player Component
 
 #### [NEW] `src/alphazero-frontend/packages/design-system/components/video-player/video-player.tsx`
-Production-grade HLS.js player with credentialed requests and automatic ticket recovery.
+Production-grade HLS.js player with `withCredentials: true`, ABR quality switching, and dynamic key ticket recovery on 410.
 
 #### [NEW] `src/alphazero-frontend/packages/design-system/components/video-player/dynamic-visible-watermark.tsx`
-Floating Canvas component rendering drifting identity watermark overlay.
+Floating HTML5 Canvas component rendering drifting identity watermark overlay (Name, Phone, ID, Session, Timestamp) with 2D Brownian motion.
 
 ---
 
@@ -929,32 +1008,32 @@ Floating Canvas component rendering drifting identity watermark overlay.
   - Implement `ICloudflareCookieSigner` and `CloudflareCookieSigner` in `AlphaZero.Shared`.
   - Add unit tests verifying HMAC generation and verification parity with WebCrypto.
 
-- [ ] **T2: Courses Module Playback Session (P1, ~2h)**
-  - Implement `CreatePlaybackSessionCommand`, Validator, and FastEndpoints endpoint `POST /api/courses/{cId}/items/{iId}/resources/{rId}/playback-session`.
-  - Verify enrollment check, bitmask prerequisite validation, and resource-level scoping.
+- [ ] **T2: Courses Module Access Verification & Resource DTO (P1, ~1.5h)**
+  - Implement `VerifyCoursePlaybackAccessRequest` / `VerifyCoursePlaybackAccessResponse` contracts.
+  - Implement `VerifyCoursePlaybackAccessConsumer` in `Modules/Courses` (enrollment + bitmask validation).
+  - Expose `AssetId` in `ResourceDto` in `CourseQueryService.cs` and `@repo/lms-types`.
 
-- [ ] **T3: Cloudflare Edge Worker & Origin Protection (P1, ~1.5h)**
-  - Implement `infrastructure/cloudflare/video-auth-worker.js`.
-  - Add test harness simulating valid, expired, tampered, and path-mismatched requests.
-  - Formulate S3 Bucket Policy with `X-Origin-Auth` header enforcement.
+- [ ] **T3: VideoUploading Module Playback Session (P1, ~1.5h)**
+  - Implement `CreatePlaybackSessionCommand`, Validator, and FastEndpoints endpoint `POST /api/videos/{videoId}/playback-session`.
+  - Wire MassTransit request client to Courses module for optional course/item context verification.
+  - Mint signed Cloudflare capability cookie.
 
-- [ ] **T4: Next.js BFF Manifest Rewriter (P1, ~2.5h)**
-  - Implement `master/route.ts` and `media/[...path]/route.ts`.
+- [ ] **T4: Cloudflare Edge Worker & Origin Protection (P1, ~1h)**
+  - Implement `infrastructure/cloudflare/video-auth-worker.js` with CORS preflight, HMAC verification, and S3 origin protection.
+  - Configure `infrastructure/cloudflare/wrangler.toml`.
+
+- [ ] **T5: Next.js BFF Manifest Rewriter & Key Ticket Retrieval (P1, ~2h)**
+  - Implement `/api/player/[videoId]/master/route.ts` and `/api/player/[videoId]/media/[...path]/route.ts`.
   - Implement segment absolute URL conversion and `#EXT-X-KEY` rewrite.
-  - Implement stateless key ticket minting.
-
-- [ ] **T5: Next.js BFF Key Delivery Endpoint (P1, ~1h)**
-  - Implement `/api/player/keys/[ticket]/route.ts`.
-  - Validate ticket signature and fetch 16 bytes from backend `GetVideoKey` endpoint.
+  - Implement stateless key ticket minting and `/api/player/keys/[ticket]/route.ts`.
 
 - [ ] **T6: Frontend Video Player & Watermark Component (P2, ~1.5h)**
   - Implement `video-player.tsx` using `hls.js` with `withCredentials: true`.
   - Implement `dynamic-visible-watermark.tsx` floating canvas overlay.
 
-- [ ] **T7: End-to-End Integration & Security Verification (P1, ~2h)**
-  - Test playback flow end-to-end with sample video.
-  - Verify direct segment access without cookie returns 403.
-  - Verify `yt-dlp` fails without valid session and cookie.
+- [ ] **T7: End-to-End Integration & Security Verification (P1, ~1.5h)**
+  - Test playback flow end-to-end with unit and integration tests.
+  - Verify edge cookie verification, key ticket delivery, and error status handling.
 
 ---
 
@@ -980,10 +1059,28 @@ Floating Canvas component rendering drifting identity watermark overlay.
 
 | Area | v2 Plan (Deprecated) | v3 Plan (Adopted) | Rationale |
 |---|---|---|---|
-| **Authorization Target** | `CourseItem` (`/courses/{cId}/items/{iId}/playback-session`) | `CurriculumResource` (`/courses/{cId}/items/{iId}/resources/{rId}/playback-session`) | Course items have multiple resources; authorization must target the specific video asset. |
+| **Module Ownership** | `Courses` module (`/api/courses/{cId}/items/{iId}/resources/{rId}/playback-session`) | `VideoUploading` module (`/api/videos/{videoId}/playback-session`) | Video streaming is a core Video module concern; Courses module should only verify curriculum enrollment/progress. |
+| **Inter-Module Boundary** | Courses module querying Video DB for `OutputFolder` (Cross-module DB coupling). | Video module owns `OutputFolder` and queries Courses via MassTransit `VerifyCoursePlaybackAccessRequest`. | Preserves clean modular monolith architecture and zero cross-module DB joins (`GEMINI.md`). |
 | **Device Enforcement** | Generic `X-Device-Fingerprint` passed through all streaming routes. | Removed from streaming path; conditional policy-driven RSA-SHA256 signature challenge in identity. | Separates concerns; aligns with AlphaZero's existing public-key device architecture. |
 | **Key Tickets** | Single-use Redis `GETDEL` (30s TTL). | Stateless HMAC-SHA256 signed tickets (120s TTL). | Eliminates Redis failure point and prevents ABR playback freezes in unstable networks. |
 | **HLS Manifest Rewriting** | Assumed `#EXT-X-KEY` was in `master.m3u8`. | Rewrites media playlists (`playlist.m3u8`); master playlist proxies variant routes. | Aligns with RFC-8216 HLS standard. |
 | **Segment Routing** | Vaguely specified relative URLs. | Absolute Cloudflare CDN URLs in media playlists. | Ensures zero segment proxying through Next.js. |
 | **Watermark Naming** | `ForensicWatermark` | `DynamicVisibleWatermark` | Accurate naming reflecting visible canvas overlay for deterrence and attribution. |
 | **Origin Protection** | Unspecified | Enforced via S3 Bucket Policy with `X-Origin-Auth` header. | Closes public S3 bypass vulnerability. |
+
+---
+
+## 23. GSTACK REVIEW REPORT
+
+### Review Summary
+- **Skills Executed:** `/plan-eng-review` and `/plan-devex-review`
+- **Target Plan:** `plans/video-security-architecture.md`
+- **Review Date:** 2026-09-20
+- **Architectural Decision (D1):** Approved & Resolved. Video Module owns `POST /api/videos/{videoId}/playback-session`. Courses Module handles inter-module access checks via MassTransit request/response.
+- **P0 Findings Fixed:**
+  - CORS preflight and `withCredentials: true` credentials mode resolved in `video-auth-worker.js`.
+  - Next.js dynamic cookie domain handled safely across local development (`localhost`) and production academies (`.alphazero.academy`).
+- **P1/P2 Findings Fixed:**
+  - `ResourceDto` updated to include `AssetId` for frontend video ID resolution.
+  - Next.js key route forwards user bearer token via `getApi()` preserving IAM policy evaluation.
+- **Review Verdict:** **APPROVED TO SHIP**. Proceed directly with implementation tasks T1 through T7.

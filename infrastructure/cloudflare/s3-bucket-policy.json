@@ -1,0 +1,21 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "EnforceCloudflareOriginHeader",
+      "Effect": "Deny",
+      "Principal": "*",
+      "Action": "s3:GetObject",
+      "Resource": "arn:aws:s3:::alphazero-cdn-bucket/*",
+      "Condition": {
+        "StringNotEquals": {
+          "aws:PrincipalServiceName": "mediaconvert.amazonaws.com",
+          "s3:ExistingObjectTag/Public": "true"
+        },
+        "StringNotEquals": {
+          "aws:RequestHeader/X-Origin-Auth": "${S3_ORIGIN_AUTH_SECRET}"
+        }
+      }
+    }
+  ]
+}

@@ -1,8 +1,6 @@
 using AlphaZero.Modules.VideoUploading.Application;
 using AlphaZero.Modules.VideoUploading.Infrastructure;
-using AlphaZero.Modules.VideoUploading.Infrastructure.Consumers;
 using AlphaZero.Modules.VideoUploading.Infrastructure.Persistance;
-using AlphaZero.Modules.VideoUploading.Infrastructure.Sagas;
 using Autofac;
 using MassTransit;
 using MediatR;
@@ -33,17 +31,8 @@ public class VideoUploadingModule : AppModule, IVideoUploadingModule
 
     public override void ConfigureModuleBus(IBusRegistrationConfigurator configuration)
     {
-        configuration.AddSagaStateMachine<VideoUploadingSaga, VideoState>()
-        .EntityFrameworkRepository(r =>
-        {
-            r.ExistingDbContext<AppDbContext>();
-            r.UsePostgres();
-            r.ConcurrencyMode = ConcurrencyMode.Optimistic;
-        });
-         
-        // Register local consumers that should run on the in-memory bus with their own scopes
-        configuration.AddConsumers(typeof(VideoUploadingModule).Assembly);
-        configuration.AddConsumers(typeof(AppDbContext).Assembly);
-        configuration.AddConsumer<FFmpegTranscodingConsumer, FFMpegTrancodingConsumerDefinition>();
+        // Register local consumers that should run on the in-memory bus with their own scopes (SQS consumers are registered on IExternalBus)
+        configuration.AddConsumers(filter => !filter.Name.Contains("sqs", StringComparison.InvariantCultureIgnoreCase), typeof(VideoUploadingModule).Assembly);
+        configuration.AddConsumers(filter => !filter.Name.Contains("sqs", StringComparison.InvariantCultureIgnoreCase), typeof(AppDbContext).Assembly);
     }
 }

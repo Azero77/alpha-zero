@@ -2,7 +2,6 @@ using AlphaZero.Modules.VideoUploading.Application;
 using AlphaZero.Modules.VideoUploading.Application.Repositories;
 using AlphaZero.Modules.VideoUploading.Application.Services;
 using AlphaZero.Modules.VideoUploading.Domain.Models;
-using AlphaZero.Modules.VideoUploading.Domain.Services;
 using AlphaZero.Modules.VideoUploading.Infrastructure.Persistance;
 using AlphaZero.Modules.VideoUploading.Infrastructure.Repositories;
 using AlphaZero.Modules.VideoUploading.Infrastructure.Services;
@@ -13,7 +12,6 @@ using AlphaZero.Shared.Domain;
 using AlphaZero.Shared.Infrastructure;
 using AlphaZero.Shared.Infrastructure.Repositores;
 using AlphaZero.Shared.Infrastructure.SoftDelete;
-using Amazon.MediaConvert;
 using Amazon.S3;
 using Amazon.SQS;
 using Aspire.Shared;
@@ -33,11 +31,7 @@ public static class DependencyInjection
 
         // Infrastructure Services that need to be global for consumers
         services.AddScoped<IUploadService, S3UploadService>();
-        services.AddScoped<IVideoSpecificationExtractorService, S3VideoSpecificationExtractor>();
-        services.AddScoped<IVideoTranscodingService, MediaConvertTranscodingService>();
-        services.AddScoped<IVideoTranscodingService, FFmpegTranscodingService>();
         services.AddScoped<IVideoEncryptionService, DefaultVideoEncryptionService>();
-        services.AddScoped<IVideoCdnSyncService, S3VideoCdnSyncService>();
 
         // Persistence
         services.AddDbContext<AppDbContext>((sp,opts) =>

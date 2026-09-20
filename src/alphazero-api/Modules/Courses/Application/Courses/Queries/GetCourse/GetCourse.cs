@@ -28,6 +28,7 @@ public record ItemDto(
     List<ResourceDto> Resources); // Ordered by ResourceDto.Order
 
 public record ResourceDto(
+    Guid AssetId,
     string Arn,
     string Type, // "Primary" or "Auxiliary"
     int Order,
