@@ -1,3 +1,4 @@
+using System.IO;
 using System.Collections.Generic;
 using Amazon.CDK;
 using Amazon.CDK.AWS.CloudWatch;
@@ -31,11 +32,16 @@ public class VideoPipelineStack : Stack
     {
         var storage = props.Storage;
 
+        var repoRoot = FindRepoRoot();
+        var analyzerPath = Path.Combine(repoRoot, "src/lambdas/AlphaZero.VideoAnalyzer");
+        var jobPreparerPath = ResolveJobPreparerAsset(repoRoot);
+        var r2MoverPath = Path.Combine(repoRoot, "src/workers/AlphaZero.R2Mover");
+
         // 1. Lambda Functions
         var analyzerFn = new DockerImageFunction(this, "VideoAnalyzerFunction", new DockerImageFunctionProps
         {
             FunctionName = "alphazero-video-analyzer",
-            Code = DockerImageCode.FromImageAsset("../../src/lambdas/AlphaZero.VideoAnalyzer"),
+            Code = DockerImageCode.FromImageAsset(analyzerPath),
             Timeout = Duration.Minutes(2),
             MemorySize = 512
         });
@@ -46,7 +52,7 @@ public class VideoPipelineStack : Stack
             FunctionName = "alphazero-job-preparer",
             Runtime = Runtime.PROVIDED_AL2023,
             Handler = "bootstrap",
-            Code = Code.FromAsset("../../src/lambdas/AlphaZero.JobPreparer/publish"),
+            Code = Code.FromAsset(jobPreparerPath),
             Timeout = Duration.Seconds(30),
             MemorySize = 256
         });
@@ -54,7 +60,28 @@ public class VideoPipelineStack : Stack
         storage.MasterClearKey.GrantRead(jobPreparerFn);
 
         // 2. ECS Fargate Tasks
-        var vpc = Vpc.FromLookup(this, "DefaultVpc", new VpcLookupOptions { IsDefault = true });
+        IVpc vpc;
+        var account = this.Account;
+        var region = this.Region;
+        var hasConcreteEnv = !string.IsNullOrEmpty(account) && !account.Contains("Token") &&
+                             !string.IsNullOrEmpty(region) && !region.Contains("Token");
+
+        if (hasConcreteEnv)
+        {
+            try
+            {
+                vpc = Vpc.FromLookup(this, "DefaultVpc", new VpcLookupOptions { IsDefault = true });
+            }
+            catch
+            {
+                vpc = new Vpc(this, "TranscoderVpc", new VpcProps { MaxAzs = 2, NatGateways = 1 });
+            }
+        }
+        else
+        {
+            vpc = new Vpc(this, "TranscoderVpc", new VpcProps { MaxAzs = 2, NatGateways = 1 });
+        }
+
         var cluster = new Cluster(this, "TranscoderCluster", new ClusterProps { Vpc = vpc });
 
         var fargateTranscoderTaskDef = new FargateTaskDefinition(this, "TranscoderTaskDef", new FargateTaskDefinitionProps
@@ -77,7 +104,7 @@ public class VideoPipelineStack : Stack
         });
         fargateR2MoverTaskDef.AddContainer("R2MoverContainer", new EcsContainerDefinitionOptions
         {
-            Image = ContainerImage.FromAsset("../../src/workers/AlphaZero.R2Mover"),
+            Image = ContainerImage.FromAsset(r2MoverPath),
             Logging = LogDriver.AwsLogs(new AwsLogDriverProps { StreamPrefix = "R2Mover" })
         });
         storage.TransientBucket.GrantRead(fargateR2MoverTaskDef.TaskRole);
@@ -254,5 +281,43 @@ public class VideoPipelineStack : Stack
             Threshold = Duration.Minutes(30).ToMilliseconds(),
             EvaluationPeriods = 1
         }).AddAlarmAction(new SnsAction(alarmTopic));
+    }
+
+    private static string FindRepoRoot()
+    {
+        var dir = new DirectoryInfo(AppContext.BaseDirectory);
+        while (dir != null)
+        {
+            if (File.Exists(Path.Combine(dir.FullName, "AlphaZero.sln")) ||
+                Directory.Exists(Path.Combine(dir.FullName, ".git")))
+            {
+                return dir.FullName;
+            }
+            dir = dir.Parent;
+        }
+        return Directory.GetCurrentDirectory();
+    }
+
+    private static string ResolveJobPreparerAsset(string repoRoot)
+    {
+        var candidates = new[]
+        {
+            Path.Combine(repoRoot, "src/lambdas/AlphaZero.JobPreparer/publish"),
+            Path.Combine(repoRoot, "src/lambdas/AlphaZero.JobPreparer/src/AlphaZero.JobPreparer/bin/Release/net10.0"),
+            Path.Combine(repoRoot, "src/lambdas/AlphaZero.JobPreparer/src/AlphaZero.JobPreparer/bin/Debug/net10.0"),
+            Path.Combine(repoRoot, "src/lambdas/AlphaZero.JobPreparer/src/AlphaZero.JobPreparer")
+        };
+
+        foreach (var candidate in candidates)
+        {
+            if (Directory.Exists(candidate))
+            {
+                return candidate;
+            }
+        }
+
+        var defaultPublish = candidates[0];
+        Directory.CreateDirectory(defaultPublish);
+        return defaultPublish;
     }
 }
