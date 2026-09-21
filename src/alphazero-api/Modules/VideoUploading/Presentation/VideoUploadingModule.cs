@@ -1,6 +1,8 @@
 using AlphaZero.Modules.VideoUploading.Application;
 using AlphaZero.Modules.VideoUploading.Infrastructure;
 using AlphaZero.Modules.VideoUploading.Infrastructure.Persistance;
+using AlphaZero.Modules.VideoUploading.Application.Services;
+using AlphaZero.Modules.VideoUploading.Presentation.Services;
 using Autofac;
 using MassTransit;
 using MediatR;
@@ -14,6 +16,9 @@ public class VideoUploadingModule : AppModule, IVideoUploadingModule
 {
     public override void RegisterGlobal(IServiceCollection globalServices)
     {
+        globalServices.AddSignalR();
+        globalServices.AddScoped<IVideoProgressNotifier, SignalRVideoProgressNotifier>();
+
         if (Configuration is not null)
             globalServices.AddVideoUploadingGlobalInfrastructure(Configuration);
         else

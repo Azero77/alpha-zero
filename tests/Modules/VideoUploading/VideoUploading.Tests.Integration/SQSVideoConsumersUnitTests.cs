@@ -262,4 +262,41 @@ public class SQSVideoConsumersUnitTests
                 e.Reason == "States.TaskFailed"),
             It.IsAny<CancellationToken>()), Times.Once);
     }
+
+    [Fact]
+    public async Task SQSVideoProgressConsumer_Should_NotifyProgress_WhenMessageReceived()
+    {
+        // Arrange
+        var notifierMock = new Mock<AlphaZero.Modules.VideoUploading.Application.Services.IVideoProgressNotifier>();
+        var logger = NullLogger<SQSVideoProgressConsumer>.Instance;
+        var consumer = new SQSVideoProgressConsumer(notifierMock.Object, logger);
+
+        var videoId = Guid.NewGuid().ToString();
+        var tenantId = Guid.NewGuid().ToString();
+        var queueMessage = new VideoProgressQueueMessage(
+            videoId,
+            tenantId,
+            "Transcoding",
+            "In Progress",
+            45,
+            "Processing 720p rendition");
+
+        var contextMock = new Mock<ConsumeContext<VideoProgressQueueMessage>>();
+        contextMock.Setup(x => x.Message).Returns(queueMessage);
+        contextMock.Setup(x => x.CancellationToken).Returns(CancellationToken.None);
+
+        // Act
+        await consumer.Consume(contextMock.Object);
+
+        // Assert
+        notifierMock.Verify(n => n.NotifyProgressAsync(
+            It.Is<AlphaZero.Modules.VideoUploading.Application.Services.VideoProgressNotification>(p =>
+                p.VideoId == videoId &&
+                p.TenantId == tenantId &&
+                p.Stage == "Transcoding" &&
+                p.Status == "In Progress" &&
+                p.Percentage == 45 &&
+                p.Metadata == "Processing 720p rendition"),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
 }
