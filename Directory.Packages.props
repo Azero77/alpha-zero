@@ -67,5 +67,9 @@
     <PackageVersion Include="Respawn" Version="7.0.0" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Relational" Version="10.0.5" />
     <PackageVersion Include="Z.EntityFramework.Plus.EFCore" Version="10.105.3" />
+    <PackageVersion Include="Amazon.Lambda.Core" Version="2.5.0" />
+    <PackageVersion Include="Amazon.Lambda.RuntimeSupport" Version="1.12.3" />
+    <PackageVersion Include="Amazon.Lambda.Serialization.SystemTextJson" Version="2.4.4" />
+    <PackageVersion Include="AWSSDK.SimpleSystemsManagement" Version="4.0.3.3" />
   </ItemGroup>
 </Project>
