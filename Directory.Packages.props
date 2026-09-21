@@ -71,5 +71,7 @@
     <PackageVersion Include="Amazon.Lambda.RuntimeSupport" Version="1.12.3" />
     <PackageVersion Include="Amazon.Lambda.Serialization.SystemTextJson" Version="2.4.4" />
     <PackageVersion Include="AWSSDK.SimpleSystemsManagement" Version="4.0.3.3" />
+    <PackageVersion Include="Amazon.CDK.Lib" Version="2.236.0" />
+    <PackageVersion Include="Constructs" Version="10.4.2" />
   </ItemGroup>
 </Project>
