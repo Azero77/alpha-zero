@@ -73,7 +73,6 @@ public record UploadCommandResponse(
 public sealed class UploadCommandHandler(
     IUploadService uploadService,
     IVideoRepository videoRepository,
-    IUnitOfWork unitOfWork,
     IModuleBus moduleBus,
     IClock clock,
     ITenantProvider tenantProvider) : IRequestHandler<UploadCommand, ErrorOr<UploadCommandResponse>>
