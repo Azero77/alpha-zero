@@ -31,6 +31,24 @@ var videoPipeline = new VideoPipelineConstruct(stackConstruct, "VideoPipeline", 
     MediaConvertRole = storageStack.MediaConvertRole,
 });
 
+// Expose CDK constructs as Aspire resources for automatic service discovery and configuration binding
+var inputS3 = awscdkStack.AddConstruct("InputS3", _ => (Bucket)storageStack.InputBucket);
+var transientS3 = awscdkStack.AddConstruct("TransientS3", _ => (Bucket)storageStack.TransientBucket);
+var outputS3 = awscdkStack.AddConstruct("OutputS3", _ => (Bucket)storageStack.TransientBucket);
+var videoPublishedQueue = awscdkStack.AddConstruct("VideoPublishedQueue", _ => (Queue)storageStack.VideoPublishedQueue);
+var videoFailedQueue = awscdkStack.AddConstruct("VideoFailedQueue", _ => (Queue)storageStack.VideoFailedQueue);
+var videoProgressQueue = awscdkStack.AddConstruct("VideoProgressQueue", _ => (Queue)storageStack.VideoProgressQueue);
+
+new Amazon.CDK.CfnOutput(stackConstruct, "MediaConvertRoleArnOutput", new Amazon.CDK.CfnOutputProps
+{
+    Value = storageStack.MediaConvertRole.RoleArn
+});
+
+new Amazon.CDK.CfnOutput(stackConstruct, "StepFunctionArnOutput", new Amazon.CDK.CfnOutputProps
+{
+    Value = videoPipeline.PipelineStateMachine.StateMachineArn
+});
+
 #endregion
 var cdnDomain = builder.Configuration["CdnDomain"] ?? "" ;
 
@@ -56,10 +74,9 @@ var keycloakHttp = keyCloak.GetEndpoint("http");
 
 var api = builder.AddProject<Projects.AlphaZero_API>("alphazero-api")
     .WithReference(awsSdkConfig)
-    .WithReference(input_s3)
-    .WithReference(transient_s3)
-    .WithReference(output_s3)
-    .WithReference(cdn_s3)
+    .WithReference(inputS3)
+    .WithReference(transientS3)
+    .WithReference(outputS3)
     .WithReference(videoPublishedQueue)
     .WithReference(videoFailedQueue)
     .WithReference(videoProgressQueue)
@@ -72,6 +89,6 @@ var api = builder.AddProject<Projects.AlphaZero_API>("alphazero-api")
     .WithEnvironment("AWS__Resources__MediaConvertRoleArn", awscdkStack.GetOutput("MediaConvertRoleArnOutput"))
     .WithEnvironment("AWS__Resources__MediaConvertKeyKMSArn", storageStack.MediaConvertKmsKeyArn)
     .WithEnvironment("AWS__Resources__CdnDomain", cdnDomain)
-    .WithEnvironment("AWS__Resources__StepFunctionArn", videoPipeline.PipelineStateMachine.StateMachineArn);
+    .WithEnvironment("AWS__Resources__StepFunctionArn", awscdkStack.GetOutput("StepFunctionArnOutput"));
 
 builder.Build().Run();
