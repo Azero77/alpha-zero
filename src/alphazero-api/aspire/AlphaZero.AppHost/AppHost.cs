@@ -1,25 +1,10 @@
-using System.Collections.Generic;
-using System.IO;
 using Amazon.CDK;
-using Amazon.CDK.AWS.CloudWatch;
-using Amazon.CDK.AWS.CloudWatch.Actions;
-using Amazon.CDK.AWS.EC2;
-using Amazon.CDK.AWS.ECS;
-using Amazon.CDK.AWS.Events;
-using Amazon.CDK.AWS.Events.Targets;
 using Amazon.CDK.AWS.IAM;
-using Amazon.CDK.AWS.Lambda;
 using Amazon.CDK.AWS.S3;
-using Amazon.CDK.AWS.SNS;
 using Amazon.CDK.AWS.SQS;
-using Amazon.CDK.AWS.SSM;
-using Amazon.CDK.AWS.StepFunctions;
-using Amazon.CDK.AWS.StepFunctions.Tasks;
+using AlphaZero.Cdk.Constructs;
 using Aspire.Hosting;
 using Constructs;
-using EcsContainerDefinitionOptions = Amazon.CDK.AWS.ECS.ContainerDefinitionOptions;
-using SfnContainerOverride = Amazon.CDK.AWS.StepFunctions.Tasks.ContainerOverride;
-using SfnTaskEnvironmentVariable = Amazon.CDK.AWS.StepFunctions.Tasks.TaskEnvironmentVariable;
 
 var builder = DistributedApplication.CreateBuilder(args);
 
@@ -29,10 +14,6 @@ var awscdkStack = builder.AddAWSCDKStack("AlphaZero")
     .WithReference(awsSdkConfig);
 
 var stackConstruct = (Construct)awscdkStack.Resource.Construct;
-var repoRoot = FindRepoRoot();
-var analyzerPath = Path.Combine(repoRoot, "src/lambdas/AlphaZero.VideoAnalyzer");
-var jobPreparerPath = ResolveJobPreparerAsset(repoRoot);
-var r2MoverPath = Path.Combine(repoRoot, "src/workers/AlphaZero.R2Mover");
 
 #region aws
 
@@ -71,49 +52,38 @@ var transient_s3 = awscdkStack.AddS3Bucket("TransientS3", new BucketProps
 var output_s3 = awscdkStack.AddS3Bucket("OutputS3");
 
 string cdnDomain = builder.Configuration["CdnDomain"] ?? "";
-var cdn_s3 = awscdkStack.AddS3Bucket("CdnS3", new BucketProps
-{
-    BucketName = string.IsNullOrEmpty(cdnDomain) ? "alphazero-cdn-dev" : cdnDomain,
-    PublicReadAccess = true,
-    BlockPublicAccess = new BlockPublicAccess(new BlockPublicAccessOptions
-    {
-        BlockPublicAcls = false,
-        IgnorePublicAcls = false,
-        BlockPublicPolicy = false,
-        RestrictPublicBuckets = false
-    }),
-    Cors = new[]
-    {
-        new CorsRule
-        {
-            AllowedMethods = new[] { Amazon.CDK.AWS.S3.HttpMethods.GET },
-            AllowedOrigins = new[] { "*" },
-            AllowedHeaders = new[] { "*" },
-            ExposedHeaders = new[] { "ETag" },
-            MaxAge = 3000
-        }
-    }
-});
+// var cdn_s3 = awscdkStack.AddS3Bucket("CdnS3", new BucketProps
+// {
+//     BucketName = string.IsNullOrEmpty(cdnDomain) ? "alphazero-cdn-dev" : cdnDomain,
+//     PublicReadAccess = true,
+//     BlockPublicAccess = new BlockPublicAccess(new BlockPublicAccessOptions
+//     {
+//         BlockPublicAcls = false,
+//         IgnorePublicAcls = false,
+//         BlockPublicPolicy = false,
+//         RestrictPublicBuckets = false
+//     }),
+//     Cors = new[]
+//     {
+//         new CorsRule
+//         {
+//             AllowedMethods = new[] { Amazon.CDK.AWS.S3.HttpMethods.GET },
+//             AllowedOrigins = new[] { "*" },
+//             AllowedHeaders = new[] { "*" },
+//             ExposedHeaders = new[] { "ETag" },
+//             MaxAge = 3000
+//         }
+//     }
+// });
 
-cdn_s3.Resource.Construct.AddToResourcePolicy(new PolicyStatement(new PolicyStatementProps
-{
-    Actions = new[] { "s3:GetObject" },
-    Resources = new[] { $"{cdn_s3.Resource.Construct.BucketArn}/*" },
-    Principals = new[] { new AnyPrincipal() }
-}));
+// cdn_s3.Resource.Construct.AddToResourcePolicy(new PolicyStatement(new PolicyStatementProps
+// {
+//     Actions = new[] { "s3:GetObject" },
+//     Resources = new[] { $"{cdn_s3.Resource.Construct.BucketArn}/*" },
+//     Principals = new[] { new AnyPrincipal() }
+// }));
 
-// 2. SSM Parameters
-var masterClearKey = StringParameter.FromSecureStringParameterAttributes(stackConstruct, "MasterClearKey", new SecureStringParameterAttributes
-{
-    ParameterName = "/AlphaZero/VideoPipeline/MasterClearKey"
-});
-
-var r2Credentials = StringParameter.FromSecureStringParameterAttributes(stackConstruct, "R2Credentials", new SecureStringParameterAttributes
-{
-    ParameterName = "/AlphaZero/VideoPipeline/R2Credentials"
-});
-
-// 3. SQS Queues
+// 2. SQS Queues
 var videoPublishedQueue = awscdkStack.AddSQSQueue("VideoPublishedQueue", new QueueProps
 {
     QueueName = "VideoPublishedQueue"
@@ -129,63 +99,7 @@ var videoProgressQueue = awscdkStack.AddSQSQueue("VideoProcessingProgressQueue",
     QueueName = "VideoProcessingProgressQueue"
 });
 
-// 4. Lambdas
-var analyzerFn = new DockerImageFunction(stackConstruct, "VideoAnalyzerFunction", new DockerImageFunctionProps
-{
-    FunctionName = "alphazero-video-analyzer",
-    Code = DockerImageCode.FromImageAsset(analyzerPath),
-    Timeout = Duration.Minutes(2),
-    MemorySize = 512
-});
-input_s3.Resource.Construct.GrantRead(analyzerFn);
-
-var jobPreparerFn = new Function(stackConstruct, "JobPreparerFunction", new FunctionProps
-{
-    FunctionName = "alphazero-job-preparer",
-    Runtime = Runtime.PROVIDED_AL2023,
-    Handler = "bootstrap",
-    Code = Code.FromAsset(jobPreparerPath),
-    Timeout = Duration.Seconds(30),
-    MemorySize = 256
-});
-input_s3.Resource.Construct.GrantReadWrite(jobPreparerFn);
-masterClearKey.GrantRead(jobPreparerFn);
-
-// 5. ECS Fargate Definitions
-var vpc = new Vpc(stackConstruct, "TranscoderVpc", new VpcProps
-{
-    MaxAzs = 2,
-    NatGateways = 1
-});
-var cluster = new Cluster(stackConstruct, "TranscoderCluster", new ClusterProps { Vpc = vpc });
-
-var fargateTranscoderTaskDef = new FargateTaskDefinition(stackConstruct, "TranscoderTaskDef", new FargateTaskDefinitionProps
-{
-    Cpu = 2048,
-    MemoryLimitMiB = 4096
-});
-fargateTranscoderTaskDef.AddContainer("TranscoderContainer", new EcsContainerDefinitionOptions
-{
-    Image = ContainerImage.FromRegistry("ghcr.io/azero77/ffmpeg-hls-transcoder:latest"),
-    Logging = LogDriver.AwsLogs(new AwsLogDriverProps { StreamPrefix = "Transcoder" })
-});
-input_s3.Resource.Construct.GrantRead(fargateTranscoderTaskDef.TaskRole);
-transient_s3.Resource.Construct.GrantWrite(fargateTranscoderTaskDef.TaskRole);
-
-var fargateR2MoverTaskDef = new FargateTaskDefinition(stackConstruct, "R2MoverTaskDef", new FargateTaskDefinitionProps
-{
-    Cpu = 512,
-    MemoryLimitMiB = 1024
-});
-fargateR2MoverTaskDef.AddContainer("R2MoverContainer", new EcsContainerDefinitionOptions
-{
-    Image = ContainerImage.FromAsset(r2MoverPath),
-    Logging = LogDriver.AwsLogs(new AwsLogDriverProps { StreamPrefix = "R2Mover" })
-});
-transient_s3.Resource.Construct.GrantRead(fargateR2MoverTaskDef.TaskRole);
-r2Credentials.GrantRead(fargateR2MoverTaskDef.TaskRole);
-
-// 6. MediaConvert Role & Legacy Support
+// 3. MediaConvert Role
 var mediaConvertRole = new Role(stackConstruct, "AspireMediaConvertServiceRole", new RoleProps
 {
     AssumedBy = new ServicePrincipal("mediaconvert.amazonaws.com"),
@@ -213,176 +127,16 @@ new Amazon.CDK.CfnOutput(stackConstruct, "MediaConvertRoleArnOutput", new Amazon
     Value = mediaConvertRole.RoleArn
 });
 
-// 7. Step Functions State Machine
-var transientRetry = new RetryProps
+// 4. Shared Step Functions Video Pipeline (from AlphaZero.Cdk)
+var videoPipeline = new VideoPipelineConstruct(stackConstruct, "VideoPipeline", new VideoPipelineConstructProps
 {
-    Errors = new[] { "TransientException", "Lambda.ServiceException", "Lambda.SdkClientException", "States.TaskFailed" },
-    Interval = Duration.Seconds(2),
-    MaxAttempts = 3,
-    BackoffRate = 2.0
-};
-
-var failNotificationTask = new SqsSendMessage(stackConstruct, "NotifyFailureTask", new SqsSendMessageProps
-{
-    Queue = videoFailedQueue.Resource.Construct,
-    MessageBody = TaskInput.FromObject(new Dictionary<string, object>
-    {
-        ["videoId"] = JsonPath.StringAt("$.videoId"),
-        ["tenantId"] = JsonPath.StringAt("$.tenantId"),
-        ["status"] = "Failed",
-        ["error"] = JsonPath.StringAt("$.Cause")
-    })
-}).Next(new Fail(stackConstruct, "PipelineFailedState"));
-
-var analyzeTask = new LambdaInvoke(stackConstruct, "AnalyzeVideoTask", new LambdaInvokeProps
-{
-    LambdaFunction = analyzerFn,
-    OutputPath = "$.Payload"
+    InputBucket = input_s3.Resource.Construct,
+    TransientBucket = transient_s3.Resource.Construct,
+    VideoPublishedQueue = videoPublishedQueue.Resource.Construct,
+    VideoFailedQueue = videoFailedQueue.Resource.Construct,
+    VideoProgressQueue = videoProgressQueue.Resource.Construct,
+    MediaConvertRole = mediaConvertRole
 });
-analyzeTask.AddRetry(transientRetry);
-analyzeTask.AddCatch(failNotificationTask);
-
-var prepareJobTask = new LambdaInvoke(stackConstruct, "PrepareJobTask", new LambdaInvokeProps
-{
-    LambdaFunction = jobPreparerFn,
-    OutputPath = "$.Payload"
-});
-prepareJobTask.AddRetry(transientRetry);
-prepareJobTask.AddCatch(failNotificationTask);
-
-var fargateTranscodeTask = new EcsRunTask(stackConstruct, "RunFargateTranscoderTask", new EcsRunTaskProps
-{
-    IntegrationPattern = IntegrationPattern.RUN_JOB,
-    Cluster = cluster,
-    TaskDefinition = fargateTranscoderTaskDef,
-    LaunchTarget = new EcsFargateLaunchTarget(),
-    ContainerOverrides = new[]
-    {
-        new SfnContainerOverride
-        {
-            ContainerDefinition = fargateTranscoderTaskDef.DefaultContainer!,
-            Environment = new[]
-            {
-                new SfnTaskEnvironmentVariable { Name = "INPUT_FILE", Value = JsonPath.StringAt("$.sourceKey") },
-                new SfnTaskEnvironmentVariable { Name = "JOB_CONFIG", Value = JsonPath.StringAt("$.jobConfigKey") }
-            }
-        }
-    }
-});
-fargateTranscodeTask.AddRetry(transientRetry);
-fargateTranscodeTask.AddCatch(failNotificationTask);
-
-var mediaConvertTask = new CustomState(stackConstruct, "MediaConvertTask", new CustomStateProps
-{
-    StateJson = new Dictionary<string, object>
-    {
-        { "Type", "Task" },
-        { "Resource", "arn:aws:states:::mediaconvert:createJob.sync" },
-        { "Parameters", new Dictionary<string, object>
-            {
-                { "Role", mediaConvertRole.RoleArn },
-                { "Settings", JsonPath.StringAt("$.mediaConvertSettings") }
-            }
-        }
-    }
-});
-mediaConvertTask.AddRetry(transientRetry);
-mediaConvertTask.AddCatch(failNotificationTask);
-
-var transcodeChoice = new Choice(stackConstruct, "EngineChoice")
-    .When(Condition.StringEquals("$.transcodingEngine", "MediaConvert"), mediaConvertTask)
-    .Otherwise(fargateTranscodeTask);
-
-var r2MoverTask = new EcsRunTask(stackConstruct, "RunR2MoverTask", new EcsRunTaskProps
-{
-    IntegrationPattern = IntegrationPattern.RUN_JOB,
-    Cluster = cluster,
-    TaskDefinition = fargateR2MoverTaskDef,
-    LaunchTarget = new EcsFargateLaunchTarget(),
-    ContainerOverrides = new[]
-    {
-        new SfnContainerOverride
-        {
-            ContainerDefinition = fargateR2MoverTaskDef.DefaultContainer!,
-            Environment = new[]
-            {
-                new SfnTaskEnvironmentVariable { Name = "TENANT_ID", Value = JsonPath.StringAt("$.tenantId") },
-                new SfnTaskEnvironmentVariable { Name = "VIDEO_ID", Value = JsonPath.StringAt("$.videoId") },
-                new SfnTaskEnvironmentVariable { Name = "TRANSIENT_BUCKET", Value = JsonPath.StringAt("$.transientOutputBucket") }
-            }
-        }
-    },
-    ResultPath = "$.r2Result"
-});
-r2MoverTask.AddRetry(transientRetry);
-r2MoverTask.AddCatch(failNotificationTask);
-
-var notifyPublishedTask = new SqsSendMessage(stackConstruct, "NotifyPublishedTask", new SqsSendMessageProps
-{
-    Queue = videoPublishedQueue.Resource.Construct,
-    MessageBody = TaskInput.FromObject(new Dictionary<string, object>
-    {
-        ["videoId"] = JsonPath.StringAt("$.videoId"),
-        ["tenantId"] = JsonPath.StringAt("$.tenantId"),
-        ["status"] = "Published",
-        ["playbackUrl"] = JsonPath.StringAt("$.r2Result.playbackUrl")
-    })
-}).Next(new Succeed(stackConstruct, "PipelineSucceededState"));
-
-var pipelineDefinition = analyzeTask
-    .Next(prepareJobTask)
-    .Next(transcodeChoice);
-
-fargateTranscodeTask.Next(r2MoverTask);
-mediaConvertTask.Next(r2MoverTask);
-r2MoverTask.Next(notifyPublishedTask);
-
-var stateMachine = new StateMachine(stackConstruct, "AlphaZeroVideoPipelineStateMachine", new StateMachineProps
-{
-    StateMachineName = "AlphaZero-VideoPipeline",
-    DefinitionBody = DefinitionBody.FromChainable(pipelineDefinition),
-    Timeout = Duration.Minutes(45)
-});
-
-// 8. EventBridge Trigger from S3 (.mp4 uploads)
-var s3EventRule = new Rule(stackConstruct, "S3UploadRule", new RuleProps
-{
-    EventPattern = new EventPattern
-    {
-        Source = new[] { "aws.s3" },
-        DetailType = new[] { "Object Created" },
-        Detail = new Dictionary<string, object>
-        {
-            { "bucket", new Dictionary<string, object> { { "name", new[] { input_s3.Resource.Construct.BucketName } } } },
-            { "object", new Dictionary<string, object> { { "key", new[] { new Dictionary<string, object> { { "suffix", ".mp4" } } } } } }
-        }
-    }
-});
-
-s3EventRule.AddTarget(new SfnStateMachine(stateMachine));
-
-// 9. Observability & Alarms
-var alarmTopic = new Topic(stackConstruct, "PipelineAlarmsTopic");
-new Alarm(stackConstruct, "ExecutionsFailedAlarm", new AlarmProps
-{
-    Metric = stateMachine.MetricFailed(),
-    Threshold = 1,
-    EvaluationPeriods = 1
-}).AddAlarmAction(new SnsAction(alarmTopic));
-
-new Alarm(stackConstruct, "ExecutionsTimedOutAlarm", new AlarmProps
-{
-    Metric = stateMachine.MetricTimedOut(),
-    Threshold = 1,
-    EvaluationPeriods = 1
-}).AddAlarmAction(new SnsAction(alarmTopic));
-
-new Alarm(stackConstruct, "ExecutionTimeAlarm", new AlarmProps
-{
-    Metric = stateMachine.MetricTime(),
-    Threshold = Duration.Minutes(30).ToMilliseconds(),
-    EvaluationPeriods = 1
-}).AddAlarmAction(new SnsAction(alarmTopic));
 
 #endregion
 
@@ -424,44 +178,6 @@ var api = builder.AddProject<Projects.AlphaZero_API>("alphazero-api")
     .WithEnvironment("AWS__Resources__MediaConvertRoleArn", awscdkStack.GetOutput("MediaConvertRoleArnOutput"))
     .WithEnvironment("AWS__Resources__MediaConvertKeyKMSArn", kmsArn)
     .WithEnvironment("AWS__Resources__CdnDomain", cdnDomain)
-    .WithEnvironment("AWS__Resources__StepFunctionArn", stateMachine.StateMachineArn);
+    .WithEnvironment("AWS__Resources__StepFunctionArn", videoPipeline.PipelineStateMachine.StateMachineArn);
 
 builder.Build().Run();
-
-static string FindRepoRoot()
-{
-    var dir = new DirectoryInfo(AppContext.BaseDirectory);
-    while (dir != null)
-    {
-        if (File.Exists(Path.Combine(dir.FullName, "AlphaZero.sln")) ||
-            Directory.Exists(Path.Combine(dir.FullName, ".git")))
-        {
-            return dir.FullName;
-        }
-        dir = dir.Parent;
-    }
-    return Directory.GetCurrentDirectory();
-}
-
-static string ResolveJobPreparerAsset(string repoRoot)
-{
-    var candidates = new[]
-    {
-        Path.Combine(repoRoot, "src/lambdas/AlphaZero.JobPreparer/publish"),
-        Path.Combine(repoRoot, "src/lambdas/AlphaZero.JobPreparer/src/AlphaZero.JobPreparer/bin/Release/net10.0"),
-        Path.Combine(repoRoot, "src/lambdas/AlphaZero.JobPreparer/src/AlphaZero.JobPreparer/bin/Debug/net10.0"),
-        Path.Combine(repoRoot, "src/lambdas/AlphaZero.JobPreparer/src/AlphaZero.JobPreparer")
-    };
-
-    foreach (var candidate in candidates)
-    {
-        if (Directory.Exists(candidate))
-        {
-            return candidate;
-        }
-    }
-
-    var defaultPublish = candidates[0];
-    Directory.CreateDirectory(defaultPublish);
-    return defaultPublish;
-}

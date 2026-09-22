@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <Sdk Name="Aspire.AppHost.Sdk" Version="9.3.1" />
 
@@ -20,6 +20,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\AlphaZero.API\AlphaZero.API.csproj" />
+    <ProjectReference Include="..\..\..\..\infrastructure\AlphaZero.Cdk\AlphaZero.Cdk.csproj" ReferenceOutputAssembly="true" />
   </ItemGroup>
 
 </Project>
