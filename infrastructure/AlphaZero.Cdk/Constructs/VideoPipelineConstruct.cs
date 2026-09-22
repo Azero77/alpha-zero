@@ -32,7 +32,7 @@ public class VideoPipelineConstructProps
     public required IQueue VideoProgressQueue { get; set; }
     public IStringParameter? MasterClearKey { get; set; }
     public IStringParameter? R2Credentials { get; set; }
-    public IRole? MediaConvertRole { get; set; }
+    public required IRole MediaConvertRole { get; set; }
     public IVpc? Vpc { get; set; }
 }
 
@@ -94,7 +94,7 @@ public class VideoPipelineConstruct : Construct
         });
         fargateTranscoderTaskDef.AddContainer("TranscoderContainer", new EcsContainerDefinitionOptions
         {
-            Image = ContainerImage.FromRegistry("ghcr.io/azero77/ffmpeg-hls-transcoder:latest"),
+            Image = ContainerImage.FromRegistry(VideoPipelineStackConfig.TranscoderDockerImage),
             Logging = LogDriver.AwsLogs(new AwsLogDriverProps { StreamPrefix = "Transcoder" })
         });
         props.InputBucket.GrantRead(fargateTranscoderTaskDef.TaskRole);
@@ -173,7 +173,7 @@ public class VideoPipelineConstruct : Construct
         fargateTranscodeTask.AddRetry(transientRetry);
         fargateTranscodeTask.AddCatch(failNotificationTask);
 
-        var mediaConvertRoleArn = props.MediaConvertRole?.RoleArn ?? "arn:aws:iam::ACCOUNT_ID:role/MediaConvertRole";
+        var mediaConvertRoleArn = props.MediaConvertRole.RoleArn;
         var mediaConvertTask = new CustomState(this, "MediaConvertTask", new CustomStateProps
         {
             StateJson = new Dictionary<string, object>

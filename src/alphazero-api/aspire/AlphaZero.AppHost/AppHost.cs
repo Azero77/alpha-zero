@@ -5,6 +5,7 @@ using Amazon.CDK.AWS.SQS;
 using AlphaZero.Cdk.Constructs;
 using Aspire.Hosting;
 using Constructs;
+using AlphaZero.Cdk.Stacks;
 
 var builder = DistributedApplication.CreateBuilder(args);
 
@@ -17,128 +18,21 @@ var stackConstruct = (Construct)awscdkStack.Resource.Construct;
 
 #region aws
 
-// 1. S3 Storage
-var input_s3 = awscdkStack.AddS3Bucket("InputS3", new BucketProps
-{
-    BucketName = "alphazero-raw-uploads-dev",
-    EventBridgeEnabled = true,
-    Cors = new[]
-    {
-        new CorsRule
-        {
-            AllowedMethods = new[] { Amazon.CDK.AWS.S3.HttpMethods.GET, Amazon.CDK.AWS.S3.HttpMethods.PUT },
-            AllowedOrigins = new[] { "*" },
-            AllowedHeaders = new[] { "content-type", "x-amz-meta-file-name", "x-amz-meta-videoid", "x-amz-meta-tenantid", "x-amz-meta-title", "x-amz-meta-description", "x-amz-meta-videotranscodingmetehod", "x-amz-meta-videoencryptionmethod", "x-amz-meta-targetresourcearn", "x-amz-meta-isthumbnail", "*" },
-            ExposedHeaders = new[] { "ETag", "x-amz-meta-file-name", "x-amz-meta-videoid", "x-amz-meta-tenantid", "x-amz-meta-title", "x-amz-meta-description", "x-amz-meta-videotranscodingmetehod", "x-amz-meta-videoencryptionmethod", "x-amz-meta-targetresourcearn", "x-amz-meta-isthumbnail" },
-            MaxAge = 3600
-        }
-    }
-});
-
-var transient_s3 = awscdkStack.AddS3Bucket("TransientS3", new BucketProps
-{
-    BucketName = "alphazero-transient-processing-dev",
-    LifecycleRules = new[]
-    {
-        new LifecycleRule
-        {
-            Id = "ExpireTransientFilesAfter24Hours",
-            Enabled = true,
-            Expiration = Duration.Days(1)
-        }
-    }
-});
-
-var output_s3 = awscdkStack.AddS3Bucket("OutputS3");
-
-string cdnDomain = builder.Configuration["CdnDomain"] ?? "";
-// var cdn_s3 = awscdkStack.AddS3Bucket("CdnS3", new BucketProps
-// {
-//     BucketName = string.IsNullOrEmpty(cdnDomain) ? "alphazero-cdn-dev" : cdnDomain,
-//     PublicReadAccess = true,
-//     BlockPublicAccess = new BlockPublicAccess(new BlockPublicAccessOptions
-//     {
-//         BlockPublicAcls = false,
-//         IgnorePublicAcls = false,
-//         BlockPublicPolicy = false,
-//         RestrictPublicBuckets = false
-//     }),
-//     Cors = new[]
-//     {
-//         new CorsRule
-//         {
-//             AllowedMethods = new[] { Amazon.CDK.AWS.S3.HttpMethods.GET },
-//             AllowedOrigins = new[] { "*" },
-//             AllowedHeaders = new[] { "*" },
-//             ExposedHeaders = new[] { "ETag" },
-//             MaxAge = 3000
-//         }
-//     }
-// });
-
-// cdn_s3.Resource.Construct.AddToResourcePolicy(new PolicyStatement(new PolicyStatementProps
-// {
-//     Actions = new[] { "s3:GetObject" },
-//     Resources = new[] { $"{cdn_s3.Resource.Construct.BucketArn}/*" },
-//     Principals = new[] { new AnyPrincipal() }
-// }));
-
-// 2. SQS Queues
-var videoPublishedQueue = awscdkStack.AddSQSQueue("VideoPublishedQueue", new QueueProps
-{
-    QueueName = "VideoPublishedQueue"
-});
-
-var videoFailedQueue = awscdkStack.AddSQSQueue("VideoProcessingFailedQueue", new QueueProps
-{
-    QueueName = "VideoProcessingFailedQueue"
-});
-
-var videoProgressQueue = awscdkStack.AddSQSQueue("VideoProcessingProgressQueue", new QueueProps
-{
-    QueueName = "VideoProcessingProgressQueue"
-});
-
-// 3. MediaConvert Role
-var mediaConvertRole = new Role(stackConstruct, "AspireMediaConvertServiceRole", new RoleProps
-{
-    AssumedBy = new ServicePrincipal("mediaconvert.amazonaws.com"),
-    Description = "Role for mediaconvert job to access s3",
-    RoleName = "Aspire-Mediaconvert-Role"
-});
-mediaConvertRole.AddToPolicy(new PolicyStatement(new PolicyStatementProps
-{
-    Actions = new[] { "s3:GetObject", "s3:ListBucket", "s3:GetBucketLocation" },
-    Resources = new[] { input_s3.Resource.Construct.BucketArn, $"{input_s3.Resource.Construct.BucketArn}/*" }
-}));
-mediaConvertRole.AddToPolicy(new PolicyStatement(new PolicyStatementProps
-{
-    Actions = new[] { "s3:PutObject", "s3:GetObject", "s3:ListBucket", "s3:PutObjectAcl", "s3:AbortMultipartUpload", "s3:GetBucketLocation" },
-    Resources = new[] { output_s3.Resource.Construct.BucketArn, $"{output_s3.Resource.Construct.BucketArn}/*" }
-}));
-string kmsArn = "arn:aws:kms:eu-north-1:555106000478:key/6dd21054-9423-469f-b94a-47a315d360fa";
-mediaConvertRole.AddToPolicy(new PolicyStatement(new PolicyStatementProps
-{
-    Actions = new[] { "kms:Decrypt", "kms:GenerateDataKey*", "kms:DescribeKey", "kms:CreateGrant" },
-    Resources = new[] { kmsArn }
-}));
-new Amazon.CDK.CfnOutput(stackConstruct, "MediaConvertRoleArnOutput", new Amazon.CDK.CfnOutputProps
-{
-    Value = mediaConvertRole.RoleArn
-});
-
+var storageStack = new StorageStack(stackConstruct, "Storage");
 // 4. Shared Step Functions Video Pipeline (from AlphaZero.Cdk)
 var videoPipeline = new VideoPipelineConstruct(stackConstruct, "VideoPipeline", new VideoPipelineConstructProps
 {
-    InputBucket = input_s3.Resource.Construct,
-    TransientBucket = transient_s3.Resource.Construct,
-    VideoPublishedQueue = videoPublishedQueue.Resource.Construct,
-    VideoFailedQueue = videoFailedQueue.Resource.Construct,
-    VideoProgressQueue = videoProgressQueue.Resource.Construct,
-    MediaConvertRole = mediaConvertRole
+
+    InputBucket = storageStack.InputBucket,
+    TransientBucket = storageStack.TransientBucket,
+    VideoPublishedQueue = storageStack.VideoPublishedQueue,
+    VideoFailedQueue = storageStack.VideoFailedQueue,
+    VideoProgressQueue = storageStack.VideoProgressQueue,
+    MediaConvertRole = storageStack.MediaConvertRole,
 });
 
 #endregion
+var cdnDomain = builder.Configuration["CdnDomain"] ?? "" ;
 
 var postgres = builder.AddPostgres("postgres")
     .WithImage("postgis/postgis:16-3.5-alpine")
@@ -176,7 +70,7 @@ var api = builder.AddProject<Projects.AlphaZero_API>("alphazero-api")
     .WithEnvironment("Authentication__TokenUrl", ReferenceExpression.Create($"{keycloakHttp}/realms/alpha-zero/protocol/openid-connect/token"))
     .WithEnvironment("Authentication__Authority", ReferenceExpression.Create($"{keycloakHttp}/realms/alpha-zero"))
     .WithEnvironment("AWS__Resources__MediaConvertRoleArn", awscdkStack.GetOutput("MediaConvertRoleArnOutput"))
-    .WithEnvironment("AWS__Resources__MediaConvertKeyKMSArn", kmsArn)
+    .WithEnvironment("AWS__Resources__MediaConvertKeyKMSArn", storageStack.MediaConvertKmsKeyArn)
     .WithEnvironment("AWS__Resources__CdnDomain", cdnDomain)
     .WithEnvironment("AWS__Resources__StepFunctionArn", videoPipeline.PipelineStateMachine.StateMachineArn);
 

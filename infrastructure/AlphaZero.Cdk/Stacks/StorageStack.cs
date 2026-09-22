@@ -1,4 +1,6 @@
 using Amazon.CDK;
+using Amazon.CDK.AWS.IAM;
+using Amazon.CDK.AWS.KMS;
 using Amazon.CDK.AWS.S3;
 using Amazon.CDK.AWS.SQS;
 using Amazon.CDK.AWS.SSM;
@@ -20,6 +22,8 @@ public class StorageStack : Stack
     public IQueue VideoProgressQueue { get; }
     public IStringParameter MasterClearKey { get; }
     public IStringParameter R2Credentials { get; }
+    public Role MediaConvertRole {get;}
+    public string MediaConvertKmsKeyArn {get;}
 
     public StorageStack(Construct scope, string id, StorageStackProps? props = null) : base(scope, id, props)
     {
@@ -83,5 +87,47 @@ public class StorageStack : Stack
         {
             ParameterName = "/AlphaZero/VideoPipeline/R2Credentials"
         });
+
+// 3. MediaConvert Role
+        MediaConvertRole = new Role(this, "AspireMediaConvertServiceRole", new RoleProps
+        {
+            AssumedBy = new ServicePrincipal("mediaconvert.amazonaws.com"),
+            Description = "Role for mediaconvert job to access s3",
+            RoleName = "Aspire-Mediaconvert-Role"
+        });
+        MediaConvertRole.AddToPolicy(new PolicyStatement(new PolicyStatementProps
+        {
+            Actions = new[] { "s3:GetObject", "s3:ListBucket", "s3:GetBucketLocation" },
+            Resources = new[] { InputBucket.BucketArn, $"{InputBucket.BucketArn}/*" }
+        }));
+        MediaConvertRole.AddToPolicy(new PolicyStatement(new PolicyStatementProps
+        {
+            Actions = new[] { "s3:PutObject", "s3:GetObject", "s3:ListBucket", "s3:PutObjectAcl", "s3:AbortMultipartUpload", "s3:GetBucketLocation" },
+            Resources = new[] { TransientBucket.BucketArn, $"{TransientBucket.BucketArn}/*" }
+        }));
+        var kms = new Key(this, "MediaConvertKMS", new KeyProps
+        {
+            // Optional, but useful for production
+            Description = "KMS key used to encrypt MediaConvert output objects in S3",
+            EnableKeyRotation = true
+        });
+
+        var mediaConvertKmsPolicy = new PolicyStatement(new PolicyStatementProps
+        {
+            Effect = Effect.ALLOW,
+            Actions = new[]
+            {
+                "kms:Decrypt",
+                "kms:GenerateDataKey*",
+                "kms:DescribeKey",
+                "kms:CreateGrant"
+            },
+            Resources = new[]
+            {
+                kms.KeyArn
+            }
+        });
+        MediaConvertKmsKeyArn = kms.KeyArn;
+        MediaConvertRole.AddToPolicy(mediaConvertKmsPolicy);
     }
 }

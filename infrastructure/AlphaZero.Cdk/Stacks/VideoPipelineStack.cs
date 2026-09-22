@@ -27,7 +27,8 @@ public class VideoPipelineStack : Stack
             VideoFailedQueue = storage.VideoFailedQueue,
             VideoProgressQueue = storage.VideoProgressQueue,
             MasterClearKey = storage.MasterClearKey,
-            R2Credentials = storage.R2Credentials
+            R2Credentials = storage.R2Credentials,
+            MediaConvertRole = storage.MediaConvertRole
         });
 
         PipelineStateMachine = Pipeline.PipelineStateMachine;
