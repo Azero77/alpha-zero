@@ -20,7 +20,9 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\AlphaZero.API\AlphaZero.API.csproj" />
-    <ProjectReference Include="..\..\..\..\infrastructure\AlphaZero.Cdk\AlphaZero.Cdk.csproj" ReferenceOutputAssembly="true" />
+    <ProjectReference Include="..\..\..\..\infrastructure\AlphaZero.Cdk\AlphaZero.Cdk.csproj" 
+    IsAspireProjectResource="false"
+    ReferenceOutputAssembly="true" />
   </ItemGroup>
 
 </Project>
