@@ -49,48 +49,60 @@ public record JobPreparerOutput(
     string DurationFormatted,
     string? TargetResourceArn);
 
-public class JobInputConfig
+public sealed record TranscodingJobInput
 {
-    public string file { get; set; }
-    public int videoStreamIndex { get; set; }
-    public int audioStreamIndex { get; set; }
+    public required Guid VideoId { get; init; }
+    public required Guid TenantId { get; init; }
+    public required string SourcePath { get; init; }
+    public required string OutputPrefix { get; init; }
+    public required VideoMetadata SourceMetadata { get; init; }
+    public required TranscodeSettings Settings { get; init; }
+
+    [JsonConverter(typeof(JsonStringEnumConverter<EncryptionMethod>))]
+    public EncryptionMethod EncryptionMethod { get; init; } = EncryptionMethod.None;
+
+    public EncryptionSettings? Encryption { get; init; }
+    public string? ThumbnailRelativeUrl { get; init; }
 }
 
-public class JobOutputConfig
+public sealed record VideoMetadata(
+    int SourceWidth,
+    int SourceHeight,
+    TimeSpan Duration);
+
+public sealed record TranscodeSettings
 {
-    public string bucket { get; set; }
-    public string prefix { get; set; }
-    public int segmentDurationSeconds { get; set; }
-    public bool enableThumbnails { get; set; }
-    public int thumbnailTimeOffsetSeconds { get; set; }
+    public required OutputPreset[] Outputs { get; init; }
+    public int SegmentLengthSeconds { get; init; } = 6;
+    public int FragmentLengthSeconds { get; init; } = 2;
+    public AudioSettings Audio { get; init; } = AudioSettings.Default;
 }
 
-public class JobCencConfig
+public sealed record OutputPreset(
+    int Width,
+    int Height,
+    int MaxBitrateKbps,
+    int QvbrQualityLevel,
+    string NameModifier);
+
+public sealed record AudioSettings(
+    string Codec,
+    int BitrateKbps,
+    int SampleRate)
 {
-    public bool enabled { get; set; }
-    public string scheme { get; set; }
-    public string keyId { get; set; }
-    public string key { get; set; }
+    public static readonly AudioSettings Default = new("aac", 128, 44100);
 }
 
-public class RenditionConfig
-{
-    public string name { get; set; }
-    public int width { get; set; }
-    public int height { get; set; }
-    public int videoBitrateKbps { get; set; }
-    public int audioBitrateKbps { get; set; }
-}
+public sealed record EncryptionSettings(
+    string KeyId,
+    string Key,
+    string? KeyUrl);
 
-public class JobConfig
+[JsonConverter(typeof(JsonStringEnumConverter<EncryptionMethod>))]
+public enum EncryptionMethod
 {
-    public string version { get; set; }
-    public string jobId { get; set; }
-    public string tenantId { get; set; }
-    public JobInputConfig[] inputs { get; set; }
-    public JobOutputConfig output { get; set; }
-    public RenditionConfig[] ladder { get; set; }
-    public JobCencConfig? cenc { get; set; }
+    None = 0,
+    ClearKey = 1
 }
 
 public class Function
@@ -127,45 +139,47 @@ public class Function
 
             var ladder = BuildAdaptiveLadder(input.Metadata.SourceWidth, input.Metadata.SourceHeight);
 
-            string? clearKey = null;
-            if (input.EncryptionMethod == "ClearKey")
+            EncryptionSettings? encryption = null;
+            var encMethod = string.Equals(input.EncryptionMethod, "ClearKey", StringComparison.OrdinalIgnoreCase)
+                ? EncryptionMethod.ClearKey
+                : EncryptionMethod.None;
+
+            if (encMethod == EncryptionMethod.ClearKey)
             {
                 var masterSecret = await GetMasterSecretAsync();
-                clearKey = GenerateClearKeySecret(masterSecret, input.VideoId);
+                var clearKey = GenerateClearKeySecret(masterSecret, input.VideoId);
+                var keyId = input.VideoId.Replace("-", "").ToLowerInvariant();
+                encryption = new EncryptionSettings(
+                    KeyId: keyId,
+                    Key: clearKey,
+                    KeyUrl: $"/api/video/keys/{input.VideoId}"
+                );
             }
 
-            var jobConfig = new JobConfig
+            var jobInput = new TranscodingJobInput
             {
-                version = "1.0",
-                jobId = input.VideoId,
-                tenantId = input.TenantId,
-                inputs = new[]
+                VideoId = Guid.TryParse(input.VideoId, out var vId) ? vId : Guid.NewGuid(),
+                TenantId = Guid.TryParse(input.TenantId, out var tId) ? tId : Guid.NewGuid(),
+                SourcePath = input.SourceKey,
+                OutputPrefix = outputPrefix,
+                SourceMetadata = new VideoMetadata(
+                    SourceWidth: input.Metadata.SourceWidth,
+                    SourceHeight: input.Metadata.SourceHeight,
+                    Duration: TimeSpan.FromSeconds(input.Metadata.DurationSeconds)
+                ),
+                Settings = new TranscodeSettings
                 {
-                    new JobInputConfig {
-                        file = $"s3://{input.SourceBucket}/{input.SourceKey}",
-                        videoStreamIndex = 0,
-                        audioStreamIndex = 1
-                    }
+                    Outputs = ladder,
+                    SegmentLengthSeconds = 6,
+                    FragmentLengthSeconds = 2,
+                    Audio = AudioSettings.Default
                 },
-                output = new JobOutputConfig
-                {
-                    bucket = input.TransientOutputBucket,
-                    prefix = outputPrefix,
-                    segmentDurationSeconds = 6,
-                    enableThumbnails = true,
-                    thumbnailTimeOffsetSeconds = 2
-                },
-                ladder = ladder,
-                cenc = (input.EncryptionMethod == "ClearKey") ? new JobCencConfig
-                {
-                    enabled = true,
-                    scheme = "cbcs",
-                    keyId = input.VideoId.Replace("-", "").ToLowerInvariant(),
-                    key = clearKey
-                } : null
+                EncryptionMethod = encMethod,
+                Encryption = encryption,
+                ThumbnailRelativeUrl = null
             };
 
-            var json = JsonSerializer.Serialize(jobConfig, JobPreparerJsonContext.Default.JobConfig);
+            var json = JsonSerializer.Serialize(jobInput, JobPreparerJsonContext.Default.TranscodingJobInput);
 
             await S3Client.PutObjectAsync(new PutObjectRequest
             {
@@ -203,23 +217,23 @@ public class Function
         }
     }
 
-    internal static RenditionConfig[] BuildAdaptiveLadder(int width, int height)
+    internal static OutputPreset[] BuildAdaptiveLadder(int width, int height)
     {
-        var renditions = new List<RenditionConfig>
+        var presets = new List<OutputPreset>
         {
-            new RenditionConfig { name = "360p", width = 640, height = 360, videoBitrateKbps = 600, audioBitrateKbps = 96 }
+            new OutputPreset(640, 360, 600, 7, "_360p")
         };
 
         if (height >= 480)
-            renditions.Add(new RenditionConfig { name = "480p", width = 854, height = 480, videoBitrateKbps = 1200, audioBitrateKbps = 128 });
+            presets.Add(new OutputPreset(854, 480, 1200, 7, "_480p"));
 
         if (height >= 720)
-            renditions.Add(new RenditionConfig { name = "720p", width = 1280, height = 720, videoBitrateKbps = 2400, audioBitrateKbps = 128 });
+            presets.Add(new OutputPreset(1280, 720, 2400, 7, "_720p"));
 
         if (height >= 1080)
-            renditions.Add(new RenditionConfig { name = "1080p", width = 1920, height = 1080, videoBitrateKbps = 4500, audioBitrateKbps = 192 });
+            presets.Add(new OutputPreset(1920, 1080, 4500, 7, "_1080p"));
 
-        return renditions.ToArray();
+        return presets.ToArray();
     }
 
     internal static string GenerateClearKeySecret(string masterSecret, string videoId)
@@ -232,5 +246,12 @@ public class Function
 
 [JsonSerializable(typeof(JobPreparerInput))]
 [JsonSerializable(typeof(JobPreparerOutput))]
-[JsonSerializable(typeof(JobConfig))]
+[JsonSerializable(typeof(TranscodingJobInput))]
+[JsonSerializable(typeof(VideoMetadata))]
+[JsonSerializable(typeof(TranscodeSettings))]
+[JsonSerializable(typeof(OutputPreset))]
+[JsonSerializable(typeof(OutputPreset[]))]
+[JsonSerializable(typeof(AudioSettings))]
+[JsonSerializable(typeof(EncryptionSettings))]
+[JsonSerializable(typeof(EncryptionMethod))]
 public partial class JobPreparerJsonContext : JsonSerializerContext { }

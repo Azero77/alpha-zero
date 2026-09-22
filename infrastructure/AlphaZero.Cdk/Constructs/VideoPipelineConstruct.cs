@@ -98,7 +98,7 @@ public class VideoPipelineConstruct : Construct
             Logging = LogDriver.AwsLogs(new AwsLogDriverProps { StreamPrefix = "Transcoder" })
         });
         props.InputBucket.GrantRead(fargateTranscoderTaskDef.TaskRole);
-        props.TransientBucket.GrantWrite(fargateTranscoderTaskDef.TaskRole);
+        props.TransientBucket.GrantReadWrite(fargateTranscoderTaskDef.TaskRole);
 
         var fargateR2MoverTaskDef = new FargateTaskDefinition(this, "R2MoverTaskDef", new FargateTaskDefinitionProps
         {
@@ -123,6 +123,11 @@ public class VideoPipelineConstruct : Construct
         };
 
         // 4. Step Functions Tasks & Failure Handling
+        var catchProps = new CatchProps
+        {
+            ResultPath = "$.errorInfo"
+        };
+
         var failNotificationTask = new SqsSendMessage(this, "NotifyFailureTask", new SqsSendMessageProps
         {
             Queue = props.VideoFailedQueue,
@@ -131,25 +136,54 @@ public class VideoPipelineConstruct : Construct
                 ["videoId"] = JsonPath.StringAt("$.videoId"),
                 ["tenantId"] = JsonPath.StringAt("$.tenantId"),
                 ["status"] = "Failed",
-                ["error"] = JsonPath.StringAt("$.Cause")
+                ["error"] = new Dictionary<string, object>
+                {
+                    ["errorType"] = JsonPath.StringAt("$.errorInfo.Error"),
+                    ["cause"] = JsonPath.StringAt("$.errorInfo.Cause")
+                },
+                ["targetResourceArn"] = JsonPath.StringAt("$.targetResourceArn")
             })
         }).Next(new Fail(this, "PipelineFailedState"));
 
         var analyzeTask = new LambdaInvoke(this, "AnalyzeVideoTask", new LambdaInvokeProps
         {
             LambdaFunction = VideoAnalyzerFunction,
-            OutputPath = "$.Payload"
+            PayloadResponseOnly = true,
+            ResultPath = "$.sourceMetadata"
         });
         analyzeTask.AddRetry(transientRetry);
-        analyzeTask.AddCatch(failNotificationTask);
+        analyzeTask.AddCatch(failNotificationTask, catchProps);
 
         var prepareJobTask = new LambdaInvoke(this, "PrepareJobTask", new LambdaInvokeProps
         {
             LambdaFunction = JobPreparerFunction,
-            OutputPath = "$.Payload"
+            Payload = TaskInput.FromObject(new Dictionary<string, object>
+            {
+                ["videoId"] = JsonPath.StringAt("$.videoId"),
+                ["tenantId"] = JsonPath.StringAt("$.tenantId"),
+                ["sourceBucket"] = JsonPath.StringAt("$.sourceBucket"),
+                ["sourceKey"] = JsonPath.StringAt("$.sourceKey"),
+                ["transientOutputBucket"] = props.TransientBucket.BucketName,
+                ["transcodingEngine"] = JsonPath.StringAt("$.transcodingEngine"),
+                ["encryptionMethod"] = JsonPath.StringAt("$.encryptionMethod"),
+                ["targetResourceArn"] = JsonPath.StringAt("$.targetResourceArn"),
+                ["metadata"] = new Dictionary<string, object>
+                {
+                    ["sourceWidth"] = JsonPath.NumberAt("$.sourceMetadata.sourceWidth"),
+                    ["sourceHeight"] = JsonPath.NumberAt("$.sourceMetadata.sourceHeight"),
+                    ["durationSeconds"] = JsonPath.NumberAt("$.sourceMetadata.durationSeconds"),
+                    ["durationFormatted"] = JsonPath.StringAt("$.sourceMetadata.durationFormatted"),
+                    ["frameRate"] = JsonPath.NumberAt("$.sourceMetadata.frameRate"),
+                    ["aspectRatio"] = JsonPath.StringAt("$.sourceMetadata.aspectRatio"),
+                    ["videoCodec"] = JsonPath.StringAt("$.sourceMetadata.videoCodec"),
+                    ["audioCodec"] = JsonPath.StringAt("$.sourceMetadata.audioCodec")
+                }
+            }),
+            PayloadResponseOnly = true,
+            ResultPath = "$.jobPrep"
         });
         prepareJobTask.AddRetry(transientRetry);
-        prepareJobTask.AddCatch(failNotificationTask);
+        prepareJobTask.AddCatch(failNotificationTask, catchProps);
 
         var fargateTranscodeTask = new EcsRunTask(this, "RunFargateTranscoderTask", new EcsRunTaskProps
         {
@@ -164,14 +198,17 @@ public class VideoPipelineConstruct : Construct
                     ContainerDefinition = fargateTranscoderTaskDef.DefaultContainer!,
                     Environment = new[]
                     {
-                        new SfnTaskEnvironmentVariable { Name = "INPUT_FILE", Value = JsonPath.StringAt("$.sourceKey") },
-                        new SfnTaskEnvironmentVariable { Name = "JOB_CONFIG", Value = JsonPath.StringAt("$.jobConfigKey") }
+                        new SfnTaskEnvironmentVariable { Name = "TRANSCODER__StorageProvider", Value = "S3" },
+                        new SfnTaskEnvironmentVariable { Name = "TRANSCODER__S3__InputBucket", Value = props.InputBucket.BucketName },
+                        new SfnTaskEnvironmentVariable { Name = "TRANSCODER__S3__OutputBucket", Value = props.TransientBucket.BucketName },
+                        new SfnTaskEnvironmentVariable { Name = "TRANSCODER__INPUT_FILE", Value = JsonPath.StringAt("$.jobPrep.jobConfigKey") }
                     }
                 }
-            }
+            },
+            ResultPath = "$.transcoderResult"
         });
         fargateTranscodeTask.AddRetry(transientRetry);
-        fargateTranscodeTask.AddCatch(failNotificationTask);
+        fargateTranscodeTask.AddCatch(failNotificationTask, catchProps);
 
         var mediaConvertRoleArn = props.MediaConvertRole.RoleArn;
         var mediaConvertTask = new CustomState(this, "MediaConvertTask", new CustomStateProps
@@ -189,7 +226,7 @@ public class VideoPipelineConstruct : Construct
             }
         });
         mediaConvertTask.AddRetry(transientRetry);
-        mediaConvertTask.AddCatch(failNotificationTask);
+        mediaConvertTask.AddCatch(failNotificationTask, catchProps);
 
         var transcodeChoice = new Choice(this, "EngineChoice")
             .When(Condition.StringEquals("$.transcodingEngine", "MediaConvert"), mediaConvertTask)
@@ -210,14 +247,14 @@ public class VideoPipelineConstruct : Construct
                     {
                         new SfnTaskEnvironmentVariable { Name = "TENANT_ID", Value = JsonPath.StringAt("$.tenantId") },
                         new SfnTaskEnvironmentVariable { Name = "VIDEO_ID", Value = JsonPath.StringAt("$.videoId") },
-                        new SfnTaskEnvironmentVariable { Name = "TRANSIENT_BUCKET", Value = JsonPath.StringAt("$.transientOutputBucket") }
+                        new SfnTaskEnvironmentVariable { Name = "TRANSIENT_BUCKET", Value = props.TransientBucket.BucketName }
                     }
                 }
             },
             ResultPath = "$.r2Result"
         });
         r2MoverTask.AddRetry(transientRetry);
-        r2MoverTask.AddCatch(failNotificationTask);
+        r2MoverTask.AddCatch(failNotificationTask, catchProps);
 
         var notifyPublishedTask = new SqsSendMessage(this, "NotifyPublishedTask", new SqsSendMessageProps
         {
@@ -227,7 +264,13 @@ public class VideoPipelineConstruct : Construct
                 ["videoId"] = JsonPath.StringAt("$.videoId"),
                 ["tenantId"] = JsonPath.StringAt("$.tenantId"),
                 ["status"] = "Published",
-                ["playbackUrl"] = JsonPath.StringAt("$.r2Result.playbackUrl")
+                ["playbackUrl"] = JsonPath.Format("{}/{}/master.m3u8", JsonPath.StringAt("$.tenantId"), JsonPath.StringAt("$.videoId")),
+                ["thumbnailUrl"] = JsonPath.Format("{}/{}/poster.jpg", JsonPath.StringAt("$.tenantId"), JsonPath.StringAt("$.videoId")),
+                ["duration"] = JsonPath.StringAt("$.sourceMetadata.durationFormatted"),
+                ["width"] = JsonPath.NumberAt("$.sourceMetadata.sourceWidth"),
+                ["height"] = JsonPath.NumberAt("$.sourceMetadata.sourceHeight"),
+                ["engineUsed"] = JsonPath.StringAt("$.transcodingEngine"),
+                ["targetResourceArn"] = JsonPath.StringAt("$.targetResourceArn")
             })
         }).Next(new Succeed(this, "PipelineSucceededState"));
 
