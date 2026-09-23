@@ -32,5 +32,7 @@ public class VideoPipelineStack : Stack
         });
 
         PipelineStateMachine = Pipeline.PipelineStateMachine;
+
+        new CfnOutput(this, "StepFunctionArnOutput", new CfnOutputProps { Value = PipelineStateMachine.StateMachineArn });
     }
 }

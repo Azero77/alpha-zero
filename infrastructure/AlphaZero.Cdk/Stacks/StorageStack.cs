@@ -129,5 +129,14 @@ public class StorageStack : Stack
         });
         MediaConvertKmsKeyArn = kms.KeyArn;
         MediaConvertRole.AddToPolicy(mediaConvertKmsPolicy);
+
+        // Outputs for Aspire AppHost
+        new CfnOutput(this, "InputS3BucketName", new CfnOutputProps { Value = InputBucket.BucketName });
+        new CfnOutput(this, "TransientS3BucketName", new CfnOutputProps { Value = TransientBucket.BucketName });
+        new CfnOutput(this, "VideoPublishedQueueUrl", new CfnOutputProps { Value = VideoPublishedQueue.QueueUrl });
+        new CfnOutput(this, "VideoFailedQueueUrl", new CfnOutputProps { Value = VideoFailedQueue.QueueUrl });
+        new CfnOutput(this, "VideoProgressQueueUrl", new CfnOutputProps { Value = VideoProgressQueue.QueueUrl });
+        new CfnOutput(this, "MediaConvertRoleArnOutput", new CfnOutputProps { Value = MediaConvertRole.RoleArn });
+        new CfnOutput(this, "MediaConvertKeyKMSArnOutput", new CfnOutputProps { Value = MediaConvertKmsKeyArn });
     }
 }

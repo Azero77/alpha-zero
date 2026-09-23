@@ -4,6 +4,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <AWSProjectType>Lambda</AWSProjectType>
+    <IsAspireProjectResource>true</IsAspireProjectResource>
   </PropertyGroup>
 
   <ItemGroup>

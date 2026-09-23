@@ -1,55 +1,14 @@
-using Amazon.CDK;
-using Amazon.CDK.AWS.IAM;
-using Amazon.CDK.AWS.S3;
-using Amazon.CDK.AWS.SQS;
-using AlphaZero.Cdk.Constructs;
 using Aspire.Hosting;
-using Constructs;
-using AlphaZero.Cdk.Stacks;
-
 var builder = DistributedApplication.CreateBuilder(args);
 
 var awsSdkConfig = builder.AddAWSSDKConfig().WithRegion(Amazon.RegionEndpoint.EUNorth1);
 
-var awscdkStack = builder.AddAWSCDKStack("AlphaZero")
-    .WithReference(awsSdkConfig);
+var storageStackOutputs = builder.AddAWSCloudFormationStack("AlphaZeroStorageStack")
+                                 .WithReference(awsSdkConfig);
 
-var stackConstruct = (Construct)awscdkStack.Resource.Construct;
+var pipelineStackOutputs = builder.AddAWSCloudFormationStack("AlphaZeroVideoPipelineStack")
+                                  .WithReference(awsSdkConfig);
 
-#region aws
-
-var storageStack = new StorageStack(stackConstruct, "Storage");
-// 4. Shared Step Functions Video Pipeline (from AlphaZero.Cdk)
-var videoPipeline = new VideoPipelineConstruct(stackConstruct, "VideoPipeline", new VideoPipelineConstructProps
-{
-
-    InputBucket = storageStack.InputBucket,
-    TransientBucket = storageStack.TransientBucket,
-    VideoPublishedQueue = storageStack.VideoPublishedQueue,
-    VideoFailedQueue = storageStack.VideoFailedQueue,
-    VideoProgressQueue = storageStack.VideoProgressQueue,
-    MediaConvertRole = storageStack.MediaConvertRole,
-});
-
-// Expose CDK constructs as Aspire resources for automatic service discovery and configuration binding
-var inputS3 = awscdkStack.AddConstruct("InputS3", _ => (Bucket)storageStack.InputBucket);
-var transientS3 = awscdkStack.AddConstruct("TransientS3", _ => (Bucket)storageStack.TransientBucket);
-var outputS3 = awscdkStack.AddConstruct("OutputS3", _ => (Bucket)storageStack.TransientBucket);
-var videoPublishedQueue = awscdkStack.AddConstruct("VideoPublishedQueue", _ => (Queue)storageStack.VideoPublishedQueue);
-var videoFailedQueue = awscdkStack.AddConstruct("VideoFailedQueue", _ => (Queue)storageStack.VideoFailedQueue);
-var videoProgressQueue = awscdkStack.AddConstruct("VideoProgressQueue", _ => (Queue)storageStack.VideoProgressQueue);
-
-new Amazon.CDK.CfnOutput(stackConstruct, "MediaConvertRoleArnOutput", new Amazon.CDK.CfnOutputProps
-{
-    Value = storageStack.MediaConvertRole.RoleArn
-});
-
-new Amazon.CDK.CfnOutput(stackConstruct, "StepFunctionArnOutput", new Amazon.CDK.CfnOutputProps
-{
-    Value = videoPipeline.PipelineStateMachine.StateMachineArn
-});
-
-#endregion
 var cdnDomain = builder.Configuration["CdnDomain"] ?? "" ;
 
 var postgres = builder.AddPostgres("postgres")
@@ -74,21 +33,29 @@ var keycloakHttp = keyCloak.GetEndpoint("http");
 
 var api = builder.AddProject<Projects.AlphaZero_API>("alphazero-api")
     .WithReference(awsSdkConfig)
-    .WithReference(inputS3)
-    .WithReference(transientS3)
-    .WithReference(outputS3)
-    .WithReference(videoPublishedQueue)
-    .WithReference(videoFailedQueue)
-    .WithReference(videoProgressQueue)
     .WithReference(db)
     .WaitFor(db)
     .WithReference(keyCloak)
     .WithEnvironment("Authentication__AuthorizationUrl", ReferenceExpression.Create($"{keycloakHttp}/realms/alpha-zero/protocol/openid-connect/auth"))
     .WithEnvironment("Authentication__TokenUrl", ReferenceExpression.Create($"{keycloakHttp}/realms/alpha-zero/protocol/openid-connect/token"))
     .WithEnvironment("Authentication__Authority", ReferenceExpression.Create($"{keycloakHttp}/realms/alpha-zero"))
-    .WithEnvironment("AWS__Resources__MediaConvertRoleArn", awscdkStack.GetOutput("MediaConvertRoleArnOutput"))
-    .WithEnvironment("AWS__Resources__MediaConvertKeyKMSArn", storageStack.MediaConvertKmsKeyArn)
-    .WithEnvironment("AWS__Resources__CdnDomain", cdnDomain)
-    .WithEnvironment("AWS__Resources__StepFunctionArn", awscdkStack.GetOutput("StepFunctionArnOutput"));
+    .WithEnvironment("AWS__Resources__InputS3__BucketName", storageStackOutputs.GetOutput("InputS3BucketName"))
+    .WithEnvironment("AWS__Resources__TransientS3__BucketName", storageStackOutputs.GetOutput("TransientS3BucketName"))
+    .WithEnvironment("AWS__Resources__VideoPublishedQueue__QueueUrl", storageStackOutputs.GetOutput("VideoPublishedQueueUrl"))
+    .WithEnvironment("AWS__Resources__VideoFailedQueue__QueueUrl", storageStackOutputs.GetOutput("VideoFailedQueueUrl"))
+    .WithEnvironment("AWS__Resources__VideoProgressQueue__QueueUrl", storageStackOutputs.GetOutput("VideoProgressQueueUrl"))
+    .WithEnvironment("AWS__Resources__MediaConvertRoleArn", storageStackOutputs.GetOutput("MediaConvertRoleArnOutput"))
+    .WithEnvironment("AWS__Resources__MediaConvertKeyKMSArn", storageStackOutputs.GetOutput("MediaConvertKeyKMSArnOutput"))
+    .WithEnvironment("AWS__Resources__StepFunctionArn", pipelineStackOutputs.GetOutput("StepFunctionArnOutput"))
+    .WithEnvironment("AWS__Resources__CdnDomain", cdnDomain);
+
+#pragma warning disable ASPIRE001
+var videoAnalyzer = builder.AddAWSLambdaFunction<Projects.AlphaZero_VideoAnalyzer>("video-analyzer", "AlphaZero.VideoAnalyzer::AlphaZero.VideoAnalyzer.Function::FunctionHandler")
+    .WithReference(awsSdkConfig)
+    .WithEnvironment("AWS__Resources__InputS3__BucketName", storageStackOutputs.GetOutput("InputS3BucketName"));
+
+var jobPreparer = builder.AddAWSLambdaFunction<Projects.AlphaZero_JobPreparer>("job-preparer", "AlphaZero.JobPreparer::AlphaZero.JobPreparer.Function::FunctionHandler")
+    .WithReference(awsSdkConfig)
+    .WithEnvironment("AWS__Resources__TransientS3__BucketName", storageStackOutputs.GetOutput("TransientS3BucketName"));
 
 builder.Build().Run();
