@@ -21,7 +21,7 @@ public static class Upload
         string? transcodingMethod,
         string? encryptionMethod,
         bool? generateCustomThumbnailUrl,
-        string? targetResourceArn);
+        string targetResourceArn);
     public record Response(
         Guid videoId,
         Guid tenantId,
@@ -57,8 +57,8 @@ public static class Upload
                 title: request.title,
                 description: request.description,
                 TargetResourceArn: request.targetResourceArn,
-                VideoTranscodingMetehod: request.transcodingMethod,
-                VideoEncryptionMethod: request.encryptionMethod,
+                VideoTranscodingMetehod: request.transcodingMethod ?? VideoTranscodingMetehod.FFMPEG.ToString(),
+                VideoEncryptionMethod: request.encryptionMethod ?? VideoEncryptionMethod.None.ToString(),
                 generateCustomThumbnailUrl: request.generateCustomThumbnailUrl ?? false);
             var response = await module.Send<UploadCommand, ErrorOr<UploadCommandResponse>>(command);
             return response.Match(

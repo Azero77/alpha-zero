@@ -23,8 +23,10 @@ public record UploadCommand(
     string TargetResourceArn,
     string VideoTranscodingMetehod, 
     string VideoEncryptionMethod,
-    bool generateCustomThumbnailUrl = false
+    UploadThumbnailCommand? UploadThumbnail
     ): ICommand<UploadCommandResponse>;
+
+public record UploadThumbnailCommand(string FileName, string ContentType);
 
 public class UploadCommandValidator : AbstractValidator<UploadCommand>
 {
@@ -50,7 +52,17 @@ public class UploadCommandValidator : AbstractValidator<UploadCommand>
         RuleFor(x => x.VideoEncryptionMethod)
             .IsEnumName(typeof(VideoEncryptionMethod), caseSensitive: false)
             .WithMessage("Invalid video encryption method.");
+        RuleFor(x => x.UploadThumbnail)
+            .Must(yy =>
+            {
 
+                if(yy is not null)
+                {
+                    //checking the extensions 
+                    return VideoConstants.AllowedThumbnailMIMETypes.Contains(yy.ContentType,StringComparer.OrdinalIgnoreCase) && VideoConstants.AllowedThumbnailExtensions.Any(extension => yy.FileName.EndsWith(extension,StringComparison.OrdinalIgnoreCase));
+                }
+                return true;
+            });
         RuleFor(x => x.TargetResourceArn)
             .NotEmpty()
             .NotNull()
@@ -92,7 +104,7 @@ public sealed class UploadCommandHandler(
             { "Description", request.description ?? string.Empty },
             { "VideoTranscodingMetehod", request.VideoTranscodingMetehod.ToString() },
             { "VideoEncryptionMethod", request.VideoEncryptionMethod.ToString() },
-            { "TargetResourceArn", request.TargetResourceArn ?? string.Empty }
+            { "TargetResourceArn", request.TargetResourceArn}
         });
         if (response.IsError) return response.Errors;
 
@@ -100,12 +112,14 @@ public sealed class UploadCommandHandler(
         string? thumbnailPreSignedUrl = null;
         Dictionary<string, string>? thumbnailHeaders = null;
 
-        if (request.generateCustomThumbnailUrl)
+        if (request.UploadThumbnail is not null)
         {
-            var thumbResponse = await uploadService.UploadFile("thumbnail.jpg", VideoConstants.GetThumbnailVideoSourceKey(videoId.ToString(), tenantId.ToString()!),"image/jpeg", new Dictionary<string, string>()
+            var thumbResponse = await uploadService.UploadFile(request.UploadThumbnail.FileName, VideoConstants.GetThumbnailVideoSourceKey(videoId.ToString(), tenantId.ToString()!, request.UploadThumbnail.FileName),request.UploadThumbnail.ContentType, new Dictionary<string, string>()
             {
                 { "VideoId" , videoId.ToString()},
                 { "TenantId", tenantId.Value.ToString() },
+                { "ContentType", request.UploadThumbnail.ContentType},
+                { "FileName", request.UploadThumbnail.FileName},
                 { "IsThumbnail", "true" }
             });
             if(thumbResponse.IsError)
@@ -121,7 +135,6 @@ public sealed class UploadCommandHandler(
             tenantId.Value,
             request.title,
             request.description,
-            response.Value.key,
             new VideoMetadata(request.fileName, request.contentType, 0, request.VideoTranscodingMetehod, request.VideoEncryptionMethod),
             thumbnail,
             clock);

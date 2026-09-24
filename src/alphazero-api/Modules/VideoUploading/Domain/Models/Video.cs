@@ -13,12 +13,11 @@ public class Video : AggregateRoot, IDomainTenantOwned, ISoftDeletable
     public VideoMetadata Metadata { get; private set; } = null!;
     public VideoSpecifications Specifications { get; private set; } = null!;
     public ThumbnailInfo Thumbnail { get; private set; } = null!;
-    public string SourceKey { get; private set; } = null!;
     public string? OutputFolder { get; private set; }
     public DateTime CreatedOn { get; private set; }
     public DateTime? PublishedOn { get; private set; }
     public bool IsDeleted { get; private set; }
-
+    public string SourceKey => VideoConstants.GetInputVideoSourceKey(videoId: Id.ToString(), tenantId: TenantId.ToString());
     public DateTime? OnDeleted { get; private set; } = null!;
     private Video()
     {
@@ -30,7 +29,6 @@ public class Video : AggregateRoot, IDomainTenantOwned, ISoftDeletable
         Guid tenantId,
         string title,
         string? description,
-        string sourceKey,
         VideoMetadata metadata,
         ThumbnailInfo thumbnail,
         DateTime createdOn) : base(id)
@@ -38,7 +36,6 @@ public class Video : AggregateRoot, IDomainTenantOwned, ISoftDeletable
         TenantId = tenantId;
         Title = title;
         Description = description;
-        SourceKey = sourceKey;
         Metadata = metadata;
         Thumbnail = thumbnail;
         Specifications = VideoSpecifications.Empty;
@@ -51,7 +48,6 @@ public class Video : AggregateRoot, IDomainTenantOwned, ISoftDeletable
         Guid tenantId,
         string title,
         string? description,
-        string sourceKey,
         VideoMetadata metadata,
         ThumbnailInfo thumbnail,
         IClock clock)
@@ -59,9 +55,8 @@ public class Video : AggregateRoot, IDomainTenantOwned, ISoftDeletable
         if (string.IsNullOrWhiteSpace(title))
             return VideoErrors.EmptyTitle;
 
-        return new Video(id, tenantId, title, description, sourceKey, metadata, thumbnail, clock.Now);
+        return new Video(id, tenantId, title, description, metadata, thumbnail, clock.Now);
     }
-
     public ErrorOr<Success> MarkAsOptimized(string outputFolder)
     {
         if (Status != VideoStatus.Processing)
@@ -220,18 +215,25 @@ public sealed class S3Uri : IEquatable<S3Uri>
 public class VideoConstants
 {
     public static readonly string[] AllowedVideoFormats = [
-    ".mp4",
-    ".mov",
-    ".mkv",
-    ".webm"];
+    ".mp4"];
 
     public static readonly string[] AllowedMIMETypes = [  
     "video/mp4",
-    "video/quicktime",
-    "video/x-matroska",
-    "video/webm"
     ];
 
+
+    public static readonly string[] AllowedThumbnailExtensions = [
+        ".jpg",
+        ".jpeg",
+        ".webp"
+    ];
+    
+    public static readonly string[] AllowedThumbnailMIMETypes = [  
+        "image/jpeg",
+        "image/jpg",
+        "image/webp"
+    ];
+ 
     public static string GetInputVideoSourceKey(string videoId, string tenantId)
     {
         return $"{tenantId}/{videoId}/";
@@ -242,9 +244,9 @@ public class VideoConstants
         return $"s3://{bucketName}/{GetInputVideoSourceKey(videoId,tenantId)}";
     }
 
-    public static string GetThumbnailVideoSourceKey(string videoId, string tenantId)
+    public static string GetThumbnailVideoSourceKey(string videoId, string tenantId, string imageFile)
     {
-        return $"{tenantId}/{videoId}/thumbnail/thumbnail.jpg";
+        return $"{tenantId}/{videoId}/thumbnail/{imageFile}}";
     } 
 
     public static string GetOutputVideoKey(string videoId, string tenantId)
