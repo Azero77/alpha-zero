@@ -7,6 +7,12 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="cdk.out\**" />
+    <Content Remove="cdk.out\**" />
+    <None Remove="cdk.out\**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Amazon.CDK.Lib" />
     <PackageReference Include="Constructs" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Json" />

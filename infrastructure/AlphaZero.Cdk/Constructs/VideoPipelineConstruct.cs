@@ -46,7 +46,7 @@ public class VideoPipelineConstruct : Construct
     public VideoPipelineConstruct(Construct scope, string id, VideoPipelineConstructProps props) : base(scope, id)
     {
         var repoRoot = FindRepoRoot();
-        var analyzerPath = Path.Combine(repoRoot, "src/lambdas/AlphaZero.VideoAnalyzer");
+        var analyzerDockerFilePath = "src/lambdas/AlphaZero.VideoAnalyzer/Dockerfile";
         var jobPreparerPath = ResolveJobPreparerAsset(repoRoot);
         var r2MoverPath = Path.Combine(repoRoot, "src/workers/AlphaZero.R2Mover");
 
@@ -65,7 +65,11 @@ public class VideoPipelineConstruct : Construct
         VideoAnalyzerFunction = new DockerImageFunction(this, "VideoAnalyzerFunction", new DockerImageFunctionProps
         {
             FunctionName = "alphazero-video-analyzer",
-            Code = DockerImageCode.FromImageAsset(analyzerPath),
+            Code = DockerImageCode.FromImageAsset(repoRoot, new AssetImageCodeProps //here the dir is reporoot to acheive build context to be the root of the repo and then we specified the dockerfile path
+            {
+                File = analyzerDockerFilePath,
+                Exclude = new[] { "**/cdk.out", "**/.git", "**/bin", "**/obj" }
+            }),
             Timeout = Duration.Minutes(2),
             MemorySize = 512
         });
@@ -107,7 +111,11 @@ public class VideoPipelineConstruct : Construct
         });
         fargateR2MoverTaskDef.AddContainer("R2MoverContainer", new EcsContainerDefinitionOptions
         {
-            Image = ContainerImage.FromAsset(r2MoverPath),
+            Image = ContainerImage.FromAsset(repoRoot, new AssetImageProps
+            {
+                File = "src/workers/AlphaZero.R2Mover/Dockerfile",
+                Exclude = new[] { "**/cdk.out", "**/.git", "**/bin", "**/obj" }
+            }),
             Logging = LogDriver.AwsLogs(new AwsLogDriverProps { StreamPrefix = "R2Mover" })
         });
         props.TransientBucket.GrantRead(fargateR2MoverTaskDef.TaskRole);
@@ -191,6 +199,8 @@ public class VideoPipelineConstruct : Construct
             Cluster = cluster,
             TaskDefinition = fargateTranscoderTaskDef,
             LaunchTarget = new EcsFargateLaunchTarget(),
+            AssignPublicIp = true,
+            Subnets = new SubnetSelection { SubnetType = SubnetType.PUBLIC },
             ContainerOverrides = new[]
             {
                 new SfnContainerOverride
@@ -238,6 +248,8 @@ public class VideoPipelineConstruct : Construct
             Cluster = cluster,
             TaskDefinition = fargateR2MoverTaskDef,
             LaunchTarget = new EcsFargateLaunchTarget(),
+            AssignPublicIp = true,
+            Subnets = new SubnetSelection { SubnetType = SubnetType.PUBLIC },
             ContainerOverrides = new[]
             {
                 new SfnContainerOverride
@@ -345,11 +357,11 @@ public class VideoPipelineConstruct : Construct
             }
             catch
             {
-                return new Vpc(scope, "TranscoderVpc", new VpcProps { MaxAzs = 2, NatGateways = 1 });
+                return new Vpc(scope, "TranscoderVpc", new VpcProps { MaxAzs = 1, NatGateways = 1 });
             }
         }
 
-        return new Vpc(scope, "TranscoderVpc", new VpcProps { MaxAzs = 2, NatGateways = 1 });
+        return new Vpc(scope, "TranscoderVpc", new VpcProps { MaxAzs = 1, NatGateways = 1 });
     }
 
     private static string FindRepoRoot()

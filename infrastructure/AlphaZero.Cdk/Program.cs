@@ -9,14 +9,22 @@ public static class Program
     {
         var app = new App();
 
+        var env = new Amazon.CDK.Environment
+        {
+            Account = System.Environment.GetEnvironmentVariable("CDK_DEFAULT_ACCOUNT"),
+            Region = System.Environment.GetEnvironmentVariable("CDK_DEFAULT_REGION")
+        };
+
         var storageStack = new StorageStack(app, "AlphaZeroStorageStack", new StorageStackProps
         {
-            Environment = "prod"
+            Environment = "prod",
+            Env = env
         });
 
         new VideoPipelineStack(app, "AlphaZeroVideoPipelineStack", new VideoPipelineStackProps
         {
-            Storage = storageStack
+            Storage = storageStack,
+            Env = env
         });
 
         app.Synth();
