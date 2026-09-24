@@ -49,7 +49,6 @@ public class VideoPipelineConstruct : Construct
         var analyzerDockerFilePath = "src/lambdas/AlphaZero.VideoAnalyzer/Dockerfile";
         var jobPreparerPath = ResolveJobPreparerAsset(repoRoot);
         var r2MoverPath = Path.Combine(repoRoot, "src/workers/AlphaZero.R2Mover");
-
         // SSM Parameters
         var masterClearKey = props.MasterClearKey ?? StringParameter.FromSecureStringParameterAttributes(this, "MasterClearKey", new SecureStringParameterAttributes
         {
@@ -65,10 +64,11 @@ public class VideoPipelineConstruct : Construct
         VideoAnalyzerFunction = new DockerImageFunction(this, "VideoAnalyzerFunction", new DockerImageFunctionProps
         {
             FunctionName = "alphazero-video-analyzer",
-            Code = DockerImageCode.FromImageAsset(repoRoot, new AssetImageCodeProps //here the dir is reporoot to acheive build context to be the root of the repo and then we specified the dockerfile path
+            Code = DockerImageCode.FromImageAsset(repoRoot, new AssetImageCodeProps 
             {
                 File = analyzerDockerFilePath,
-                Exclude = new[] { "**/cdk.out", "**/.git", "**/bin", "**/obj" }
+                Exclude = new[] { ".git", "cdk.out" },
+                IgnoreMode = IgnoreMode.DOCKER
             }),
             Timeout = Duration.Minutes(2),
             MemorySize = 512
@@ -114,7 +114,8 @@ public class VideoPipelineConstruct : Construct
             Image = ContainerImage.FromAsset(repoRoot, new AssetImageProps
             {
                 File = "src/workers/AlphaZero.R2Mover/Dockerfile",
-                Exclude = new[] { "**/cdk.out", "**/.git", "**/bin", "**/obj" }
+                Exclude = new[] { ".git", "cdk.out" },
+                IgnoreMode = IgnoreMode.DOCKER
             }),
             Logging = LogDriver.AwsLogs(new AwsLogDriverProps { StreamPrefix = "R2Mover" })
         });
@@ -230,7 +231,7 @@ public class VideoPipelineConstruct : Construct
                 { "Parameters", new Dictionary<string, object>
                     {
                         { "Role", mediaConvertRoleArn },
-                        { "Settings", JsonPath.StringAt("$.mediaConvertSettings") }
+                        { "Settings.$", "$.mediaConvertSettings" }
                     }
                 }
             }
@@ -300,6 +301,24 @@ public class VideoPipelineConstruct : Construct
             DefinitionBody = DefinitionBody.FromChainable(pipelineDefinition),
             Timeout = Duration.Minutes(45)
         });
+
+        PipelineStateMachine.AddToRolePolicy(new PolicyStatement(new PolicyStatementProps
+        {
+            Actions = new[] { "events:PutTargets", "events:PutRule", "events:DescribeRule" },
+            Resources = new[] { $"arn:aws:events:{Stack.Of(this).Region}:{Stack.Of(this).Account}:rule/StepFunctionsGetEventsForMediaConvertJobRule" }
+        }));
+        
+        PipelineStateMachine.AddToRolePolicy(new PolicyStatement(new PolicyStatementProps
+        {
+            Actions = new[] { "mediaconvert:CreateJob" },
+            Resources = new[] { "*" } // Best to use arn:aws:mediaconvert... but * is fine for this action.
+        }));
+
+        PipelineStateMachine.AddToRolePolicy(new PolicyStatement(new PolicyStatementProps
+        {
+            Actions = new[] { "iam:PassRole" },
+            Resources = new[] { props.MediaConvertRole.RoleArn }
+        }));
 
         // 5. EventBridge Trigger from S3 (.mp4 files only)
         var s3EventRule = new Rule(this, "S3UploadRule", new RuleProps
