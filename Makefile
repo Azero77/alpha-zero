@@ -44,3 +44,9 @@ migrations-clean:
 
 run:
 	dotnet run --project src/alphazero-api/aspire/AlphaZero.AppHost/AlphaZero.AppHost.csproj
+
+#-------------------------
+# Deploy CDK Infrastructure
+#-------------------------
+cdk-deploy:
+	cdk deploy --all --app "dotnet run -p infrastructure/AlphaZero.Cdk/AlphaZero.Cdk.csproj"
