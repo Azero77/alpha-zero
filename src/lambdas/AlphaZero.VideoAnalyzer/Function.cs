@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Text.Json;
 using Amazon.Lambda.Core;
+using Amazon.Lambda.RuntimeSupport;
 using Amazon.S3;
 using Amazon.S3.Model;
 using AlphaZero.VideoPipeline.Exceptions;
@@ -36,6 +37,14 @@ public record VideoAnalyzerOutput(
 
 public class Function
 {
+    public static async Task Main()
+    {
+        Func<VideoAnalyzerInput, ILambdaContext, Task<VideoAnalyzerOutput>> handler = new Function().FunctionHandler;
+        await LambdaBootstrapBuilder.Create(handler, new Amazon.Lambda.Serialization.SystemTextJson.DefaultLambdaJsonSerializer())
+            .Build()
+            .RunAsync();
+    }
+
     private readonly IAmazonS3 _s3Client;
 
     public Function() : this(new AmazonS3Client()) { }

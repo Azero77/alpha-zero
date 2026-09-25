@@ -85,4 +85,43 @@ public class JobPreparerUnitTests
         json.Should().Contain("ClearKey");
         json.Should().Contain("cb541084c99731aef4fff74500c12ead");
     }
+
+    [Fact]
+    public void Assembly_ShouldHaveLambdaSerializerAttribute()
+    {
+        var assembly = typeof(Function).Assembly;
+        var attribute = (Amazon.Lambda.Core.LambdaSerializerAttribute?)Attribute.GetCustomAttribute(
+            assembly, 
+            typeof(Amazon.Lambda.Core.LambdaSerializerAttribute));
+
+        attribute.Should().NotBeNull();
+        attribute!.SerializerType.Should().Be(typeof(Amazon.Lambda.Serialization.SystemTextJson.SourceGeneratorLambdaJsonSerializer<JobPreparerJsonContext>));
+    }
+
+    [Fact]
+    public void SourceGeneratorLambdaJsonSerializer_ShouldRoundtripJobPreparerInput()
+    {
+        var serializer = new Amazon.Lambda.Serialization.SystemTextJson.SourceGeneratorLambdaJsonSerializer<JobPreparerJsonContext>();
+        var original = new JobPreparerInput(
+            VideoId: "test-video",
+            TenantId: "test-tenant",
+            SourceBucket: "my-bucket",
+            SourceKey: "videos/vid.mp4",
+            TransientOutputBucket: "transient-bucket",
+            TranscodingEngine: "FFMPEG",
+            EncryptionMethod: "ClearKey",
+            TargetResourceArn: "arn:aws:video:123",
+            Metadata: new SourceMetadata(1920, 1080, 120.5, "00:02:00", 30, "16:9", "h264", "aac")
+        );
+
+        using var ms = new MemoryStream();
+        serializer.Serialize(original, ms);
+        ms.Position = 0;
+
+        var deserialized = serializer.Deserialize<JobPreparerInput>(ms);
+        deserialized.Should().NotBeNull();
+        deserialized.VideoId.Should().Be("test-video");
+        deserialized.Metadata.SourceWidth.Should().Be(1920);
+        deserialized.Metadata.DurationSeconds.Should().Be(120.5);
+    }
 }

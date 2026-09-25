@@ -11,3 +11,5 @@ FROM mcr.microsoft.com/dotnet/runtime:10.0
 WORKDIR /var/task
 RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg ca-certificates && rm -rf /var/lib/apt/lists/*
 COPY --from=build /app/publish .
+
+ENTRYPOINT ["dotnet", "AlphaZero.VideoAnalyzer.dll"]

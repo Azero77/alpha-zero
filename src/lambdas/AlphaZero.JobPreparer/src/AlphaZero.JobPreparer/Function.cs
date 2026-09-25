@@ -11,6 +11,7 @@ using Amazon.SimpleSystemsManagement;
 using Amazon.SimpleSystemsManagement.Model;
 using AlphaZero.VideoPipeline.Exceptions;
 
+[assembly: LambdaSerializer(typeof(SourceGeneratorLambdaJsonSerializer<AlphaZero.JobPreparer.JobPreparerJsonContext>))]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("AlphaZero.JobPreparer.Tests")]
 
 namespace AlphaZero.JobPreparer;
@@ -244,6 +245,7 @@ public class Function
     }
 }
 
+[JsonSerializable(typeof(SourceMetadata))]
 [JsonSerializable(typeof(JobPreparerInput))]
 [JsonSerializable(typeof(JobPreparerOutput))]
 [JsonSerializable(typeof(TranscodingJobInput))]
