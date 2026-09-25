@@ -1,73 +1,104 @@
 import { create } from 'zustand';
 import type { Video } from '../../domain/models/video';
+import type { VideoProgressUpdate } from '../../domain/models/video-state';
 import type { IVideoRepository } from '../../domain/repositories/video-repository';
 import { VideoRepositoryImpl } from '../../infrastructure/api/video-repository-impl';
-import { normalizeVideoStatus } from '../../shared/utils/status-utils';
 
-interface VideoState {
+interface VideoStoreState {
   videos: Video[];
   totalCount: number;
   currentPage: number;
   isLoading: boolean;
   error: string | null;
   
+  // Real-time progress tracking
+  videoProgress: Record<string, VideoProgressUpdate>;
+  
+  // Actions
   fetchVideos: (page?: number, perPage?: number) => Promise<void>;
-  deleteVideo: (id: string) => Promise<void>;
   refreshVideoState: (id: string) => Promise<void>;
+  deleteVideo: (id: string) => Promise<void>;
+  updateVideoInfo: (id: string, title: string, description?: string) => Promise<void>;
+  updateVideoProgress: (update: VideoProgressUpdate) => void;
+  clearVideoProgress: (videoId: string) => void;
 }
 
-const videoRepository: IVideoRepository = new VideoRepositoryImpl();
+const repo: IVideoRepository = new VideoRepositoryImpl();
 
-export const useVideoStore = create<VideoState>((set, get) => ({
+export const useVideoStore = create<VideoStoreState>((set, get) => ({
   videos: [],
   totalCount: 0,
   currentPage: 1,
   isLoading: false,
   error: null,
+  videoProgress: {},
 
   fetchVideos: async (page = 1, perPage = 10) => {
     set({ isLoading: true, error: null });
     try {
-      const result = await videoRepository.getVideos(page, perPage);
+      const result = await repo.getVideos(page, perPage);
       set({ 
         videos: result.items, 
-        totalCount: result.totalCount, 
-        currentPage: page, 
+        totalCount: result.totalCount,
+        currentPage: page,
         isLoading: false 
       });
-    } catch (err: any) {
-      set({ error: err.message || 'Failed to fetch videos', isLoading: false });
-    }
-  },
-
-  deleteVideo: async (id: string) => {
-    try {
-      await videoRepository.deleteVideo(id);
-      const { currentPage } = get();
-      await get().fetchVideos(currentPage);
-    } catch (err: any) {
-      set({ error: err.message || 'Failed to delete video' });
+    } catch (error) {
+      const errMessage = error instanceof Error ? error.message : 'Failed to fetch videos';
+      set({ error: errMessage, isLoading: false });
     }
   },
 
   refreshVideoState: async (id: string) => {
     try {
-      const updatedVideo = await videoRepository.getVideoById(id);
-      const normalizedStatus = normalizeVideoStatus(updatedVideo);
-      const isPublished = normalizedStatus === 'Published';
-
-      set((s) => ({
-        videos: s.videos.map((v) => {
-          const vId = v.id || (v as any).Id;
-          return vId === id ? updatedVideo : v;
-        }),
-      }));
-
-      if (isPublished) {
-        await get().fetchVideos(get().currentPage);
-      }
-    } catch (err) {
-      console.error('Failed to refresh video:', id, err);
+      const video = await repo.getVideoById(id);
+      set((state) => {
+        const updatedVideos = state.videos.map(v => v.id === id ? video : v);
+        return { videos: updatedVideos };
+      });
+    } catch (error) {
+      console.error(`Failed to refresh video state for ${id}`, error);
     }
   },
+
+  deleteVideo: async (id: string) => {
+    try {
+      await repo.deleteVideo(id);
+      // Re-fetch current page
+      await get().fetchVideos(get().currentPage);
+    } catch (error) {
+      const errMessage = error instanceof Error ? error.message : 'Failed to delete video';
+      set({ error: errMessage });
+      throw error;
+    }
+  },
+
+  updateVideoInfo: async (id: string, title: string, description?: string) => {
+    try {
+      await repo.updateVideoInfo(id, { title, description });
+      // Re-fetch current page
+      await get().fetchVideos(get().currentPage);
+    } catch (error) {
+      const errMessage = error instanceof Error ? error.message : 'Failed to update video info';
+      set({ error: errMessage });
+      throw error;
+    }
+  },
+
+  updateVideoProgress: (update: VideoProgressUpdate) => {
+    set((state) => ({
+      videoProgress: {
+        ...state.videoProgress,
+        [update.videoId]: update
+      }
+    }));
+  },
+
+  clearVideoProgress: (videoId: string) => {
+    set((state) => {
+      const newProgress = { ...state.videoProgress };
+      delete newProgress[videoId];
+      return { videoProgress: newProgress };
+    });
+  }
 }));

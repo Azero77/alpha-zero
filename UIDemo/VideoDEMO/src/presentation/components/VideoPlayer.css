@@ -1,34 +1,47 @@
-/* Shaka Player UI Fixes */
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.video-player-section {
+  animation: slideUp 0.3s ease-out forwards;
+}
+
+/* Shaka Player UI overrides */
+.shaka-container {
+  font-family: inherit;
+}
+
+/* Reset Tailwind button defaults that might conflict */
 .shaka-container button {
-    /* Reset Tailwind defaults that might interfere with Shaka UI */
-    background-color: transparent;
-    border: none;
-    padding: 0;
-    margin: 0;
+  background-color: transparent !important;
+  border: none;
+  padding: 0;
+  margin: 0;
+  box-shadow: none;
+  outline: none;
 }
 
-.shaka-container button:focus {
-    outline: none;
+.shaka-container .shaka-controls-container {
+  background: linear-gradient(to top, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0) 100%);
+  transition: opacity 150ms ease-out;
 }
 
-/* Fix for overlapping play/replay buttons */
-.shaka-play-pause-button {
-    display: flex !important;
-    align-items: center;
-    justify-content: center;
+.shaka-container .shaka-range-container {
+  margin: 0;
 }
 
-.shaka-recenter-button {
-    /* Ensure center buttons don't stack weirdly */
-    margin: auto !important;
+/* NO glassmorphism, NO glow effects */
+.shaka-container .shaka-bottom-controls {
+  backdrop-filter: none !important;
 }
 
-/* Production aesthetic for the control bar */
-.shaka-bottom-controls {
-    @apply bg-gradient-to-t from-black/60 to-transparent !important;
-    padding: 0 10px !important;
-}
-
-.shaka-range-container {
-    bottom: 45px !important;
+.shaka-container * {
+  transition: all 150ms ease-out;
 }

@@ -8,7 +8,7 @@ export const apiClient = axios.create({
   },
 });
 
-// Add tenant header if available
+// Add tenant header to every request
 apiClient.interceptors.request.use((req) => {
   if (config.tenantId) {
     req.headers['X-TenantId'] = config.tenantId;

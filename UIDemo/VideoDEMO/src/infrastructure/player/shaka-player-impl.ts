@@ -17,117 +17,95 @@ export interface PlayerConfig {
 
 export class ShakaPlayerManager {
   private player: shaka.Player | null = null;
-  private ui: any = null;
+  private ui: shaka.ui.Overlay | null = null;
 
-  async initialize(videoElement: HTMLVideoElement, containerElement: HTMLElement, config: PlayerConfig) {
-    shaka.polyfill.installAll();
+  async initialize(videoElement: HTMLVideoElement, containerElement: HTMLElement, config: PlayerConfig): Promise<void> {
+    try {
+      this.player = new shaka.Player(videoElement);
+      this.ui = new shaka.ui.Overlay(this.player, containerElement, videoElement);
 
-    if (!shaka.Player.isBrowserSupported()) {
-      throw new Error('Browser not supported');
-    }
-
-    this.player = new shaka.Player();
-    await this.player.attach(videoElement);
-
-    // 1. Setup Request Filter for Authenticated Key Delivery
-    this.player.getNetworkingEngine()!.registerRequestFilter((type, request) => {
-      // Check if this is a request for a decryption key or a DRM license
-      const isLicenseOrKey = type === shaka.net.NetworkingEngine.RequestType.LICENSE;
+      const uiConfig = {
+        controlPanelElements: [
+          'play_pause',
+          'time_and_duration',
+          'spacer',
+          'mute',
+          'volume',
+          'quality',
+          'playback_rate',
+          'fullscreen'
+        ],
+        seekBarColors: {
+          base: 'rgba(255, 255, 255, 0.3)',
+          buffered: 'rgba(255, 255, 255, 0.54)',
+          played: '#10B981',
+        },
+        addBigPlayButton: true
+      };
       
-      // If our API is hosting the key, we need to add the auth token
-      if (isLicenseOrKey) {
-        console.log('[Player] Adding Auth header to key/license request:', request.uris[0]);
-        
-        // In a real app, you would get this from your auth store (Zustand/Redux)
-        const token = localStorage.getItem('auth_token'); 
-        if (token) {
-          request.headers['Authorization'] = `Bearer ${token}`;
-        }
-      }
-    });
+      this.ui.configure(uiConfig);
 
-    // 2. Modern Shaka 5.0 Configuration
-    const shakaConfig = {
-      streaming: {
-        lowLatencyMode: false,
-      },
-      manifest: {
-        hls: {
-          ignoreTextStreamFailures: true,
-        }
-      }
-    };
+      this.player.addEventListener('error', this.onErrorEvent.bind(this));
 
-    // 3. DRM Strategy
-    if (config.drm) {
-      console.log('[Player] Initializing in Premium DRM Mode');
-      const servers: Record<string, string> = {};
-      if (config.drm.widevineUrl) servers['com.widevine.alpha'] = config.drm.widevineUrl;
-      if (config.drm.playReadyUrl) servers['com.microsoft.playready'] = config.drm.playReadyUrl;
-
-      this.player.configure({
-        drm: {
-          servers: servers,
-          advanced: {
-            'com.widevine.alpha': {
-              videoRobustness: 'SW_SECURE_CRYPTO',
-              audioRobustness: 'SW_SECURE_CRYPTO',
-            }
-          }
-        }
-      });
-
-      if (config.drm.token) {
-        this.player.getNetworkingEngine()!.registerRequestFilter((type, request) => {
+      if (config.drm?.token) {
+        this.player.getNetworkingEngine()?.registerRequestFilter((type: shaka.net.NetworkingEngine.RequestType, request: shaka.extern.Request) => {
           if (type === shaka.net.NetworkingEngine.RequestType.LICENSE) {
             request.headers['Authorization'] = `Bearer ${config.drm!.token}`;
           }
         });
       }
-    } 
-    else if (config.clearKey?.key) {
-      console.log('[Player] Initializing in Free/Static Key Mode (AES-128)');
-    }
 
-    this.player.configure(shakaConfig);
-    this.ui = new shaka.ui.Overlay(this.player, containerElement, videoElement);
+      const playerConfig: shaka.extern.PlayerConfiguration = {
+        drm: {}
+      };
 
-    // 4. Production-Ready UI Configuration
-    const uiConfig = {
-      controlPanelElements: [
-        'play_pause',
-        'time_and_duration',
-        'spacer',
-        'mute',
-        'volume',
-        'quality',
-        'playback_rate',
-        'fullscreen',
-      ],
-      // This helps prevent overlapping by explicitly managing the center button
-      addBigPlayButton: true,
-      // Ensure the seek bar doesn't overlap with buttons
-      seekBarColors: {
-        base: 'rgba(255, 255, 255, 0.3)',
-        buffered: 'rgba(255, 255, 255, 0.5)',
-        played: '#0ea5e9', // Primary-500
+      if (config.drm) {
+        if (config.drm.widevineUrl || config.drm.playReadyUrl) {
+          playerConfig.drm!.servers = {};
+          if (config.drm.widevineUrl) {
+            playerConfig.drm!.servers['com.widevine.alpha'] = config.drm.widevineUrl;
+          }
+          if (config.drm.playReadyUrl) {
+            playerConfig.drm!.servers['com.microsoft.playready'] = config.drm.playReadyUrl;
+          }
+        }
+      } else if (config.clearKey?.keyId && config.clearKey?.key) {
+        playerConfig.drm!.clearKeys = {
+          [config.clearKey.keyId]: config.clearKey.key
+        };
       }
-    };
 
-    this.ui.configure(uiConfig);
+      this.player.configure(playerConfig);
 
-    try {
-      console.log('[Player] Loading manifest:', config.manifestUrl);
       await this.player.load(config.manifestUrl);
-      console.log('[Player] Video loaded successfully');
+      
+      if (config.posterUrl) {
+        videoElement.poster = config.posterUrl;
+      }
+      
     } catch (error) {
-      console.error('[Player] Error loading video:', error);
+      this.onError(error as shaka.util.Error);
       throw error;
     }
   }
 
-  destroy() {
-    if (this.ui) this.ui.destroy();
-    if (this.player) this.player.destroy();
+  private onErrorEvent(event: Event) {
+    const customEvent = event as unknown as { detail: shaka.util.Error };
+    this.onError(customEvent.detail);
+  }
+
+  private onError(error: shaka.util.Error) {
+    console.error('Error code', error.code, 'object', error);
+  }
+
+  async destroy(): Promise<void> {
+    if (this.ui) {
+      await this.ui.destroy();
+      this.ui = null;
+    }
+    if (this.player) {
+      await this.player.destroy();
+      this.player = null;
+    }
   }
 }

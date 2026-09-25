@@ -1,11 +1,12 @@
 import { z } from 'zod';
 
 const configSchema = z.object({
-  apiUrl: z.string().url().default('http://localhost:5001/api'),
-  uploadApiUrl: z.string().url().default('http://localhost:5001/api/video-uploading'),
-  streamingApiUrl: z.string().url().default('http://localhost:5001/api/video'),
+  apiUrl: z.string().url().default('https://localhost:7016'),
+  uploadApiUrl: z.string().url().default('https://localhost:7016/api/video-uploading'),
+  streamingApiUrl: z.string().url().default('https://localhost:7016/api/video'),
   cdnUrl: z.string().url().optional(),
-  tenantId: z.string().uuid().optional(),
+  tenantId: z.string().uuid().default('9ac6bf72-f911-452e-a43a-ae9b3e26238c'),
+  signalRHubUrl: z.string().url().default('https://localhost:7016/hubs/video-progress'),
 });
 
 export const config = configSchema.parse({
@@ -13,6 +14,7 @@ export const config = configSchema.parse({
   uploadApiUrl: import.meta.env.VITE_UPLOAD_API_URL,
   streamingApiUrl: import.meta.env.VITE_STREAMING_API_URL,
   cdnUrl: import.meta.env.VITE_CDN_URL,
+  signalRHubUrl: import.meta.env.VITE_SIGNALR_HUB_URL,
   tenantId: import.meta.env.VITE_TENANT_ID,
 });
 

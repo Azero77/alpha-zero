@@ -1,176 +1,313 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
+import { Upload, Video, RefreshCcw, ChevronLeft, ChevronRight, Activity, X, Cpu } from 'lucide-react';
 import { useVideoStore } from '../store/video-store';
+import { usePollVideoStatus } from '../hooks/usePollVideoStatus';
 import { VideoGrid } from '../features/dashboard/VideoGrid';
 import { UploadModal } from '../features/upload/UploadModal';
+import { PipelineTestModal } from '../features/test/PipelineTestModal';
 import { VideoPlayer } from '../components/VideoPlayer';
-import type { Video } from '../../domain/models/video';
-import { Plus, Video as VideoIcon, LayoutDashboard, Settings, LogOut, ChevronRight } from 'lucide-react';
-import { clsx } from 'clsx';
+import { normalizeVideoStatus } from '../../shared/utils/status-utils';
+import type { Video as VideoType } from '../../domain/models/video';
+import type { VideoState } from '../../domain/models/video-state';
+import type { PlayerConfig } from '../../infrastructure/player/shaka-player-impl';
 import { VideoRepositoryImpl } from '../../infrastructure/api/video-repository-impl';
-import type { StreamingInfo } from '../../domain/repositories/video-repository';
-import { usePollVideoStatus } from '../hooks/usePollVideoStatus';
 import { config } from '../../core/config';
 
 const videoRepo = new VideoRepositoryImpl();
 
 export const DashboardPage: React.FC = () => {
-  const { fetchVideos } = useVideoStore();
-  const [isUploadOpen, setIsUploadOpen] = useState(false);
-  const [selectedVideo, setSelectedVideo] = useState<Video | null>(null);
-  const [streamingInfo, setStreamingInfo] = useState<StreamingInfo | null>(null);
-  const [activeTab, setActiveTab] = useState('dashboard');
+  const {
+    videos,
+    totalCount,
+    currentPage,
+    isLoading,
+    error,
+    videoProgress,
+    fetchVideos,
+  } = useVideoStore();
 
-  // Use polling hook
+  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+  const [activePlayer, setActivePlayer] = useState<{
+    video: VideoType;
+    config: PlayerConfig;
+  } | null>(null);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [inspectedSaga, setInspectedSaga] = useState<{ video: VideoType; state: VideoState | null; loading: boolean } | null>(null);
+  const [isTestModalOpen, setIsTestModalOpen] = useState(false);
+
+  // Real-time progress via SignalR (falls back to polling)
   usePollVideoStatus();
 
+  const perPage = 12;
+  const totalPages = Math.ceil(totalCount / perPage);
+
   useEffect(() => {
-    fetchVideos();
+    fetchVideos(1, perPage);
   }, [fetchVideos]);
 
-  const handlePlay = async (video: Video) => {
+  const processingCount = videos.filter(
+    (v: VideoType) => normalizeVideoStatus(v) === 'Processing'
+  ).length;
+
+  // ── Player ──────────────────────────────────────────────
+
+  const handlePlay = useCallback(async (video: VideoType) => {
     try {
-      const info = await videoRepo.getStreamingInfo(video.id);
-      setStreamingInfo(info);
-      setSelectedVideo(video);
+      const streamingInfo = await videoRepo.getStreamingInfo(video.id);
+      const playerConfig: PlayerConfig = {
+        manifestUrl: streamingInfo.url,
+        posterUrl: video.thumbnailUrl || undefined,
+      };
+
+      // ClearKey encryption — fetch raw binary key
+      if (streamingInfo.encryptionMethod === 'ClearKey') {
+        const keyUrl = `${config.streamingApiUrl}/keys/${video.id}`;
+        const keyResponse = await fetch(keyUrl, {
+          headers: config.tenantId ? { 'X-TenantId': config.tenantId } : {},
+        });
+        const keyBuffer = await keyResponse.arrayBuffer();
+        const keyHex = Array.from(new Uint8Array(keyBuffer))
+          .map((b) => b.toString(16).padStart(2, '0'))
+          .join('');
+        playerConfig.clearKey = { key: keyHex };
+      }
+
+      // Widevine/PlayReady DRM
+      if (streamingInfo.drm?.widevineUrl || streamingInfo.drm?.playReadyUrl) {
+        playerConfig.drm = streamingInfo.drm;
+      }
+
+      setActivePlayer({ video, config: playerConfig });
     } catch (err) {
-      alert('Failed to get streaming info');
+      console.error('Failed to initialize playback:', err);
     }
-  };
+  }, []);
 
-  const playerConfig = useMemo(() => {
-    if (!streamingInfo || !selectedVideo) return null;
-    
-    const posterUrl = selectedVideo.thumbnailUrl 
-      ? (selectedVideo.thumbnailUrl.startsWith('http') ? selectedVideo.thumbnailUrl : `${config.cdnUrl}/${selectedVideo.thumbnailUrl}`)
-      : undefined;
+  // ── Inspect Pipeline Saga ───────────────────────────────
 
-    return {
-      manifestUrl: streamingInfo.url,
-      posterUrl: posterUrl,
-      // If the backend sends DRM details (Premium video)
-      drm: streamingInfo.drm ? {
-        widevineUrl: streamingInfo.drm.widevineUrl,
-        playReadyUrl: streamingInfo.drm.playReadyUrl,
-        token: streamingInfo.drm.token
-      } : undefined,
-      // If the backend sends a raw key (Free video)
-      clearKey: streamingInfo.key ? {
-        keyId: streamingInfo.key,
-        key: streamingInfo.key
-      } : undefined
-    };
-  }, [streamingInfo]);
+  const handleInspectSaga = useCallback(async (video: VideoType) => {
+    setInspectedSaga({ video, state: null, loading: true });
+    try {
+      const state = await videoRepo.getVideoState(video.id);
+      setInspectedSaga({ video, state, loading: false });
+    } catch (err) {
+      console.error('Failed to fetch saga state:', err);
+      setInspectedSaga({ video, state: null, loading: false });
+    }
+  }, []);
+
+  // ── Delete ──────────────────────────────────────────────
+
+  const handleDelete = useCallback((id: string) => {
+    setDeleteConfirmId(id);
+  }, []);
+
+  const confirmDelete = useCallback(async () => {
+    if (!deleteConfirmId) return;
+    await useVideoStore.getState().deleteVideo(deleteConfirmId);
+    setDeleteConfirmId(null);
+    if (activePlayer?.video.id === deleteConfirmId) {
+      setActivePlayer(null);
+    }
+  }, [deleteConfirmId, activePlayer]);
+
+  // ── Pagination ──────────────────────────────────────────
+
+  const goToPage = useCallback(
+    (page: number) => {
+      if (page >= 1 && page <= totalPages) {
+        fetchVideos(page, perPage);
+      }
+    },
+    [fetchVideos, totalPages]
+  );
 
   return (
-    <div className="flex min-h-screen bg-slate-50">
-      {/* Sidebar */}
-      <aside className="w-64 bg-white border-r border-slate-200 flex flex-col hidden lg:flex">
-        <div className="p-6 flex items-center gap-3">
-          <div className="bg-primary-600 p-2 rounded-lg text-white">
-            <VideoIcon size={24} />
+    <div className="min-h-screen bg-[#FAFAFA]">
+      {/* Header */}
+      <header className="bg-white border-b border-slate-200 sticky top-0 z-30">
+        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-slate-900 text-white rounded-lg">
+              <Video size={20} />
+            </div>
+            <div>
+              <h1 className="text-lg font-bold text-slate-900 tracking-tight">
+                AlphaZero Video Pipeline
+              </h1>
+              <p className="text-[11px] text-slate-500">
+                S3 &rarr; Step Functions &rarr; Transcoder &rarr; R2 &rarr; SQS &rarr; SignalR
+              </p>
+            </div>
+            {processingCount > 0 && (
+              <span className="ml-2 bg-amber-100 text-amber-700 text-xs font-semibold px-2 py-0.5 rounded-full flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                {processingCount} processing
+              </span>
+            )}
           </div>
-          <span className="text-xl font-bold tracking-tight">AlphaZero</span>
-        </div>
 
-        <nav className="flex-1 px-4 py-4 space-y-1">
-          <button 
-            onClick={() => setActiveTab('dashboard')}
-            className={clsx(
-              "flex items-center gap-3 px-4 py-3 w-full rounded-xl font-medium transition-all text-left outline-none",
-              activeTab === 'dashboard' ? "bg-primary-50 text-primary-700" : "text-slate-500 hover:bg-slate-50"
-            )}
-          >
-            <LayoutDashboard size={20} />
-            Dashboard
-          </button>
-          <button 
-            onClick={() => setActiveTab('library')}
-            className={clsx(
-              "flex items-center gap-3 px-4 py-3 w-full rounded-xl font-medium transition-all text-left outline-none",
-              activeTab === 'library' ? "bg-primary-50 text-primary-700" : "text-slate-500 hover:bg-slate-50"
-            )}
-          >
-            <VideoIcon size={20} />
-            My Library
-          </button>
-          <button 
-            onClick={() => setActiveTab('settings')}
-            className={clsx(
-              "flex items-center gap-3 px-4 py-3 w-full rounded-xl font-medium transition-all text-left outline-none",
-              activeTab === 'settings' ? "bg-primary-50 text-primary-700" : "text-slate-500 hover:bg-slate-50"
-            )}
-          >
-            <Settings size={20} />
-            Settings
-          </button>
-        </nav>
-
-        <div className="p-4 border-t border-slate-100">
-          <button className="flex items-center gap-3 px-4 py-3 w-full text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-xl font-medium transition-colors">
-            <LogOut size={20} />
-            Logout
-          </button>
+          <div className="flex items-center gap-2.5">
+            <button
+              onClick={() => fetchVideos(currentPage, perPage)}
+              className="p-2 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors"
+              title="Refresh videos"
+            >
+              <RefreshCcw size={16} />
+            </button>
+            <button
+              onClick={() => setIsTestModalOpen(true)}
+              className="flex items-center gap-1.5 border border-slate-300 bg-white text-slate-700 px-3 py-2 text-xs font-semibold rounded-lg hover:bg-slate-50 transition-colors shadow-sm"
+              title="Test AWS CDK Ingestion Pipeline Contracts"
+            >
+              <Cpu size={14} className="text-slate-500" />
+              Test Ingestion
+            </button>
+            <button
+              onClick={() => setIsUploadModalOpen(true)}
+              className="flex items-center gap-2 bg-slate-900 text-white px-4 py-2 text-xs font-semibold rounded-lg hover:bg-slate-800 transition-colors shadow-sm"
+            >
+              <Upload size={14} />
+              Upload Asset
+            </button>
+          </div>
         </div>
-      </aside>
+      </header>
+
+      {/* Upload Modal (with thumbnail, engine selector, and progress) */}
+      <UploadModal
+        isOpen={isUploadModalOpen}
+        onClose={() => setIsUploadModalOpen(false)}
+      />
+
+      {/* Pipeline Test Modal (for testing VideoPipelineConstruct contracts) */}
+      <PipelineTestModal
+        isOpen={isTestModalOpen}
+        onClose={() => setIsTestModalOpen(false)}
+        sampleVideoId={videos[0]?.id}
+      />
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col overflow-hidden">
-        {/* Header */}
-        <header className="h-20 bg-white border-b border-slate-200 px-8 flex items-center justify-between">
-          <div className="flex items-center gap-2 text-sm text-slate-400">
-            <span>Pages</span>
-            <ChevronRight size={14} />
-            <span className="text-slate-900 font-medium">Dashboard</span>
+      <main className="max-w-7xl mx-auto px-6 py-6">
+        {/* Active Player (inline, pushes grid down) */}
+        {activePlayer && (
+          <div className="mb-8 p-6 bg-white border border-slate-200 rounded-2xl shadow-sm">
+            <VideoPlayer
+              config={activePlayer.config}
+              title={activePlayer.video.title}
+              description={activePlayer.video.description}
+              onClose={() => setActivePlayer(null)}
+            />
           </div>
+        )}
 
-          <button 
-            onClick={() => setIsUploadOpen(true)}
-            className="btn btn-primary gap-2"
-          >
-            <Plus size={18} />
-            Upload New Video
-          </button>
-        </header>
+        {/* Error Banner */}
+        {error && (
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl text-xs text-red-700 flex items-center justify-between">
+            <span>{error}</span>
+            <button onClick={() => fetchVideos(currentPage, perPage)} className="underline font-semibold ml-4">
+              Retry
+            </button>
+          </div>
+        )}
 
-        {/* Scrollable Area */}
-        <div className="flex-1 overflow-y-auto p-8">
-          {selectedVideo && streamingInfo && (
-            <div className="mb-12 animate-slide-up">
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <h2 className="text-2xl font-bold text-slate-900">{selectedVideo.title}</h2>
-                  <p className="text-slate-500">{selectedVideo.description}</p>
-                </div>
-                <button 
-                  onClick={() => { setSelectedVideo(null); setStreamingInfo(null); }}
-                  className="text-primary-600 font-semibold hover:underline"
-                >
-                  Close Player
-                </button>
-              </div>
-              <VideoPlayer 
-                config={playerConfig!} 
-              />
-            </div>
-          )}
-
-          <div className="mb-6 flex items-center justify-between">
-            <h2 className="text-xl font-bold text-slate-900">Your Library</h2>
-            <div className="flex gap-2">
-              <span className="text-sm text-slate-500">
-                Sorted by: <span className="font-medium text-slate-900 cursor-pointer">Recently added</span>
-              </span>
+        {/* Delete Confirmation */}
+        {deleteConfirmId && (
+          <div className="mb-6 p-4 bg-white border border-red-200 shadow-sm rounded-xl flex items-center justify-between">
+            <span className="text-xs font-medium text-slate-700">
+              Delete this video asset? This will remove records from the VideoUploading module.
+            </span>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setDeleteConfirmId(null)}
+                className="px-3 py-1.5 text-xs text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDelete}
+                className="px-3.5 py-1.5 text-xs font-semibold text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors"
+              >
+                Confirm Delete
+              </button>
             </div>
           </div>
+        )}
 
-          <VideoGrid onPlay={handlePlay} />
+        {/* Video Grid */}
+        <VideoGrid
+          videos={videos}
+          videoProgress={videoProgress}
+          onPlay={handlePlay}
+          onDelete={handleDelete}
+          onInspectSaga={handleInspectSaga}
+          isLoading={isLoading}
+        />
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="mt-8 flex items-center justify-center gap-3">
+            <button
+              onClick={() => goToPage(currentPage - 1)}
+              disabled={currentPage <= 1}
+              className="p-2 text-slate-500 hover:text-slate-800 disabled:opacity-30 disabled:cursor-not-allowed transition-colors rounded-lg hover:bg-slate-100"
+            >
+              <ChevronLeft size={16} />
+            </button>
+            <span className="text-xs font-medium text-slate-600">
+              Page {currentPage} of {totalPages}
+            </span>
+            <button
+              onClick={() => goToPage(currentPage + 1)}
+              disabled={currentPage >= totalPages}
+              className="p-2 text-slate-500 hover:text-slate-800 disabled:opacity-30 disabled:cursor-not-allowed transition-colors rounded-lg hover:bg-slate-100"
+            >
+              <ChevronRight size={16} />
+            </button>
+          </div>
+        )}
+
+        {/* Total count */}
+        <div className="mt-4 text-center text-xs text-slate-400">
+          {totalCount} total video{totalCount !== 1 ? 's' : ''} in pipeline
         </div>
       </main>
 
-      <UploadModal 
-        isOpen={isUploadOpen} 
-        onClose={() => setIsUploadOpen(false)} 
-      />
+      {/* Saga State Inspection Drawer / Modal */}
+      {inspectedSaga && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-200">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <Activity size={18} className="text-slate-700" />
+                <h3 className="text-sm font-bold text-slate-900">Saga State: {inspectedSaga.video.title}</h3>
+              </div>
+              <button onClick={() => setInspectedSaga(null)} className="text-slate-400 hover:text-slate-700">
+                <X size={16} />
+              </button>
+            </div>
+            <div className="py-4">
+              {inspectedSaga.loading ? (
+                <div className="text-center text-xs text-slate-400 py-6">Loading saga execution details...</div>
+              ) : inspectedSaga.state ? (
+                <pre className="text-[11px] bg-slate-900 text-emerald-400 p-4 rounded-xl overflow-x-auto font-mono max-h-72">
+                  {JSON.stringify(inspectedSaga.state, null, 2)}
+                </pre>
+              ) : (
+                <div className="text-center text-xs text-slate-500 py-6">No active saga state found for this video.</div>
+              )}
+            </div>
+            <div className="flex justify-end">
+              <button
+                onClick={() => setInspectedSaga(null)}
+                className="px-4 py-1.5 text-xs bg-slate-100 hover:bg-slate-200 rounded-lg text-slate-700"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
