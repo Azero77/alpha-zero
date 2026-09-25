@@ -41,6 +41,7 @@ public class VideoPipelineConstruct : Construct
     public StateMachine PipelineStateMachine { get; }
     public Topic AlarmTopic { get; }
     public DockerImageFunction VideoAnalyzerFunction { get; }
+    public Function S3VideoCreatedEventParserFunction { get; }
     public Function JobPreparerFunction { get; }
 
     public VideoPipelineConstruct(Construct scope, string id, VideoPipelineConstructProps props) : base(scope, id)
@@ -61,6 +62,18 @@ public class VideoPipelineConstruct : Construct
         });
 
         // 1. Lambda Functions
+
+        S3VideoCreatedEventParserFunction = new Function(this, "S3VideoCreatedEventParserFunction",
+            new FunctionProps()
+            {
+                FunctionName = "alphazero-video-uploaded-event-parser",
+                Runtime = Runtime.PROVIDED_AL2023,
+                Handler = "bootstrap",
+                Code = Code.FromAsset("src/lambdas/S3VideoCreatedEventParser/publish"),
+                Timeout = Duration.Seconds(30),
+                MemorySize = 256
+            });
+        
         VideoAnalyzerFunction = new DockerImageFunction(this, "VideoAnalyzerFunction", new DockerImageFunctionProps
         {
             FunctionName = "alphazero-video-analyzer",
@@ -154,6 +167,19 @@ public class VideoPipelineConstruct : Construct
             })
         }).Next(new Fail(this, "PipelineFailedState"));
 
+        var s3EVentParserTask = new LambdaInvoke(this, "S3EventParserTask", new LambdaInvokeProps()
+        {
+            LambdaFunction = S3VideoCreatedEventParserFunction,
+            PayloadResponseOnly = true,
+            Payload = TaskInput.FromObject(new Dictionary<string, object>()
+            {
+                ["BucketName"] = JsonPath.StringAt("$.detail.bucket.name"),
+                ["SourceKey"] = JsonPath.StringAt( "$.detail.object.key")
+            })
+        });
+
+        s3EVentParserTask.AddRetry(transientRetry);
+        s3EVentParserTask.AddCatch(failNotificationTask, catchProps);
         var analyzeTask = new LambdaInvoke(this, "AnalyzeVideoTask", new LambdaInvokeProps
         {
             LambdaFunction = VideoAnalyzerFunction,
