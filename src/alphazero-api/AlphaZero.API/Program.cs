@@ -71,6 +71,14 @@ public class Program
         await app.RunMigrations(moduleInstances);
         if (app.Environment.IsDevelopment())
         {
+            var tenantsModule = moduleInstances.OfType<AlphaZero.Modules.Tenants.Presentation.TenantsModule>().FirstOrDefault();
+            if (tenantsModule is not null)
+            {
+                using var scope = tenantsModule.CreateScope();
+                var tenantsContext = scope.Resolve<AlphaZero.Modules.Tenants.Infrastructure.Persistance.AppDbContext>();
+                await AlphaZero.Modules.Tenants.Infrastructure.Persistance.Seeding.TenantSeeder.SeedAsync(tenantsContext);
+            }
+
             var identityModule = moduleInstances.OfType<AlphaZero.Modules.Identity.Presentation.IdentityModule>().FirstOrDefault();
             if (identityModule is not null)
             {

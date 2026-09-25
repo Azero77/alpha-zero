@@ -46,6 +46,23 @@ public class Tenant : AggregateRoot
         return tenant;
     }
 
+    public static Tenant CreateWithId(
+        Guid id,
+        string name,
+        string subdomain,
+        TenantBranding? branding = null)
+    {
+        var tenant = new Tenant(
+            id,
+            name,
+            subdomain.ToLowerInvariant(),
+            branding ?? TenantBranding.Default,
+            TenantStatus.Active,
+            DateTime.UtcNow);
+
+        return tenant;
+    }
+
     public void UpdateDetails(string name)
     {
         Name = name;

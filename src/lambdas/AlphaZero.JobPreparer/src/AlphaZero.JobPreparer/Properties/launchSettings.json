@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "Aspire_job-preparer": {
+      "commandName": "Executable",
+      "executablePath": "dotnet",
+      "commandLineArgs": "exec --depsfile ./AlphaZero.JobPreparer.deps.json --runtimeconfig ./AlphaZero.JobPreparer.runtimeconfig.json $(HOME)/.dotnet/tools/.store/amazon.lambda.testtool/0.13.0/amazon.lambda.testtool/0.13.0/content/Amazon.Lambda.RuntimeSupport/net10.0/Amazon.Lambda.RuntimeSupport.TestTool.dll AlphaZero.JobPreparer::AlphaZero.JobPreparer.Function::FunctionHandler",
+      "workingDirectory": "bin/Debug/net10.0/"
+    }
+  }
+}
