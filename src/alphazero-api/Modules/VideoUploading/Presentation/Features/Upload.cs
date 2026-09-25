@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using AlphaZero.API.Shared;
 using AlphaZero.Modules.VideoUploading.Application;
+using Microsoft.EntityFrameworkCore.Metadata.Internal;
 
 namespace AlphaZero.Modules.VideoUploading.Presentation.Features;
 
@@ -20,8 +21,9 @@ public static class Upload
         string? description,
         string? transcodingMethod,
         string? encryptionMethod,
-        bool? generateCustomThumbnailUrl,
-        string targetResourceArn);
+        string targetResourceArn,
+        string? ThumbnailFileName = null,
+        string? ThumbnailContentType = null);
     public record Response(
         Guid videoId,
         Guid tenantId,
@@ -52,14 +54,16 @@ public static class Upload
         private async Task<IResult> Handler(Request request, VideoUploadingModule module, HttpContext context)
         {
             var command = new UploadCommand(
-                fileName: request.fileName,
-                contentType: request.contentType,
-                title: request.title,
-                description: request.description,
+                FileName: request.fileName,
+                ContentType: request.contentType,
+                Title: request.title,
+                Description: request.description,
                 TargetResourceArn: request.targetResourceArn,
-                VideoTranscodingMetehod: request.transcodingMethod ?? VideoTranscodingMetehod.FFMPEG.ToString(),
+                VideoTranscodingMethod: request.transcodingMethod ?? VideoTranscodingMetehod.FFMPEG.ToString(),
                 VideoEncryptionMethod: request.encryptionMethod ?? VideoEncryptionMethod.None.ToString(),
-                generateCustomThumbnailUrl: request.generateCustomThumbnailUrl ?? false);
+                UploadThumbnail: request.ThumbnailFileName is not null && request.ThumbnailContentType is not null ? new UploadThumbnailCommand(request.ThumbnailFileName, request.ThumbnailContentType)
+                : null
+                );
             var response = await module.Send<UploadCommand, ErrorOr<UploadCommandResponse>>(command);
             return response.Match(
                 res => Results.Ok(new Response(

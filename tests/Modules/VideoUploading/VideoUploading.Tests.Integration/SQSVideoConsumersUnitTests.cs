@@ -27,7 +27,6 @@ public class SQSVideoConsumersUnitTests
             Guid.NewGuid(),
             "Test Video",
             "Description",
-            "raw/video.mp4",
             new VideoMetadata("test.mp4", "video/mp4", 1024, "FFmpeg", "None"),
             new ThumbnailInfo(null, null, false),
             clock);

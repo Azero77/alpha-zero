@@ -16,12 +16,12 @@ using System.Data;
 namespace AlphaZero.Modules.VideoUploading.Application.Commands.Upload;
 
 public record UploadCommand(
-    string fileName, 
-    string contentType, 
-    string title, 
-    string? description, 
+    string FileName, 
+    string ContentType, 
+    string Title, 
+    string? Description, 
     string TargetResourceArn,
-    string VideoTranscodingMetehod, 
+    string VideoTranscodingMethod, 
     string VideoEncryptionMethod,
     UploadThumbnailCommand? UploadThumbnail
     ): ICommand<UploadCommandResponse>;
@@ -32,21 +32,21 @@ public class UploadCommandValidator : AbstractValidator<UploadCommand>
 {
     public UploadCommandValidator()
     {
-        RuleFor(x => x.fileName)
+        RuleFor(x => x.FileName)
             .NotEmpty()
             .Must(x => x.EndsWith(".mp4", StringComparison.OrdinalIgnoreCase))
             .WithMessage("Only mp4 files are allowed.");
 
-        RuleFor(x => x.contentType)
+        RuleFor(x => x.ContentType)
             .NotEmpty()
             .Must(x => x.Equals("video/mp4", StringComparison.OrdinalIgnoreCase))
             .WithMessage("Only video/mp4 content type is allowed.");
 
-        RuleFor(x => x.title)
+        RuleFor(x => x.Title)
             .NotEmpty()
             .MaximumLength(255);
 
-        RuleFor(x => x.VideoTranscodingMetehod)
+        RuleFor(x => x.VideoTranscodingMethod)
             .IsEnumName(typeof(VideoTranscodingMetehod), caseSensitive: false)
             .WithMessage("Invalid video transcoding method.");
         RuleFor(x => x.VideoEncryptionMethod)
@@ -96,13 +96,13 @@ public sealed class UploadCommandHandler(
 
         Guid videoId = Guid.NewGuid();
         
-        var response = await uploadService.UploadFile(request.fileName,VideoConstants.GetInputVideoSourceKey(videoId.ToString(), tenantId.ToString()!) ,request.contentType, new Dictionary<string, string>()
+        var response = await uploadService.UploadFile(request.FileName,VideoConstants.GetInputVideoSourceKey(videoId.ToString(), tenantId.ToString()!) ,request.ContentType, new Dictionary<string, string>()
         {
             { "VideoId" , videoId.ToString()},
             { "TenantId", tenantId.Value.ToString() },
-            { "Title", request.title },
-            { "Description", request.description ?? string.Empty },
-            { "VideoTranscodingMetehod", request.VideoTranscodingMetehod.ToString() },
+            { "Title", request.Title },
+            { "Description", request.Description ?? string.Empty },
+            { "VideoTranscodingMetehod", request.VideoTranscodingMethod.ToString() },
             { "VideoEncryptionMethod", request.VideoEncryptionMethod.ToString() },
             { "TargetResourceArn", request.TargetResourceArn}
         });
@@ -114,7 +114,8 @@ public sealed class UploadCommandHandler(
 
         if (request.UploadThumbnail is not null)
         {
-            var thumbResponse = await uploadService.UploadFile(request.UploadThumbnail.FileName, VideoConstants.GetThumbnailVideoSourceKey(videoId.ToString(), tenantId.ToString()!, request.UploadThumbnail.FileName),request.UploadThumbnail.ContentType, new Dictionary<string, string>()
+            string thumbnailExtension = Path.GetExtension(request.UploadThumbnail.FileName);
+            var thumbResponse = await uploadService.UploadFile(request.UploadThumbnail.FileName, VideoConstants.GetThumbnailInputVideoSourceKey(videoId.ToString(), tenantId.ToString()!, thumbnailExtension),request.UploadThumbnail.ContentType, new Dictionary<string, string>()
             {
                 { "VideoId" , videoId.ToString()},
                 { "TenantId", tenantId.Value.ToString() },
@@ -133,9 +134,9 @@ public sealed class UploadCommandHandler(
         var videoResult = Video.Create(
             videoId,
             tenantId.Value,
-            request.title,
-            request.description,
-            new VideoMetadata(request.fileName, request.contentType, 0, request.VideoTranscodingMetehod, request.VideoEncryptionMethod),
+            request.Title,
+            request.Description,
+            new VideoMetadata(request.FileName, request.ContentType, 0, request.VideoTranscodingMethod, request.VideoEncryptionMethod),
             thumbnail,
             clock);
 
@@ -149,14 +150,15 @@ public sealed class UploadCommandHandler(
             clock.Now, 
             request.VideoEncryptionMethod.ToString(),
             thumbnailKey,
-            request.TargetResourceArn));
+            request.TargetResourceArn),
+            cancellationToken);
 
         return new UploadCommandResponse(
             videoId, 
             tenantId.Value, 
             response.Value.key, 
             response.Value.presignedUrl, 
-            request.VideoTranscodingMetehod.ToString(),
+            request.VideoTranscodingMethod.ToString(),
             request.VideoEncryptionMethod.ToString(),
             response.Value.headers,
             thumbnailKey,

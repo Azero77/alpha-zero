@@ -28,7 +28,6 @@ public class VideoDomainTests
             tenantId,
             "Original Title",
             "Original Description",
-            "raw/videos/test.mp4",
             metadata,
             ThumbnailInfo.Empty,
             clock).Value;
@@ -66,7 +65,6 @@ public class VideoDomainTests
             tenantId,
             "Original Title",
             "Original Description",
-            "raw/videos/test.mp4",
             metadata,
             ThumbnailInfo.Empty,
             clock).Value;

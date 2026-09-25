@@ -236,7 +236,7 @@ public class VideoConstants
  
     public static string GetInputVideoSourceKey(string videoId, string tenantId)
     {
-        return $"{tenantId}/{videoId}/";
+        return $"{tenantId}/{videoId}/source.mp4";
     }
 
     public static string GetInputS3Url(string bucketName,string videoId, string tenantId)
@@ -244,9 +244,9 @@ public class VideoConstants
         return $"s3://{bucketName}/{GetInputVideoSourceKey(videoId,tenantId)}";
     }
 
-    public static string GetThumbnailVideoSourceKey(string videoId, string tenantId, string imageFile)
+    public static string GetThumbnailInputVideoSourceKey(string videoId, string tenantId, string imageExtension)
     {
-        return $"{tenantId}/{videoId}/thumbnail/{imageFile}}";
+        return $"{tenantId}/{videoId}/thumbnail.{imageExtension}";
     } 
 
     public static string GetOutputVideoKey(string videoId, string tenantId)
