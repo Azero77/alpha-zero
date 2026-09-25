@@ -20,6 +20,7 @@ class VideoProgressClient {
     this.connection = new signalR.HubConnectionBuilder()
       .withUrl(config.signalRHubUrl, {
         skipNegotiation: false,
+        accessTokenFactory: config.authToken ? () => config.authToken! : undefined,
       })
       .withAutomaticReconnect([0, 2000, 10000, 30000])
       .configureLogging(signalR.LogLevel.Information)

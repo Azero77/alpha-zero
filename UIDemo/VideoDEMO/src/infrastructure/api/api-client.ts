@@ -8,10 +8,13 @@ export const apiClient = axios.create({
   },
 });
 
-// Add tenant header to every request
+// Add tenant and authorization headers to every request
 apiClient.interceptors.request.use((req) => {
   if (config.tenantId) {
     req.headers['X-TenantId'] = config.tenantId;
+  }
+  if (config.authToken) {
+    req.headers['Authorization'] = `Bearer ${config.authToken}`;
   }
   return req;
 });

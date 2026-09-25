@@ -129,9 +129,10 @@ export class PipelineTestRunner {
     if (keyTargetId) {
       try {
         const keyUrl = `${config.streamingApiUrl}/keys/${keyTargetId}`;
-        const resp = await fetch(keyUrl, {
-          headers: config.tenantId ? { 'X-TenantId': config.tenantId } : {},
-        });
+        const headers: Record<string, string> = {};
+        if (config.tenantId) headers['X-TenantId'] = config.tenantId;
+        if (config.authToken) headers['Authorization'] = `Bearer ${config.authToken}`;
+        const resp = await fetch(keyUrl, { headers });
 
         s4.durationMs = Math.round(performance.now() - t3);
         if (resp.ok) {

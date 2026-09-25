@@ -62,9 +62,10 @@ export const DashboardPage: React.FC = () => {
       // ClearKey encryption — fetch raw binary key
       if (streamingInfo.encryptionMethod === 'ClearKey') {
         const keyUrl = `${config.streamingApiUrl}/keys/${video.id}`;
-        const keyResponse = await fetch(keyUrl, {
-          headers: config.tenantId ? { 'X-TenantId': config.tenantId } : {},
-        });
+        const headers: Record<string, string> = {};
+        if (config.tenantId) headers['X-TenantId'] = config.tenantId;
+        if (config.authToken) headers['Authorization'] = `Bearer ${config.authToken}`;
+        const keyResponse = await fetch(keyUrl, { headers });
         const keyBuffer = await keyResponse.arrayBuffer();
         const keyHex = Array.from(new Uint8Array(keyBuffer))
           .map((b) => b.toString(16).padStart(2, '0'))

@@ -65,7 +65,7 @@ public class TestTenantProvider : ITenantProvider
     public Guid? GetTenant()
     {
         var context = _httpContextAccessor.HttpContext;
-        if (context != null && context.Request.Headers.TryGetValue("X-Tenant-Id", out var tenantIdStr))
+        if (context != null && context.Request.Headers.TryGetValue("X-TenantId", out var tenantIdStr))
         {
             if (Guid.TryParse(tenantIdStr, out var tenantId))
             {

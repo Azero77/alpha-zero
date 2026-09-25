@@ -50,8 +50,8 @@ public abstract class BaseIntegrationTest : IAsyncLifetime
 
     protected void SetTenant(Guid tenantId)
     {
-        Client.DefaultRequestHeaders.Remove("X-Tenant-Id");
-        Client.DefaultRequestHeaders.Add("X-Tenant-Id", tenantId.ToString());
+        Client.DefaultRequestHeaders.Remove("X-TenantId");
+        Client.DefaultRequestHeaders.Add("X-TenantId", tenantId.ToString());
 
         // Resolve from the test's private scope so the local DbContext sees it
         var provider = _scope.ServiceProvider.GetRequiredService<ITenantProvider>() as TestTenantProvider;

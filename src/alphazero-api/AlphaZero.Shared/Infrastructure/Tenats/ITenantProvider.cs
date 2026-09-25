@@ -16,7 +16,7 @@ public class FakeTenantProvider : ITenantProvider
 public class HttpTenantProvider : ITenantProvider
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
-    private const string TenantClaim = "TenantId";
+    private const string TenantClaim = "tid";
     private const string TenantIdHeader = "X-TenantId";
 
     public HttpTenantProvider(IHttpContextAccessor httpContextAccessor)

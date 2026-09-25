@@ -115,8 +115,8 @@ public class IAMPreprocessorTests : IClassFixture<SecurityApiFactory>
         }
 
         // 2. Act: Attempt to add lesson to Tenant A's course while acting as User in Tenant B
-        _client.DefaultRequestHeaders.Remove("X-Tenant-Id");
-        _client.DefaultRequestHeaders.Add("X-Tenant-Id", tenantB.ToString());
+        _client.DefaultRequestHeaders.Remove("X-TenantId");
+        _client.DefaultRequestHeaders.Add("X-TenantId", tenantB.ToString());
         
         // We set the auth claim headers that TestAuthHandler uses.
         // We use user.Id because CurrentTenantUserRepository searches by primary key.

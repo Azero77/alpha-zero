@@ -64,7 +64,7 @@ public class OfflineVideoKeyTests : BaseIntegrationTest
         // Act - No signature headers
         var request = new HttpRequestMessage(HttpMethod.Get, $"/api/video/keys/{videoId}");
         request.Headers.Add("X-Test-User-Id", user.Id.ToString());
-        request.Headers.Add("X-Tenant-Id", tenantId.ToString());
+        request.Headers.Add("X-TenantId", tenantId.ToString());
 
         var response = await Client.SendAsync(request);
 
@@ -109,7 +109,7 @@ public class OfflineVideoKeyTests : BaseIntegrationTest
 
         var request = new HttpRequestMessage(HttpMethod.Get, $"/api/video/keys/{videoId}");
         request.Headers.Add("X-Test-User-Id", user.Id.ToString());
-        request.Headers.Add("X-Tenant-Id", tenantId.ToString());
+        request.Headers.Add("X-TenantId", tenantId.ToString());
         request.Headers.Add("X-Device-Id", deviceId.ToString());
         request.Headers.Add("X-Timestamp", timestamp);
         request.Headers.Add("X-Signature", signature);

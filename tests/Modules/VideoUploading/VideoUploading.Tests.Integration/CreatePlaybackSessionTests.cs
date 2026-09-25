@@ -78,7 +78,7 @@ public class CreatePlaybackSessionIntegrationTests : BaseIntegrationTest
             Content = JsonContent.Create(new { VideoId = videoId })
         };
         request.Headers.Add("X-Test-User-Id", user.Id.ToString());
-        request.Headers.Add("X-Tenant-Id", tenantId.ToString());
+        request.Headers.Add("X-TenantId", tenantId.ToString());
 
         var response = await Client.SendAsync(request);
 
@@ -125,7 +125,7 @@ public class CreatePlaybackSessionIntegrationTests : BaseIntegrationTest
             Content = JsonContent.Create(new { VideoId = videoId })
         };
         request.Headers.Add("X-Test-User-Id", user.Id.ToString());
-        request.Headers.Add("X-Tenant-Id", tenantId.ToString());
+        request.Headers.Add("X-TenantId", tenantId.ToString());
         request.Headers.Add("X-Device-Id", deviceId.ToString());
         request.Headers.Add("X-Timestamp", timestamp);
         request.Headers.Add("X-Signature", signature);
