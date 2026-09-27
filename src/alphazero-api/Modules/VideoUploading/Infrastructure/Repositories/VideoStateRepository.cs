@@ -19,14 +19,14 @@ public class VideoStateRepository : IVideoStateRepository
     {
         var state = await _context.VideoState
             .AsNoTracking()
-            .FirstOrDefaultAsync(s => s.CorrelationId == videoId, cancellationToken);
+            .FirstOrDefaultAsync(s => s.VideoId == videoId, cancellationToken);
 
         if (state == null) return null;
 
         return new VideoStateDto(
-            state.CorrelationId,
+            state.VideoId,
             state.TenantId,
-            state.CurrentState,
+            state.Stage,
             state.MediaConverterJobId,
             state.Key,
             state.CustomThumbnailKey,

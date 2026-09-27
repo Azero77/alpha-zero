@@ -1,12 +1,12 @@
-using MassTransit;
+using AlphaZero.Modules.VideoUploading.Application.Models;
 
 namespace AlphaZero.Modules.VideoUploading.Infrastructure.Sagas;
 
-public class VideoState : SagaStateMachineInstance
+public class VideoState
 {
-    public Guid CorrelationId { get; set; }
+    public Guid VideoId { get; set; }
     public Guid TenantId { get; set; }
-    public string CurrentState { get; set; } = null!;
+    public PipelineStage Stage { get; set; }
     public string? MediaConverterJobId { get; set; }
     public string? Key { get; set; }
     public int? SourceWidth { get; set; }

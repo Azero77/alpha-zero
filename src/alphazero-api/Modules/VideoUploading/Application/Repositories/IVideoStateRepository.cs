@@ -2,12 +2,14 @@ using AlphaZero.Modules.VideoUploading.Domain.Models;
 using AlphaZero.Shared.Infrastructure.Repositores;
 using ErrorOr;
 
+using AlphaZero.Modules.VideoUploading.Application.Models;
+
 namespace AlphaZero.Modules.VideoUploading.Application.Repositories;
 
 public record VideoStateDto(
-    Guid CorrelationId,
+    Guid VideoId,
     Guid TenantId,
-    string CurrentState,
+    PipelineStage Stage,
     string? MediaConverterJobId,
     string? Key,
     string? CustomThumbnailKey,
