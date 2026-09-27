@@ -137,7 +137,7 @@ public sealed class UploadCommandHandler(
             tenantId.Value,
             request.Title,
             request.Description,
-            new VideoMetadata(request.FileName, request.ContentType, 0, request.VideoTranscodingMethod, request.VideoEncryptionMethod),
+            new AlphaZero.Modules.VideoUploading.Domain.Models.VideoMetadata(request.FileName, request.ContentType, 0, request.VideoTranscodingMethod, request.VideoEncryptionMethod),
             thumbnail,
             clock);
 

@@ -1,3 +1,4 @@
+using AlphaZero.Modules.VideoUploading.IntegrationEvents;
 using AlphaZero.Modules.VideoUploading.Application.Services;
 using Aspire.Shared;
 using MassTransit;
@@ -5,12 +6,6 @@ using Microsoft.Extensions.Logging;
 
 namespace AlphaZero.Modules.VideoUploading.Infrastructure.Consumers;
 
-public record VideoProgressQueueMessage(
-    string VideoId,
-    string TenantId,
-    string Stage,
-    string Status,
-    string? Metadata = null);
 
 public class SQSVideoProgressConsumer : IConsumer<VideoProgressQueueMessage>
 {

@@ -37,13 +37,12 @@ public class Program
         if (!string.IsNullOrEmpty(queueUrl))
         {
             var sqsClient = new Amazon.SQS.AmazonSQSClient();
-            var message = new
-            {
-                VideoId = videoId,
-                TenantId = tenantId,
-                Stage = "publishing",
-                Status = "IN_PROGRESS"
-            };
+            var message = new AlphaZero.Modules.VideoUploading.IntegrationEvents.VideoProgressQueueMessage(
+                VideoId: videoId,
+                TenantId: tenantId,
+                Stage: "publishing",
+                Status: "IN_PROGRESS"
+            );
             var request = new Amazon.SQS.Model.SendMessageRequest
             {
                 QueueUrl = queueUrl,

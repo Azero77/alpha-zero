@@ -1,3 +1,4 @@
+using AlphaZero.Modules.VideoUploading.IntegrationEvents;
 using System.Diagnostics;
 using System.Globalization;
 using System.Text.Json;
@@ -16,26 +17,6 @@ using FFMpegCore.Arguments;
 
 namespace AlphaZero.VideoAnalyzer;
 
-public record VideoAnalyzerInput(
-    string VideoId,
-    string TenantId,
-    string SourceBucket,
-    string SourceKey,
-    string? TargetResourceArn = null,
-    string? TranscodingEngine = "FFMPEG",
-    string? EncryptionMethod = "ClearKey");
-
-public record VideoAnalyzerOutput(
-    int SourceWidth,
-    int SourceHeight,
-    double DurationSeconds,
-    string DurationFormatted,
-    double FrameRate,
-    string AspectRatio,
-    string VideoCodec,
-    string AudioCodec,
-    int AudioBitrateKbps,
-    int AudioSampleRate);
 
 public class Function
 {
@@ -62,13 +43,12 @@ public class Function
         var queueUrl = Environment.GetEnvironmentVariable("PROGRESS_QUEUE_URL");
         if (string.IsNullOrEmpty(queueUrl)) return;
 
-        var message = new
-        {
-            VideoId = videoId,
-            TenantId = tenantId,
-            Stage = stage,
-            Status = status
-        };
+        var message = new VideoProgressQueueMessage(
+            VideoId: videoId,
+            TenantId: tenantId,
+            Stage: stage,
+            Status: status
+        );
 
         var request = new SendMessageRequest
         {

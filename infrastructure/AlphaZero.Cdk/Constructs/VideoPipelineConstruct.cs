@@ -237,7 +237,7 @@ public class VideoPipelineConstruct : Construct
                         new SfnTaskEnvironmentVariable { Name = "TRANSCODER__S3__InputBucket", Value = props.InputBucket.BucketName },
                         new SfnTaskEnvironmentVariable { Name = "TRANSCODER__S3__OutputBucket", Value = props.TransientBucket.BucketName },
                         new SfnTaskEnvironmentVariable { Name = "TRANSCODER__INPUT_FILE", Value = JsonPath.StringAt("$.JobPrep.JobConfigKey") },
-                        new SfnTaskEnvironmentVariable { Name = "TRANSCODER__PROGRESS_QUEUE_URL", Value = props.VideoProgressQueue.QueueUrl }
+                        new SfnTaskEnvironmentVariable { Name = "TRANSCODER__ProgressQueueUrl", Value = props.VideoProgressQueue.QueueUrl },
                     }
                 }
             },

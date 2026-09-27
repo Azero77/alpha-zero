@@ -9,21 +9,6 @@ using System.Text.Json.Serialization;
 
 namespace AlphaZero.S3VideoCreatedEventParser;
 
-public record S3VideoCreatedEventParserInput(
-    string BucketName,
-    string SourceKey);
-
-public record S3VideoCreatedEventParserOutput(
-    string VideoId,
-    string TenantId,
-    string SourceBucket,
-    string? Description,
-    string FileName,
-    string Title,
-    string SourceKey,
-    string? TargetResourceArn = null,
-    string? TranscodingEngine = "FFMPEG",
-    string? EncryptionMethod = "ClearKey");
 
 public class Function
 {

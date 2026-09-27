@@ -18,4 +18,8 @@
     <PackageReference Include="AWSSDK.SQS" />
     <PackageReference Include="FFMpegCore" />
   </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\alphazero-api\Modules\VideoUploading\IntegrationEvents\IntegrationEvents.csproj" />
+  </ItemGroup>
 </Project>

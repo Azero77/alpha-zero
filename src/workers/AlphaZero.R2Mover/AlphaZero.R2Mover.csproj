@@ -12,4 +12,8 @@
     <PackageReference Include="AWSSDK.SimpleSystemsManagement" />
     <PackageReference Include="AWSSDK.SQS" />
   </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\alphazero-api\Modules\VideoUploading\IntegrationEvents\IntegrationEvents.csproj" />
+  </ItemGroup>
 </Project>

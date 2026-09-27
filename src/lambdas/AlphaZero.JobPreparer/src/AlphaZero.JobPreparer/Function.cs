@@ -1,3 +1,4 @@
+using AlphaZero.Modules.VideoUploading.IntegrationEvents;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -16,95 +17,6 @@ using AlphaZero.VideoPipeline.Exceptions;
 
 namespace AlphaZero.JobPreparer;
 
-public record SourceMetadata(
-    int SourceWidth,
-    int SourceHeight,
-    double DurationSeconds,
-    string DurationFormatted,
-    double FrameRate,
-    string AspectRatio,
-    string VideoCodec,
-    string AudioCodec);
-
-public record JobPreparerInput(
-    string VideoId,
-    string TenantId,
-    string SourceBucket,
-    string SourceKey,
-    string TransientOutputBucket,
-    string? TranscodingEngine,
-    string? EncryptionMethod,
-    string? TargetResourceArn,
-    SourceMetadata SourceMetadata);
-
-public record JobPreparerOutput(
-    string JobConfigS3Uri,
-    string JobConfigKey,
-    string SourceBucket,
-    string SourceKey,
-    string TransientOutputBucket,
-    string OutputPrefix,
-    string TranscodingEngine,
-    int SourceWidth,
-    int SourceHeight,
-    string DurationFormatted,
-    string? TargetResourceArn);
-
-public sealed record TranscodingJobInput
-{
-    public required Guid VideoId { get; init; }
-    public required Guid TenantId { get; init; }
-    public required string SourcePath { get; init; }
-    public required string OutputPrefix { get; init; }
-    public required VideoMetadata SourceMetadata { get; init; }
-    public required TranscodeSettings Settings { get; init; }
-
-    [JsonConverter(typeof(JsonStringEnumConverter<EncryptionMethod>))]
-    public EncryptionMethod EncryptionMethod { get; init; } = EncryptionMethod.None;
-
-    public EncryptionSettings? Encryption { get; init; }
-    public string? ThumbnailRelativeUrl { get; init; }
-}
-
-public sealed record VideoMetadata(
-    int SourceWidth,
-    int SourceHeight,
-    TimeSpan Duration);
-
-public sealed record TranscodeSettings
-{
-    public required OutputPreset[] Outputs { get; init; }
-    public int SegmentLengthSeconds { get; init; } = 6;
-    public int FragmentLengthSeconds { get; init; } = 2;
-    public AudioSettings Audio { get; init; } = AudioSettings.Default;
-}
-
-public sealed record OutputPreset(
-    int Width,
-    int Height,
-    int MaxBitrateKbps,
-    int QvbrQualityLevel,
-    string NameModifier);
-
-public sealed record AudioSettings(
-    string Codec,
-    int BitrateKbps,
-    int SampleRate)
-{
-    public static readonly AudioSettings Default = new("aac", 128, 44100);
-}
-
-public sealed record EncryptionSettings(
-    string KeyId,
-    string Key,
-    string? KeyUrl);
-
-[JsonConverter(typeof(JsonStringEnumConverter<EncryptionMethod>))]
-public enum EncryptionMethod
-{
-    None = 0,
-    ClearKey = 1
-}
 
 public class Function
 {
@@ -130,31 +42,23 @@ public class Function
         return _masterSecretCache;
     }
 
-    public sealed class ProgressMessage
-    {
-        public string VideoId { get; set; } = "";
-        public string TenantId { get; set; } = "";
-        public string Stage { get; set; } = "";
-        public string Status { get; set; } = "";
-    }
 
     private static async Task NotifyProgressAsync(string videoId, string tenantId, string stage, string status)
     {
         var queueUrl = Environment.GetEnvironmentVariable("PROGRESS_QUEUE_URL");
         if (string.IsNullOrEmpty(queueUrl)) return;
 
-        var message = new ProgressMessage
-        {
-            VideoId = videoId,
-            TenantId = tenantId,
-            Stage = stage,
-            Status = status
-        };
+        var message = new VideoProgressQueueMessage(
+            VideoId: videoId,
+            TenantId: tenantId,
+            Stage: stage,
+            Status: status
+        );
 
         var request = new Amazon.SQS.Model.SendMessageRequest
         {
             QueueUrl = queueUrl,
-            MessageBody = JsonSerializer.Serialize(message, JobPreparerJsonContext.Default.ProgressMessage)
+            MessageBody = JsonSerializer.Serialize(message, JobPreparerJsonContext.Default.VideoProgressQueueMessage)
         };
         await SqsClient.SendMessageAsync(request);
     }
@@ -287,5 +191,5 @@ public class Function
 [JsonSerializable(typeof(AudioSettings))]
 [JsonSerializable(typeof(EncryptionSettings))]
 [JsonSerializable(typeof(EncryptionMethod))]
-[JsonSerializable(typeof(Function.ProgressMessage))]
+[JsonSerializable(typeof(VideoProgressQueueMessage))]
 public partial class JobPreparerJsonContext : JsonSerializerContext { }

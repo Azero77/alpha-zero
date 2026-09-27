@@ -10,17 +10,6 @@ using Microsoft.Extensions.Logging;
 
 namespace AlphaZero.Modules.VideoUploading.Infrastructure.Consumers;
 
-public record VideoPublishedQueueMessage(
-    Guid VideoId,
-    Guid TenantId,
-    string Status,
-    string PlaybackUrl,
-    string? ThumbnailUrl,
-    string? Duration,
-    int? Width,
-    int? Height,
-    string? EngineUsed,
-    string? TargetResourceArn);
 
 public class SQSVideoPublishedConsumer : IConsumer<VideoPublishedQueueMessage>
 {

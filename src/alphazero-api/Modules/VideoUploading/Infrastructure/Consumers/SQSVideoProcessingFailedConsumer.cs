@@ -9,14 +9,6 @@ using Microsoft.Extensions.Logging;
 
 namespace AlphaZero.Modules.VideoUploading.Infrastructure.Consumers;
 
-public record VideoProcessingErrorDetail(string? ErrorType, string? Cause);
-
-public record VideoProcessingFailedQueueMessage(
-    Guid VideoId,
-    Guid TenantId,
-    string Status,
-    VideoProcessingErrorDetail? Error,
-    string? TargetResourceArn);
 
 public class SQSVideoProcessingFailedConsumer : IConsumer<VideoProcessingFailedQueueMessage>
 {
