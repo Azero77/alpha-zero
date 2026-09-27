@@ -111,7 +111,7 @@ public class JobPreparerUnitTests
             TranscodingEngine: "FFMPEG",
             EncryptionMethod: "ClearKey",
             TargetResourceArn: "arn:aws:video:123",
-            Metadata: new SourceMetadata(1920, 1080, 120.5, "00:02:00", 30, "16:9", "h264", "aac")
+            SourceMetadata: new SourceMetadata(1920, 1080, 120.5, "00:02:00", 30, "16:9", "h264", "aac")
         );
 
         using var ms = new MemoryStream();
@@ -121,7 +121,7 @@ public class JobPreparerUnitTests
         var deserialized = serializer.Deserialize<JobPreparerInput>(ms);
         deserialized.Should().NotBeNull();
         deserialized.VideoId.Should().Be("test-video");
-        deserialized.Metadata.SourceWidth.Should().Be(1920);
-        deserialized.Metadata.DurationSeconds.Should().Be(120.5);
+        deserialized.SourceMetadata.SourceWidth.Should().Be(1920);
+        deserialized.SourceMetadata.DurationSeconds.Should().Be(120.5);
     }
 }

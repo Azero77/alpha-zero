@@ -273,20 +273,14 @@ public class Program
         {
             x.AddConsumers(filter => filter.Name.Contains("sqs", StringComparison.InvariantCultureIgnoreCase), assemblies);
             
-            var region = builder.Configuration.GetAWSOptions().Region?.SystemName;
+            var region = builder.Configuration.GetAWSOptions().Region?.SystemName ?? throw new ArgumentNullException("Aws Options are not provided");
             
-            if (builder.Environment.IsDevelopment() || string.IsNullOrEmpty(region))
+            x.UsingAmazonSqs((context, cfg) =>
             {
-                x.UsingInMemory((context, cfg) => cfg.ConfigureEndpoints(context));
-            }
-            else
-            {
-                x.UsingAmazonSqs((context, cfg) =>
-                {
-                    cfg.Host(region, h => { });
-                    cfg.ConfigureEndpoints(context);
-                });
-            }
+                var hostRegion = region;
+                cfg.Host(hostRegion, h => { });
+                cfg.ConfigureEndpoints(context);
+            });
 
             x.ConfigureHealthCheckOptions(options =>
             {

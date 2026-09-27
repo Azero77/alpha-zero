@@ -2,6 +2,7 @@ using AlphaZero.Modules.VideoUploading.Application.Repositories;
 using AlphaZero.Modules.VideoUploading.Domain.Models;
 using AlphaZero.Modules.VideoUploading.IntegrationEvents;
 using AlphaZero.Shared.Application;
+using Aspire.Shared;
 using MassTransit;
 using Microsoft.Extensions.Logging;
 
@@ -37,6 +38,7 @@ public class SQSVideoProcessingFailedConsumer : IConsumer<VideoProcessingFailedQ
 
     public async Task Consume(ConsumeContext<VideoProcessingFailedQueueMessage> context)
     {
+        _logger.LogInformation("[SQS] SQSVideoProcessingFailedConsumer triggered!");
         var msg = context.Message;
         string reason = msg.Error?.Cause ?? msg.Error?.ErrorType ?? "Unknown Step Functions failure";
         _logger.LogError("[SQS] Processing video failed callback for Video {VideoId}. Reason: {Reason}", msg.VideoId, reason);
@@ -59,9 +61,11 @@ public class SQSVideoProcessingFailedConsumer : IConsumer<VideoProcessingFailedQ
 
 public class SQSVideoProcessingFailedConsumerDefinition : ConsumerDefinition<SQSVideoProcessingFailedConsumer>
 {
-    public SQSVideoProcessingFailedConsumerDefinition()
+    public SQSVideoProcessingFailedConsumerDefinition(AWSResources resources)
     {
-        EndpointName = "VideoProcessingFailedQueue";
+        var queueUrl = resources.VideoPublishedQueue?.QueueUrl ?? throw new ArgumentException("Video Published Queue is not Configured");
+
+        EndpointName = !string.IsNullOrEmpty(queueUrl) ? queueUrl.Split('/').Last() : "VideoProcessingFailedQueue";
     }
 
     protected override void ConfigureConsumer(

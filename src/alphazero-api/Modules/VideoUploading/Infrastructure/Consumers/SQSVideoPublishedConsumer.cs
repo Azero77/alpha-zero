@@ -3,6 +3,7 @@ using AlphaZero.Modules.VideoUploading.Domain.Models;
 using AlphaZero.Modules.VideoUploading.IntegrationEvents;
 using AlphaZero.Shared.Application;
 using AlphaZero.Shared.Domain;
+using Aspire.Shared;
 using MassTransit;
 using Microsoft.Extensions.Logging;
 
@@ -44,6 +45,7 @@ public class SQSVideoPublishedConsumer : IConsumer<VideoPublishedQueueMessage>
 
     public async Task Consume(ConsumeContext<VideoPublishedQueueMessage> context)
     {
+        _logger.LogInformation("[SQS] SQSVideoPublishedConsumer triggered!");
         var msg = context.Message;
         _logger.LogInformation("[SQS] Processing video published callback for Video: {VideoId}", msg.VideoId);
 
@@ -88,9 +90,10 @@ public class SQSVideoPublishedConsumer : IConsumer<VideoPublishedQueueMessage>
 
 public class SQSVideoPublishedConsumerDefinition : ConsumerDefinition<SQSVideoPublishedConsumer>
 {
-    public SQSVideoPublishedConsumerDefinition()
+    public SQSVideoPublishedConsumerDefinition(AWSResources resources)
     {
-        EndpointName = "VideoPublishedQueue";
+        var queueUrl = resources.VideoPublishedQueue?.QueueUrl ?? throw new ArgumentException("Video Published Queue is not Configured");
+        EndpointName = !string.IsNullOrEmpty(queueUrl) ? queueUrl.Split('/').Last() : "VideoPublishedQueue";
     }
 
     protected override void ConfigureConsumer(

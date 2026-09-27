@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "Aspire_alphazero-s3EventParser": {
+      "commandName": "Executable",
+      "executablePath": "dotnet",
+      "commandLineArgs": "exec --depsfile ./AlphaZero.S3VideoCreatedEventParser.deps.json --runtimeconfig ./AlphaZero.S3VideoCreatedEventParser.runtimeconfig.json $(HOME)/.dotnet/tools/.store/amazon.lambda.testtool/0.13.0/amazon.lambda.testtool/0.13.0/content/Amazon.Lambda.RuntimeSupport/net10.0/Amazon.Lambda.RuntimeSupport.TestTool.dll AlphaZero.S3VideoCreatedEventParser::AlphaZero.S3VideoCreatedEventParser.Function::FunctionHandler",
+      "workingDirectory": "bin/Debug/net10.0/"
+    }
+  }
+}
