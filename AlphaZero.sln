@@ -175,7 +175,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "infrastructure", "infrastru
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AlphaZero.Cdk", "infrastructure\AlphaZero.Cdk\AlphaZero.Cdk.csproj", "{9D3B6FF0-74B0-4A56-9CB5-700D7894E8F9}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "S3VideoCreatedEventParser", "src\lambdas\S3VideoCreatedEventParser\S3VideoCreatedEventParser.csproj", "{28D7A1DC-7DF8-4883-8074-EEC2A804AB73}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AlphaZero.S3VideoCreatedEventParser", "src\lambdas\AlphaZero.S3VideoCreatedEventParser\S3VideoCreatedEventParser.csproj", "{28D7A1DC-7DF8-4883-8074-EEC2A804AB73}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

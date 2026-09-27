@@ -23,6 +23,7 @@
     <ProjectReference Include="..\..\AlphaZero.API\AlphaZero.API.csproj" />
     <ProjectReference Include="..\..\..\lambdas\AlphaZero.VideoAnalyzer\AlphaZero.VideoAnalyzer.csproj" />
     <ProjectReference Include="..\..\..\lambdas\AlphaZero.JobPreparer\src\AlphaZero.JobPreparer\AlphaZero.JobPreparer.csproj" />
+    <ProjectReference Include="..\..\..\lambdas\AlphaZero.S3VideoCreatedEventParser\S3VideoCreatedEventParser.csproj" />
   </ItemGroup>
 
 </Project>

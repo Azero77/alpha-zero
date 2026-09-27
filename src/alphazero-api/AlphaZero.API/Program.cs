@@ -30,7 +30,7 @@ public class Program
         
         if (app.Environment.IsDevelopment())
         {
-            app.UseCors(b => b.AllowAnyHeader().AllowAnyOrigin().AllowAnyMethod());
+            app.UseCors(b => b.AllowAnyHeader().SetIsOriginAllowed(_ => true).AllowAnyMethod().AllowCredentials());
         }
         //app.UseHttpsRedirection();
         app.UseAuthentication();

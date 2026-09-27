@@ -98,13 +98,14 @@ public sealed class UploadCommandHandler(
         
         var response = await uploadService.UploadFile(request.FileName,VideoConstants.GetInputVideoSourceKey(videoId.ToString(), tenantId.ToString()!) ,request.ContentType, new Dictionary<string, string>()
         {
-            { "VideoId" , videoId.ToString()},
-            { "TenantId", tenantId.Value.ToString() },
-            { "Title", request.Title },
-            { "Description", request.Description ?? string.Empty },
-            { "VideoTranscodingMetehod", request.VideoTranscodingMethod.ToString() },
-            { "VideoEncryptionMethod", request.VideoEncryptionMethod.ToString() },
-            { "TargetResourceArn", request.TargetResourceArn}
+            { VideoObjectStorageMetadataTags.VideoId , videoId.ToString()},
+            { VideoObjectStorageMetadataTags.TenantId, tenantId.Value.ToString() },
+            { VideoObjectStorageMetadataTags.Title, request.Title },
+            { VideoObjectStorageMetadataTags.Description, request.Description ?? string.Empty },
+            { VideoObjectStorageMetadataTags.TranscodingMethod, request.VideoTranscodingMethod.ToString() },
+            { VideoObjectStorageMetadataTags.EncryptionMethod, request.VideoEncryptionMethod.ToString() },
+            { VideoObjectStorageMetadataTags.TargetResourceArn, request.TargetResourceArn},
+            //{VideoObjectStorageMetadataTags.FileName , request.FileName} is already made inside the UploadFile method , it already add file-name metadata
         });
         if (response.IsError) return response.Errors;
 

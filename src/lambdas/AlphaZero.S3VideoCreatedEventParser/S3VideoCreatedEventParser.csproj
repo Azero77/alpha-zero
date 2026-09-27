@@ -4,6 +4,7 @@
         <TargetFramework>net10.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
+        <InvariantGlobalization>true</InvariantGlobalization>
         <AWSProjectType>Lambda</AWSProjectType>
         <!-- This property makes the build directory similar to a publish directory and helps the AWS .NET Lambda Mock Test Tool find project dependencies. -->
         <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
@@ -15,6 +16,8 @@
         <!-- TrimMode partial will only trim assemblies marked as trimmable. To reduce package size make all assemblies trimmable and set TrimMode to full.
         If there are trim warnings during build, you can hit errors at runtime.-->
         <TrimMode>partial</TrimMode>
+        <AssemblyName>AlphaZero.S3VideoCreatedEventParser</AssemblyName>
+        <RootNamespace>AlphaZero.S3VideoCreatedEventParser</RootNamespace>
     </PropertyGroup>
     <ItemGroup>
         <PackageReference Include="Amazon.Lambda.RuntimeSupport"/>
@@ -22,4 +25,12 @@
         <PackageReference Include="Amazon.Lambda.Serialization.SystemTextJson" />
         <PackageReference Include="AWSSDK.S3" />
     </ItemGroup>
+    <ItemGroup>
+      <ProjectReference Include="..\..\alphazero-api\Modules\VideoUploading\IntegrationEvents\IntegrationEvents.csproj" />
+    </ItemGroup>
+
+    <!-- Rename the compiled native binary to 'bootstrap' so AWS provided.al2023 runtime can execute it -->
+    <Target Name="RenameForLambda" AfterTargets="Publish">
+        <Move SourceFiles="$(PublishDir)$(AssemblyName)" DestinationFiles="$(PublishDir)bootstrap" Condition="Exists('$(PublishDir)$(AssemblyName)')" />
+    </Target>
 </Project>

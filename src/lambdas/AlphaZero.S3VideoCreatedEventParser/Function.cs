@@ -1,13 +1,13 @@
+using AlphaZero.Modules.VideoUploading.IntegrationEvents;
 using Amazon.Lambda.Core;
 using Amazon.Lambda.RuntimeSupport;
 using Amazon.Lambda.Serialization.SystemTextJson;
 using Amazon.Runtime;
 using Amazon.S3;
 using Amazon.S3.Model;
-using System.Net;
 using System.Text.Json.Serialization;
 
-namespace S3VideoCreatedEventParser;
+namespace AlphaZero.S3VideoCreatedEventParser;
 
 public record S3VideoCreatedEventParserInput(
     string BucketName,
@@ -71,35 +71,34 @@ public class Function
 
             var videoId = GetRequiredMetadata(
                 metadata,
-                "videoid");
+                VideoObjectStorageMetadataTags.VideoId);
 
             var tenantId = GetRequiredMetadata(
-                metadata,
-                "tenantid");
+                metadata, VideoObjectStorageMetadataTags.TenantId);
 
             var targetResourceArn = GetRequiredMetadata(
                 metadata,
-                "targetresourcearn");
+                VideoObjectStorageMetadataTags.TargetResourceArn);
 
             var encryptionMethod = GetRequiredMetadata(
                 metadata,
-                "videoencryptionmethod");
+                VideoObjectStorageMetadataTags.EncryptionMethod);
 
             var transcodingMethod = GetRequiredMetadata(
                 metadata,
-                "videotranscodingmethod");
+                VideoObjectStorageMetadataTags.TranscodingMethod);
 
             var title = GetRequiredMetadata(
                 metadata,
-                "title");
+                VideoObjectStorageMetadataTags.Title);
 
             var fileName = GetRequiredMetadata(
                 metadata,
-                "file-name");
+                VideoObjectStorageMetadataTags.FileName);
 
             var description = GetOptionalMetadata(
                 metadata,
-                "description");
+                VideoObjectStorageMetadataTags.Description);
 
             context.Logger.LogInformation(
                 $"Successfully parsed metadata for video '{videoId}'.");

@@ -35,7 +35,7 @@ public record JobPreparerInput(
     string? TranscodingEngine,
     string? EncryptionMethod,
     string? TargetResourceArn,
-    SourceMetadata Metadata);
+    SourceMetadata SourceMetadata);
 
 public record JobPreparerOutput(
     string JobConfigS3Uri,
@@ -138,7 +138,7 @@ public class Function
             var outputPrefix = $"{input.TenantId}/{input.VideoId}/";
             var jobKey = $"{input.TenantId}/{input.VideoId}/job.json";
 
-            var ladder = BuildAdaptiveLadder(input.Metadata.SourceWidth, input.Metadata.SourceHeight);
+            var ladder = BuildAdaptiveLadder(input.SourceMetadata.SourceWidth, input.SourceMetadata.SourceHeight);
 
             EncryptionSettings? encryption = null;
             var encMethod = string.Equals(input.EncryptionMethod, "ClearKey", StringComparison.OrdinalIgnoreCase)
@@ -164,9 +164,9 @@ public class Function
                 SourcePath = input.SourceKey,
                 OutputPrefix = outputPrefix,
                 SourceMetadata = new VideoMetadata(
-                    SourceWidth: input.Metadata.SourceWidth,
-                    SourceHeight: input.Metadata.SourceHeight,
-                    Duration: TimeSpan.FromSeconds(input.Metadata.DurationSeconds)
+                    SourceWidth: input.SourceMetadata.SourceWidth,
+                    SourceHeight: input.SourceMetadata.SourceHeight,
+                    Duration: TimeSpan.FromSeconds(input.SourceMetadata.DurationSeconds)
                 ),
                 Settings = new TranscodeSettings
                 {
@@ -198,9 +198,9 @@ public class Function
                 TransientOutputBucket: input.TransientOutputBucket,
                 OutputPrefix: outputPrefix,
                 TranscodingEngine: input.TranscodingEngine ?? "FFMPEG",
-                SourceWidth: input.Metadata.SourceWidth,
-                SourceHeight: input.Metadata.SourceHeight,
-                DurationFormatted: input.Metadata.DurationFormatted,
+                SourceWidth: input.SourceMetadata.SourceWidth,
+                SourceHeight: input.SourceMetadata.SourceHeight,
+                DurationFormatted: input.SourceMetadata.DurationFormatted,
                 TargetResourceArn: input.TargetResourceArn
             );
         }
@@ -235,7 +235,7 @@ public class Function
             presets.Add(new OutputPreset(1920, 1080, 4500, 7, "_1080p"));
 
         return presets.ToArray();
-    }
+    }   
 
     internal static string GenerateClearKeySecret(string masterSecret, string videoId)
     {

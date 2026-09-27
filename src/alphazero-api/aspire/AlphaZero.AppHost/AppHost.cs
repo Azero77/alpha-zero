@@ -1,4 +1,6 @@
 using Aspire.Hosting;
+using Projects;
+
 var builder = DistributedApplication.CreateBuilder(args);
 
 var awsSdkConfig = builder.AddAWSSDKConfig().WithRegion(Amazon.RegionEndpoint.EUNorth1);
@@ -50,6 +52,8 @@ var api = builder.AddProject<Projects.AlphaZero_API>("alphazero-api")
     .WithEnvironment("AWS__Resources__CdnDomain", cdnDomain);
 
 #pragma warning disable ASPIRE001
+
+var s3EventParser = builder.AddAWSLambdaFunction<Projects.S3VideoCreatedEventParser>("alphazero-s3EventParser", "AlphaZero.S3VideoCreatedEventParser::AlphaZero.S3VideoCreatedEventParser.Function::FunctionHandler");
 var videoAnalyzer = builder.AddAWSLambdaFunction<Projects.AlphaZero_VideoAnalyzer>("video-analyzer", "AlphaZero.VideoAnalyzer::AlphaZero.VideoAnalyzer.Function::FunctionHandler")
     .WithReference(awsSdkConfig)
     .WithEnvironment("AWS__Resources__InputS3__BucketName", storageStackOutputs.GetOutput("InputS3BucketName"));

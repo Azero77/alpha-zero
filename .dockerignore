@@ -27,3 +27,8 @@ README.md
 !.git/config
 !.git/packed-refs
 !.git/refs/heads/**
+cdk.out   
+.next   
+.agents   
+node_modules
+UIDemo/**/node_modules

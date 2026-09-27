@@ -15,7 +15,7 @@ public class R2Credentials
     public string ServiceUrl { get; set; } = "";
     public string BucketName { get; set; } = "";
     public string PublicUrl { get; set; } = "";
-}
+}   
 
 public class Program
 {
@@ -97,6 +97,7 @@ public class Program
                         ContentType = GetContentType(obj.Key),
                         DisablePayloadSigning = true
                     };
+                    putRequest.Headers.ContentLength = getResponse.ContentLength;
                     await r2Client.PutObjectAsync(putRequest);
                     Console.WriteLine($"Successfully copied {obj.Key}");
                 }

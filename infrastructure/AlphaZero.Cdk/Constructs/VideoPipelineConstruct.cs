@@ -48,17 +48,18 @@ public class VideoPipelineConstruct : Construct
     {
         var repoRoot = FindRepoRoot();
         var analyzerDockerFilePath = "src/lambdas/AlphaZero.VideoAnalyzer/Dockerfile";
-        var jobPreparerPath = ResolveJobPreparerAsset(repoRoot);
+        var jobPreparerPath = "src/lambdas/AlphaZero.JobPreparer/publish";
         var r2MoverPath = Path.Combine(repoRoot, "src/workers/AlphaZero.R2Mover");
         // SSM Parameters
         var masterClearKey = props.MasterClearKey ?? StringParameter.FromSecureStringParameterAttributes(this, "MasterClearKey", new SecureStringParameterAttributes
         {
-            ParameterName = "/AlphaZero/VideoPipeline/MasterClearKey"
+            ParameterName = "/AlphaZero/VideoPipeline/MasterClearKey",
         });
 
         var r2Credentials = props.R2Credentials ?? StringParameter.FromSecureStringParameterAttributes(this, "R2Credentials", new SecureStringParameterAttributes
         {
-            ParameterName = "/AlphaZero/VideoPipeline/R2Credentials"
+            ParameterName = "/AlphaZero/VideoPipeline/R2Credentials",
+            
         });
 
         // 1. Lambda Functions
@@ -69,10 +70,12 @@ public class VideoPipelineConstruct : Construct
                 FunctionName = "alphazero-video-uploaded-event-parser",
                 Runtime = Runtime.PROVIDED_AL2023,
                 Handler = "bootstrap",
-                Code = Code.FromAsset("src/lambdas/S3VideoCreatedEventParser/publish"),
+                Code = Code.FromAsset("src/lambdas/AlphaZero.S3VideoCreatedEventParser/publish"),
                 Timeout = Duration.Seconds(30),
                 MemorySize = 256
             });
+
+        props.InputBucket.GrantRead(S3VideoCreatedEventParserFunction);
         
         VideoAnalyzerFunction = new DockerImageFunction(this, "VideoAnalyzerFunction", new DockerImageFunctionProps
         {
@@ -155,15 +158,15 @@ public class VideoPipelineConstruct : Construct
             Queue = props.VideoFailedQueue,
             MessageBody = TaskInput.FromObject(new Dictionary<string, object>
             {
-                ["videoId"] = JsonPath.StringAt("$.videoId"),
-                ["tenantId"] = JsonPath.StringAt("$.tenantId"),
-                ["status"] = "Failed",
-                ["error"] = new Dictionary<string, object>
+                ["VideoId"] = JsonPath.StringAt("$.VideoId"),
+                ["TenantId"] = JsonPath.StringAt("$.TenantId"),
+                ["Status"] = "Failed",
+                ["Error"] = new Dictionary<string, object>
                 {
                     ["errorType"] = JsonPath.StringAt("$.errorInfo.Error"),
                     ["cause"] = JsonPath.StringAt("$.errorInfo.Cause")
                 },
-                ["targetResourceArn"] = JsonPath.StringAt("$.targetResourceArn")
+                ["TargetResourceArn"] = JsonPath.StringAt("$.TargetResourceArn")
             })
         }).Next(new Fail(this, "PipelineFailedState"));
 
@@ -184,7 +187,7 @@ public class VideoPipelineConstruct : Construct
         {
             LambdaFunction = VideoAnalyzerFunction,
             PayloadResponseOnly = true,
-            ResultPath = "$.sourceMetadata"
+            ResultPath = "$.SourceMetadata"
         });
         analyzeTask.AddRetry(transientRetry);
         analyzeTask.AddCatch(failNotificationTask, catchProps);
@@ -192,30 +195,8 @@ public class VideoPipelineConstruct : Construct
         var prepareJobTask = new LambdaInvoke(this, "PrepareJobTask", new LambdaInvokeProps
         {
             LambdaFunction = JobPreparerFunction,
-            Payload = TaskInput.FromObject(new Dictionary<string, object>
-            {
-                ["videoId"] = JsonPath.StringAt("$.videoId"),
-                ["tenantId"] = JsonPath.StringAt("$.tenantId"),
-                ["sourceBucket"] = JsonPath.StringAt("$.sourceBucket"),
-                ["sourceKey"] = JsonPath.StringAt("$.sourceKey"),
-                ["transientOutputBucket"] = props.TransientBucket.BucketName,
-                ["transcodingEngine"] = JsonPath.StringAt("$.transcodingEngine"),
-                ["encryptionMethod"] = JsonPath.StringAt("$.encryptionMethod"),
-                ["targetResourceArn"] = JsonPath.StringAt("$.targetResourceArn"),
-                ["metadata"] = new Dictionary<string, object>
-                {
-                    ["sourceWidth"] = JsonPath.NumberAt("$.sourceMetadata.sourceWidth"),
-                    ["sourceHeight"] = JsonPath.NumberAt("$.sourceMetadata.sourceHeight"),
-                    ["durationSeconds"] = JsonPath.NumberAt("$.sourceMetadata.durationSeconds"),
-                    ["durationFormatted"] = JsonPath.StringAt("$.sourceMetadata.durationFormatted"),
-                    ["frameRate"] = JsonPath.NumberAt("$.sourceMetadata.frameRate"),
-                    ["aspectRatio"] = JsonPath.StringAt("$.sourceMetadata.aspectRatio"),
-                    ["videoCodec"] = JsonPath.StringAt("$.sourceMetadata.videoCodec"),
-                    ["audioCodec"] = JsonPath.StringAt("$.sourceMetadata.audioCodec")
-                }
-            }),
             PayloadResponseOnly = true,
-            ResultPath = "$.jobPrep"
+            ResultPath = "$.JobPrep"
         });
         prepareJobTask.AddRetry(transientRetry);
         prepareJobTask.AddCatch(failNotificationTask, catchProps);
@@ -238,7 +219,7 @@ public class VideoPipelineConstruct : Construct
                         new SfnTaskEnvironmentVariable { Name = "TRANSCODER__StorageProvider", Value = "S3" },
                         new SfnTaskEnvironmentVariable { Name = "TRANSCODER__S3__InputBucket", Value = props.InputBucket.BucketName },
                         new SfnTaskEnvironmentVariable { Name = "TRANSCODER__S3__OutputBucket", Value = props.TransientBucket.BucketName },
-                        new SfnTaskEnvironmentVariable { Name = "TRANSCODER__INPUT_FILE", Value = JsonPath.StringAt("$.jobPrep.jobConfigKey") }
+                        new SfnTaskEnvironmentVariable { Name = "TRANSCODER__INPUT_FILE", Value = JsonPath.StringAt("$.JobPrep.JobConfigKey") }
                     }
                 }
             },
@@ -266,7 +247,7 @@ public class VideoPipelineConstruct : Construct
         mediaConvertTask.AddCatch(failNotificationTask, catchProps);
 
         var transcodeChoice = new Choice(this, "EngineChoice")
-            .When(Condition.StringEquals("$.transcodingEngine", "MediaConvert"), mediaConvertTask)
+            .When(Condition.StringEquals("$.TranscodingEngine", "MediaConvert"), mediaConvertTask)
             .Otherwise(fargateTranscodeTask);
 
         var r2MoverTask = new EcsRunTask(this, "RunR2MoverTask", new EcsRunTaskProps
@@ -284,8 +265,8 @@ public class VideoPipelineConstruct : Construct
                     ContainerDefinition = fargateR2MoverTaskDef.DefaultContainer!,
                     Environment = new[]
                     {
-                        new SfnTaskEnvironmentVariable { Name = "TENANT_ID", Value = JsonPath.StringAt("$.tenantId") },
-                        new SfnTaskEnvironmentVariable { Name = "VIDEO_ID", Value = JsonPath.StringAt("$.videoId") },
+                        new SfnTaskEnvironmentVariable { Name = "TENANT_ID", Value = JsonPath.StringAt("$.TenantId") },
+                        new SfnTaskEnvironmentVariable { Name = "VIDEO_ID", Value = JsonPath.StringAt("$.VideoId") },
                         new SfnTaskEnvironmentVariable { Name = "TRANSIENT_BUCKET", Value = props.TransientBucket.BucketName }
                     }
                 }
@@ -300,20 +281,22 @@ public class VideoPipelineConstruct : Construct
             Queue = props.VideoPublishedQueue,
             MessageBody = TaskInput.FromObject(new Dictionary<string, object>
             {
-                ["videoId"] = JsonPath.StringAt("$.videoId"),
-                ["tenantId"] = JsonPath.StringAt("$.tenantId"),
-                ["status"] = "Published",
-                ["playbackUrl"] = JsonPath.Format("{}/{}/master.m3u8", JsonPath.StringAt("$.tenantId"), JsonPath.StringAt("$.videoId")),
-                ["thumbnailUrl"] = JsonPath.Format("{}/{}/poster.jpg", JsonPath.StringAt("$.tenantId"), JsonPath.StringAt("$.videoId")),
-                ["duration"] = JsonPath.StringAt("$.sourceMetadata.durationFormatted"),
-                ["width"] = JsonPath.NumberAt("$.sourceMetadata.sourceWidth"),
-                ["height"] = JsonPath.NumberAt("$.sourceMetadata.sourceHeight"),
-                ["engineUsed"] = JsonPath.StringAt("$.transcodingEngine"),
-                ["targetResourceArn"] = JsonPath.StringAt("$.targetResourceArn")
+                ["VideoId"] = JsonPath.StringAt("$.VideoId"),
+                ["TenantId"] = JsonPath.StringAt("$.TenantId"),
+                ["Status"] = "Published",
+                ["PlaybackUrl"] = JsonPath.Format("{}/{}/master.m3u8", JsonPath.StringAt("$.TenantId"), JsonPath.StringAt("$.VideoId")),
+                ["ThumbnailUrl"] = JsonPath.Format("{}/{}/poster.jpg", JsonPath.StringAt("$.TenantId"), JsonPath.StringAt("$.VideoId")),
+                ["Duration"] = JsonPath.StringAt("$.SourceMetadata.DurationFormatted"),
+                ["Width"] = JsonPath.NumberAt("$.SourceMetadata.SourceWidth"),
+                ["Height"] = JsonPath.NumberAt("$.SourceMetadata.SourceHeight"),
+                ["EngineUsed"] = JsonPath.StringAt("$.TranscodingEngine"),
+                ["TargetResourceArn"] = JsonPath.StringAt("$.TargetResourceArn")
             })
         }).Next(new Succeed(this, "PipelineSucceededState"));
 
-        var pipelineDefinition = analyzeTask
+        var pipelineDefinition = 
+            s3EVentParserTask
+            .Next(analyzeTask)
             .Next(prepareJobTask)
             .Next(transcodeChoice);
 
@@ -422,28 +405,5 @@ public class VideoPipelineConstruct : Construct
             dir = dir.Parent;
         }
         return Directory.GetCurrentDirectory();
-    }
-
-    private static string ResolveJobPreparerAsset(string repoRoot)
-    {
-        var candidates = new[]
-        {
-            Path.Combine(repoRoot, "src/lambdas/AlphaZero.JobPreparer/publish"),
-            Path.Combine(repoRoot, "src/lambdas/AlphaZero.JobPreparer/src/AlphaZero.JobPreparer/bin/Release/net10.0"),
-            Path.Combine(repoRoot, "src/lambdas/AlphaZero.JobPreparer/src/AlphaZero.JobPreparer/bin/Debug/net10.0"),
-            Path.Combine(repoRoot, "src/lambdas/AlphaZero.JobPreparer/src/AlphaZero.JobPreparer")
-        };
-
-        foreach (var candidate in candidates)
-        {
-            if (Directory.Exists(candidate))
-            {
-                return candidate;
-            }
-        }
-
-        var defaultPublish = candidates[0];
-        Directory.CreateDirectory(defaultPublish);
-        return defaultPublish;
     }
 }
