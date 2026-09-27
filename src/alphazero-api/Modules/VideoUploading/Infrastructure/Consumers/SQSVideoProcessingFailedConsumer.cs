@@ -1,4 +1,5 @@
 using AlphaZero.Modules.VideoUploading.Application.Repositories;
+using AlphaZero.Modules.VideoUploading.Application.Services;
 using AlphaZero.Modules.VideoUploading.Domain.Models;
 using AlphaZero.Modules.VideoUploading.IntegrationEvents;
 using AlphaZero.Shared.Application;
@@ -22,17 +23,20 @@ public class SQSVideoProcessingFailedConsumer : IConsumer<VideoProcessingFailedQ
     private readonly IVideoRepository _videoRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IModuleBus _moduleBus;
+    private readonly IVideoProgressNotifier _progressNotifier;
     private readonly ILogger<SQSVideoProcessingFailedConsumer> _logger;
 
     public SQSVideoProcessingFailedConsumer(
         IVideoRepository videoRepository,
         IUnitOfWork unitOfWork,
         IModuleBus moduleBus,
+        IVideoProgressNotifier progressNotifier,
         ILogger<SQSVideoProcessingFailedConsumer> logger)
     {
         _videoRepository = videoRepository;
         _unitOfWork = unitOfWork;
         _moduleBus = moduleBus;
+        _progressNotifier = progressNotifier;
         _logger = logger;
     }
 
@@ -56,6 +60,15 @@ public class SQSVideoProcessingFailedConsumer : IConsumer<VideoProcessingFailedQ
             reason,
             null,
             msg.TargetResourceArn), context.CancellationToken);
+
+        // Notify SignalR clients about the failure
+        await _progressNotifier.NotifyProgressAsync(new VideoProgressNotification(
+            msg.VideoId.ToString(),
+            msg.TenantId.ToString(),
+            "processing",
+            "FAILED",
+            reason
+        ), context.CancellationToken);
     }
 }
 
@@ -63,7 +76,7 @@ public class SQSVideoProcessingFailedConsumerDefinition : ConsumerDefinition<SQS
 {
     public SQSVideoProcessingFailedConsumerDefinition(AWSResources resources)
     {
-        var queueUrl = resources.VideoPublishedQueue?.QueueUrl ?? throw new ArgumentException("Video Published Queue is not Configured");
+        var queueUrl = resources.VideoFailedQueue?.QueueUrl ?? throw new ArgumentException("Video Published Queue is not Configured");
 
         EndpointName = !string.IsNullOrEmpty(queueUrl) ? queueUrl.Split('/').Last() : "VideoProcessingFailedQueue";
     }

@@ -33,6 +33,25 @@ public class Program
 
         Console.WriteLine($"Starting R2Mover for {tenantId}/{videoId} from {transientBucket}");
 
+        var queueUrl = Environment.GetEnvironmentVariable("PROGRESS_QUEUE_URL");
+        if (!string.IsNullOrEmpty(queueUrl))
+        {
+            var sqsClient = new Amazon.SQS.AmazonSQSClient();
+            var message = new
+            {
+                VideoId = videoId,
+                TenantId = tenantId,
+                Stage = "publishing",
+                Status = "IN_PROGRESS"
+            };
+            var request = new Amazon.SQS.Model.SendMessageRequest
+            {
+                QueueUrl = queueUrl,
+                MessageBody = JsonSerializer.Serialize(message)
+            };
+            await sqsClient.SendMessageAsync(request);
+        }
+
         var ssmClient = new AmazonSimpleSystemsManagementClient();
         var credRequest = new GetParameterRequest
         {

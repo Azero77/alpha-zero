@@ -10,7 +10,6 @@ public record VideoProgressQueueMessage(
     string TenantId,
     string Stage,
     string Status,
-    int? Percentage = null,
     string? Metadata = null);
 
 public class SQSVideoProgressConsumer : IConsumer<VideoProgressQueueMessage>
@@ -30,11 +29,11 @@ public class SQSVideoProgressConsumer : IConsumer<VideoProgressQueueMessage>
     {
         _logger.LogInformation("[SQS] SQSVideoProgressConsumer triggered!");
         var msg = context.Message;
-        _logger.LogInformation("[SQS] Video {VideoId} progress: {Stage} - {Status} ({Percentage}%)",
-            msg.VideoId, msg.Stage, msg.Status, msg.Percentage);
+        _logger.LogInformation("[SQS] Video {VideoId} progress: {Stage} - {Status}",
+            msg.VideoId, msg.Stage, msg.Status);
 
         await _progressNotifier.NotifyProgressAsync(
-            new VideoProgressNotification(msg.VideoId, msg.TenantId, msg.Stage, msg.Status, msg.Percentage, msg.Metadata),
+            new VideoProgressNotification(msg.VideoId, msg.TenantId, msg.Stage, msg.Status, msg.Metadata),
             context.CancellationToken);
     }
 }

@@ -1,4 +1,5 @@
 using AlphaZero.Modules.VideoUploading.Application.Repositories;
+using AlphaZero.Modules.VideoUploading.Application.Services;
 using AlphaZero.Modules.VideoUploading.Domain.Models;
 using AlphaZero.Modules.VideoUploading.IntegrationEvents;
 using AlphaZero.Shared.Application;
@@ -27,6 +28,7 @@ public class SQSVideoPublishedConsumer : IConsumer<VideoPublishedQueueMessage>
     private readonly IUnitOfWork _unitOfWork;
     private readonly IModuleBus _moduleBus;
     private readonly IClock _clock;
+    private readonly IVideoProgressNotifier _progressNotifier;
     private readonly ILogger<SQSVideoPublishedConsumer> _logger;
 
     public SQSVideoPublishedConsumer(
@@ -34,12 +36,14 @@ public class SQSVideoPublishedConsumer : IConsumer<VideoPublishedQueueMessage>
         IUnitOfWork unitOfWork,
         IModuleBus moduleBus,
         IClock clock,
+        IVideoProgressNotifier progressNotifier,
         ILogger<SQSVideoPublishedConsumer> logger)
     {
         _videoRepository = videoRepository;
         _unitOfWork = unitOfWork;
         _moduleBus = moduleBus;
         _clock = clock;
+        _progressNotifier = progressNotifier;
         _logger = logger;
     }
 
@@ -85,6 +89,15 @@ public class SQSVideoPublishedConsumer : IConsumer<VideoPublishedQueueMessage>
             video.Id,
             msg.PlaybackUrl,
             msg.TargetResourceArn), context.CancellationToken);
+
+        // Notify SignalR clients that publishing is complete
+        await _progressNotifier.NotifyProgressAsync(new VideoProgressNotification(
+            msg.VideoId.ToString(),
+            msg.TenantId.ToString(),
+            "publishing",
+            "COMPLETE",
+            null
+        ), context.CancellationToken);
     }
 }
 

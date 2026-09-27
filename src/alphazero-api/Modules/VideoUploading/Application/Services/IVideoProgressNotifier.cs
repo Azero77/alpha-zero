@@ -5,7 +5,6 @@ public record VideoProgressNotification(
     string TenantId,
     string Stage,
     string Status,
-    int? Percentage,
     string? Metadata);
 
 public interface IVideoProgressNotifier

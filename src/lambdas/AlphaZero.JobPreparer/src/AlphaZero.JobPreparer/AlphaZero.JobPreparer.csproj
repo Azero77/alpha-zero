@@ -16,6 +16,7 @@
     <PackageReference Include="Amazon.Lambda.Serialization.SystemTextJson" />
     <PackageReference Include="AWSSDK.S3" />
     <PackageReference Include="AWSSDK.SimpleSystemsManagement" />
+    <PackageReference Include="AWSSDK.SQS" />
   </ItemGroup>
 
   <!-- Rename the compiled native binary to 'bootstrap' so AWS provided.al2023 runtime can execute it -->

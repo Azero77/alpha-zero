@@ -72,10 +72,15 @@ public class VideoPipelineConstruct : Construct
                 Handler = "bootstrap",
                 Code = Code.FromAsset("src/lambdas/AlphaZero.S3VideoCreatedEventParser/publish"),
                 Timeout = Duration.Seconds(30),
-                MemorySize = 256
+                MemorySize = 256,
+                Environment = new Dictionary<string, string>
+                {
+                    { "PROGRESS_QUEUE_URL", props.VideoProgressQueue.QueueUrl }
+                }
             });
 
         props.InputBucket.GrantRead(S3VideoCreatedEventParserFunction);
+        props.VideoProgressQueue.GrantSendMessages(S3VideoCreatedEventParserFunction);
         
         VideoAnalyzerFunction = new DockerImageFunction(this, "VideoAnalyzerFunction", new DockerImageFunctionProps
         {
@@ -87,9 +92,14 @@ public class VideoPipelineConstruct : Construct
                 IgnoreMode = IgnoreMode.DOCKER
             }),
             Timeout = Duration.Minutes(2),
-            MemorySize = 512
+            MemorySize = 512,
+            Environment = new Dictionary<string, string>
+            {
+                { "PROGRESS_QUEUE_URL", props.VideoProgressQueue.QueueUrl }
+            }
         });
         props.InputBucket.GrantRead(VideoAnalyzerFunction);
+        props.VideoProgressQueue.GrantSendMessages(VideoAnalyzerFunction);
 
         JobPreparerFunction = new Function(this, "JobPreparerFunction", new FunctionProps
         {
@@ -98,10 +108,15 @@ public class VideoPipelineConstruct : Construct
             Handler = "bootstrap",
             Code = Code.FromAsset(jobPreparerPath),
             Timeout = Duration.Seconds(30),
-            MemorySize = 256
+            MemorySize = 256,
+            Environment = new Dictionary<string, string>
+            {
+                { "PROGRESS_QUEUE_URL", props.VideoProgressQueue.QueueUrl }
+            }
         });
         props.InputBucket.GrantReadWrite(JobPreparerFunction);
         masterClearKey.GrantRead(JobPreparerFunction);
+        props.VideoProgressQueue.GrantSendMessages(JobPreparerFunction);
 
         // 2. ECS Fargate Tasks
         IVpc vpc = props.Vpc ?? ResolveVpc(scope);
@@ -119,6 +134,7 @@ public class VideoPipelineConstruct : Construct
         });
         props.InputBucket.GrantRead(fargateTranscoderTaskDef.TaskRole);
         props.TransientBucket.GrantReadWrite(fargateTranscoderTaskDef.TaskRole);
+        props.VideoProgressQueue.GrantSendMessages(fargateTranscoderTaskDef.TaskRole);
 
         var fargateR2MoverTaskDef = new FargateTaskDefinition(this, "R2MoverTaskDef", new FargateTaskDefinitionProps
         {
@@ -137,6 +153,7 @@ public class VideoPipelineConstruct : Construct
         });
         props.TransientBucket.GrantRead(fargateR2MoverTaskDef.TaskRole);
         r2Credentials.GrantRead(fargateR2MoverTaskDef.TaskRole);
+        props.VideoProgressQueue.GrantSendMessages(fargateR2MoverTaskDef.TaskRole);
 
         // 3. Retry Policies
         var transientRetry = new RetryProps
@@ -219,7 +236,8 @@ public class VideoPipelineConstruct : Construct
                         new SfnTaskEnvironmentVariable { Name = "TRANSCODER__StorageProvider", Value = "S3" },
                         new SfnTaskEnvironmentVariable { Name = "TRANSCODER__S3__InputBucket", Value = props.InputBucket.BucketName },
                         new SfnTaskEnvironmentVariable { Name = "TRANSCODER__S3__OutputBucket", Value = props.TransientBucket.BucketName },
-                        new SfnTaskEnvironmentVariable { Name = "TRANSCODER__INPUT_FILE", Value = JsonPath.StringAt("$.JobPrep.JobConfigKey") }
+                        new SfnTaskEnvironmentVariable { Name = "TRANSCODER__INPUT_FILE", Value = JsonPath.StringAt("$.JobPrep.JobConfigKey") },
+                        new SfnTaskEnvironmentVariable { Name = "TRANSCODER__PROGRESS_QUEUE_URL", Value = props.VideoProgressQueue.QueueUrl }
                     }
                 }
             },
@@ -267,7 +285,8 @@ public class VideoPipelineConstruct : Construct
                     {
                         new SfnTaskEnvironmentVariable { Name = "TENANT_ID", Value = JsonPath.StringAt("$.TenantId") },
                         new SfnTaskEnvironmentVariable { Name = "VIDEO_ID", Value = JsonPath.StringAt("$.VideoId") },
-                        new SfnTaskEnvironmentVariable { Name = "TRANSIENT_BUCKET", Value = props.TransientBucket.BucketName }
+                        new SfnTaskEnvironmentVariable { Name = "TRANSIENT_BUCKET", Value = props.TransientBucket.BucketName },
+                        new SfnTaskEnvironmentVariable { Name = "PROGRESS_QUEUE_URL", Value = props.VideoProgressQueue.QueueUrl }
                     }
                 }
             },

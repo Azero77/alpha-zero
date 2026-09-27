@@ -110,6 +110,7 @@ public class Function
 {
     private static readonly IAmazonS3 S3Client = new AmazonS3Client();
     private static readonly IAmazonSimpleSystemsManagement SsmClient = new AmazonSimpleSystemsManagementClient();
+    private static readonly Amazon.SQS.IAmazonSQS SqsClient = new Amazon.SQS.AmazonSQSClient();
     private static string? _masterSecretCache;
 
     public static async Task Main()
@@ -129,11 +130,41 @@ public class Function
         return _masterSecretCache;
     }
 
+    public sealed class ProgressMessage
+    {
+        public string VideoId { get; set; } = "";
+        public string TenantId { get; set; } = "";
+        public string Stage { get; set; } = "";
+        public string Status { get; set; } = "";
+    }
+
+    private static async Task NotifyProgressAsync(string videoId, string tenantId, string stage, string status)
+    {
+        var queueUrl = Environment.GetEnvironmentVariable("PROGRESS_QUEUE_URL");
+        if (string.IsNullOrEmpty(queueUrl)) return;
+
+        var message = new ProgressMessage
+        {
+            VideoId = videoId,
+            TenantId = tenantId,
+            Stage = stage,
+            Status = status
+        };
+
+        var request = new Amazon.SQS.Model.SendMessageRequest
+        {
+            QueueUrl = queueUrl,
+            MessageBody = JsonSerializer.Serialize(message, JobPreparerJsonContext.Default.ProgressMessage)
+        };
+        await SqsClient.SendMessageAsync(request);
+    }
+
     public static async Task<JobPreparerOutput> FunctionHandler(JobPreparerInput input, ILambdaContext context)
     {
         try
         {
             context.Logger.LogInformation($"[JobPreparer] Generating job.json for VideoId {input.VideoId}");
+            await NotifyProgressAsync(input.VideoId, input.TenantId, "preparing", "IN_PROGRESS");
 
             var outputPrefix = $"{input.TenantId}/{input.VideoId}/";
             var jobKey = $"{input.TenantId}/{input.VideoId}/job.json";
@@ -256,4 +287,5 @@ public class Function
 [JsonSerializable(typeof(AudioSettings))]
 [JsonSerializable(typeof(EncryptionSettings))]
 [JsonSerializable(typeof(EncryptionMethod))]
+[JsonSerializable(typeof(Function.ProgressMessage))]
 public partial class JobPreparerJsonContext : JsonSerializerContext { }

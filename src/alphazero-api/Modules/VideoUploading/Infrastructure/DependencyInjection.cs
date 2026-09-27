@@ -29,6 +29,11 @@ public static class DependencyInjection
         var dbSettings = DatabaseSettings.GetDatabaseSettings(configuration);
         var awsResources = configuration.GetSection(AWSResources.Section).Get<AWSResources>();
 
+        
+        services.AddScoped<IVideoRepository, VideoRepository>();
+        services.AddScoped<IVideoStateRepository, VideoStateRepository>();
+        services.AddScoped<IRepository<VideoSecret>,VideoSecretRepository>();
+        services.AddScoped<IUnitOfWork, UnitOfWork<AppDbContext>>();
         // Infrastructure Services that need to be global for consumers
         services.AddScoped<IUploadService, S3UploadService>();
         services.AddScoped<IVideoEncryptionService, DefaultVideoEncryptionService>();
@@ -61,10 +66,6 @@ public static class DependencyInjection
         });
 
         // Module Specific Infrastructure
-        moduleServices.AddScoped<IVideoRepository, VideoRepository>();
-        moduleServices.AddScoped<IVideoStateRepository, VideoStateRepository>();
-        moduleServices.AddScoped<IRepository<VideoSecret>,VideoSecretRepository>();
-        moduleServices.AddScoped<IUnitOfWork, UnitOfWork<AppDbContext>>();
         moduleServices.AddScoped<AlphaZero.Modules.VideoUploading.Application.Queries.IVideoQueryService, AlphaZero.Modules.VideoUploading.Infrastructure.Queries.VideoQueryService>();
         moduleServices.AddScoped<IStreamingService, DatabaseCloudFlareCdnVideoStreamingService>();
     }

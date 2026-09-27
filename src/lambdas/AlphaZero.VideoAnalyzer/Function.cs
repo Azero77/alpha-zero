@@ -5,6 +5,8 @@ using Amazon.Lambda.Core;
 using Amazon.Lambda.RuntimeSupport;
 using Amazon.S3;
 using Amazon.S3.Model;
+using Amazon.SQS;
+using Amazon.SQS.Model;
 using AlphaZero.VideoPipeline.Exceptions;
 using FFMpegCore;
 using FFMpegCore.Arguments;
@@ -46,9 +48,35 @@ public class Function
     }
 
     private readonly IAmazonS3 _s3Client;
+    private readonly IAmazonSQS _sqsClient;
 
-    public Function() : this(new AmazonS3Client()) { }
-    public Function(IAmazonS3 s3Client) => _s3Client = s3Client;
+    public Function() : this(new AmazonS3Client(), new AmazonSQSClient()) { }
+    public Function(IAmazonS3 s3Client, IAmazonSQS sqsClient) 
+    { 
+        _s3Client = s3Client;
+        _sqsClient = sqsClient;
+    }
+
+    private async Task NotifyProgressAsync(string videoId, string tenantId, string stage, string status)
+    {
+        var queueUrl = Environment.GetEnvironmentVariable("PROGRESS_QUEUE_URL");
+        if (string.IsNullOrEmpty(queueUrl)) return;
+
+        var message = new
+        {
+            VideoId = videoId,
+            TenantId = tenantId,
+            Stage = stage,
+            Status = status
+        };
+
+        var request = new SendMessageRequest
+        {
+            QueueUrl = queueUrl,
+            MessageBody = JsonSerializer.Serialize(message)
+        };
+        await _sqsClient.SendMessageAsync(request);
+    }
 
     public async Task<VideoAnalyzerOutput> FunctionHandler(VideoAnalyzerInput input, ILambdaContext context)
     {
@@ -56,6 +84,8 @@ public class Function
 
         try
         {
+            await NotifyProgressAsync(input.VideoId, input.TenantId, "analyzing", "IN_PROGRESS");
+
             var presignedUrl = await _s3Client.GetPreSignedURLAsync(new GetPreSignedUrlRequest
             {
                 BucketName = input.SourceBucket,
