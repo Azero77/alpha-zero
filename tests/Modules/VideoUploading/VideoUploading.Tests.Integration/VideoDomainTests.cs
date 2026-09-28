@@ -29,8 +29,8 @@ public class VideoDomainTests
             "Original Title",
             "Original Description",
             metadata,
-            ThumbnailInfo.Empty,
-            clock).Value;
+             
+            clock.UtcNow).Value;
 
         // Act
         var result = video.UpdateInformation("Updated Video Title", "Updated Description");
@@ -66,8 +66,8 @@ public class VideoDomainTests
             "Original Title",
             "Original Description",
             metadata,
-            ThumbnailInfo.Empty,
-            clock).Value;
+             
+            clock.UtcNow).Value;
 
         // Act
         var result = video.UpdateInformation(title!, "New Description");

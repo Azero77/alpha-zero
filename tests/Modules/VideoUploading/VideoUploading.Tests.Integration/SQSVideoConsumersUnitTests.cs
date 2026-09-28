@@ -1,11 +1,12 @@
-using AlphaZero.Modules.VideoUploading.Application.Repositories;
-using AlphaZero.Modules.VideoUploading.Domain.Models;
+using AlphaZero.Modules.VideoUploading.Application.Commands.FailVideoProcessing;
+using AlphaZero.Modules.VideoUploading.Application.Commands.PublishVideo;
+using AlphaZero.Modules.VideoUploading.Application.Commands.UpdateVideoProgress;
 using AlphaZero.Modules.VideoUploading.Infrastructure.Consumers;
 using AlphaZero.Modules.VideoUploading.IntegrationEvents;
-using AlphaZero.Shared.Application;
-using AlphaZero.Shared.Domain;
+using AlphaZero.Modules.VideoUploading.Application.Models;
 using FluentAssertions;
 using MassTransit;
+using MediatR;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Xunit;
@@ -14,288 +15,63 @@ namespace VideoUploading.Tests.Integration;
 
 public class SQSVideoConsumersUnitTests
 {
-    private class FakeClock : IClock
-    {
-        public DateTime Now => new DateTime(2026, 9, 20, 12, 0, 0, DateTimeKind.Utc);
-    }
-
-    private Video CreateTestVideo(VideoStatus status = VideoStatus.Processing)
-    {
-        var clock = new FakeClock();
-        var videoResult = Video.Create(
-            Guid.NewGuid(),
-            Guid.NewGuid(),
-            "Test Video",
-            "Description",
-            new VideoMetadata("test.mp4", "video/mp4", 1024, "FFmpeg", "None"),
-            new ThumbnailInfo(null, null, false),
-            clock);
-
-        var video = videoResult.Value;
-        if (status == VideoStatus.Published)
-        {
-            video.MarkAsLive("https://cdn.alphazero.cloud/streaming/tenant/video/master.m3u8", clock);
-        }
-        else if (status == VideoStatus.Failed)
-        {
-            video.MarkAsFailed();
-        }
-
-        return video;
-    }
-
     [Fact]
-    public async Task SQSVideoPublishedConsumer_Should_PublishVideo_WhenVideoIsProcessing()
+    public async Task SQSVideoPublishedConsumer_Should_Dispatch_CompleteVideoPublishingCommand()
     {
-        // Arrange
-        var video = CreateTestVideo(VideoStatus.Processing);
-        var videoRepoMock = new Mock<IVideoRepository>();
-        videoRepoMock.Setup(r => r.GetByIdAsync(video.Id, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(video);
-
-        var unitOfWorkMock = new Mock<IUnitOfWork>();
-        unitOfWorkMock.Setup(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(1);
-
-        var moduleBusMock = new Mock<IModuleBus>();
-        var clock = new FakeClock();
+        var mediatorMock = new Mock<IMediator>();
         var logger = NullLogger<SQSVideoPublishedConsumer>.Instance;
+        var consumer = new SQSVideoPublishedConsumer(mediatorMock.Object, logger);
 
-        var consumer = new SQSVideoPublishedConsumer(videoRepoMock.Object, unitOfWorkMock.Object, moduleBusMock.Object, clock, logger);
-
-        var playbackUrl = "https://cdn.alphazero.cloud/streaming/tenant/video/master.m3u8";
-        var targetResourceArn = "arn:alphazero:courses:tenant123:course/c1:lecture/l1";
         var queueMessage = new VideoPublishedQueueMessage(
-            video.Id,
-            video.TenantId,
-            "SUCCESS",
-            playbackUrl,
-            "https://cdn.alphazero.cloud/streaming/tenant/video/thumbnails/poster.jpg",
-            "00:10:30",
-            1920,
-            1080,
-            "ffmpeg-fargate",
-            targetResourceArn);
+            Guid.NewGuid(), Guid.NewGuid(), "SUCCESS", "https://cdn/playback.m3u8", null, "00:10:30", 1920, 1080, "ffmpeg", "arn");
 
         var contextMock = new Mock<ConsumeContext<VideoPublishedQueueMessage>>();
         contextMock.Setup(x => x.Message).Returns(queueMessage);
-        contextMock.Setup(x => x.CancellationToken).Returns(CancellationToken.None);
 
-        // Act
         await consumer.Consume(contextMock.Object);
 
-        // Assert
-        video.Status.Should().Be(VideoStatus.Published);
-        video.PlaybackUrl.Should().Be(playbackUrl);
-        video.Specifications.Duration.Should().Be(TimeSpan.FromMinutes(10) + TimeSpan.FromSeconds(30));
-        video.Specifications.Resolution.width.Should().Be(1920);
-        video.Specifications.Resolution.height.Should().Be(1080);
-        unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
-
-        moduleBusMock.Verify(x => x.Publish(
-            It.Is<VideoPublishedIntegrationEvent>(e =>
-                e.VideoId == video.Id &&
-                e.RelativeUrl == playbackUrl &&
-                e.TargetResourceArn == targetResourceArn),
+        mediatorMock.Verify(m => m.Send(
+            It.Is<CompleteVideoPublishingCommand>(c => c.VideoId == queueMessage.VideoId && c.PlaybackUrl == queueMessage.PlaybackUrl),
             It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
-    public async Task SQSVideoPublishedConsumer_Should_Skip_WhenVideoIsAlreadyPublished()
+    public async Task SQSVideoProcessingFailedConsumer_Should_Dispatch_FailVideoProcessingCommand()
     {
-        // Arrange
-        var video = CreateTestVideo(VideoStatus.Published);
-        var videoRepoMock = new Mock<IVideoRepository>();
-        videoRepoMock.Setup(r => r.GetByIdAsync(video.Id, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(video);
-
-        var unitOfWorkMock = new Mock<IUnitOfWork>();
-        var moduleBusMock = new Mock<IModuleBus>();
-        var clock = new FakeClock();
-        var logger = NullLogger<SQSVideoPublishedConsumer>.Instance;
-
-        var consumer = new SQSVideoPublishedConsumer(videoRepoMock.Object, unitOfWorkMock.Object, moduleBusMock.Object, clock, logger);
-
-        var queueMessage = new VideoPublishedQueueMessage(
-            video.Id,
-            video.TenantId,
-            "SUCCESS",
-            "https://cdn.alphazero.cloud/new_url.m3u8",
-            null,
-            "00:05:00",
-            1280,
-            720,
-            "ffmpeg-fargate",
-            null);
-
-        var contextMock = new Mock<ConsumeContext<VideoPublishedQueueMessage>>();
-        contextMock.Setup(x => x.Message).Returns(queueMessage);
-        contextMock.Setup(x => x.CancellationToken).Returns(CancellationToken.None);
-
-        // Act
-        await consumer.Consume(contextMock.Object);
-
-        // Assert: Idempotent skip - no save changes and no duplicate event
-        unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
-        moduleBusMock.Verify(x => x.Publish(It.IsAny<VideoPublishedIntegrationEvent>(), It.IsAny<CancellationToken>()), Times.Never);
-    }
-
-    [Fact]
-    public async Task SQSVideoPublishedConsumer_Should_Skip_WhenVideoNotFound()
-    {
-        // Arrange
-        var videoRepoMock = new Mock<IVideoRepository>();
-        videoRepoMock.Setup(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((Video?)null);
-
-        var unitOfWorkMock = new Mock<IUnitOfWork>();
-        var moduleBusMock = new Mock<IModuleBus>();
-        var clock = new FakeClock();
-        var logger = NullLogger<SQSVideoPublishedConsumer>.Instance;
-
-        var consumer = new SQSVideoPublishedConsumer(videoRepoMock.Object, unitOfWorkMock.Object, moduleBusMock.Object, clock, logger);
-
-        var queueMessage = new VideoPublishedQueueMessage(
-            Guid.NewGuid(),
-            Guid.NewGuid(),
-            "SUCCESS",
-            "https://cdn.alphazero.cloud/master.m3u8",
-            null,
-            null,
-            null,
-            null,
-            null,
-            null);
-
-        var contextMock = new Mock<ConsumeContext<VideoPublishedQueueMessage>>();
-        contextMock.Setup(x => x.Message).Returns(queueMessage);
-        contextMock.Setup(x => x.CancellationToken).Returns(CancellationToken.None);
-
-        // Act
-        await consumer.Consume(contextMock.Object);
-
-        // Assert
-        unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
-        moduleBusMock.Verify(x => x.Publish(It.IsAny<VideoPublishedIntegrationEvent>(), It.IsAny<CancellationToken>()), Times.Never);
-    }
-
-    [Fact]
-    public async Task SQSVideoProcessingFailedConsumer_Should_MarkAsFailed_AndPublishEvent()
-    {
-        // Arrange
-        var video = CreateTestVideo(VideoStatus.Processing);
-        var videoRepoMock = new Mock<IVideoRepository>();
-        videoRepoMock.Setup(r => r.GetByIdAsync(video.Id, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(video);
-
-        var unitOfWorkMock = new Mock<IUnitOfWork>();
-        unitOfWorkMock.Setup(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(1);
-
-        var moduleBusMock = new Mock<IModuleBus>();
+        var mediatorMock = new Mock<IMediator>();
         var logger = NullLogger<SQSVideoProcessingFailedConsumer>.Instance;
+        var consumer = new SQSVideoProcessingFailedConsumer(mediatorMock.Object, logger);
 
-        var consumer = new SQSVideoProcessingFailedConsumer(videoRepoMock.Object, unitOfWorkMock.Object, moduleBusMock.Object, logger);
-
-        var targetResourceArn = "arn:alphazero:courses:tenant123:course/c1";
         var queueMessage = new VideoProcessingFailedQueueMessage(
-            video.Id,
-            video.TenantId,
-            "FAILED",
-            new VideoProcessingErrorDetail("TranscodingException", "FFmpeg process exited with code 1"),
-            targetResourceArn);
+            Guid.NewGuid(), Guid.NewGuid(), "FAILED", new VideoProcessingErrorDetail("Error", "Cause"), "arn");
 
         var contextMock = new Mock<ConsumeContext<VideoProcessingFailedQueueMessage>>();
         contextMock.Setup(x => x.Message).Returns(queueMessage);
-        contextMock.Setup(x => x.CancellationToken).Returns(CancellationToken.None);
 
-        // Act
         await consumer.Consume(contextMock.Object);
 
-        // Assert
-        video.Status.Should().Be(VideoStatus.Failed);
-        unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
-
-        moduleBusMock.Verify(x => x.Publish(
-            It.Is<VideoProcessingFailedEvent>(e =>
-                e.VideoId == video.Id &&
-                e.Reason == "FFmpeg process exited with code 1" &&
-                e.TargetResourceArn == targetResourceArn),
+        mediatorMock.Verify(m => m.Send(
+            It.Is<FailVideoProcessingCommand>(c => c.VideoId == queueMessage.VideoId && c.Reason == "Cause"),
             It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
-    public async Task SQSVideoProcessingFailedConsumer_Should_PublishEvent_EvenIfVideoNotFound()
+    public async Task SQSVideoProgressConsumer_Should_Dispatch_UpdateVideoProgressCommand()
     {
-        // Arrange
-        var videoId = Guid.NewGuid();
-        var videoRepoMock = new Mock<IVideoRepository>();
-        videoRepoMock.Setup(r => r.GetByIdAsync(videoId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync((Video?)null);
-
-        var unitOfWorkMock = new Mock<IUnitOfWork>();
-        var moduleBusMock = new Mock<IModuleBus>();
-        var logger = NullLogger<SQSVideoProcessingFailedConsumer>.Instance;
-
-        var consumer = new SQSVideoProcessingFailedConsumer(videoRepoMock.Object, unitOfWorkMock.Object, moduleBusMock.Object, logger);
-
-        var queueMessage = new VideoProcessingFailedQueueMessage(
-            videoId,
-            Guid.NewGuid(),
-            "FAILED",
-            new VideoProcessingErrorDetail("States.TaskFailed", null),
-            null);
-
-        var contextMock = new Mock<ConsumeContext<VideoProcessingFailedQueueMessage>>();
-        contextMock.Setup(x => x.Message).Returns(queueMessage);
-        contextMock.Setup(x => x.CancellationToken).Returns(CancellationToken.None);
-
-        // Act
-        await consumer.Consume(contextMock.Object);
-
-        // Assert
-        unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
-        moduleBusMock.Verify(x => x.Publish(
-            It.Is<VideoProcessingFailedEvent>(e =>
-                e.VideoId == videoId &&
-                e.Reason == "States.TaskFailed"),
-            It.IsAny<CancellationToken>()), Times.Once);
-    }
-
-    [Fact]
-    public async Task SQSVideoProgressConsumer_Should_NotifyProgress_WhenMessageReceived()
-    {
-        // Arrange
-        var notifierMock = new Mock<AlphaZero.Modules.VideoUploading.Application.Services.IVideoProgressNotifier>();
+        var mediatorMock = new Mock<IMediator>();
         var logger = NullLogger<SQSVideoProgressConsumer>.Instance;
-        var consumer = new SQSVideoProgressConsumer(notifierMock.Object, logger);
+        var consumer = new SQSVideoProgressConsumer(mediatorMock.Object, logger);
 
-        var videoId = Guid.NewGuid().ToString();
-        var tenantId = Guid.NewGuid().ToString();
         var queueMessage = new VideoProgressQueueMessage(
-            videoId,
-            tenantId,
-            "Transcoding",
-            "In Progress",
-            45,
-            "Processing 720p rendition");
+            Guid.NewGuid().ToString(), Guid.NewGuid().ToString(), "Analyzing", "IN_PROGRESS", "Details");
 
         var contextMock = new Mock<ConsumeContext<VideoProgressQueueMessage>>();
         contextMock.Setup(x => x.Message).Returns(queueMessage);
-        contextMock.Setup(x => x.CancellationToken).Returns(CancellationToken.None);
 
-        // Act
         await consumer.Consume(contextMock.Object);
 
-        // Assert
-        notifierMock.Verify(n => n.NotifyProgressAsync(
-            It.Is<AlphaZero.Modules.VideoUploading.Application.Services.VideoProgressNotification>(p =>
-                p.VideoId == videoId &&
-                p.TenantId == tenantId &&
-                p.Stage == "Transcoding" &&
-                p.Status == "In Progress" &&
-                p.Percentage == 45 &&
-                p.Metadata == "Processing 720p rendition"),
+        mediatorMock.Verify(m => m.Send(
+            It.Is<UpdateVideoProgressCommand>(c => c.VideoId.ToString() == queueMessage.VideoId && c.Stage == PipelineStage.Analyzing),
             It.IsAny<CancellationToken>()), Times.Once);
     }
 }

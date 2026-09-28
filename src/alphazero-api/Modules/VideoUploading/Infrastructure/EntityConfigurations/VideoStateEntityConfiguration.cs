@@ -13,6 +13,5 @@ public class VideoStateEntityConfiguration : IEntityTypeConfiguration<VideoState
         builder.HasIndex(x => x.VideoId).IsUnique();
         builder.Property(x => x.Version)
             .IsConcurrencyToken();
-        builder.Property(x => x.CustomThumbnailKey).HasMaxLength(512);
     }
 }

@@ -9,6 +9,13 @@ public class VideoPublishedDomainEvent(Guid videoId, Guid tenantId,DateTime publ
     public DateTime PublishedOn { get; } = publishedOn;
 }
 
+public class VideoFailedDomainEvent(Guid videoId, Guid tenantId,string reason) : DomainEvent
+{
+    public Guid VideoId { get; } = videoId;
+    public Guid TenantId { get; } = tenantId;
+    public string Reason { get; } = reason;
+}
+
 public class VideoMetadataUpdatedDomainEvent : DomainEvent
 {
     public Guid VideoId { get; }

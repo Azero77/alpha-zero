@@ -17,7 +17,7 @@ public interface IVideoStateRepository
 {
     Task<VideoStateDto?> GetByVideoIdAsync(Guid videoId, CancellationToken cancellationToken = default);
     Task<bool> ExistsAsync(Guid videoId, CancellationToken cancellationToken = default);
-    Task InitializeAsync(Guid videoId, Guid tenantId, string? customThumbnailKey, string? targetResourceArn, CancellationToken cancellationToken = default);
+    Task InitializeAsync(Guid videoId, Guid tenantId, CancellationToken cancellationToken = default);
     Task<bool> TryUpdateStageAsync(Guid videoId, PipelineStage newStage, CancellationToken cancellationToken = default);
     Task RemoveAsync(Guid videoId, CancellationToken cancellationToken = default);
 }

@@ -141,7 +141,7 @@ public class CreatePlaybackSessionHandlerUnitTests
         var metadata = new VideoMetadata("test.mp4", "video/mp4", 1000, "ffmpeg");
         var thumbnail = ThumbnailInfo.Empty;
         // Created video defaults to Status = VideoStatus.Processing
-        var video = Video.Create(Guid.NewGuid(), tenantId, "Test Title", "Desc",  metadata, thumbnail, clock).Value;
+        var video = Video.Create(Guid.NewGuid(), tenantId, "Test Title", "Desc",  metadata, clock.UtcNow).Value;
         _videoRepo.VideoToReturn = video;
 
         var handler = new CreatePlaybackSessionCommandHandler(
@@ -174,8 +174,8 @@ public class CreatePlaybackSessionHandlerUnitTests
         var metadata = new VideoMetadata("test.mp4", "video/mp4", 1000, "ffmpeg");
         var thumbnail = ThumbnailInfo.Empty;
         // Transition video to Published
-        var video = Video.Create(Guid.NewGuid(), tenantId, "Test Title", "Desc",  metadata, thumbnail, clock).Value;
-        video.MarkAsPublished("streaming/1080p", VideoSpecifications.Empty, clock);
+        var video = Video.Create(Guid.NewGuid(), tenantId, "Test Title", "Desc",  metadata, clock.UtcNow).Value;
+        video.MarkAsPublished(clock.UtcNow);
         _videoRepo.VideoToReturn = video;
 
         var handler = new CreatePlaybackSessionCommandHandler(

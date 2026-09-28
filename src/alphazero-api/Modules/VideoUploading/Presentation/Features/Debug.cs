@@ -37,7 +37,7 @@ public static class Debug
     {
         var domain = resources.CdnDomain;
         
-        string? thumbnailUrl = video.Thumbnail?.ThumbnailUrl;
+        string? thumbnailUrl = video.ThumbnailUrl;
         if (!string.IsNullOrEmpty(thumbnailUrl) && !thumbnailUrl.StartsWith("http"))
         {
             thumbnailUrl = $"http://{domain}/{thumbnailUrl.TrimStart('/')}";

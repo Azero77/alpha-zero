@@ -1,3 +1,4 @@
+using AlphaZero.Modules.VideoUploading.IntegrationEvents;
 using System.Security.Cryptography;
 using System.Text;
 using AlphaZero.JobPreparer;
@@ -111,7 +112,7 @@ public class JobPreparerUnitTests
             TranscodingEngine: "FFMPEG",
             EncryptionMethod: "ClearKey",
             TargetResourceArn: "arn:aws:video:123",
-            SourceMetadata: new SourceMetadata(1920, 1080, 120.5, "00:02:00", 30, "16:9", "h264", "aac")
+            SourceMetadata: new SourceMetadata(1920, 1080, 120.5, "00:02:00", 30, "16:9", "h264", "aac", 128, 44100)
         );
 
         using var ms = new MemoryStream();

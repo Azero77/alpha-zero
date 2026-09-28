@@ -30,38 +30,10 @@ public class InitializeVideoStateConsumer : IConsumer<UploadVideoRequestedEvent>
             return;
         }
 
-        await _videoStateRepository.InitializeAsync(msg.VideoId, msg.TenantId, msg.ThumbnailKey, msg.TargetResourceArn, context.CancellationToken);
+        await _videoStateRepository.InitializeAsync(msg.VideoId, msg.TenantId, context.CancellationToken);
         
         _logger.LogInformation("Initialized VideoState for VideoId {VideoId}", msg.VideoId);
     }
 }
 
-public class CleanupVideoStateConsumer : IConsumer<VideoPublishedIntegrationEvent>, IConsumer<VideoProcessingFailedEvent>
-{
-    private readonly IVideoStateRepository _videoStateRepository;
-    private readonly ILogger<CleanupVideoStateConsumer> _logger;
 
-    public CleanupVideoStateConsumer(IVideoStateRepository videoStateRepository, ILogger<CleanupVideoStateConsumer> logger)
-    {
-        _videoStateRepository = videoStateRepository;
-        _logger = logger;
-    }
-
-    public async Task Consume(ConsumeContext<VideoPublishedIntegrationEvent> context)
-    {
-        await CleanupAsync(context.Message.VideoId, context.CancellationToken);
-    }
-
-    public async Task Consume(ConsumeContext<VideoProcessingFailedEvent> context)
-    {
-        // On failure, we might want to keep the state for debugging, or drop it.
-        // The architecture says "delete on publish". Let's delete on fail too.
-        await CleanupAsync(context.Message.VideoId, context.CancellationToken);
-    }
-
-    private async Task CleanupAsync(Guid videoId, CancellationToken cancellationToken)
-    {
-        await _videoStateRepository.RemoveAsync(videoId, cancellationToken);
-        _logger.LogInformation("Cleaned up VideoState for VideoId {VideoId}", videoId);
-    }
-}

@@ -76,9 +76,10 @@ public class Video : AggregateRoot, IDomainTenantOwned, ISoftDeletable
         return Result.Success;
     }
 
-    public void MarkAsFailed()
+    public void MarkAsFailed(string reason)
     {
         Status = VideoStatus.Failed;
+        AddDomainEvent(new VideoFailedDomainEvent(Id,TenantId, reason));
     }
 
     public void MarkAsDeleted()

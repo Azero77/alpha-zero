@@ -59,7 +59,7 @@ public record VideoMetadataResponse(
 
 public record VideoMetaDataNotFoundResponse(Guid VideoId);
 
-public record VideoProcessingFailedEvent(Guid VideoId, string Reason, string? Key, string? TargetResourceArn = null);
+public record VideoProcessingFailedEvent(Guid VideoId, string Reason);
 
 // LIFECYCLE
 public record VideoDeletedFromS3Event(string Key);

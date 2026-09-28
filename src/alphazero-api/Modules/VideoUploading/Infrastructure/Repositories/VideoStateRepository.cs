@@ -36,7 +36,7 @@ public class VideoStateRepository : IVideoStateRepository
         return await _context.VideoState.AnyAsync(s => s.VideoId == videoId, cancellationToken);
     }
 
-    public async Task InitializeAsync(Guid videoId, Guid tenantId, string? customThumbnailKey, string? targetResourceArn, CancellationToken cancellationToken = default)
+    public async Task InitializeAsync(Guid videoId, Guid tenantId, CancellationToken cancellationToken = default)
     {
         var state = new Sagas.VideoState
         {
