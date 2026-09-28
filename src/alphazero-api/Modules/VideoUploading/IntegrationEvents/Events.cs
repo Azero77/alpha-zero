@@ -23,7 +23,7 @@ public record UploadVideoRequestedEvent(
     Guid TenantId, 
     DateTime OnTime, 
     string? EncryptionMethod = "None", 
-    string? ThumbnailKey = null,
+    bool IsDefaultThumbnail = true,
     string? TargetResourceArn = null);
 public record VideoDeliveredToInputEvent(
     Guid VideoId, 

@@ -15,7 +15,7 @@ public class VideoConfiguration : IEntityTypeConfiguration<Video>
         
         builder.Property(x => x.Title).HasMaxLength(255).IsRequired();
         builder.Property(x => x.Description).HasMaxLength(1000);
-        builder.Property(x => x.OutputFolder).HasMaxLength(512);
+        builder.Property(x => x.PlaybackUrl).HasMaxLength(512);
 
         builder.OwnsOne(x => x.Metadata, m =>
         {

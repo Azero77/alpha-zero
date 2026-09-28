@@ -1,21 +1,20 @@
 using AlphaZero.Modules.VideoUploading.IntegrationEvents;
-using AlphaZero.Modules.VideoUploading.Infrastructure.Persistance;
+using AlphaZero.Modules.VideoUploading.Application.Repositories;
 using AlphaZero.Modules.VideoUploading.Infrastructure.Sagas;
 using AlphaZero.Modules.VideoUploading.Application.Models;
 using MassTransit;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 namespace AlphaZero.Modules.VideoUploading.Infrastructure.Consumers;
 
 public class InitializeVideoStateConsumer : IConsumer<UploadVideoRequestedEvent>
 {
-    private readonly AppDbContext _context;
+    private readonly IVideoStateRepository _videoStateRepository;
     private readonly ILogger<InitializeVideoStateConsumer> _logger;
 
-    public InitializeVideoStateConsumer(AppDbContext context, ILogger<InitializeVideoStateConsumer> logger)
+    public InitializeVideoStateConsumer(IVideoStateRepository videoStateRepository, ILogger<InitializeVideoStateConsumer> logger)
     {
-        _context = context;
+        _videoStateRepository = videoStateRepository;
         _logger = logger;
     }
 
@@ -24,24 +23,14 @@ public class InitializeVideoStateConsumer : IConsumer<UploadVideoRequestedEvent>
         var msg = context.Message;
         
         // Ensure idempotency
-        var exists = await _context.VideoState.AnyAsync(s => s.VideoId == msg.VideoId, context.CancellationToken);
+        var exists = await _videoStateRepository.ExistsAsync(msg.VideoId, context.CancellationToken);
         if (exists)
         {
             _logger.LogWarning("VideoState already exists for VideoId {VideoId}. Skipping.", msg.VideoId);
             return;
         }
 
-        var state = new VideoState
-        {
-            VideoId = msg.VideoId,
-            TenantId = msg.TenantId,
-            Stage = PipelineStage.Uploaded,
-            CustomThumbnailKey = msg.ThumbnailKey,
-            TargetResourceArn = msg.TargetResourceArn
-        };
-
-        _context.VideoState.Add(state);
-        await _context.SaveChangesAsync(context.CancellationToken);
+        await _videoStateRepository.InitializeAsync(msg.VideoId, msg.TenantId, msg.ThumbnailKey, msg.TargetResourceArn, context.CancellationToken);
         
         _logger.LogInformation("Initialized VideoState for VideoId {VideoId}", msg.VideoId);
     }
@@ -49,12 +38,12 @@ public class InitializeVideoStateConsumer : IConsumer<UploadVideoRequestedEvent>
 
 public class CleanupVideoStateConsumer : IConsumer<VideoPublishedEvent>, IConsumer<VideoProcessingFailedEvent>
 {
-    private readonly AppDbContext _context;
+    private readonly IVideoStateRepository _videoStateRepository;
     private readonly ILogger<CleanupVideoStateConsumer> _logger;
 
-    public CleanupVideoStateConsumer(AppDbContext context, ILogger<CleanupVideoStateConsumer> logger)
+    public CleanupVideoStateConsumer(IVideoStateRepository videoStateRepository, ILogger<CleanupVideoStateConsumer> logger)
     {
-        _context = context;
+        _videoStateRepository = videoStateRepository;
         _logger = logger;
     }
 
@@ -72,12 +61,7 @@ public class CleanupVideoStateConsumer : IConsumer<VideoPublishedEvent>, IConsum
 
     private async Task CleanupAsync(Guid videoId, CancellationToken cancellationToken)
     {
-        var state = await _context.VideoState.FirstOrDefaultAsync(s => s.VideoId == videoId, cancellationToken);
-        if (state != null)
-        {
-            _context.VideoState.Remove(state);
-            await _context.SaveChangesAsync(cancellationToken);
-            _logger.LogInformation("Cleaned up VideoState for VideoId {VideoId}", videoId);
-        }
+        await _videoStateRepository.RemoveAsync(videoId, cancellationToken);
+        _logger.LogInformation("Cleaned up VideoState for VideoId {VideoId}", videoId);
     }
 }

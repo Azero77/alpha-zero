@@ -59,7 +59,9 @@ public class UploadCommandValidator : AbstractValidator<UploadCommand>
                 if(yy is not null)
                 {
                     //checking the extensions 
-                    return VideoConstants.AllowedThumbnailMIMETypes.Contains(yy.ContentType,StringComparer.OrdinalIgnoreCase) && VideoConstants.AllowedThumbnailExtensions.Any(extension => yy.FileName.EndsWith(extension,StringComparison.OrdinalIgnoreCase));
+                    return VideoConstants.AllowedThumbnailMIMETypes.Contains(yy.ContentType,StringComparer.OrdinalIgnoreCase) 
+                           &&
+                           VideoConstants.AllowedThumbnailExtensions.Any(extension => yy.FileName.EndsWith(extension,StringComparison.OrdinalIgnoreCase));
                 }
                 return true;
             });
@@ -112,10 +114,11 @@ public sealed class UploadCommandHandler(
         string? thumbnailKey = null;
         string? thumbnailPreSignedUrl = null;
         Dictionary<string, string>? thumbnailHeaders = null;
-
-        if (request.UploadThumbnail is not null)
+        
+        var isDefaultThumbnail = request.UploadThumbnail is null;
+        if (!isDefaultThumbnail)
         {
-            string thumbnailExtension = Path.GetExtension(request.UploadThumbnail.FileName);
+            string thumbnailExtension = Path.GetExtension(request.UploadThumbnail!.FileName);
             var thumbResponse = await uploadService.UploadFile(request.UploadThumbnail.FileName, VideoConstants.GetThumbnailInputVideoSourceKey(videoId.ToString(), tenantId.ToString()!, thumbnailExtension),request.UploadThumbnail.ContentType, new Dictionary<string, string>()
             {
                 { "VideoId" , videoId.ToString()},
@@ -130,16 +133,14 @@ public sealed class UploadCommandHandler(
             thumbnailPreSignedUrl = thumbResponse.Value.presignedUrl;
             thumbnailHeaders = thumbResponse.Value.headers;
         }
-
-        var thumbnail = new ThumbnailInfo(thumbnailKey, null, thumbnailKey != null);
         var videoResult = Video.Create(
             videoId,
             tenantId.Value,
             request.Title,
             request.Description,
             new AlphaZero.Modules.VideoUploading.Domain.Models.VideoMetadata(request.FileName, request.ContentType, 0, request.VideoTranscodingMethod, request.VideoEncryptionMethod),
-            thumbnail,
-            clock);
+            clock,
+            isDefaultThumbnail);
 
         if (videoResult.IsError) return videoResult.Errors;
 
@@ -150,7 +151,7 @@ public sealed class UploadCommandHandler(
             tenantId.Value, 
             clock.Now, 
             request.VideoEncryptionMethod.ToString(),
-            thumbnailKey,
+            isDefaultThumbnail,
             request.TargetResourceArn),
             cancellationToken);
 

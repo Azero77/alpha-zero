@@ -57,7 +57,7 @@ public class SQSVideoProcessingFailedConsumer : IConsumer<VideoProcessingFailedQ
         await _progressNotifier.NotifyProgressAsync(new VideoProgressNotification(
             msg.VideoId.ToString(),
             msg.TenantId.ToString(),
-            "processing",
+            AlphaZero.Modules.VideoUploading.Application.Models.PipelineStage.Failed,
             "FAILED",
             reason
         ), context.CancellationToken);

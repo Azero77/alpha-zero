@@ -86,7 +86,7 @@ public class SQSVideoConsumersUnitTests
 
         // Assert
         video.Status.Should().Be(VideoStatus.Published);
-        video.OutputFolder.Should().Be(playbackUrl);
+        video.PlaybackUrl.Should().Be(playbackUrl);
         video.Specifications.Duration.Should().Be(TimeSpan.FromMinutes(10) + TimeSpan.FromSeconds(30));
         video.Specifications.Resolution.width.Should().Be(1920);
         video.Specifications.Resolution.height.Should().Be(1080);

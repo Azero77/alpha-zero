@@ -44,11 +44,11 @@ public static class Debug
         }
 
         string? streamingUrl = null;
-        if (video.Status == VideoStatus.Published && !string.IsNullOrEmpty(video.OutputFolder))
+        if (video.Status == VideoStatus.Published && !string.IsNullOrEmpty(video.PlaybackUrl))
         {
-            streamingUrl = video.OutputFolder.StartsWith("http") 
-                ? video.OutputFolder 
-                : $"http://{domain}/{video.OutputFolder.TrimStart('/')}/master.m3u8";
+            streamingUrl = video.PlaybackUrl.StartsWith("http") 
+                ? video.PlaybackUrl 
+                : $"http://{domain}/{video.PlaybackUrl.TrimStart('/')}/master.m3u8";
         }
 
         return new VideoResponse(
@@ -61,7 +61,7 @@ public static class Debug
             video.Metadata,
             video.Specifications,
             video.SourceKey,    
-            video.OutputFolder,
+            video.PlaybackUrl,
             video.CreatedOn,
             video.PublishedOn);
     }

@@ -1,6 +1,7 @@
 using AlphaZero.Modules.VideoUploading.Domain.Events;
 using AlphaZero.Shared.Domain;
 using ErrorOr;
+using OpenTelemetry.Trace;
 
 namespace AlphaZero.Modules.VideoUploading.Domain.Models;
 
@@ -12,8 +13,9 @@ public class Video : AggregateRoot, IDomainTenantOwned, ISoftDeletable
     public VideoStatus Status { get; private set; }
     public VideoMetadata Metadata { get; private set; } = null!;
     public VideoSpecifications Specifications { get; private set; } = null!;
-    public ThumbnailInfo Thumbnail { get; private set; } = null!;
-    public string? OutputFolder { get; private set; }
+    public string? ThumbnailUrl => Status == VideoStatus.Published ? VideoConstants.GetThumbnailOutputKey(Id.ToString(), TenantId.ToString()) : null;
+    public bool IsDefaultThumbnail { get; private set; } = true;
+    public string? PlaybackUrl  => Status == VideoStatus.Published ? VideoConstants.GetPlaybackUrl(Id.ToString(), TenantId.ToString()) : null;
     public DateTime CreatedOn { get; private set; }
     public DateTime? PublishedOn { get; private set; }
     public bool IsDeleted { get; private set; }
@@ -30,17 +32,17 @@ public class Video : AggregateRoot, IDomainTenantOwned, ISoftDeletable
         string title,
         string? description,
         VideoMetadata metadata,
-        ThumbnailInfo thumbnail,
-        DateTime createdOn) : base(id)
+        DateTime createdOn, 
+        bool isDefaultThumbnail = true) : base(id)
     {
         TenantId = tenantId;
         Title = title;
         Description = description;
         Metadata = metadata;
-        Thumbnail = thumbnail;
         Specifications = VideoSpecifications.Empty;
         Status = VideoStatus.Processing;
         CreatedOn = createdOn;
+        IsDefaultThumbnail = isDefaultThumbnail;
     }
 
     public static ErrorOr<Video> Create(
@@ -49,55 +51,30 @@ public class Video : AggregateRoot, IDomainTenantOwned, ISoftDeletable
         string title,
         string? description,
         VideoMetadata metadata,
-        ThumbnailInfo thumbnail,
-        IClock clock)
+        IClock clock,
+        bool isDefaultThumbnail = true)
     {
         if (string.IsNullOrWhiteSpace(title))
             return VideoErrors.EmptyTitle;
 
-        return new Video(id, tenantId, title, description, metadata, thumbnail, clock.Now);
-    }
-    public ErrorOr<Success> MarkAsOptimized(string outputFolder)
-    {
-        if (Status != VideoStatus.Processing)
-            return VideoErrors.InvalidStatus;
-
-        OutputFolder = outputFolder;
-        return Result.Success;
+        return new Video(id, tenantId, title, description, metadata, clock.Now, isDefaultThumbnail);
     }
 
-    public ErrorOr<Success> MarkAsLive(string finalUrl, IClock clock)
-    {
+    public ErrorOr<Success> MarkAsLive(IClock clock)
+    {//idempotency checks are application concern not a domain one 
         Status = VideoStatus.Published;
-        OutputFolder = finalUrl;
         PublishedOn = clock.Now;
-
-        // Finalize thumbnail URL
-        // If finalUrl is "path/to/master.m3u8", get "path/to/"
-        string folderPrefix = finalUrl.Contains('/') 
-            ? finalUrl[..(finalUrl.LastIndexOf('/') + 1)] 
-            : "";
-
-        string thumbFileName = Thumbnail.UseCustom ? "custom.jpg" : "poster.jpg"; 
-        string thumbUrl = $"{folderPrefix}thumbnails/{thumbFileName}";
-
-        Thumbnail = new ThumbnailInfo(
-            Thumbnail.CustomThumbnailKey, 
-            thumbUrl, 
-            Thumbnail.UseCustom);
-
         AddDomainEvent(new VideoPublishedDomainEvent(Id, PublishedOn.Value));
-
         return Result.Success;
     }
 
-    public ErrorOr<Success> MarkAsPublished(string outputFolder, VideoSpecifications specifications, IClock clock)
+    public ErrorOr<Success> MarkAsPublished(VideoSpecifications specifications, IClock clock)
     {
+        
         if (Status != VideoStatus.Processing)
             return VideoErrors.InvalidStatus;
 
         Status = VideoStatus.Published;
-        OutputFolder = outputFolder;
         Specifications = specifications;
         PublishedOn = clock.Now;
 
@@ -257,5 +234,15 @@ public class VideoConstants
     public static string GetOutputPathS3Url(string bucketName,string videoId, string tenantId)
     {
         return $"s3://{bucketName}/{GetOutputVideoKey(videoId,tenantId)}";
+    }
+
+    public static string GetPlaybackUrl(string videoId, string tenantId)
+    {
+        return $"{tenantId}/{videoId}/master.m3u8";
+    }
+
+    public static string GetThumbnailOutputKey(string videoId, string tenantId)
+    {
+        return $"{tenantId}/{videoId}/thumbnail.jpeg";
     }
 } 

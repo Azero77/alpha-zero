@@ -29,6 +29,6 @@ public class GetVideoMetadataConsumer : IConsumer<GetVideoMetadataRequest>
             video.Description,
             video.Status.ToString(),
             video.Specifications.Duration.ToString(@"hh\:mm\:ss"),
-            video.OutputFolder));
+            video.PlaybackUrl));
     }
 }

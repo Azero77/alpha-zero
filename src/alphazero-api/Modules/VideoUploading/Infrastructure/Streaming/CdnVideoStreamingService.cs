@@ -34,8 +34,8 @@ public class DatabaseCloudFlareCdnVideoStreamingService(AWSResources resources, 
         
         // We can now return the real streaming URL stored in the DB if available, 
         // or construct it if we follow a standard pattern.
-        var streamingUrl = video.OutputFolder != null 
-            ? $"http://{domain}/{video.OutputFolder}"
+        var streamingUrl = video.PlaybackUrl != null 
+            ? $"http://{domain}/{video.PlaybackUrl}"
             : $"http://{domain}/streaming/{videoId}/master.m3u8";
 
         var response = new StreamingInfoResponseDTO(
