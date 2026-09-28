@@ -43,10 +43,9 @@ public record VideoTranscodingFinishedEvent(Guid VideoId, string OutputKeyPrefix
 public record VideoCdnSyncCompletedEvent(Guid VideoId, string RelativeUrl);
 
 // PHASE 5: FINALIZATION
-public record VideoPublishedEvent(
+public record VideoPublishedIntegrationEvent(
     Guid VideoId, 
-    string RelativeUrl, 
-    string? TargetResourceArn);
+    string RelativeUrl);
 
 public record GetVideoMetadataRequest(Guid VideoId);
 

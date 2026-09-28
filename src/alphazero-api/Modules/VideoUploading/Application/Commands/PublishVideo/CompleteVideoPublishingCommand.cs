@@ -34,14 +34,12 @@ public class CompleteVideoPublishingCommandHandler : IRequestHandler<CompleteVid
     public CompleteVideoPublishingCommandHandler(
         IVideoRepository videoRepository,
         IVideoStateRepository videoStateRepository,
-        IUnitOfWork unitOfWork,
         IModuleBus moduleBus,
         IClock clock,
         IVideoProgressNotifier progressNotifier)
     {
         _videoRepository = videoRepository;
         _videoStateRepository = videoStateRepository;
-        _unitOfWork = unitOfWork;
         _moduleBus = moduleBus;
         _clock = clock;
         _progressNotifier = progressNotifier;
@@ -72,25 +70,11 @@ public class CompleteVideoPublishingCommandHandler : IRequestHandler<CompleteVid
 
         video.UpdateSpecifications(new VideoSpecifications(duration, resolution));
         video.MarkAsPublished( _clock.Now);
-
-        // Remove transient state
-        await _videoStateRepository.RemoveAsync(request.VideoId, cancellationToken);
-
-
-        // Notify other modules
-        await _moduleBus.Publish(new VideoPublishedEvent(
-            video.Id,
-            request.PlaybackUrl,
-            request.TargetResourceArn), cancellationToken);
-
-        // Notify SignalR clients
-        
-
         return Result.Success;
     }
 }
 
-public class NotifyVideoPublishedHandler(IVideoProgressNotifier progressNotifier) : INotificationHandler<VideoPublishedDomainEvent>
+public class NotifyVideoPublishedHandlerPublishSignalR(IVideoProgressNotifier progressNotifier) : INotificationHandler<VideoPublishedDomainEvent>
 {
     public async Task Handle(VideoPublishedDomainEvent notification, CancellationToken cancellationToken)
     {
@@ -101,5 +85,28 @@ public class NotifyVideoPublishedHandler(IVideoProgressNotifier progressNotifier
             "COMPLETE",
             null
         ), cancellationToken);
+    }
+}
+
+public class VideoPublishedDomainEventHandlerPublishIntegrationEvent(IModuleBus moduleBus, IVideoRepository videoRepository) : INotificationHandler<VideoPublishedDomainEvent>
+{
+    public async Task Handle(VideoPublishedDomainEvent notification, CancellationToken cancellationToken)
+    {   
+        //first we delete the video state after finishing 
+        var video = await videoRepository.GetById(notification.VideoId, cancellationToken);
+        if (video is null) return;
+        // Notify other modules
+        await moduleBus.Publish(new VideoPublishedIntegrationEvent(
+            notification.VideoId,
+            video.PlaybackUrl!), cancellationToken);
+    }
+}
+
+public class DeleteVideoStateVideoPublishedDomainEventHandler(IVideoStateRepository videoStateRepository)
+    : INotificationHandler<VideoPublishedDomainEvent>
+{
+    public Task Handle(VideoPublishedDomainEvent notification, CancellationToken cancellationToken)
+    {
+        return videoStateRepository.RemoveAsync(notification.VideoId, cancellationToken);
     }
 }

@@ -96,7 +96,7 @@ public class VideoUploadingFailedEventHandler : IConsumer<VideoProcessingFailedE
 /// TODO (Broker Selection): When a production message broker (e.g. SQS/SNS, RabbitMQ) is configured,
 /// route these lifecycle events using topics (e.g. "courses.video") so only the courses queue consumes them.
 /// </summary>
-public class VideoUploadedEventHandler : IConsumer<VideoPublishedEvent>
+public class VideoUploadedEventHandler : IConsumer<VideoPublishedIntegrationEvent>
 {
     private readonly ICoursesModule _coursesModule;
     private readonly ILogger<VideoUploadedEventHandler> _logger;
@@ -109,7 +109,7 @@ public class VideoUploadedEventHandler : IConsumer<VideoPublishedEvent>
         _logger = logger;
     }
 
-    public async Task Consume(ConsumeContext<VideoPublishedEvent> context)
+    public async Task Consume(ConsumeContext<VideoPublishedIntegrationEvent> context)
     {
         var msg = context.Message;
 

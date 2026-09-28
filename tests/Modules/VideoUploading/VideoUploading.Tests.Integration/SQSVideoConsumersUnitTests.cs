@@ -93,7 +93,7 @@ public class SQSVideoConsumersUnitTests
         unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
 
         moduleBusMock.Verify(x => x.Publish(
-            It.Is<VideoPublishedEvent>(e =>
+            It.Is<VideoPublishedIntegrationEvent>(e =>
                 e.VideoId == video.Id &&
                 e.RelativeUrl == playbackUrl &&
                 e.TargetResourceArn == targetResourceArn),
@@ -137,7 +137,7 @@ public class SQSVideoConsumersUnitTests
 
         // Assert: Idempotent skip - no save changes and no duplicate event
         unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
-        moduleBusMock.Verify(x => x.Publish(It.IsAny<VideoPublishedEvent>(), It.IsAny<CancellationToken>()), Times.Never);
+        moduleBusMock.Verify(x => x.Publish(It.IsAny<VideoPublishedIntegrationEvent>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -176,7 +176,7 @@ public class SQSVideoConsumersUnitTests
 
         // Assert
         unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
-        moduleBusMock.Verify(x => x.Publish(It.IsAny<VideoPublishedEvent>(), It.IsAny<CancellationToken>()), Times.Never);
+        moduleBusMock.Verify(x => x.Publish(It.IsAny<VideoPublishedIntegrationEvent>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]

@@ -36,7 +36,7 @@ public class InitializeVideoStateConsumer : IConsumer<UploadVideoRequestedEvent>
     }
 }
 
-public class CleanupVideoStateConsumer : IConsumer<VideoPublishedEvent>, IConsumer<VideoProcessingFailedEvent>
+public class CleanupVideoStateConsumer : IConsumer<VideoPublishedIntegrationEvent>, IConsumer<VideoProcessingFailedEvent>
 {
     private readonly IVideoStateRepository _videoStateRepository;
     private readonly ILogger<CleanupVideoStateConsumer> _logger;
@@ -47,7 +47,7 @@ public class CleanupVideoStateConsumer : IConsumer<VideoPublishedEvent>, IConsum
         _logger = logger;
     }
 
-    public async Task Consume(ConsumeContext<VideoPublishedEvent> context)
+    public async Task Consume(ConsumeContext<VideoPublishedIntegrationEvent> context)
     {
         await CleanupAsync(context.Message.VideoId, context.CancellationToken);
     }

@@ -38,8 +38,8 @@ public class MetadataConsumerTests
     {
         // Arrange
         var consumer = new VideoUploadedEventHandler(_coursesModuleMock.Object, _videoUploadedLoggerMock.Object);
-        var contextMock = new Mock<ConsumeContext<VideoPublishedEvent>>();
-        var msg = new VideoPublishedEvent(Guid.NewGuid(), "master.m3u8", arn);
+        var contextMock = new Mock<ConsumeContext<VideoPublishedIntegrationEvent>>();
+        var msg = new VideoPublishedIntegrationEvent(Guid.NewGuid(), "master.m3u8", arn);
         contextMock.Setup(x => x.Message).Returns(msg);
 
         // Act
@@ -54,10 +54,10 @@ public class MetadataConsumerTests
     {
         // Arrange
         var consumer = new VideoUploadedEventHandler(_coursesModuleMock.Object, _videoUploadedLoggerMock.Object);
-        var contextMock = new Mock<ConsumeContext<VideoPublishedEvent>>();
+        var contextMock = new Mock<ConsumeContext<VideoPublishedIntegrationEvent>>();
         // ResourceArn for video (not course)
         var nonCourseArn = ResourceArn.ForVideo(Guid.NewGuid(), Guid.NewGuid()).Value;
-        var msg = new VideoPublishedEvent(Guid.NewGuid(), "master.m3u8", nonCourseArn);
+        var msg = new VideoPublishedIntegrationEvent(Guid.NewGuid(), "master.m3u8", nonCourseArn);
         contextMock.Setup(x => x.Message).Returns(msg);
 
         // Act
@@ -72,12 +72,12 @@ public class MetadataConsumerTests
     {
         // Arrange
         var consumer = new VideoUploadedEventHandler(_coursesModuleMock.Object, _videoUploadedLoggerMock.Object);
-        var contextMock = new Mock<ConsumeContext<VideoPublishedEvent>>();
+        var contextMock = new Mock<ConsumeContext<VideoPublishedIntegrationEvent>>();
         var tenantId = Guid.NewGuid();
         var courseId = Guid.NewGuid();
         var videoId = Guid.NewGuid();
         var courseArn = ResourceArn.ForCourse(tenantId, courseId).Value;
-        var msg = new VideoPublishedEvent(videoId, "master.m3u8", courseArn);
+        var msg = new VideoPublishedIntegrationEvent(videoId, "master.m3u8", courseArn);
         contextMock.Setup(x => x.Message).Returns(msg);
 
         _coursesModuleMock.Setup(x => x.Send(It.IsAny<MarkCourseAssetAvailableCommand>(), It.IsAny<CancellationToken>()))
