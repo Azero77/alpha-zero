@@ -5,9 +5,11 @@ using AlphaZero.Modules.VideoUploading.IntegrationEvents;
 using AlphaZero.Shared.Application;
 using AlphaZero.Shared.Domain;
 using AlphaZero.Modules.VideoUploading.Application.Models;
+using AlphaZero.Modules.VideoUploading.Domain.Events;
 using ErrorOr;
 using MediatR;
 using MassTransit;
+using VideoMetadata = AlphaZero.Modules.VideoUploading.Domain.Models.VideoMetadata;
 
 namespace AlphaZero.Modules.VideoUploading.Application.Commands.PublishVideo;
 
@@ -18,7 +20,7 @@ public record CompleteVideoPublishingCommand(
     string? Duration,
     int? Width,
     int? Height,
-    string? TargetResourceArn) : IRequest<ErrorOr<Success>>;
+    string? TargetResourceArn) :ICommand<Success>;
 
 public class CompleteVideoPublishingCommandHandler : IRequestHandler<CompleteVideoPublishingCommand, ErrorOr<Success>>
 {
@@ -64,17 +66,16 @@ public class CompleteVideoPublishingCommandHandler : IRequestHandler<CompleteVid
             duration = parsedDuration;
         }
 
-        var resolution = (request.Width.HasValue && request.Height.HasValue)
+        var resolution = request is { Width: not null, Height: not null }
             ? new Resolution(request.Width.Value, request.Height.Value)
             : Resolution.Empty;
 
         video.UpdateSpecifications(new VideoSpecifications(duration, resolution));
-        video.MarkAsLive(request.PlaybackUrl, _clock);
+        video.MarkAsPublished( _clock.Now);
 
         // Remove transient state
         await _videoStateRepository.RemoveAsync(request.VideoId, cancellationToken);
 
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         // Notify other modules
         await _moduleBus.Publish(new VideoPublishedEvent(
@@ -83,14 +84,22 @@ public class CompleteVideoPublishingCommandHandler : IRequestHandler<CompleteVid
             request.TargetResourceArn), cancellationToken);
 
         // Notify SignalR clients
-        await _progressNotifier.NotifyProgressAsync(new VideoProgressNotification(
-            request.VideoId.ToString(),
-            request.TenantId.ToString(),
+        
+
+        return Result.Success;
+    }
+}
+
+public class NotifyVideoPublishedHandler(IVideoProgressNotifier progressNotifier) : INotificationHandler<VideoPublishedDomainEvent>
+{
+    public async Task Handle(VideoPublishedDomainEvent notification, CancellationToken cancellationToken)
+    {
+        await progressNotifier.NotifyProgressAsync(new VideoProgressNotification(
+            notification.VideoId.ToString(),
+            notification.TenantId.ToString(),
             PipelineStage.Published,
             "COMPLETE",
             null
         ), cancellationToken);
-
-        return Result.Success;
     }
 }

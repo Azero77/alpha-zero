@@ -1,5 +1,6 @@
 using AlphaZero.Modules.VideoUploading.IntegrationEvents;
 using AlphaZero.Modules.VideoUploading.Application.Commands.UpdateVideoProgress;
+using AlphaZero.Modules.VideoUploading.Application.Models;
 using Aspire.Shared;
 using MediatR;
 using MassTransit;
@@ -29,13 +30,13 @@ public class SQSVideoProgressConsumer : IConsumer<VideoProgressQueueMessage>
             msg.VideoId, msg.Stage, msg.Status);
 
         // Try mapping the incoming string stage to our PipelineStage enum
-        if (!Enum.TryParse<AlphaZero.Modules.VideoUploading.Application.Models.PipelineStage>(msg.Stage, true, out var incomingStage))
+        if (!Enum.TryParse<PipelineStage>(msg.Stage, true, out var incomingStage))
         {
             _logger.LogWarning("[SQS] Unrecognized pipeline stage: {Stage}", msg.Stage);
         }
         else
         {
-            if (Guid.TryParse(msg.VideoId, out var videoIdGuid) && Guid.TryParse(msg.TenantId, out var tenantIdGuid))
+            if (Guid.TryParse(msg.VideoId, out Guid videoIdGuid) && Guid.TryParse(msg.TenantId, out Guid tenantIdGuid))
             {
                 await _mediator.Send(new UpdateVideoProgressCommand(
                     videoIdGuid,

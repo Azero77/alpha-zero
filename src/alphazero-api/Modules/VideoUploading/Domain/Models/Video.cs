@@ -51,34 +51,27 @@ public class Video : AggregateRoot, IDomainTenantOwned, ISoftDeletable
         string title,
         string? description,
         VideoMetadata metadata,
-        IClock clock,
+        DateTime createdOn,
         bool isDefaultThumbnail = true)
     {
         if (string.IsNullOrWhiteSpace(title))
             return VideoErrors.EmptyTitle;
 
-        return new Video(id, tenantId, title, description, metadata, clock.Now, isDefaultThumbnail);
+        return new Video(id, tenantId, title, description, metadata, createdOn, isDefaultThumbnail);
     }
 
-    public ErrorOr<Success> MarkAsLive(IClock clock)
-    {//idempotency checks are application concern not a domain one 
-        Status = VideoStatus.Published;
-        PublishedOn = clock.Now;
-        AddDomainEvent(new VideoPublishedDomainEvent(Id, PublishedOn.Value));
-        return Result.Success;
-    }
-
-    public ErrorOr<Success> MarkAsPublished(VideoSpecifications specifications, IClock clock)
+    public ErrorOr<Success> MarkAsPublished(DateTime publishOn)
     {
         
         if (Status != VideoStatus.Processing)
             return VideoErrors.InvalidStatus;
-
+        if (Specifications == VideoSpecifications.Empty ||
+            (string.IsNullOrEmpty(Metadata.OriginalFileName) && Metadata.FileSize == 0))
+            return Error.Forbidden("Video.Publishing", "Can't Pubilsh a Video with empty Specification and metadata");
         Status = VideoStatus.Published;
-        Specifications = specifications;
-        PublishedOn = clock.Now;
+        PublishedOn = publishOn;
 
-        AddDomainEvent(new VideoPublishedDomainEvent(Id, PublishedOn.Value));
+        AddDomainEvent(new VideoPublishedDomainEvent(Id, TenantId,PublishedOn.Value));
 
         return Result.Success;
     }

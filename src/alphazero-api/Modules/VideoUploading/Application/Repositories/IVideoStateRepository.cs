@@ -11,9 +11,6 @@ public record VideoStateDto(
     Guid TenantId,
     PipelineStage Stage,
     string? MediaConverterJobId,
-    string? Key,
-    string? CustomThumbnailKey,
-    bool IsFailed,
     int Version);
 
 public interface IVideoStateRepository

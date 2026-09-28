@@ -2,16 +2,11 @@ using AlphaZero.Shared.Domain;
 
 namespace AlphaZero.Modules.VideoUploading.Domain.Events;
 
-public class VideoPublishedDomainEvent : DomainEvent
+public class VideoPublishedDomainEvent(Guid videoId, Guid tenantId,DateTime publishedOn) : DomainEvent
 {
-    public Guid VideoId { get; }
-    public DateTime PublishedOn { get; }
-
-    public VideoPublishedDomainEvent(Guid videoId, DateTime publishedOn)
-    {
-        VideoId = videoId;
-        PublishedOn = publishedOn;
-    }
+    public Guid VideoId { get; } = videoId;
+    public Guid TenantId { get; } = tenantId;
+    public DateTime PublishedOn { get; } = publishedOn;
 }
 
 public class VideoMetadataUpdatedDomainEvent : DomainEvent

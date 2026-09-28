@@ -12,6 +12,7 @@ using MassTransit;
 using MassTransit.Mediator;
 using MediatR;
 using System.Data;
+using VideoMetadata = AlphaZero.Modules.VideoUploading.Domain.Models.VideoMetadata;
 
 namespace AlphaZero.Modules.VideoUploading.Application.Commands.Upload;
 
@@ -138,8 +139,8 @@ public sealed class UploadCommandHandler(
             tenantId.Value,
             request.Title,
             request.Description,
-            new AlphaZero.Modules.VideoUploading.Domain.Models.VideoMetadata(request.FileName, request.ContentType, 0, request.VideoTranscodingMethod, request.VideoEncryptionMethod),
-            clock,
+            new VideoMetadata(request.FileName, request.ContentType, 0, request.VideoTranscodingMethod, request.VideoEncryptionMethod),
+            clock.Now,
             isDefaultThumbnail);
 
         if (videoResult.IsError) return videoResult.Errors;

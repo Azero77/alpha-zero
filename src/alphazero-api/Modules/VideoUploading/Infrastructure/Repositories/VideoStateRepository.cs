@@ -28,9 +28,6 @@ public class VideoStateRepository : IVideoStateRepository
             state.TenantId,
             state.Stage,
             state.MediaConverterJobId,
-            state.Key,
-            state.CustomThumbnailKey,
-            state.IsFailed,
             state.Version);
     }
 
@@ -41,18 +38,16 @@ public class VideoStateRepository : IVideoStateRepository
 
     public async Task InitializeAsync(Guid videoId, Guid tenantId, string? customThumbnailKey, string? targetResourceArn, CancellationToken cancellationToken = default)
     {
-        var state = new AlphaZero.Modules.VideoUploading.Infrastructure.Sagas.VideoState
+        var state = new Sagas.VideoState
         {
             VideoId = videoId,
             TenantId = tenantId,
-            Stage = AlphaZero.Modules.VideoUploading.Application.Models.PipelineStage.Uploaded,
-            CustomThumbnailKey = customThumbnailKey,
-            TargetResourceArn = targetResourceArn
+            Stage = Application.Models.PipelineStage.Uploaded,
         };
         _context.VideoState.Add(state);
     }
 
-    public async Task<bool> TryUpdateStageAsync(Guid videoId, AlphaZero.Modules.VideoUploading.Application.Models.PipelineStage incomingStage, CancellationToken cancellationToken = default)
+    public async Task<bool> TryUpdateStageAsync(Guid videoId, Application.Models.PipelineStage incomingStage, CancellationToken cancellationToken = default)
     {
         var state = await _context.VideoState.FirstOrDefaultAsync(s => s.VideoId == videoId, cancellationToken);
         if (state == null || (int)incomingStage <= (int)state.Stage)
