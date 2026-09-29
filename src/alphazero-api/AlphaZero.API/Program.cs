@@ -271,6 +271,16 @@ public class Program
 
         builder.Services.AddMassTransit<IExternalBus>(x =>
         {
+            x.AddEntityFrameworkOutbox<AlphaZero.Modules.VideoUploading.Infrastructure.Persistance.AppDbContext>(o =>
+            {
+                o.UsePostgres();
+            });
+
+            x.AddConfigureEndpointsCallback((context, name, endpoint) =>
+            {
+                endpoint.UseEntityFrameworkOutbox<AlphaZero.Modules.VideoUploading.Infrastructure.Persistance.AppDbContext>(context);
+            });
+
             x.AddConsumers(filter => filter.Name.Contains("sqs", StringComparison.InvariantCultureIgnoreCase), assemblies);
             
             var region = builder.Configuration.GetAWSOptions().Region?.SystemName ?? "eu-north-1";
