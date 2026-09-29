@@ -20,14 +20,11 @@ public record FailVideoProcessingCommand(Guid VideoId, string Reason) : ICommand
 public class FailVideoProcessingCommandHandler : IRequestHandler<FailVideoProcessingCommand, ErrorOr<Success>>
 {
     private readonly IVideoRepository _videoRepository;
-    private readonly IVideoProgressNotifier _progressNotifier;
 
     public FailVideoProcessingCommandHandler(
-        IVideoRepository videoRepository,
-        IVideoProgressNotifier progressNotifier)
+        IVideoRepository videoRepository)
     {
         _videoRepository = videoRepository;
-        _progressNotifier = progressNotifier;
     }
 
     public async Task<ErrorOr<Success>> Handle(FailVideoProcessingCommand request, CancellationToken cancellationToken)
@@ -62,15 +59,3 @@ public class DeleteVideoStateVideoFailedDomainEventHandler(IVideoStateRepository
     }
 }
 
-public class NotifySignalRVideoFailedDomainEventHandler(IVideoProgressNotifier notifier)
-    : INotificationHandler<VideoFailedDomainEvent>
-{
-    public Task Handle(VideoFailedDomainEvent notification, CancellationToken cancellationToken)
-        => notifier.NotifyProgressAsync(new VideoProgressNotification(
-            notification.VideoId.ToString(),
-            notification.TenantId.ToString(),
-            PipelineStage.Failed,
-            "FAILED",
-            notification.Reason
-        ), cancellationToken);
-}

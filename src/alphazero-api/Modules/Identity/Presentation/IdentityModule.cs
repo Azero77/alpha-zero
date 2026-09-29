@@ -32,6 +32,12 @@ public class IdentityModule : AppModule, IIdentityModule
 
     public override void ConfigureModuleBus(IBusRegistrationConfigurator configuration)
     {
+        configuration.AddEntityFrameworkOutbox<AlphaZero.Modules.Identity.Infrastructure.Persistance.AppDbContext>(o =>
+        {
+            o.UsePostgres();
+            o.UseBusOutbox();
+        });
+
         configuration.AddConsumers(typeof(IdentityModule).Assembly);
     }
 }

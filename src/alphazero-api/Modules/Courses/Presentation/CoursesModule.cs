@@ -1,4 +1,4 @@
-﻿using AlphaZero.Modules.Courses.Infrastructure.Persistance;
+using AlphaZero.Modules.Courses.Infrastructure.Persistance;
 using AlphaZero.Modules.Courses.Infrastructure.Sagas.CourseRedemption;
 using AlphaZero.Modules.Courses.Infrastructure.Sagas.CourseRevocation;
 using Autofac;
@@ -46,6 +46,12 @@ public class CoursesModule : AppModule, ICoursesModule
                 r.ExistingDbContext<AppDbContext>();
                 r.UsePostgres();
             });
+
+        configuration.AddEntityFrameworkOutbox<AppDbContext>(o =>
+        {
+            o.UsePostgres();
+            o.UseBusOutbox();
+        });
 
         configuration.AddConsumers(typeof(CoursesModule).Assembly);
         configuration.AddConsumers(typeof(AlphaZero.Modules.Courses.Infrastructure.Consumers.AssessmentMetadataChangedConsumer).Assembly);

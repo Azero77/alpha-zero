@@ -29,8 +29,8 @@ export const usePollVideoStatus = (intervalMs: number = 5000) => {
         updateVideoProgress(update);
         
         // If it's reached final state and published, fetch the full videos array
-        if (update.status === 'COMPLETE' && update.stage === 'publishing') {
-           fetchVideos(); // re-fetch to get final published state
+        if (update.status === 'COMPLETE' && update.stage === 'published') {
+           refreshVideoState(update.videoId); // fetch the final published state
         }
       });
 

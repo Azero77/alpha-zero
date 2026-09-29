@@ -30,6 +30,12 @@ public class AssessmentsModule : AppModule, IAssessmentsModule
 
     public override void ConfigureModuleBus(IBusRegistrationConfigurator configuration)
     {
+        configuration.AddEntityFrameworkOutbox<AlphaZero.Modules.Assessments.Infrastructure.Persistance.AppDbContext>(o =>
+        {
+            o.UsePostgres();
+            o.UseBusOutbox();
+        });
+
         configuration.AddConsumers(typeof(AssessmentsModule).Assembly);
         
         // Add Sagas if needed later

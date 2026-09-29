@@ -7,6 +7,7 @@ using AlphaZero.Shared.Infrastructure.Database;
 using AlphaZero.Shared.Infrastructure.Tenats;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Migrations;
+using MassTransit;
 
 namespace AlphaZero.Modules.Identity.Infrastructure.Persistance;
 
@@ -38,6 +39,11 @@ public class AppDbContext : DbContext, ITenantDbContext
         modelBuilder.Ignore<PolicyStatement>();
         modelBuilder.Ignore<ManagedPolicyStatement>();
         modelBuilder.Ignore<Principal>(); 
+
+        modelBuilder.AddInboxStateEntity();
+        modelBuilder.AddOutboxMessageEntity();
+        modelBuilder.AddOutboxStateEntity();
+
         base.OnModelCreating(modelBuilder);
     }
 }

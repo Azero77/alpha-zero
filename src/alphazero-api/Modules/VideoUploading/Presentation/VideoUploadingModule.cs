@@ -36,6 +36,12 @@ public class VideoUploadingModule : AppModule, IVideoUploadingModule
 
     public override void ConfigureModuleBus(IBusRegistrationConfigurator configuration)
     {
+        configuration.AddEntityFrameworkOutbox<AlphaZero.Modules.VideoUploading.Infrastructure.Persistance.AppDbContext>(o =>
+        {
+            o.UsePostgres();
+            o.UseBusOutbox();
+        });
+
         // Register local consumers that should run on the in-memory bus with their own scopes (SQS consumers are registered on IExternalBus)
         configuration.AddConsumers(filter => !filter.Name.Contains("sqs", StringComparison.InvariantCultureIgnoreCase), typeof(VideoUploadingModule).Assembly);
         configuration.AddConsumers(filter => !filter.Name.Contains("sqs", StringComparison.InvariantCultureIgnoreCase), typeof(AppDbContext).Assembly);

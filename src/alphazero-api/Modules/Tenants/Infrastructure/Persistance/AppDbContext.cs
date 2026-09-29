@@ -2,6 +2,8 @@ using AlphaZero.Modules.Tenants.Domain;
 using AlphaZero.Shared.Infrastructure.Database;
 using Microsoft.EntityFrameworkCore;
 
+using MassTransit;
+
 namespace AlphaZero.Modules.Tenants.Infrastructure.Persistance;
 
 public class AppDbContext : DbContext
@@ -18,6 +20,10 @@ public class AppDbContext : DbContext
     {
         modelBuilder.HasDefaultSchema(Schema);
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
+
+        modelBuilder.AddInboxStateEntity();
+        modelBuilder.AddOutboxMessageEntity();
+        modelBuilder.AddOutboxStateEntity();
 
         base.OnModelCreating(modelBuilder);
     }

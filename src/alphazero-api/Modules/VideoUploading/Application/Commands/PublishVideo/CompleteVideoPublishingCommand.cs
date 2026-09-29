@@ -26,23 +26,19 @@ public class CompleteVideoPublishingCommandHandler : IRequestHandler<CompleteVid
 {
     private readonly IVideoRepository _videoRepository;
     private readonly IVideoStateRepository _videoStateRepository;
-    private readonly IUnitOfWork _unitOfWork;
     private readonly IModuleBus _moduleBus;
     private readonly IClock _clock;
-    private readonly IVideoProgressNotifier _progressNotifier;
 
     public CompleteVideoPublishingCommandHandler(
         IVideoRepository videoRepository,
         IVideoStateRepository videoStateRepository,
         IModuleBus moduleBus,
-        IClock clock,
-        IVideoProgressNotifier progressNotifier)
+        IClock clock)
     {
         _videoRepository = videoRepository;
         _videoStateRepository = videoStateRepository;
         _moduleBus = moduleBus;
         _clock = clock;
-        _progressNotifier = progressNotifier;
     }
 
     public async Task<ErrorOr<Success>> Handle(CompleteVideoPublishingCommand request, CancellationToken cancellationToken)
@@ -71,20 +67,6 @@ public class CompleteVideoPublishingCommandHandler : IRequestHandler<CompleteVid
         video.UpdateSpecifications(new VideoSpecifications(duration, resolution));
         video.MarkAsPublished( _clock.Now);
         return Result.Success;
-    }
-}
-
-public class NotifyVideoPublishedHandlerPublishSignalR(IVideoProgressNotifier progressNotifier) : INotificationHandler<VideoPublishedDomainEvent>
-{
-    public async Task Handle(VideoPublishedDomainEvent notification, CancellationToken cancellationToken)
-    {
-        await progressNotifier.NotifyProgressAsync(new VideoProgressNotification(
-            notification.VideoId.ToString(),
-            notification.TenantId.ToString(),
-            PipelineStage.Published,
-            "COMPLETE",
-            null
-        ), cancellationToken);
     }
 }
 

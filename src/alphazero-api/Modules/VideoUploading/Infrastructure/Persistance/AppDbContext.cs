@@ -3,6 +3,7 @@ using AlphaZero.Modules.VideoUploading.Infrastructure.Sagas;
 using AlphaZero.Shared.Infrastructure.Database;
 using AlphaZero.Shared.Infrastructure.Tenats;
 using Microsoft.EntityFrameworkCore;
+using MassTransit;
 
 namespace AlphaZero.Modules.VideoUploading.Infrastructure.Persistance;
 
@@ -30,6 +31,10 @@ public class AppDbContext : DbContext, ITenantDbContext
 
         // Auto-apply Tenant and Soft Delete filters for all entities in this module
         modelBuilder.ApplyAlphaZeroGlobalFilters(this);
+
+        modelBuilder.AddInboxStateEntity();
+        modelBuilder.AddOutboxMessageEntity();
+        modelBuilder.AddOutboxStateEntity();
     }
 
 }

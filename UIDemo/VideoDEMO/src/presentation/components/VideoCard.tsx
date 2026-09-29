@@ -67,7 +67,7 @@ export const VideoCard: React.FC<VideoCardProps> = ({
 
   // Determine current pipeline stage index for step indicator
   const currentStageIndex = progress
-    ? PIPELINE_STAGES.indexOf(progress.stage as typeof PIPELINE_STAGES[number])
+    ? (progress.stage === 'published' ? PIPELINE_STAGES.length : PIPELINE_STAGES.indexOf(progress.stage as typeof PIPELINE_STAGES[number]))
     : -1;
 
   return (

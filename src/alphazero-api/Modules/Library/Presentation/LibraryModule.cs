@@ -4,6 +4,8 @@ using Autofac;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
+using MassTransit;
+
 namespace AlphaZero.Modules.Library.Presentation;
 
 public class LibraryModule : AppModule
@@ -22,5 +24,16 @@ public class LibraryModule : AppModule
             moduleServices.AddLibraryPrivateInfrastructure(Configuration);
         else
             _logger?.LogWarning("Configuration is null in Library Module (Private)");
+    }
+
+    public override void ConfigureModuleBus(IBusRegistrationConfigurator configuration)
+    {
+        configuration.AddEntityFrameworkOutbox<AlphaZero.Modules.Library.Infrastructure.Persistance.AppDbContext>(o =>
+        {
+            o.UsePostgres();
+            o.UseBusOutbox();
+        });
+
+        configuration.AddConsumers(typeof(LibraryModule).Assembly);
     }
 }

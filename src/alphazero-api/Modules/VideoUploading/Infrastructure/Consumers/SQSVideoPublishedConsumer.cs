@@ -7,19 +7,25 @@ using MassTransit;
 using Microsoft.Extensions.Logging;
 using System;
 
+using AlphaZero.Modules.VideoUploading.Application.Services;
+using AlphaZero.Modules.VideoUploading.Application.Models;
+
 namespace AlphaZero.Modules.VideoUploading.Infrastructure.Consumers;
 
 public class SQSVideoPublishedConsumer : IConsumer<VideoPublishedQueueMessage>
 {
     private readonly IVideoUploadingModule _module;
     private readonly ILogger<SQSVideoPublishedConsumer> _logger;
+    private readonly IVideoProgressNotifier _progressNotifier;
 
     public SQSVideoPublishedConsumer(
         IVideoUploadingModule module,
-        ILogger<SQSVideoPublishedConsumer> logger)
+        ILogger<SQSVideoPublishedConsumer> logger,
+        IVideoProgressNotifier progressNotifier)
     {
         _module = module;
         _logger = logger;
+        _progressNotifier = progressNotifier;
     }
 
     public async Task Consume(ConsumeContext<VideoPublishedQueueMessage> context)
@@ -36,6 +42,14 @@ public class SQSVideoPublishedConsumer : IConsumer<VideoPublishedQueueMessage>
             msg.Width,
             msg.Height,
             msg.TargetResourceArn
+        ), context.CancellationToken);
+
+        await _progressNotifier.NotifyProgressAsync(new VideoProgressNotification(
+            msg.VideoId.ToString(),
+            msg.TenantId.ToString(),
+            PipelineStage.Published.ToString().ToLowerInvariant(),
+            "COMPLETE",
+            null
         ), context.CancellationToken);
     }
 }

@@ -6,19 +6,25 @@ using MassTransit;
 using MediatR;
 using Microsoft.Extensions.Logging;
 
+using AlphaZero.Modules.VideoUploading.Application.Services;
+using AlphaZero.Modules.VideoUploading.Application.Models;
+
 namespace AlphaZero.Modules.VideoUploading.Infrastructure.Consumers;
 
 public class SQSVideoProcessingFailedConsumer : IConsumer<VideoProcessingFailedQueueMessage>
 {
     private readonly IVideoUploadingModule _module;
     private readonly ILogger<SQSVideoProcessingFailedConsumer> _logger;
+    private readonly IVideoProgressNotifier _progressNotifier;
 
     public SQSVideoProcessingFailedConsumer(
         IVideoUploadingModule module,
-        ILogger<SQSVideoProcessingFailedConsumer> logger)
+        ILogger<SQSVideoProcessingFailedConsumer> logger,
+        IVideoProgressNotifier progressNotifier)
     {
         _module = module;
         _logger = logger;
+        _progressNotifier = progressNotifier;
     }
 
     public async Task Consume(ConsumeContext<VideoProcessingFailedQueueMessage> context)
@@ -29,6 +35,14 @@ public class SQSVideoProcessingFailedConsumer : IConsumer<VideoProcessingFailedQ
         _logger.LogError("[SQS] Processing video failed callback for Video {VideoId}. Reason: {Reason}", msg.VideoId, reason);
 
         await _module.Send(new FailVideoProcessingCommand(msg.VideoId, reason), context.CancellationToken);
+
+        await _progressNotifier.NotifyProgressAsync(new VideoProgressNotification(
+            msg.VideoId.ToString(),
+            msg.TenantId.ToString(),
+            PipelineStage.Failed.ToString().ToLowerInvariant(),
+            "FAILED",
+            reason
+        ), context.CancellationToken);
     }
 }
 

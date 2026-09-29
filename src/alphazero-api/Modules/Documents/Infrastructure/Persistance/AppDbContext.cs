@@ -3,6 +3,8 @@ using AlphaZero.Shared.Infrastructure.Database;
 using AlphaZero.Shared.Infrastructure.Tenats;
 using Microsoft.EntityFrameworkCore;
 
+using MassTransit;
+
 namespace AlphaZero.Modules.Documents.Infrastructure.Persistance;
 
 public class AppDbContext : DbContext, ITenantDbContext
@@ -24,5 +26,9 @@ public class AppDbContext : DbContext, ITenantDbContext
         modelBuilder.HasDefaultSchema(Schema);
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
         modelBuilder.ApplyAlphaZeroGlobalFilters(this);
+        
+        modelBuilder.AddInboxStateEntity();
+        modelBuilder.AddOutboxMessageEntity();
+        modelBuilder.AddOutboxStateEntity();
     }
 }

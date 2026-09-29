@@ -5,7 +5,7 @@ namespace AlphaZero.Modules.VideoUploading.Application.Services;
 public record VideoProgressNotification(
     string VideoId,
     string TenantId,
-    PipelineStage Stage,
+    string Stage,
     string Status,
     string? Metadata);
 

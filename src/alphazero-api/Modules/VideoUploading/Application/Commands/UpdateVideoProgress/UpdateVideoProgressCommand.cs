@@ -36,7 +36,7 @@ public class UpdateVideoProgressCommandHandler : IRequestHandler<UpdateVideoProg
             await _progressNotifier.NotifyProgressAsync(new VideoProgressNotification(
                 request.VideoId.ToString(),
                 request.TenantId.ToString(),
-                request.Stage,
+                request.Stage.ToString().ToLowerInvariant(),
                 request.Status,
                 request.Metadata
             ), cancellationToken);

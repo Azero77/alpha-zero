@@ -31,6 +31,12 @@ public class DocumentsModule : AppModule, IDocumentsModule
 
     public override void ConfigureModuleBus(IBusRegistrationConfigurator configuration)
     {
+        configuration.AddEntityFrameworkOutbox<AlphaZero.Modules.Documents.Infrastructure.Persistance.AppDbContext>(o =>
+        {
+            o.UsePostgres();
+            o.UseBusOutbox();
+        });
+
         configuration.AddConsumers(typeof(DocumentsModule).Assembly);
         configuration.AddConsumers(typeof(AppDbContext).Assembly);
     }
