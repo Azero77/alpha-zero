@@ -1,3 +1,4 @@
+using AlphaZero.Modules.VideoUploading.Application;
 using AlphaZero.Modules.VideoUploading.Application.Commands.PublishVideo;
 using AlphaZero.Modules.VideoUploading.IntegrationEvents;
 using Aspire.Shared;
@@ -10,14 +11,14 @@ namespace AlphaZero.Modules.VideoUploading.Infrastructure.Consumers;
 
 public class SQSVideoPublishedConsumer : IConsumer<VideoPublishedQueueMessage>
 {
-    private readonly IMediator _mediator;
+    private readonly IVideoUploadingModule _module;
     private readonly ILogger<SQSVideoPublishedConsumer> _logger;
 
     public SQSVideoPublishedConsumer(
-        IMediator mediator,
+        IVideoUploadingModule module,
         ILogger<SQSVideoPublishedConsumer> logger)
     {
-        _mediator = mediator;
+        _module = module;
         _logger = logger;
     }
 
@@ -27,7 +28,7 @@ public class SQSVideoPublishedConsumer : IConsumer<VideoPublishedQueueMessage>
         var msg = context.Message;
         _logger.LogInformation("[SQS] Processing video published callback for Video: {VideoId}", msg.VideoId);
 
-        await _mediator.Send(new CompleteVideoPublishingCommand(
+        await _module.Send(new CompleteVideoPublishingCommand(
             msg.VideoId,
             msg.TenantId,
             msg.PlaybackUrl,

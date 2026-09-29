@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.SignalR;
 
 namespace AlphaZero.Modules.VideoUploading.Presentation.Services;
 
-internal abstract class SignalRVideoProgressNotifier(IHubContext<VideoProgressHub> hubContext) : IVideoProgressNotifier
+internal class SignalRVideoProgressNotifier(IHubContext<VideoProgressHub> hubContext) : IVideoProgressNotifier
 {
     public async Task NotifyProgressAsync(VideoProgressNotification notification, CancellationToken cancellationToken = default)
     {

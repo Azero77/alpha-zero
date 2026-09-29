@@ -1,3 +1,4 @@
+using AlphaZero.Modules.VideoUploading.Application;
 using AlphaZero.Modules.VideoUploading.IntegrationEvents;
 using AlphaZero.Modules.VideoUploading.Application.Commands.UpdateVideoProgress;
 using AlphaZero.Modules.VideoUploading.Application.Models;
@@ -11,14 +12,14 @@ namespace AlphaZero.Modules.VideoUploading.Infrastructure.Consumers;
 
 public class SQSVideoProgressConsumer : IConsumer<VideoProgressQueueMessage>
 {
-    private readonly IMediator _mediator;
+    private readonly IVideoUploadingModule _module;
     private readonly ILogger<SQSVideoProgressConsumer> _logger;
 
     public SQSVideoProgressConsumer(
-        IMediator mediator,
+        IVideoUploadingModule module,
         ILogger<SQSVideoProgressConsumer> logger)
     {
-        _mediator = mediator;
+        _module = module;
         _logger = logger;
     }
 
@@ -38,7 +39,7 @@ public class SQSVideoProgressConsumer : IConsumer<VideoProgressQueueMessage>
         {
             if (Guid.TryParse(msg.VideoId, out Guid videoIdGuid) && Guid.TryParse(msg.TenantId, out Guid tenantIdGuid))
             {
-                await _mediator.Send(new UpdateVideoProgressCommand(
+                await _module.Send(new UpdateVideoProgressCommand(
                     videoIdGuid,
                     tenantIdGuid,
                     incomingStage,

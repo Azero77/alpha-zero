@@ -273,7 +273,7 @@ public class Program
         {
             x.AddConsumers(filter => filter.Name.Contains("sqs", StringComparison.InvariantCultureIgnoreCase), assemblies);
             
-            var region = builder.Configuration.GetAWSOptions().Region?.SystemName ?? throw new ArgumentNullException("Aws Options are not provided");
+            var region = builder.Configuration.GetAWSOptions().Region?.SystemName ?? "eu-north-1";
             
             x.UsingAmazonSqs((context, cfg) =>
             {

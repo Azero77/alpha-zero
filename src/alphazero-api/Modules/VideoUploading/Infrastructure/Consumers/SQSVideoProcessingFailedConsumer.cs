@@ -1,3 +1,4 @@
+using AlphaZero.Modules.VideoUploading.Application;
 using AlphaZero.Modules.VideoUploading.Application.Commands.FailVideoProcessing;
 using AlphaZero.Modules.VideoUploading.IntegrationEvents;
 using Aspire.Shared;
@@ -9,14 +10,14 @@ namespace AlphaZero.Modules.VideoUploading.Infrastructure.Consumers;
 
 public class SQSVideoProcessingFailedConsumer : IConsumer<VideoProcessingFailedQueueMessage>
 {
-    private readonly IMediator _mediator;
+    private readonly IVideoUploadingModule _module;
     private readonly ILogger<SQSVideoProcessingFailedConsumer> _logger;
 
     public SQSVideoProcessingFailedConsumer(
-        IMediator mediator,
+        IVideoUploadingModule module,
         ILogger<SQSVideoProcessingFailedConsumer> logger)
     {
-        _mediator = mediator;
+        _module = module;
         _logger = logger;
     }
 
@@ -27,7 +28,7 @@ public class SQSVideoProcessingFailedConsumer : IConsumer<VideoProcessingFailedQ
         string reason = msg.Error?.Cause ?? msg.Error?.ErrorType ?? "Unknown Step Functions failure";
         _logger.LogError("[SQS] Processing video failed callback for Video {VideoId}. Reason: {Reason}", msg.VideoId, reason);
 
-        await _mediator.Send(new FailVideoProcessingCommand(msg.VideoId, reason), context.CancellationToken);
+        await _module.Send(new FailVideoProcessingCommand(msg.VideoId, reason), context.CancellationToken);
     }
 }
 
