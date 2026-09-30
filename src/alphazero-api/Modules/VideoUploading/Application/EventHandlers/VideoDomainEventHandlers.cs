@@ -10,11 +10,11 @@ namespace AlphaZero.Modules.VideoUploading.Application.EventHandlers;
 public class VideoDomainEventHandlers :
     INotificationHandler<VideoMetadataUpdatedDomainEvent>
 {
-    private readonly IModuleBus _publishEndpoint;
+    private readonly IPublishEndpoint _publishEndpoint;
     private readonly ILogger<VideoDomainEventHandlers> _logger;
 
     public VideoDomainEventHandlers(
-        IModuleBus publishEndpoint,
+        IPublishEndpoint publishEndpoint,
         ILogger<VideoDomainEventHandlers> logger)
     {
         _publishEndpoint = publishEndpoint;

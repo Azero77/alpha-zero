@@ -12,12 +12,12 @@ public class DocumentDomainEventHandlers :
     INotificationHandler<DocumentMetadataUpdatedDomainEvent>
 {
     private readonly IDocumentRepository _documentRepository;
-    private readonly IModuleBus _publishEndpoint;
+    private readonly IPublishEndpoint _publishEndpoint;
     private readonly ILogger<DocumentDomainEventHandlers> _logger;
 
     public DocumentDomainEventHandlers(
         IDocumentRepository documentRepository,
-        IModuleBus publishEndpoint,
+        IPublishEndpoint publishEndpoint,
         ILogger<DocumentDomainEventHandlers> logger)
     {
         _documentRepository = documentRepository;

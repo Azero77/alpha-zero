@@ -26,13 +26,13 @@ public class CompleteVideoPublishingCommandHandler : IRequestHandler<CompleteVid
 {
     private readonly IVideoRepository _videoRepository;
     private readonly IVideoStateRepository _videoStateRepository;
-    private readonly IModuleBus _moduleBus;
+    private readonly IPublishEndpoint _moduleBus;
     private readonly IClock _clock;
 
     public CompleteVideoPublishingCommandHandler(
         IVideoRepository videoRepository,
         IVideoStateRepository videoStateRepository,
-        IModuleBus moduleBus,
+        IPublishEndpoint moduleBus,
         IClock clock)
     {
         _videoRepository = videoRepository;
@@ -70,7 +70,7 @@ public class CompleteVideoPublishingCommandHandler : IRequestHandler<CompleteVid
     }
 }
 
-public class VideoPublishedDomainEventHandlerPublishIntegrationEvent(IModuleBus moduleBus, IVideoRepository videoRepository) : INotificationHandler<VideoPublishedDomainEvent>
+public class VideoPublishedDomainEventHandlerPublishIntegrationEvent(IPublishEndpoint moduleBus, IVideoRepository videoRepository) : INotificationHandler<VideoPublishedDomainEvent>
 {
     public async Task Handle(VideoPublishedDomainEvent notification, CancellationToken cancellationToken)
     {   

@@ -231,7 +231,7 @@ public class Program
             });
         });
 
-        builder.Services.AddMassTransit<IModuleBus>(x =>
+        builder.Services.AddMassTransit(x =>
         {
             x.SetKebabCaseEndpointNameFormatter();
             x.AddJobSagaStateMachines(options =>
@@ -256,11 +256,6 @@ public class Program
                 cfg.UseDelayedMessageScheduler();
                 cfg.ConfigureEndpoints(context);
             });
-            /*x.AddEntityFrameworkOutbox<OrchestrationDbContext>(o =>
-            {
-                o.UsePostgres();
-                o.UseBusOutbox();
-            });*/
 
 
             x.ConfigureHealthCheckOptions(options =>
@@ -274,6 +269,7 @@ public class Program
             x.AddEntityFrameworkOutbox<AlphaZero.Modules.VideoUploading.Infrastructure.Persistance.AppDbContext>(o =>
             {
                 o.UsePostgres();
+                o.UseBusOutbox(c => c.DisableDeliveryService());
             });
 
             x.AddConfigureEndpointsCallback((context, name, endpoint) =>
@@ -297,6 +293,8 @@ public class Program
                 options.Name = "external-bus";
             });
         });
+        
+        builder.Services.AddMassTransitMultiBusOutboxWorkaround<IExternalBus, AlphaZero.Modules.VideoUploading.Infrastructure.Persistance.AppDbContext>();
     }
 
     private static void ConfigureAutofac(WebApplicationBuilder builder, List<IModule> moduleInstances)

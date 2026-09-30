@@ -3,8 +3,10 @@ using AlphaZero.Modules.VideoUploading.Infrastructure;
 using AlphaZero.Modules.VideoUploading.Infrastructure.Persistance;
 using AlphaZero.Modules.VideoUploading.Application.Services;
 using AlphaZero.Modules.VideoUploading.Presentation.Services;
+using AlphaZero.Shared.Application;
 using Autofac;
 using MassTransit;
+using AlphaZero.Shared.Infrastructure;
 using MediatR;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -43,7 +45,7 @@ public class VideoUploadingModule : AppModule, IVideoUploadingModule
         });
 
         // Register local consumers that should run on the in-memory bus with their own scopes (SQS consumers are registered on IExternalBus)
-        configuration.AddConsumers(filter => !filter.Name.Contains("sqs", StringComparison.InvariantCultureIgnoreCase), typeof(VideoUploadingModule).Assembly);
-        configuration.AddConsumers(filter => !filter.Name.Contains("sqs", StringComparison.InvariantCultureIgnoreCase), typeof(AppDbContext).Assembly);
+        configuration.AddModuleConsumers<Infrastructure.Persistance.AppDbContext>(filter => !filter.Name.Contains("sqs", StringComparison.InvariantCultureIgnoreCase), typeof(VideoUploadingModule).Assembly);
+        configuration.AddModuleConsumers<Infrastructure.Persistance.AppDbContext>(filter => !filter.Name.Contains("sqs", StringComparison.InvariantCultureIgnoreCase), typeof(Infrastructure.Persistance.AppDbContext).Assembly);
     }
 }

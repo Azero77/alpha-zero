@@ -1,8 +1,10 @@
 using AlphaZero.Modules.Identity.Application;
 using AlphaZero.Modules.Identity.Infrastructure;
+using AlphaZero.Shared.Application;
 using AlphaZero.Shared.Presentation;
 using Autofac;
 using MassTransit;
+using AlphaZero.Shared.Infrastructure;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -38,6 +40,6 @@ public class IdentityModule : AppModule, IIdentityModule
             o.UseBusOutbox();
         });
 
-        configuration.AddConsumers(typeof(IdentityModule).Assembly);
+        configuration.AddModuleConsumers<Infrastructure.Persistance.AppDbContext>(typeof(IdentityModule).Assembly);
     }
 }

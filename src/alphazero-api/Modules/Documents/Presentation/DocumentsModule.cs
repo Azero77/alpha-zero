@@ -1,8 +1,10 @@
 using AlphaZero.Modules.Documents.Application;
 using AlphaZero.Modules.Documents.Infrastructure;
 using AlphaZero.Modules.Documents.Infrastructure.Persistance;
+using AlphaZero.Shared.Application;
 using Autofac;
 using MassTransit;
+using AlphaZero.Shared.Infrastructure;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -37,7 +39,7 @@ public class DocumentsModule : AppModule, IDocumentsModule
             o.UseBusOutbox();
         });
 
-        configuration.AddConsumers(typeof(DocumentsModule).Assembly);
-        configuration.AddConsumers(typeof(AppDbContext).Assembly);
+        configuration.AddModuleConsumers<Infrastructure.Persistance.AppDbContext>(typeof(DocumentsModule).Assembly);
+        configuration.AddModuleConsumers<Infrastructure.Persistance.AppDbContext>(typeof(Infrastructure.Persistance.AppDbContext).Assembly);
     }
 }

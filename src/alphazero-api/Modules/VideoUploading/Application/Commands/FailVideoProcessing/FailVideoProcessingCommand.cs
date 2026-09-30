@@ -41,7 +41,7 @@ public class FailVideoProcessingCommandHandler : IRequestHandler<FailVideoProces
     }
 }
 
-public class VideoFailedDomainEventHandlerPublishIntegrationEvent(IModuleBus moduleBus) : INotificationHandler<VideoFailedDomainEvent>
+public class VideoFailedDomainEventHandlerPublishIntegrationEvent(IPublishEndpoint moduleBus) : INotificationHandler<VideoFailedDomainEvent>
 {
     public async Task Handle(VideoFailedDomainEvent notification, CancellationToken cancellationToken)
     {

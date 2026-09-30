@@ -1,3 +1,4 @@
+using MassTransit;
 using System.Text.Json;
 using AlphaZero.Modules.Library.Domain;
 using AlphaZero.Modules.Courses.IntegrationEvents;
@@ -15,10 +16,10 @@ namespace AlphaZero.Modules.Library.IntegrationEvents;
 public class CourseEnrollmentStrategy : IRedemptionStrategy
 {
     public string StrategyId => "enroll-course";
-    private readonly IModuleBus _bus;
+    private readonly IPublishEndpoint _bus;
     private readonly IClock _clock;
 
-    public CourseEnrollmentStrategy(IModuleBus bus, IClock clock)
+    public CourseEnrollmentStrategy(IPublishEndpoint bus, IClock clock)
     {
         _bus = bus;
         _clock = clock;

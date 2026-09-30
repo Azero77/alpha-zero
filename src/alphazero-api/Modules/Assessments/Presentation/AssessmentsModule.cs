@@ -1,8 +1,10 @@
 using AlphaZero.Modules.Assessments.Application;
 using AlphaZero.Modules.Assessments.Infrastructure;
 using AlphaZero.Modules.Assessments.Infrastructure.Persistence;
+using AlphaZero.Shared.Application;
 using Autofac;
 using MassTransit;
+using AlphaZero.Shared.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -36,7 +38,7 @@ public class AssessmentsModule : AppModule, IAssessmentsModule
             o.UseBusOutbox();
         });
 
-        configuration.AddConsumers(typeof(AssessmentsModule).Assembly);
+        configuration.AddModuleConsumers<Infrastructure.Persistance.AppDbContext>(typeof(AssessmentsModule).Assembly);
         
         // Add Sagas if needed later
     }

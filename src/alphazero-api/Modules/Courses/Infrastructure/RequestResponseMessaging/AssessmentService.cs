@@ -10,7 +10,7 @@ public class AssessmentService : IAssessmentService
 {
     private readonly IRequestClient<CreateAssessmentRequest> _requestClient;
 
-    public AssessmentService(IModuleBus moduleBus)
+    public AssessmentService(IBus moduleBus)
     {
         _requestClient = moduleBus.CreateRequestClient<CreateAssessmentRequest>();
     }

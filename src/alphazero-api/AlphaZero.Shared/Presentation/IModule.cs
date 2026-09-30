@@ -1,3 +1,4 @@
+using AlphaZero.Shared.Application;
 using Autofac;
 using Autofac.Core;
 using Autofac.Extensions.DependencyInjection;

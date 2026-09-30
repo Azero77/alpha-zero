@@ -1,3 +1,4 @@
+using MassTransit;
 using AlphaZero.Modules.Library.Domain;
 using AlphaZero.Modules.Library.IntegrationEvents;
 using AlphaZero.Shared.Application;
@@ -6,7 +7,7 @@ using MediatR;
 
 namespace AlphaZero.Modules.Library.Application.DomainEventHandlers;
 
-public class AccessCodeVoidedDomainEventHandler(IModuleBus bus, IClock clock) : INotificationHandler<AccessCodeVoidedDomainEvent>
+public class AccessCodeVoidedDomainEventHandler(IPublishEndpoint bus, IClock clock) : INotificationHandler<AccessCodeVoidedDomainEvent>
 {
     public async Task Handle(AccessCodeVoidedDomainEvent notification, CancellationToken cancellationToken)
     {

@@ -88,7 +88,7 @@ public record UploadCommandResponse(
 public sealed class UploadCommandHandler(
     IUploadService uploadService,
     IVideoRepository videoRepository,
-    IModuleBus moduleBus,
+    IPublishEndpoint moduleBus,
     IClock clock,
     ITenantProvider tenantProvider) : IRequestHandler<UploadCommand, ErrorOr<UploadCommandResponse>>
 {

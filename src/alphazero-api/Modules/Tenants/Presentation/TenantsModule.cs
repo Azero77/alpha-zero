@@ -1,9 +1,11 @@
 using AlphaZero.Modules.Tenants.Infrastructure;
+using AlphaZero.Shared.Application;
 using AlphaZero.Shared.Presentation;
 using Autofac;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using MassTransit;
+using AlphaZero.Shared.Infrastructure;
 
 namespace AlphaZero.Modules.Tenants.Presentation;
 
@@ -25,7 +27,7 @@ public class TenantsModule : AppModule
             _logger?.LogWarning("Configuration is null in Tenants Module (Private)");
     }
 
-    public override void ConfigureModuleBus(MassTransit.IBusRegistrationConfigurator configuration)
+    public override void ConfigureModuleBus(IBusRegistrationConfigurator configuration)
     {
         configuration.AddEntityFrameworkOutbox<AlphaZero.Modules.Tenants.Infrastructure.Persistance.AppDbContext>(o =>
         {
@@ -33,6 +35,6 @@ public class TenantsModule : AppModule
             o.UseBusOutbox();
         });
 
-        configuration.AddConsumers(typeof(TenantsModule).Assembly);
+        configuration.AddModuleConsumers<Infrastructure.Persistance.AppDbContext>(typeof(TenantsModule).Assembly);
     }
 }

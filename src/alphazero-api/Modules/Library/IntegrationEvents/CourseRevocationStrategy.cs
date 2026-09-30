@@ -1,3 +1,4 @@
+using MassTransit;
 using AlphaZero.Modules.Library.Domain;
 using AlphaZero.Modules.Library.IntegrationEvents;
 using AlphaZero.Shared.Application;
@@ -5,7 +6,7 @@ using AlphaZero.Shared.Domain;
 
 namespace AlphaZero.Modules.Library.IntegrationEvents;
 
-public class CourseRevocationStrategy(IModuleBus bus, IClock clock) : IRevocationStrategy
+public class CourseRevocationStrategy(IPublishEndpoint bus, IClock clock) : IRevocationStrategy
 {
     public string StrategyId => "enroll-course"; // Matches the activation strategy ID
 

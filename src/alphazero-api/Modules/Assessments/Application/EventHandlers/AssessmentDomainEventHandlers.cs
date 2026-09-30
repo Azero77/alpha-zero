@@ -15,12 +15,12 @@ public class AssessmentDomainEventHandlers :
     INotificationHandler<AssessmentPublishedDomainEvent>
 {
     private readonly IAssessmentRepository _assessmentRepository;
-    private readonly IModuleBus _publishEndpoint;
+    private readonly IPublishEndpoint _publishEndpoint;
     private readonly ILogger<AssessmentDomainEventHandlers> _logger;
 
     public AssessmentDomainEventHandlers(
         IAssessmentRepository assessmentRepository,
-        IModuleBus publishEndpoint,
+        IPublishEndpoint publishEndpoint,
         ILogger<AssessmentDomainEventHandlers> logger)
     {
         _assessmentRepository = assessmentRepository;

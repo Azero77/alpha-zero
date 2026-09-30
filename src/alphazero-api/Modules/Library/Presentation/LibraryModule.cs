@@ -1,10 +1,12 @@
 using AlphaZero.Modules.Library.Infrastructure;
+using AlphaZero.Shared.Application;
 using AlphaZero.Shared.Presentation;
 using Autofac;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 using MassTransit;
+using AlphaZero.Shared.Infrastructure;
 
 namespace AlphaZero.Modules.Library.Presentation;
 
@@ -34,6 +36,6 @@ public class LibraryModule : AppModule
             o.UseBusOutbox();
         });
 
-        configuration.AddConsumers(typeof(LibraryModule).Assembly);
+        configuration.AddModuleConsumers<Infrastructure.Persistance.AppDbContext>(typeof(LibraryModule).Assembly);
     }
 }

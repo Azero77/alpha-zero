@@ -1,9 +1,11 @@
 using AlphaZero.Modules.Courses.Infrastructure.Persistance;
 using AlphaZero.Modules.Courses.Infrastructure.Sagas.CourseRedemption;
 using AlphaZero.Modules.Courses.Infrastructure.Sagas.CourseRevocation;
+using AlphaZero.Shared.Application;
 using Autofac;
 using Infrastructure;
 using MassTransit;
+using AlphaZero.Shared.Infrastructure;
 using MediatR;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -53,7 +55,7 @@ public class CoursesModule : AppModule, ICoursesModule
             o.UseBusOutbox();
         });
 
-        configuration.AddConsumers(typeof(CoursesModule).Assembly);
-        configuration.AddConsumers(typeof(AlphaZero.Modules.Courses.Infrastructure.Consumers.AssessmentMetadataChangedConsumer).Assembly);
+        configuration.AddModuleConsumers<Infrastructure.Persistance.AppDbContext>(typeof(CoursesModule).Assembly);
+        configuration.AddModuleConsumers<Infrastructure.Persistance.AppDbContext>(typeof(AlphaZero.Modules.Courses.Infrastructure.Consumers.AssessmentMetadataChangedConsumer).Assembly);
     }
 }

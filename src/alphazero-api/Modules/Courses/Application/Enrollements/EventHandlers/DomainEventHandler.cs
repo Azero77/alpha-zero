@@ -1,3 +1,4 @@
+using MassTransit;
 using AlphaZero.Modules.Courses.Domain.Events;
 using AlphaZero.Modules.Courses.IntegrationEvents;
 using AlphaZero.Shared.Application;
@@ -9,9 +10,9 @@ public class DomainEventHandler :
     INotificationHandler<ItemCompletedDomainEvent>,
     INotificationHandler<EnrollementCreatedDomainEvent>
 {
-    private readonly IModuleBus _moduleBus;
+    private readonly IPublishEndpoint _moduleBus;
 
-    public DomainEventHandler(IModuleBus moduleBus)
+    public DomainEventHandler(IPublishEndpoint moduleBus)
     {
         _moduleBus = moduleBus;
     }
