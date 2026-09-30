@@ -43,6 +43,9 @@ public class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
             services.RemoveAll<ITenantProvider>();
             services.AddHttpContextAccessor();
             services.AddScoped<ITenantProvider, TestTenantProvider>();
+
+            // Mock AWSResources so MassTransit SQS consumers can instantiate
+            services.AddSingleton(new Aspire.Shared.AWSResources { VideoProgressQueue = new Aspire.Shared.SQSQueueSettings { QueueUrl = "https://sqs.mock/mock-queue" }, VideoFailedQueue = new Aspire.Shared.SQSQueueSettings { QueueUrl = "https://sqs.mock/mock-queue-failed" }, VideoPublishedQueue = new Aspire.Shared.SQSQueueSettings { QueueUrl = "https://sqs.mock/mock-queue-pub" } });
         });
     }
 

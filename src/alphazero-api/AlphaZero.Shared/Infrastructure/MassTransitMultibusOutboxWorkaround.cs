@@ -11,12 +11,22 @@ using Microsoft.Extensions.Options;
 
 namespace AlphaZero.Shared.Infrastructure;
 
-public class BusOutboxNotification<TBus> : MassTransit.Middleware.Outbox.BusOutboxNotification, IBusOutboxNotification<TBus> where TBus : class, IBus 
-{
-    public BusOutboxNotification(IOptions<OutboxDeliveryServiceOptions> options) : base(options) {}
-}
-
 public interface IBusOutboxNotification<TBus> : IBusOutboxNotification where TBus : class, IBus {}
+
+public interface IBusOutboxNotification<TBus, TDbContext> : IBusOutboxNotification<TBus> 
+    where TBus : class, IBus 
+    where TDbContext : DbContext 
+{}
+
+public class BusOutboxNotification<TBus, TDbContext> : MassTransit.Middleware.Outbox.BusOutboxNotification, IBusOutboxNotification<TBus, TDbContext> 
+    where TBus : class, IBus 
+    where TDbContext : DbContext 
+{
+    public BusOutboxNotification(IOptions<OutboxDeliveryServiceOptions> options) 
+        : base(options ?? Options.Create(new OutboxDeliveryServiceOptions { QueryDelay = TimeSpan.FromSeconds(10) })) 
+    {
+    }
+}
 
 public static class MassTransitMultibusOutboxWorkaround
 {
@@ -24,10 +34,15 @@ public static class MassTransitMultibusOutboxWorkaround
         where TBus : class, IBus
         where TDbContext : DbContext
     {
+        services.Configure<OutboxDeliveryServiceOptions>(options => 
+        {
+            if (options.QueryDelay == TimeSpan.Zero) options.QueryDelay = TimeSpan.FromSeconds(10);
+        });
+
         services.AddScoped<IScopedBusContextProvider<TBus>, MultibusEntityFrameworkScopedBusContextProvider<TBus, TDbContext>>();
         services.AddHostedService<BusOutboxDeliveryService<TBus, TDbContext>>();
         services.AddHostedService<InboxCleanupService<TBus, TDbContext>>();
-        services.AddSingleton<IBusOutboxNotification<TBus>, BusOutboxNotification<TBus>>();
+        services.AddSingleton<IBusOutboxNotification<TBus, TDbContext>, BusOutboxNotification<TBus, TDbContext>>();
         return services;
     }
 }
@@ -38,11 +53,11 @@ public class MultibusEntityFrameworkScopedBusContextProvider<TBus, TDbContext> :
 {
     private readonly TDbContext _dbContext;
     private readonly TBus _bus;
-    private readonly IBusOutboxNotification<TBus> _notification;
+    private readonly IBusOutboxNotification<TBus, TDbContext> _notification;
     private readonly IClientFactory _clientFactory;
     private readonly IServiceProvider _provider;
 
-    public MultibusEntityFrameworkScopedBusContextProvider(TDbContext dbContext, TBus bus, IBusOutboxNotification<TBus> notification, IClientFactory clientFactory, IServiceProvider provider)
+    public MultibusEntityFrameworkScopedBusContextProvider(TDbContext dbContext, TBus bus, IBusOutboxNotification<TBus, TDbContext> notification, IClientFactory clientFactory, IServiceProvider provider)
     {
         _dbContext = dbContext;
         _bus = bus;
@@ -66,10 +81,12 @@ public class BusOutboxDeliveryService<TBus, TDbContext> : BusOutboxDeliveryServi
         IBusInstance<TBus> busInstance, 
         IOptions<OutboxDeliveryServiceOptions> options, 
         IOptions<EntityFrameworkOutboxOptions<TDbContext>> efOptions, 
-        IBusOutboxNotification<TBus> notification, 
+        IBusOutboxNotification<TBus, TDbContext> notification, 
         ILogger<BusOutboxDeliveryService<TDbContext>> logger, 
         IServiceProvider provider)
-        : base(busInstance.BusControl, options, efOptions, notification, logger, provider)
+        : base(busInstance.BusControl, 
+               options ?? Options.Create(new OutboxDeliveryServiceOptions { QueryDelay = TimeSpan.FromSeconds(10) }), 
+               efOptions, notification, logger, provider)
     {
     }
 }
@@ -79,7 +96,7 @@ public class InboxCleanupService<TBus, TDbContext> : InboxCleanupService<TDbCont
     where TDbContext : DbContext
 {
     public InboxCleanupService(IOptions<InboxCleanupServiceOptions<TDbContext>> options, ILogger<InboxCleanupService<TDbContext>> logger, IServiceProvider provider)
-        : base(options, logger, provider)
+        : base(options ?? Options.Create(new InboxCleanupServiceOptions<TDbContext>()), logger, provider)
     {
     }
 }

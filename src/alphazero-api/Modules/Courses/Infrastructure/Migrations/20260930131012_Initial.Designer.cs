@@ -14,7 +14,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace AlphaZero.Modules.Courses.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260830175449_Initial")]
+    [Migration("20260930131012_Initial")]
     partial class Initial
     {
         /// <inheritdoc />
@@ -67,6 +67,54 @@ namespace AlphaZero.Modules.Courses.Infrastructure.Migrations
                         .HasFilter("\"IsDeleted\" = FALSE");
 
                     b.ToTable("Courses", "Courses");
+                });
+
+            modelBuilder.Entity("AlphaZero.Modules.Courses.Domain.Aggregates.Courses.CourseAsset", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("AssetType")
+                        .IsRequired()
+                        .HasMaxLength(13)
+                        .HasColumnType("character varying(13)");
+
+                    b.Property<Guid>("CourseId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ResourceArn")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("State")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<DateTime>("UploadedUtcAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ResourceArn")
+                        .IsUnique();
+
+                    b.HasIndex("CourseId", "State");
+
+                    b.ToTable("CourseAssets", "Courses");
+
+                    b.HasDiscriminator<string>("AssetType").HasValue("CourseAsset");
+
+                    b.UseTphMappingStrategy();
                 });
 
             modelBuilder.Entity("AlphaZero.Modules.Courses.Domain.Aggregates.Courses.CoursePlan", b =>
@@ -336,6 +384,236 @@ namespace AlphaZero.Modules.Courses.Infrastructure.Migrations
                     b.ToTable("CourseRevocationStates", "Courses");
                 });
 
+            modelBuilder.Entity("MassTransit.EntityFrameworkCoreIntegration.InboxState", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<DateTime?>("Consumed")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("ConsumerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("Delivered")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("ExpirationTime")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<long?>("LastSequenceNumber")
+                        .HasColumnType("bigint");
+
+                    b.Property<Guid>("LockId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("MessageId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("ReceiveCount")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("Received")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("bytea");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Delivered");
+
+                    b.ToTable("InboxState", "Courses");
+                });
+
+            modelBuilder.Entity("MassTransit.EntityFrameworkCoreIntegration.OutboxMessage", b =>
+                {
+                    b.Property<long>("SequenceNumber")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("SequenceNumber"));
+
+                    b.Property<string>("Body")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<Guid?>("ConversationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("CorrelationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("DestinationAddress")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<DateTime?>("EnqueueTime")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("ExpirationTime")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("FaultAddress")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<string>("Headers")
+                        .HasColumnType("text");
+
+                    b.Property<Guid?>("InboxConsumerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("InboxMessageId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("InitiatorId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("MessageId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("MessageType")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid?>("OutboxId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Properties")
+                        .HasColumnType("text");
+
+                    b.Property<Guid?>("RequestId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ResponseAddress")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<DateTime>("SentTime")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("SourceAddress")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.HasKey("SequenceNumber");
+
+                    b.HasIndex("EnqueueTime");
+
+                    b.HasIndex("ExpirationTime");
+
+                    b.HasIndex("OutboxId", "SequenceNumber")
+                        .IsUnique();
+
+                    b.HasIndex("InboxMessageId", "InboxConsumerId", "SequenceNumber")
+                        .IsUnique();
+
+                    b.ToTable("OutboxMessage", "Courses");
+                });
+
+            modelBuilder.Entity("MassTransit.EntityFrameworkCoreIntegration.OutboxState", b =>
+                {
+                    b.Property<Guid>("OutboxId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("Created")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("Delivered")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<long?>("LastSequenceNumber")
+                        .HasColumnType("bigint");
+
+                    b.Property<Guid>("LockId")
+                        .HasColumnType("uuid");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("bytea");
+
+                    b.HasKey("OutboxId");
+
+                    b.HasIndex("Created");
+
+                    b.ToTable("OutboxState", "Courses");
+                });
+
+            modelBuilder.Entity("AlphaZero.Modules.Courses.Domain.Aggregates.Courses.AssessmentCourseAsset", b =>
+                {
+                    b.HasBaseType("AlphaZero.Modules.Courses.Domain.Aggregates.Courses.CourseAsset");
+
+                    b.Property<int>("QuestionsNumber")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.HasDiscriminator().HasValue("Assessment");
+                });
+
+            modelBuilder.Entity("AlphaZero.Modules.Courses.Domain.Aggregates.Courses.DocumentCourseAsset", b =>
+                {
+                    b.HasBaseType("AlphaZero.Modules.Courses.Domain.Aggregates.Courses.CourseAsset");
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("FileName")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<long>("Size")
+                        .HasColumnType("bigint");
+
+                    b.HasDiscriminator().HasValue("Document");
+                });
+
+            modelBuilder.Entity("AlphaZero.Modules.Courses.Domain.Aggregates.Courses.VideoCourseAsset", b =>
+                {
+                    b.HasBaseType("AlphaZero.Modules.Courses.Domain.Aggregates.Courses.CourseAsset");
+
+                    b.Property<TimeSpan>("Duration")
+                        .HasColumnType("interval");
+
+                    b.Property<string>("RelativeStreamingUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("ThumbnailUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.HasDiscriminator().HasValue("Video");
+                });
+
+            modelBuilder.Entity("AlphaZero.Modules.Courses.Domain.Aggregates.Courses.CourseAsset", b =>
+                {
+                    b.HasOne("AlphaZero.Modules.Courses.Domain.Aggregates.Courses.Course", null)
+                        .WithMany("Assets")
+                        .HasForeignKey("CourseId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("AlphaZero.Modules.Courses.Domain.Aggregates.Courses.CoursePlan", b =>
                 {
                     b.HasOne("AlphaZero.Modules.Courses.Domain.Aggregates.Courses.Course", null)
@@ -368,10 +646,8 @@ namespace AlphaZero.Modules.Courses.Infrastructure.Migrations
                                 .ValueGeneratedOnAdd()
                                 .HasColumnType("uuid");
 
-                            b1.Property<string>("Arn")
-                                .IsRequired()
-                                .HasMaxLength(500)
-                                .HasColumnType("character varying(500)");
+                            b1.Property<Guid>("CourseAssetId")
+                                .HasColumnType("uuid");
 
                             b1.Property<Guid>("CurriculumItemId")
                                 .HasColumnType("uuid");
@@ -382,19 +658,24 @@ namespace AlphaZero.Modules.Courses.Infrastructure.Migrations
                             b1.Property<int>("Order")
                                 .HasColumnType("integer");
 
-                            b1.Property<string>("Type")
-                                .IsRequired()
-                                .HasMaxLength(50)
-                                .HasColumnType("character varying(50)");
-
                             b1.HasKey("Id");
+
+                            b1.HasIndex("CourseAssetId");
 
                             b1.HasIndex("CurriculumItemId");
 
                             b1.ToTable("CurriculumResources", "Courses");
 
+                            b1.HasOne("AlphaZero.Modules.Courses.Domain.Aggregates.Courses.CourseAsset", "Asset")
+                                .WithMany()
+                                .HasForeignKey("CourseAssetId")
+                                .OnDelete(DeleteBehavior.Restrict)
+                                .IsRequired();
+
                             b1.WithOwner()
                                 .HasForeignKey("CurriculumItemId");
+
+                            b1.Navigation("Asset");
                         });
 
                     b.Navigation("Resources");
@@ -406,6 +687,10 @@ namespace AlphaZero.Modules.Courses.Infrastructure.Migrations
                         {
                             b1.Property<Guid>("EnrollementId")
                                 .HasColumnType("uuid");
+
+                            b1.Property<int>("ActiveItems")
+                                .HasColumnType("integer")
+                                .HasColumnName("ProgressActiveItems");
 
                             b1.Property<BitArray>("Bitmask")
                                 .IsRequired()
@@ -428,8 +713,22 @@ namespace AlphaZero.Modules.Courses.Infrastructure.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("MassTransit.EntityFrameworkCoreIntegration.OutboxMessage", b =>
+                {
+                    b.HasOne("MassTransit.EntityFrameworkCoreIntegration.OutboxState", null)
+                        .WithMany()
+                        .HasForeignKey("OutboxId");
+
+                    b.HasOne("MassTransit.EntityFrameworkCoreIntegration.InboxState", null)
+                        .WithMany()
+                        .HasForeignKey("InboxMessageId", "InboxConsumerId")
+                        .HasPrincipalKey("MessageId", "ConsumerId");
+                });
+
             modelBuilder.Entity("AlphaZero.Modules.Courses.Domain.Aggregates.Courses.Course", b =>
                 {
+                    b.Navigation("Assets");
+
                     b.Navigation("Plans");
 
                     b.Navigation("Sections");

@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace AlphaZero.Shared.Migrations
 {
     [DbContext(typeof(JobServiceSagaDbContext))]
-    [Migration("20260503161649_Initial")]
+    [Migration("20260930131059_Initial")]
     partial class Initial
     {
         /// <inheritdoc />

@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace AlphaZero.Modules.VideoUploading.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260925085339_RemovedSourceKey")]
-    partial class RemovedSourceKey
+    [Migration("20260930131032_Initial")]
+    partial class Initial
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -38,15 +38,14 @@ namespace AlphaZero.Modules.VideoUploading.Infrastructure.Migrations
                         .HasMaxLength(1000)
                         .HasColumnType("character varying(1000)");
 
+                    b.Property<bool>("IsDefaultThumbnail")
+                        .HasColumnType("boolean");
+
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
 
                     b.Property<DateTime?>("OnDeleted")
                         .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("OutputFolder")
-                        .HasMaxLength(512)
-                        .HasColumnType("character varying(512)");
 
                     b.Property<DateTime?>("PublishedOn")
                         .HasColumnType("timestamp with time zone");
@@ -104,47 +103,15 @@ namespace AlphaZero.Modules.VideoUploading.Infrastructure.Migrations
 
             modelBuilder.Entity("AlphaZero.Modules.VideoUploading.Infrastructure.Sagas.VideoState", b =>
                 {
-                    b.Property<Guid>("CorrelationId")
+                    b.Property<Guid>("VideoId")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
-
-                    b.Property<string>("CurrentState")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("CustomThumbnailKey")
-                        .HasMaxLength(512)
-                        .HasColumnType("character varying(512)");
-
-                    b.Property<TimeSpan?>("Duration")
-                        .HasColumnType("interval");
-
-                    b.Property<string>("EncryptionMethod")
-                        .HasColumnType("text");
-
-                    b.Property<string>("FinalUrl")
-                        .HasColumnType("text");
-
-                    b.Property<bool>("IsFailed")
-                        .HasColumnType("boolean");
-
-                    b.Property<string>("Key")
-                        .HasColumnType("text");
 
                     b.Property<string>("MediaConverterJobId")
                         .HasColumnType("text");
 
-                    b.Property<string>("S3OutputPrefix")
-                        .HasColumnType("text");
-
-                    b.Property<int?>("SourceHeight")
+                    b.Property<int>("Stage")
                         .HasColumnType("integer");
-
-                    b.Property<int?>("SourceWidth")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("TargetResourceArn")
-                        .HasColumnType("text");
 
                     b.Property<Guid>("TenantId")
                         .HasColumnType("uuid");
@@ -153,48 +120,184 @@ namespace AlphaZero.Modules.VideoUploading.Infrastructure.Migrations
                         .IsConcurrencyToken()
                         .HasColumnType("integer");
 
-                    b.HasKey("CorrelationId");
+                    b.HasKey("VideoId");
 
-                    b.HasIndex("CorrelationId")
+                    b.HasIndex("VideoId")
                         .IsUnique();
 
                     b.ToTable("VideoState", "video_uploading");
                 });
 
+            modelBuilder.Entity("MassTransit.EntityFrameworkCoreIntegration.InboxState", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<DateTime?>("Consumed")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("ConsumerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("Delivered")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("ExpirationTime")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<long?>("LastSequenceNumber")
+                        .HasColumnType("bigint");
+
+                    b.Property<Guid>("LockId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("MessageId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("ReceiveCount")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("Received")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("bytea");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Delivered");
+
+                    b.ToTable("InboxState", "video_uploading");
+                });
+
+            modelBuilder.Entity("MassTransit.EntityFrameworkCoreIntegration.OutboxMessage", b =>
+                {
+                    b.Property<long>("SequenceNumber")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("SequenceNumber"));
+
+                    b.Property<string>("Body")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<Guid?>("ConversationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("CorrelationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("DestinationAddress")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<DateTime?>("EnqueueTime")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("ExpirationTime")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("FaultAddress")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<string>("Headers")
+                        .HasColumnType("text");
+
+                    b.Property<Guid?>("InboxConsumerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("InboxMessageId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("InitiatorId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("MessageId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("MessageType")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid?>("OutboxId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Properties")
+                        .HasColumnType("text");
+
+                    b.Property<Guid?>("RequestId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ResponseAddress")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<DateTime>("SentTime")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("SourceAddress")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.HasKey("SequenceNumber");
+
+                    b.HasIndex("EnqueueTime");
+
+                    b.HasIndex("ExpirationTime");
+
+                    b.HasIndex("OutboxId", "SequenceNumber")
+                        .IsUnique();
+
+                    b.HasIndex("InboxMessageId", "InboxConsumerId", "SequenceNumber")
+                        .IsUnique();
+
+                    b.ToTable("OutboxMessage", "video_uploading");
+                });
+
+            modelBuilder.Entity("MassTransit.EntityFrameworkCoreIntegration.OutboxState", b =>
+                {
+                    b.Property<Guid>("OutboxId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("Created")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("Delivered")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<long?>("LastSequenceNumber")
+                        .HasColumnType("bigint");
+
+                    b.Property<Guid>("LockId")
+                        .HasColumnType("uuid");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("bytea");
+
+                    b.HasKey("OutboxId");
+
+                    b.HasIndex("Created");
+
+                    b.ToTable("OutboxState", "video_uploading");
+                });
+
             modelBuilder.Entity("AlphaZero.Modules.VideoUploading.Domain.Models.Video", b =>
                 {
-                    b.OwnsOne("AlphaZero.Modules.VideoUploading.Domain.Models.ThumbnailInfo", "Thumbnail", b1 =>
-                        {
-                            b1.Property<Guid>("VideoId")
-                                .HasColumnType("uuid");
-
-                            b1.Property<string>("CustomThumbnailKey")
-                                .HasMaxLength(512)
-                                .HasColumnType("character varying(512)")
-                                .HasColumnName("CustomThumbnailKey");
-
-                            b1.Property<int>("State")
-                                .HasColumnType("integer");
-
-                            b1.Property<string>("ThumbnailUrl")
-                                .HasMaxLength(1024)
-                                .HasColumnType("character varying(1024)")
-                                .HasColumnName("ThumbnailUrl");
-
-                            b1.Property<bool>("UseCustom")
-                                .ValueGeneratedOnAdd()
-                                .HasColumnType("boolean")
-                                .HasDefaultValue(false)
-                                .HasColumnName("UseCustomThumbnail");
-
-                            b1.HasKey("VideoId");
-
-                            b1.ToTable("Videos", "video_uploading");
-
-                            b1.WithOwner()
-                                .HasForeignKey("VideoId");
-                        });
-
                     b.OwnsOne("AlphaZero.Modules.VideoUploading.Domain.Models.VideoMetadata", "Metadata", b1 =>
                         {
                             b1.Property<Guid>("VideoId")
@@ -277,9 +380,18 @@ namespace AlphaZero.Modules.VideoUploading.Infrastructure.Migrations
 
                     b.Navigation("Specifications")
                         .IsRequired();
+                });
 
-                    b.Navigation("Thumbnail")
-                        .IsRequired();
+            modelBuilder.Entity("MassTransit.EntityFrameworkCoreIntegration.OutboxMessage", b =>
+                {
+                    b.HasOne("MassTransit.EntityFrameworkCoreIntegration.OutboxState", null)
+                        .WithMany()
+                        .HasForeignKey("OutboxId");
+
+                    b.HasOne("MassTransit.EntityFrameworkCoreIntegration.InboxState", null)
+                        .WithMany()
+                        .HasForeignKey("InboxMessageId", "InboxConsumerId")
+                        .HasPrincipalKey("MessageId", "ConsumerId");
                 });
 #pragma warning restore 612, 618
         }

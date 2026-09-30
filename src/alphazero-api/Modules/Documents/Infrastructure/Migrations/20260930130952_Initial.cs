@@ -4,31 +4,41 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
-namespace AlphaZero.Modules.Identity.Infrastructure.Migrations
+namespace AlphaZero.Modules.Documents.Infrastructure.Migrations
 {
     /// <inheritdoc />
-    public partial class AddMassTransitOutbox : Migration
+    public partial class Initial : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropTable(
-                name: "InlinePolicy",
-                schema: "Identity");
+            migrationBuilder.EnsureSchema(
+                name: "documents");
 
-            migrationBuilder.DropIndex(
-                name: "IX_TenantUsers_TenantId",
-                schema: "Identity",
-                table: "TenantUsers");
-
-            migrationBuilder.DropIndex(
-                name: "IX_TenantPrincipalAssignments_TenantId",
-                schema: "Identity",
-                table: "TenantPrincipalAssignments");
+            migrationBuilder.CreateTable(
+                name: "Documents",
+                schema: "documents",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    TenantId = table.Column<Guid>(type: "uuid", nullable: false),
+                    Title = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: false),
+                    Description = table.Column<string>(type: "character varying(2000)", maxLength: 2000, nullable: true),
+                    FileType = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
+                    S3Key = table.Column<string>(type: "character varying(1000)", maxLength: 1000, nullable: false),
+                    FileSizeBytes = table.Column<long>(type: "bigint", nullable: false),
+                    CreatedOn = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    IsDeleted = table.Column<bool>(type: "boolean", nullable: false),
+                    OnDeleted = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Documents", x => x.Id);
+                });
 
             migrationBuilder.CreateTable(
                 name: "InboxState",
-                schema: "Identity",
+                schema: "documents",
                 columns: table => new
                 {
                     Id = table.Column<long>(type: "bigint", nullable: false)
@@ -52,7 +62,7 @@ namespace AlphaZero.Modules.Identity.Infrastructure.Migrations
 
             migrationBuilder.CreateTable(
                 name: "OutboxState",
-                schema: "Identity",
+                schema: "documents",
                 columns: table => new
                 {
                     OutboxId = table.Column<Guid>(type: "uuid", nullable: false),
@@ -69,7 +79,7 @@ namespace AlphaZero.Modules.Identity.Infrastructure.Migrations
 
             migrationBuilder.CreateTable(
                 name: "OutboxMessage",
-                schema: "Identity",
+                schema: "documents",
                 columns: table => new
                 {
                     SequenceNumber = table.Column<long>(type: "bigint", nullable: false)
@@ -101,52 +111,65 @@ namespace AlphaZero.Modules.Identity.Infrastructure.Migrations
                     table.ForeignKey(
                         name: "FK_OutboxMessage_InboxState_InboxMessageId_InboxConsumerId",
                         columns: x => new { x.InboxMessageId, x.InboxConsumerId },
-                        principalSchema: "Identity",
+                        principalSchema: "documents",
                         principalTable: "InboxState",
                         principalColumns: new[] { "MessageId", "ConsumerId" });
                     table.ForeignKey(
                         name: "FK_OutboxMessage_OutboxState_OutboxId",
                         column: x => x.OutboxId,
-                        principalSchema: "Identity",
+                        principalSchema: "documents",
                         principalTable: "OutboxState",
                         principalColumn: "OutboxId");
                 });
 
             migrationBuilder.CreateIndex(
+                name: "IX_Documents_IsDeleted",
+                schema: "documents",
+                table: "Documents",
+                column: "IsDeleted",
+                filter: "\"IsDeleted\" = FALSE");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Documents_TenantId_IsDeleted",
+                schema: "documents",
+                table: "Documents",
+                columns: new[] { "TenantId", "IsDeleted" });
+
+            migrationBuilder.CreateIndex(
                 name: "IX_InboxState_Delivered",
-                schema: "Identity",
+                schema: "documents",
                 table: "InboxState",
                 column: "Delivered");
 
             migrationBuilder.CreateIndex(
                 name: "IX_OutboxMessage_EnqueueTime",
-                schema: "Identity",
+                schema: "documents",
                 table: "OutboxMessage",
                 column: "EnqueueTime");
 
             migrationBuilder.CreateIndex(
                 name: "IX_OutboxMessage_ExpirationTime",
-                schema: "Identity",
+                schema: "documents",
                 table: "OutboxMessage",
                 column: "ExpirationTime");
 
             migrationBuilder.CreateIndex(
                 name: "IX_OutboxMessage_InboxMessageId_InboxConsumerId_SequenceNumber",
-                schema: "Identity",
+                schema: "documents",
                 table: "OutboxMessage",
                 columns: new[] { "InboxMessageId", "InboxConsumerId", "SequenceNumber" },
                 unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_OutboxMessage_OutboxId_SequenceNumber",
-                schema: "Identity",
+                schema: "documents",
                 table: "OutboxMessage",
                 columns: new[] { "OutboxId", "SequenceNumber" },
                 unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_OutboxState_Created",
-                schema: "Identity",
+                schema: "documents",
                 table: "OutboxState",
                 column: "Created");
         }
@@ -155,48 +178,20 @@ namespace AlphaZero.Modules.Identity.Infrastructure.Migrations
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropTable(
+                name: "Documents",
+                schema: "documents");
+
+            migrationBuilder.DropTable(
                 name: "OutboxMessage",
-                schema: "Identity");
+                schema: "documents");
 
             migrationBuilder.DropTable(
                 name: "InboxState",
-                schema: "Identity");
+                schema: "documents");
 
             migrationBuilder.DropTable(
                 name: "OutboxState",
-                schema: "Identity");
-
-            migrationBuilder.CreateTable(
-                name: "InlinePolicy",
-                schema: "Identity",
-                columns: table => new
-                {
-                    Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    Name = table.Column<string>(type: "text", nullable: false),
-                    TenantId = table.Column<Guid>(type: "uuid", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_InlinePolicy", x => x.Id);
-                });
-
-            migrationBuilder.CreateIndex(
-                name: "IX_TenantUsers_TenantId",
-                schema: "Identity",
-                table: "TenantUsers",
-                column: "TenantId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_TenantPrincipalAssignments_TenantId",
-                schema: "Identity",
-                table: "TenantPrincipalAssignments",
-                column: "TenantId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_InlinePolicy_TenantId",
-                schema: "Identity",
-                table: "InlinePolicy",
-                column: "TenantId");
+                schema: "documents");
         }
     }
 }

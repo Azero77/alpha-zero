@@ -38,6 +38,7 @@ public class IdentityModule : AppModule, IIdentityModule
         {
             o.UsePostgres();
             o.UseBusOutbox();
+            o.QueryDelay = TimeSpan.FromMinutes(5);
         });
 
         configuration.AddModuleConsumers<Infrastructure.Persistance.AppDbContext>(typeof(IdentityModule).Assembly);

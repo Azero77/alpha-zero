@@ -7,11 +7,14 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace AlphaZero.Modules.VideoUploading.Infrastructure.Migrations
 {
     /// <inheritdoc />
-    public partial class AddMassTransitOutbox : Migration
+    public partial class Initial : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.EnsureSchema(
+                name: "video_uploading");
+
             migrationBuilder.CreateTable(
                 name: "InboxState",
                 schema: "video_uploading",
@@ -51,6 +54,67 @@ namespace AlphaZero.Modules.VideoUploading.Infrastructure.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_OutboxState", x => x.OutboxId);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Videos",
+                schema: "video_uploading",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    TenantId = table.Column<Guid>(type: "uuid", nullable: false),
+                    Title = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: false),
+                    Description = table.Column<string>(type: "character varying(1000)", maxLength: 1000, nullable: true),
+                    Status = table.Column<string>(type: "text", nullable: false),
+                    OriginalFileName = table.Column<string>(type: "text", nullable: false),
+                    ContentType = table.Column<string>(type: "text", nullable: false),
+                    FileSize = table.Column<long>(type: "bigint", nullable: false),
+                    Metadata_TranscodingMethod = table.Column<string>(type: "text", nullable: false),
+                    Metadata_EncryptionMethod = table.Column<string>(type: "text", nullable: true),
+                    Duration = table.Column<TimeSpan>(type: "interval", nullable: false),
+                    Width = table.Column<int>(type: "integer", nullable: false),
+                    Height = table.Column<int>(type: "integer", nullable: false),
+                    IsDefaultThumbnail = table.Column<bool>(type: "boolean", nullable: false),
+                    CreatedOn = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    PublishedOn = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    IsDeleted = table.Column<bool>(type: "boolean", nullable: false),
+                    OnDeleted = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Videos", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "VideoSecrets",
+                schema: "video_uploading",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    VideoId = table.Column<Guid>(type: "uuid", nullable: false),
+                    KeyId = table.Column<string>(type: "character varying(128)", maxLength: 128, nullable: false),
+                    KeyValue = table.Column<string>(type: "character varying(512)", maxLength: 512, nullable: false),
+                    IV = table.Column<string>(type: "character varying(128)", maxLength: 128, nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_VideoSecrets", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "VideoState",
+                schema: "video_uploading",
+                columns: table => new
+                {
+                    VideoId = table.Column<Guid>(type: "uuid", nullable: false),
+                    TenantId = table.Column<Guid>(type: "uuid", nullable: false),
+                    Stage = table.Column<int>(type: "integer", nullable: false),
+                    MediaConverterJobId = table.Column<string>(type: "text", nullable: true),
+                    Version = table.Column<int>(type: "integer", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_VideoState", x => x.VideoId);
                 });
 
             migrationBuilder.CreateTable(
@@ -135,6 +199,27 @@ namespace AlphaZero.Modules.VideoUploading.Infrastructure.Migrations
                 schema: "video_uploading",
                 table: "OutboxState",
                 column: "Created");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Videos_IsDeleted",
+                schema: "video_uploading",
+                table: "Videos",
+                column: "IsDeleted",
+                filter: "\"IsDeleted\" = FALSE");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_VideoSecrets_VideoId",
+                schema: "video_uploading",
+                table: "VideoSecrets",
+                column: "VideoId",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_VideoState_VideoId",
+                schema: "video_uploading",
+                table: "VideoState",
+                column: "VideoId",
+                unique: true);
         }
 
         /// <inheritdoc />
@@ -142,6 +227,18 @@ namespace AlphaZero.Modules.VideoUploading.Infrastructure.Migrations
         {
             migrationBuilder.DropTable(
                 name: "OutboxMessage",
+                schema: "video_uploading");
+
+            migrationBuilder.DropTable(
+                name: "Videos",
+                schema: "video_uploading");
+
+            migrationBuilder.DropTable(
+                name: "VideoSecrets",
+                schema: "video_uploading");
+
+            migrationBuilder.DropTable(
+                name: "VideoState",
                 schema: "video_uploading");
 
             migrationBuilder.DropTable(

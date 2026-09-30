@@ -270,12 +270,9 @@ public class Program
             {
                 o.UsePostgres();
                 o.UseBusOutbox(c => c.DisableDeliveryService());
+                o.QueryDelay = TimeSpan.FromMinutes(5);
             });
 
-            x.AddConfigureEndpointsCallback((context, name, endpoint) =>
-            {
-                endpoint.UseEntityFrameworkOutbox<AlphaZero.Modules.VideoUploading.Infrastructure.Persistance.AppDbContext>(context);
-            });
 
             x.AddConsumers(filter => filter.Name.Contains("sqs", StringComparison.InvariantCultureIgnoreCase), assemblies);
             
@@ -299,6 +296,9 @@ public class Program
 
     private static void ConfigureAutofac(WebApplicationBuilder builder, List<IModule> moduleInstances)
     {
+        // Replace MassTransit's buggy BusOutboxNotification with a thread-safe one
+        builder.Services.AddSingleton<MassTransit.Middleware.Outbox.IBusOutboxNotification, AlphaZero.Shared.Infrastructure.ThreadSafeBusOutboxNotification>();
+
         builder.Host.UseServiceProviderFactory(new AutofacServiceProviderFactory());
         builder.Host.ConfigureContainer<ContainerBuilder>(containerBuilder =>
         {

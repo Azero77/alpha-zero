@@ -4,17 +4,20 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
-namespace AlphaZero.Modules.Library.Infrastructure.Migrations
+namespace AlphaZero.Modules.Tenants.Infrastructure.Migrations
 {
     /// <inheritdoc />
-    public partial class AddMassTransitOutbox : Migration
+    public partial class Initial : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.EnsureSchema(
+                name: "Tenants");
+
             migrationBuilder.CreateTable(
                 name: "InboxState",
-                schema: "Library",
+                schema: "Tenants",
                 columns: table => new
                 {
                     Id = table.Column<long>(type: "bigint", nullable: false)
@@ -38,7 +41,7 @@ namespace AlphaZero.Modules.Library.Infrastructure.Migrations
 
             migrationBuilder.CreateTable(
                 name: "OutboxState",
-                schema: "Library",
+                schema: "Tenants",
                 columns: table => new
                 {
                     OutboxId = table.Column<Guid>(type: "uuid", nullable: false),
@@ -54,8 +57,29 @@ namespace AlphaZero.Modules.Library.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "Tenants",
+                schema: "Tenants",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    Name = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: false),
+                    Subdomain = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: false),
+                    PrimaryColor = table.Column<string>(type: "character varying(32)", maxLength: 32, nullable: false, defaultValue: "#2563eb"),
+                    SecondaryColor = table.Column<string>(type: "character varying(32)", maxLength: 32, nullable: true),
+                    LogoUrl = table.Column<string>(type: "character varying(512)", maxLength: 512, nullable: true),
+                    DarkModeLogoUrl = table.Column<string>(type: "character varying(512)", maxLength: 512, nullable: true),
+                    FaviconUrl = table.Column<string>(type: "character varying(512)", maxLength: 512, nullable: true),
+                    Status = table.Column<string>(type: "character varying(32)", maxLength: 32, nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Tenants", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "OutboxMessage",
-                schema: "Library",
+                schema: "Tenants",
                 columns: table => new
                 {
                     SequenceNumber = table.Column<long>(type: "bigint", nullable: false)
@@ -87,54 +111,61 @@ namespace AlphaZero.Modules.Library.Infrastructure.Migrations
                     table.ForeignKey(
                         name: "FK_OutboxMessage_InboxState_InboxMessageId_InboxConsumerId",
                         columns: x => new { x.InboxMessageId, x.InboxConsumerId },
-                        principalSchema: "Library",
+                        principalSchema: "Tenants",
                         principalTable: "InboxState",
                         principalColumns: new[] { "MessageId", "ConsumerId" });
                     table.ForeignKey(
                         name: "FK_OutboxMessage_OutboxState_OutboxId",
                         column: x => x.OutboxId,
-                        principalSchema: "Library",
+                        principalSchema: "Tenants",
                         principalTable: "OutboxState",
                         principalColumn: "OutboxId");
                 });
 
             migrationBuilder.CreateIndex(
                 name: "IX_InboxState_Delivered",
-                schema: "Library",
+                schema: "Tenants",
                 table: "InboxState",
                 column: "Delivered");
 
             migrationBuilder.CreateIndex(
                 name: "IX_OutboxMessage_EnqueueTime",
-                schema: "Library",
+                schema: "Tenants",
                 table: "OutboxMessage",
                 column: "EnqueueTime");
 
             migrationBuilder.CreateIndex(
                 name: "IX_OutboxMessage_ExpirationTime",
-                schema: "Library",
+                schema: "Tenants",
                 table: "OutboxMessage",
                 column: "ExpirationTime");
 
             migrationBuilder.CreateIndex(
                 name: "IX_OutboxMessage_InboxMessageId_InboxConsumerId_SequenceNumber",
-                schema: "Library",
+                schema: "Tenants",
                 table: "OutboxMessage",
                 columns: new[] { "InboxMessageId", "InboxConsumerId", "SequenceNumber" },
                 unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_OutboxMessage_OutboxId_SequenceNumber",
-                schema: "Library",
+                schema: "Tenants",
                 table: "OutboxMessage",
                 columns: new[] { "OutboxId", "SequenceNumber" },
                 unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_OutboxState_Created",
-                schema: "Library",
+                schema: "Tenants",
                 table: "OutboxState",
                 column: "Created");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Tenants_Subdomain",
+                schema: "Tenants",
+                table: "Tenants",
+                column: "Subdomain",
+                unique: true);
         }
 
         /// <inheritdoc />
@@ -142,15 +173,19 @@ namespace AlphaZero.Modules.Library.Infrastructure.Migrations
         {
             migrationBuilder.DropTable(
                 name: "OutboxMessage",
-                schema: "Library");
+                schema: "Tenants");
+
+            migrationBuilder.DropTable(
+                name: "Tenants",
+                schema: "Tenants");
 
             migrationBuilder.DropTable(
                 name: "InboxState",
-                schema: "Library");
+                schema: "Tenants");
 
             migrationBuilder.DropTable(
                 name: "OutboxState",
-                schema: "Library");
+                schema: "Tenants");
         }
     }
 }
