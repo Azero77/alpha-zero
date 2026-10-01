@@ -85,6 +85,16 @@ public class Function
                 metadata,
                 VideoObjectStorageMetadataTags.Description);
 
+            var defaultThumbnailStr = GetOptionalMetadata(
+                metadata,
+                VideoObjectStorageMetadataTags.DefaultThumbnail);
+            
+            bool isDefaultThumbnail = true; // fallback
+            if (!string.IsNullOrWhiteSpace(defaultThumbnailStr) && bool.TryParse(defaultThumbnailStr, out var parsedDefaultThumbnail))
+            {
+                isDefaultThumbnail = parsedDefaultThumbnail;
+            }
+
             context.Logger.LogInformation(
                 $"Successfully parsed metadata for video '{videoId}'.");
 
@@ -98,7 +108,8 @@ public class Function
                 SourceKey: input.SourceKey,
                 TargetResourceArn: targetResourceArn,
                 TranscodingEngine: transcodingMethod,
-                EncryptionMethod: encryptionMethod);
+                EncryptionMethod: encryptionMethod,
+                IsDefaultThumbnail: isDefaultThumbnail);
         }
         catch (AmazonS3Exception ex)
         {

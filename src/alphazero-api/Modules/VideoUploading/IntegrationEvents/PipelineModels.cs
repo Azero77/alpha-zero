@@ -20,7 +20,8 @@ public record S3VideoCreatedEventParserOutput(
     string SourceKey,
     string? TargetResourceArn = null,
     string? TranscodingEngine = "FFMPEG",
-    string? EncryptionMethod = "ClearKey");
+    string? EncryptionMethod = "ClearKey",
+    bool IsDefaultThumbnail = true);
 
 public record VideoAnalyzerInput(
     string VideoId,
@@ -29,7 +30,8 @@ public record VideoAnalyzerInput(
     string SourceKey,
     string? TargetResourceArn = null,
     string? TranscodingEngine = "FFMPEG",
-    string? EncryptionMethod = "ClearKey");
+    string? EncryptionMethod = "ClearKey",
+    bool IsDefaultThumbnail = true);
 
 public record SourceMetadata(
     int SourceWidth,
@@ -64,7 +66,9 @@ public record JobPreparerInput(
     SourceMetadata SourceMetadata,
     string? TargetResourceArn = null,
     string? TranscodingEngine = "FFMPEG",
-    string? EncryptionMethod = "ClearKey");
+    string? EncryptionMethod = "ClearKey",
+    bool IsDefaultThumbnail = true,
+    string? CustomThumbnailKey = null);
 
 public record JobPreparerOutput(
     string JobConfigS3Uri,

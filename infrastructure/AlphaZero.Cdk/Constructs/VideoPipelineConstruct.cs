@@ -304,7 +304,7 @@ public class VideoPipelineConstruct : Construct
                 ["TenantId"] = JsonPath.StringAt("$.TenantId"),
                 ["Status"] = "Published",
                 ["PlaybackUrl"] = JsonPath.Format("{}/{}/master.m3u8", JsonPath.StringAt("$.TenantId"), JsonPath.StringAt("$.VideoId")),
-                ["ThumbnailUrl"] = JsonPath.Format("{}/{}/poster.jpg", JsonPath.StringAt("$.TenantId"), JsonPath.StringAt("$.VideoId")),
+                ["ThumbnailUrl"] = JsonPath.Format("{}/{}/thumbnail.jpeg", JsonPath.StringAt("$.TenantId"), JsonPath.StringAt("$.VideoId")),
                 ["Duration"] = JsonPath.StringAt("$.SourceMetadata.DurationFormatted"),
                 ["Width"] = JsonPath.NumberAt("$.SourceMetadata.SourceWidth"),
                 ["Height"] = JsonPath.NumberAt("$.SourceMetadata.SourceHeight"),

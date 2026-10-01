@@ -92,6 +92,12 @@ public class Function
                 );
             }
 
+            string? thumbnailRelativeUrl = null;
+            if (!input.IsDefaultThumbnail)
+            {
+                thumbnailRelativeUrl = $"{input.TenantId}/{input.VideoId}/thumbnail";
+            }
+
             var jobInput = new TranscodingJobInput
             {
                 VideoId = Guid.TryParse(input.VideoId, out var vId) ? vId : Guid.NewGuid(),
@@ -112,7 +118,7 @@ public class Function
                 },
                 EncryptionMethod = encMethod,
                 Encryption = encryption,
-                ThumbnailRelativeUrl = null
+                ThumbnailRelativeUrl = thumbnailRelativeUrl
             };
 
             var json = JsonSerializer.Serialize(jobInput, JobPreparerJsonContext.Default.TranscodingJobInput);
