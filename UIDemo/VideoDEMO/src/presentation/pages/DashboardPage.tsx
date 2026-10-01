@@ -54,8 +54,15 @@ export const DashboardPage: React.FC = () => {
   const handlePlay = useCallback(async (video: VideoType) => {
     try {
       const streamingInfo = await videoRepo.getStreamingInfo(video.id);
+      
+      let manifestUrl = streamingInfo.url;
+      // Bypassing CORS for the UI demo by proxying mock CDN through Vite
+      if (manifestUrl.startsWith('http://cdn.zadmuslim.cc')) {
+        manifestUrl = manifestUrl.replace('http://cdn.zadmuslim.cc', '/cdn-proxy');
+      }
+
       const playerConfig: PlayerConfig = {
-        manifestUrl: streamingInfo.url,
+        manifestUrl: manifestUrl,
         posterUrl: video.thumbnailUrl || undefined,
       };
 

@@ -217,7 +217,7 @@ public class VideoConstants
 
     public static string GetThumbnailInputVideoSourceKey(string videoId, string tenantId, string imageExtension)
     {
-        return $"{tenantId}/{videoId}/thumbnail.{imageExtension}";
+        return $"{tenantId}/{videoId}/thumbnail{imageExtension}";
     } 
 
     public static string GetOutputVideoKey(string videoId, string tenantId)

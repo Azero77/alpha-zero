@@ -99,6 +99,8 @@ public sealed class UploadCommandHandler(
 
         Guid videoId = Guid.NewGuid();
         
+        var isDefaultThumbnail = request.UploadThumbnail is null;
+        
         var response = await uploadService.UploadFile(request.FileName,VideoConstants.GetInputVideoSourceKey(videoId.ToString(), tenantId.ToString()!) ,request.ContentType, new Dictionary<string, string>()
         {
             { VideoObjectStorageMetadataTags.VideoId , videoId.ToString()},
@@ -108,6 +110,7 @@ public sealed class UploadCommandHandler(
             { VideoObjectStorageMetadataTags.TranscodingMethod, request.VideoTranscodingMethod.ToString() },
             { VideoObjectStorageMetadataTags.EncryptionMethod, request.VideoEncryptionMethod.ToString() },
             { VideoObjectStorageMetadataTags.TargetResourceArn, request.TargetResourceArn},
+            { VideoObjectStorageMetadataTags.DefaultThumbnail, isDefaultThumbnail.ToString()}
             //{VideoObjectStorageMetadataTags.FileName , request.FileName} is already made inside the UploadFile method , it already add file-name metadata
         });
         if (response.IsError) return response.Errors;
@@ -116,7 +119,6 @@ public sealed class UploadCommandHandler(
         string? thumbnailPreSignedUrl = null;
         Dictionary<string, string>? thumbnailHeaders = null;
         
-        var isDefaultThumbnail = request.UploadThumbnail is null;
         if (!isDefaultThumbnail)
         {
             string thumbnailExtension = Path.GetExtension(request.UploadThumbnail!.FileName);

@@ -10,4 +10,5 @@ public static class VideoObjectStorageMetadataTags
     public const string TranscodingMethod = "transcodingmethod";
     public const string EncryptionMethod = "encryptionmethod";
     public const string TargetResourceArn = "targetresourcearn";
+    public const string DefaultThumbnail = "defaultthumbnail";
 }
