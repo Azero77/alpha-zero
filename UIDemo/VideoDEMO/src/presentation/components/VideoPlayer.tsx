@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState, useMemo } from 'react';
-import { ShakaPlayerManager, type PlayerConfig } from '../../infrastructure/player/shaka-player-impl';
+import { HlsPlayerManager, type PlayerConfig } from '../../infrastructure/player/hls-player-impl';
+import { DynamicVisibleWatermark } from './DynamicVisibleWatermark';
 import './VideoPlayer.css';
 
 interface VideoPlayerProps {
@@ -21,9 +22,17 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const managerRef = useRef<ShakaPlayerManager | null>(null);
+  const managerRef = useRef<HlsPlayerManager | null>(null);
 
   const manifestUrl = useMemo(() => config.manifestUrl, [config.manifestUrl]);
+
+  // Dummy watermark data for demo
+  const watermarkData = {
+    fullName: "Demo User",
+    phone: "+963 ••• ••34",
+    userId: "1234abcd",
+    sessionId: "demo-session-xyz"
+  };
 
   useEffect(() => {
     let isMounted = true;
@@ -39,7 +48,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
           await managerRef.current.destroy();
         }
         
-        managerRef.current = new ShakaPlayerManager();
+        managerRef.current = new HlsPlayerManager();
         await managerRef.current.initialize(videoRef.current, containerRef.current, config);
         
         if (isMounted) {
@@ -82,13 +91,16 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
       <div 
         ref={containerRef}
-        className="relative w-full aspect-video bg-black rounded-xl overflow-hidden shaka-container"
+        className="relative w-full aspect-video bg-black rounded-xl overflow-hidden hls-container"
       >
         <video
           ref={videoRef}
           className="w-full h-full"
+          controls
           autoPlay
         />
+        
+        <DynamicVisibleWatermark data={watermarkData} />
         
         {isLoading && (
           <div className="absolute inset-0 flex items-center justify-center bg-black/50 text-white z-10">

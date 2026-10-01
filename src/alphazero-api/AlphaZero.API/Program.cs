@@ -271,6 +271,7 @@ public class Program
                 o.UsePostgres();
                 o.UseBusOutbox(c => c.DisableDeliveryService());
                 o.QueryDelay = TimeSpan.FromMinutes(5);
+                o.DuplicateDetectionWindow = TimeSpan.FromMinutes(30);
             });
 
 

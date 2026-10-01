@@ -43,6 +43,7 @@ public class VideoUploadingModule : AppModule, IVideoUploadingModule
             o.UsePostgres();
             o.UseBusOutbox();
             o.QueryDelay = TimeSpan.FromMinutes(5);
+            o.DuplicateDetectionWindow = TimeSpan.FromMinutes(30);
         });
 
         // Register local consumers that should run on the in-memory bus with their own scopes (SQS consumers are registered on IExternalBus)

@@ -54,6 +54,7 @@ public class CoursesModule : AppModule, ICoursesModule
             o.UsePostgres();
             o.UseBusOutbox();
             o.QueryDelay = TimeSpan.FromMinutes(5);
+            o.DuplicateDetectionWindow = TimeSpan.FromMinutes(30);
         });
 
         configuration.AddModuleConsumers<Infrastructure.Persistance.AppDbContext>(typeof(CoursesModule).Assembly);

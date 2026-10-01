@@ -35,6 +35,7 @@ public class LibraryModule : AppModule
             o.UsePostgres();
             o.UseBusOutbox();
             o.QueryDelay = TimeSpan.FromMinutes(5);
+            o.DuplicateDetectionWindow = TimeSpan.FromMinutes(30);
         });
 
         configuration.AddModuleConsumers<Infrastructure.Persistance.AppDbContext>(typeof(LibraryModule).Assembly);

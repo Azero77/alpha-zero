@@ -9,7 +9,7 @@ import { VideoPlayer } from '../components/VideoPlayer';
 import { normalizeVideoStatus } from '../../shared/utils/status-utils';
 import type { Video as VideoType } from '../../domain/models/video';
 import type { VideoState } from '../../domain/models/video-state';
-import type { PlayerConfig } from '../../infrastructure/player/shaka-player-impl';
+import type { PlayerConfig } from '../../infrastructure/player/hls-player-impl';
 import { VideoRepositoryImpl } from '../../infrastructure/api/video-repository-impl';
 import { config } from '../../core/config';
 
@@ -58,25 +58,6 @@ export const DashboardPage: React.FC = () => {
         manifestUrl: streamingInfo.url,
         posterUrl: video.thumbnailUrl || undefined,
       };
-
-      // ClearKey encryption — fetch raw binary key
-      if (streamingInfo.encryptionMethod === 'ClearKey') {
-        const keyUrl = `${config.streamingApiUrl}/keys/${video.id}`;
-        const headers: Record<string, string> = {};
-        if (config.tenantId) headers['X-TenantId'] = config.tenantId;
-        if (config.authToken) headers['Authorization'] = `Bearer ${config.authToken}`;
-        const keyResponse = await fetch(keyUrl, { headers });
-        const keyBuffer = await keyResponse.arrayBuffer();
-        const keyHex = Array.from(new Uint8Array(keyBuffer))
-          .map((b) => b.toString(16).padStart(2, '0'))
-          .join('');
-        playerConfig.clearKey = { key: keyHex };
-      }
-
-      // Widevine/PlayReady DRM
-      if (streamingInfo.drm?.widevineUrl || streamingInfo.drm?.playReadyUrl) {
-        playerConfig.drm = streamingInfo.drm;
-      }
 
       setActivePlayer({ video, config: playerConfig });
     } catch (err) {
