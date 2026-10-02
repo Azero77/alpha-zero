@@ -2,13 +2,14 @@ using System.Net;
 using System.Net.Http.Json;
 using AlphaZero.Modules.Courses.Application.Analytics.Queries.GetCourseAnalytics;
 using AlphaZero.Modules.Courses.Application.Enrollements.Queries.GetEnrollement;
-using AlphaZero.Modules.Courses.Presentation.Courses.AddItem;
 using AlphaZero.Modules.Courses.Presentation.Courses.AddSection;
 using AlphaZero.Modules.Courses.Presentation.Courses.Create;
 using AlphaZero.Modules.Courses.Presentation.Courses.Get;
 using AlphaZero.Modules.Courses.Presentation.Courses.Plans.AddPlan;
+using AlphaZero.Modules.Courses.Presentation.Courses.Pool;
 using AlphaZero.Modules.Courses.Presentation.Enrollements.Enroll;
 using AlphaZero.Modules.Courses.Presentation.Subjects.Create;
+using AlphaZero.Shared.Domain;
 using AlphaZero.Shared.Queries;
 using Microsoft.Extensions.DependencyInjection;
 using Courses.Tests.Integration.Abstractions;
@@ -38,8 +39,18 @@ public class CourseAnalyticsTests : BaseIntegrationTest
         await Client.PostAsJsonAsync($"/courses/{courseId}/sections", new AddSectionRequest { Title = "S1" });
         var courseData = await Client.GetFromJsonAsync<CourseResponse>($"/courses/{courseId}");
         var sectionId = courseData!.Sections.First().Id;
-        await Client.PostAsJsonAsync($"/courses/{courseId}/sections/{sectionId}/lessons", new AddLessonRequest { Title = "L1", VideoId = Guid.NewGuid() });
-        await Client.PostAsJsonAsync($"/courses/{courseId}/sections/{sectionId}/lessons", new AddLessonRequest { Title = "L2", VideoId = Guid.NewGuid() });
+
+        var v1Id = Guid.NewGuid();
+        var v2Id = Guid.NewGuid();
+        var a1 = AlphaZero.Modules.Courses.Domain.Aggregates.Courses.VideoCourseAsset.Create(v1Id, tenantId, ResourceArn.ForVideo(tenantId, v1Id), "L1", courseId).Value;
+        a1.MarkAvailable();
+        var a2 = AlphaZero.Modules.Courses.Domain.Aggregates.Courses.VideoCourseAsset.Create(v2Id, tenantId, ResourceArn.ForVideo(tenantId, v2Id), "L2", courseId).Value;
+        a2.MarkAvailable();
+        DbContext.CourseAssets.AddRange(a1, a2);
+        await DbContext.SaveChangesAsync();
+
+        await Client.PostAsJsonAsync($"/courses/{courseId}/pool/{v1Id}/assign", new AssignAssetRequest { CourseId = courseId, AssetId = v1Id, SectionId = sectionId, Title = "L1" });
+        await Client.PostAsJsonAsync($"/courses/{courseId}/pool/{v2Id}/assign", new AssignAssetRequest { CourseId = courseId, AssetId = v2Id, SectionId = sectionId, Title = "L2" });
 
         // Lifecycle
         await Client.PatchAsJsonAsync($"/courses/{courseId}/review", new { });

@@ -12,6 +12,7 @@
 [Dd]ebugPublic/
 [Rr]elease/
 [Rr]eleases/
+publish/
 x64/
 x86/
 [Ww][Ii][Nn]32/
@@ -22,7 +23,7 @@ bld/
 [Oo]bj/
 [Ll]og/
 [Ll]ogs/
-
+cdk.out
 # .NET Core
 project.lock.json
 project.fragment.lock.json
@@ -84,6 +85,7 @@ _ReSharper*/
 # Ignore package management folders
 packages/
 node_modules/
+!src/alphazero-frontend/packages/
 
 # Ignore published files
 .publish/

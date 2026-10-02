@@ -1,0 +1,72 @@
+namespace AlphaZero.Modules.VideoUploading.IntegrationEvents;
+
+/* 
+ * COMMANDS (Instructions to do something)
+ * These are sent to specific consumers to perform a task.
+ */
+
+public record AnalyzeVideoCommand(Guid VideoId, string Key, string? TargetResourceArn = null);
+
+public record TranscodeVideoCommand(Guid VideoId, Guid TenantId,string Key, int Width, int Height, string? EncryptionMethod = "None", string? TargetResourceArn = null);
+
+public record SyncVideoToCdnCommand(Guid VideoId, string S3KeyPrefix, string? CustomThumbnailKey = null, string? TargetResourceArn = null);
+
+
+/* 
+ * EVENTS (Facts about what happened)
+ * These are published to let the system know a stage is complete.
+ */
+
+// PHASE 1: INGESTION
+public record UploadVideoRequestedEvent(
+    Guid VideoId, 
+    Guid TenantId, 
+    DateTime OnTime, 
+    string? EncryptionMethod = "None", 
+    bool IsDefaultThumbnail = true,
+    string? TargetResourceArn = null);
+public record VideoDeliveredToInputEvent(
+    Guid VideoId, 
+    string Key, 
+    string BucketName, 
+    Guid TenantId,
+    string? TargetResourceArn = null);
+
+// PHASE 2: ANALYSIS
+public record VideoMetadataProcessedEvent(Guid VideoId, TimeSpan Duration, int Width, int Height);
+
+// PHASE 3: TRANSCODING
+public record VideoTranscodingStartedEvent(Guid VideoId, string JobId);
+public record VideoTranscodingFinishedEvent(Guid VideoId, string OutputKeyPrefix);
+
+// PHASE 4: DISTRIBUTION
+public record VideoCdnSyncCompletedEvent(Guid VideoId, string RelativeUrl);
+
+// PHASE 5: FINALIZATION
+public record VideoPublishedIntegrationEvent(
+    Guid VideoId, 
+    string RelativeUrl);
+
+public record GetVideoMetadataRequest(Guid VideoId);
+
+public record VideoMetadataResponse(
+    Guid VideoId,
+    string Title,
+    string? Description,
+    string Status,
+    string? Duration,
+    string? RelativeUrl);
+
+public record VideoMetaDataNotFoundResponse(Guid VideoId);
+
+public record VideoProcessingFailedEvent(Guid VideoId, string Reason);
+
+// LIFECYCLE
+public record VideoDeletedFromS3Event(string Key);
+public record VideoMetadataUpdatedEvent(string Key);
+
+// METADATA SYNC
+public record VideoMetadataChangedIntegrationEvent(
+    Guid VideoId,
+    string Title,
+    string? Description);

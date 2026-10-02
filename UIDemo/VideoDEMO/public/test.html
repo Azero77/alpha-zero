@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+<body>
+<script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+<script>
+  console.log('hls', Hls.version);
+  var hls = new Hls({
+    fetchSetup: function(context, initParams) {
+      console.log('fetchSetup called', context.url);
+      initParams.headers = initParams.headers || {};
+      initParams.headers['Authorization'] = 'Bearer XYZ';
+      return new Request(context.url, initParams);
+    }
+  });
+  hls.loadSource('/cdn-proxy/master.m3u8');
+</script>
+</body>
+</html>

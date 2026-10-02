@@ -81,3 +81,4 @@ Use the `/browse` skill from gstack for all web browsing. Never use `mcp__claude
 - `/unfreeze`
 - `/gstack-upgrade`
 - `/learn`
+- `/api-docs-sync`

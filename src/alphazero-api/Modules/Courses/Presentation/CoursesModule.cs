@@ -1,0 +1,63 @@
+using AlphaZero.Modules.Courses.Infrastructure.Persistance;
+using AlphaZero.Modules.Courses.Infrastructure.Sagas.CourseRedemption;
+using AlphaZero.Modules.Courses.Infrastructure.Sagas.CourseRevocation;
+using AlphaZero.Shared.Application;
+using Autofac;
+using Infrastructure;
+using MassTransit;
+using AlphaZero.Shared.Infrastructure;
+using MediatR;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+
+namespace AlphaZero.Modules.Courses.Presentation;
+
+public class CoursesModule : AppModule, ICoursesModule
+{
+    public override void RegisterGlobal(IServiceCollection globalServices)
+    {
+        if (Configuration is not null)
+            globalServices.AddCoursesGlobalInfrastructure(Configuration);
+        else
+            _logger?.LogWarning("Configuration is null in Courses Module");
+
+        globalServices.AddSingleton<ICoursesModule>(this);
+    }
+
+    public override void RegisterPrivate(IServiceCollection moduleServices, ContainerBuilder builder)
+    {
+        if (Configuration is not null)
+            moduleServices.AddCoursesPrivateInfrastructure(Configuration);
+        else
+            _logger?.LogWarning("Configuration is null in Courses Module (Private)");
+    }
+
+    public override void ConfigureModuleBus(IBusRegistrationConfigurator configuration)
+    {
+        configuration.AddSagaStateMachine<CourseRedemptionSaga, CourseRedemptionState>()
+            .EntityFrameworkRepository(r =>
+            {
+                r.ExistingDbContext<AppDbContext>();
+                r.UsePostgres();
+            });
+
+        configuration.AddSagaStateMachine<CourseRevocationSaga, CourseRevocationState>()
+            .EntityFrameworkRepository(r =>
+            {
+                r.ExistingDbContext<AppDbContext>();
+                r.UsePostgres();
+            });
+
+        configuration.AddEntityFrameworkOutbox<AppDbContext>(o =>
+        {
+            o.UsePostgres();
+            o.UseBusOutbox();
+            o.QueryDelay = TimeSpan.FromMinutes(5);
+            o.DuplicateDetectionWindow = TimeSpan.FromMinutes(30);
+        });
+
+        configuration.AddModuleConsumers<Infrastructure.Persistance.AppDbContext>(typeof(CoursesModule).Assembly);
+        configuration.AddModuleConsumers<Infrastructure.Persistance.AppDbContext>(typeof(AlphaZero.Modules.Courses.Infrastructure.Consumers.AssessmentMetadataChangedConsumer).Assembly);
+    }
+}

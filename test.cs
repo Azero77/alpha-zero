@@ -1,6 +1,15 @@
-using FastEndpoints;
-public class TestEndpoint : EndpointWithoutRequest
+using System;
+using Amazon.Extensions.NETCore.Setup;
+using Microsoft.Extensions.Configuration;
+
+class Program
 {
-    public override async Task HandleAsync(CancellationToken ct)
+    static void Main()
     {
-        await Send
+        var builder = new ConfigurationBuilder()
+            .AddEnvironmentVariables();
+        var config = builder.Build();
+        var options = config.GetAWSOptions();
+        Console.WriteLine($"Region: {options.Region?.SystemName ?? "NULL"}");
+    }
+}

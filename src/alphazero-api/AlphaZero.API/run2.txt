@@ -1,0 +1,90 @@
+Using launch settings from /home/azero/Desktop/AlphaZeroLearningAcademy/src/alphazero-api/AlphaZero.API/Properties/launchSettings.json...
+info: MassTransit[0]
+      Configured endpoint assign-student-role-from-saga, Consumer: AlphaZero.Modules.Identity.Infrastructure.Consumers.Saga.AssignStudentRoleFromSagaConsumer
+info: MassTransit[0]
+      Configured endpoint remove-student-role-from-saga, Consumer: AlphaZero.Modules.Identity.Infrastructure.Consumers.Saga.RemoveStudentRoleFromSagaConsumer
+info: MassTransit[0]
+      Configured endpoint tenant-branding-updated, Consumer: AlphaZero.Modules.Tenants.Infrastructure.Consumers.TenantBrandingUpdatedConsumer
+info: MassTransit[0]
+      Configured endpoint assessment-metadata-changed, Consumer: AlphaZero.Modules.Courses.Infrastructure.Consumers.AssessmentMetadataChangedConsumer
+info: MassTransit[0]
+      Configured endpoint document-metadata-changed, Consumer: AlphaZero.Modules.Courses.Infrastructure.Consumers.DocumentMetadataChangedConsumer
+info: MassTransit[0]
+      Configured endpoint video-metadata-changed, Consumer: AlphaZero.Modules.Courses.Infrastructure.Consumers.VideoMetadataChangedConsumer
+info: MassTransit[0]
+      Configured endpoint video-uploading-started-event-handler, Consumer: AlphaZero.Modules.Courses.Infrastructure.Consumers.Videos.VideoUploadingStartedEventHandler
+info: MassTransit[0]
+      Configured endpoint video-uploading-failed-event-handler, Consumer: AlphaZero.Modules.Courses.Infrastructure.Consumers.Videos.VideoUploadingFailedEventHandler
+info: MassTransit[0]
+      Configured endpoint video-uploaded-event-handler, Consumer: AlphaZero.Modules.Courses.Infrastructure.Consumers.Videos.VideoUploadedEventHandler
+info: MassTransit[0]
+      Configured endpoint enroll-student-from-saga, Consumer: AlphaZero.Modules.Courses.Infrastructure.Consumers.Saga.EnrollStudentFromSagaConsumer
+info: MassTransit[0]
+      Configured endpoint revoke-student-enrollment-from-saga, Consumer: AlphaZero.Modules.Courses.Infrastructure.Consumers.Saga.RevokeStudentEnrollmentFromSagaConsumer
+info: MassTransit[0]
+      Configured endpoint assessment-grading-completed, Consumer: AlphaZero.Modules.Courses.Infrastructure.Consumers.Assessments.AssessmentGradingCompletedConsumer
+info: MassTransit[0]
+      Configured endpoint course-analytics-updater, Consumer: AlphaZero.Modules.Courses.Infrastructure.Consumers.Analytics.CourseAnalyticsUpdaterConsumer
+info: MassTransit[0]
+      Configured endpoint document-queries, Consumer: AlphaZero.Modules.Documents.Infrastructure.Consumers.DocumentQueriesConsumer
+info: MassTransit[0]
+      Configured endpoint create-assessment-request-handler, Consumer: AlphaZero.Modules.Assessments.Infrastructure.Consumers.CreateAssessmentRequestHandler
+info: MassTransit[0]
+      Configured endpoint video-s3-sync-handlers, Consumer: AlphaZero.Modules.VideoUploading.Infrastructure.Consumers.VideoS3SyncHandlers
+info: MassTransit[0]
+      Configured endpoint initialize-video-state, Consumer: AlphaZero.Modules.VideoUploading.Infrastructure.Consumers.InitializeVideoStateConsumer
+info: MassTransit[0]
+      Configured endpoint get-video-metadata, Consumer: AlphaZero.Modules.VideoUploading.Infrastructure.Consumers.Queries.GetVideoMetadataConsumer
+info: MassTransit[0]
+      Configured endpoint job-type, Saga: MassTransit.JobTypeSaga, State Machine: MassTransit.JobTypeStateMachine
+info: MassTransit[0]
+      Configured endpoint job, Saga: MassTransit.JobSaga, State Machine: MassTransit.JobStateMachine
+info: MassTransit[0]
+      Configured endpoint job-attempt, Saga: MassTransit.JobAttemptSaga, State Machine: MassTransit.JobAttemptStateMachine
+info: MassTransit[0]
+      Configured endpoint course-redemption-state, Saga: AlphaZero.Modules.Courses.Infrastructure.Sagas.CourseRedemption.CourseRedemptionState, State Machine: AlphaZero.Modules.Courses.Infrastructure.Sagas.CourseRedemption.CourseRedemptionSaga
+info: MassTransit[0]
+      Configured endpoint course-revocation-state, Saga: AlphaZero.Modules.Courses.Infrastructure.Sagas.CourseRevocation.CourseRevocationState, State Machine: AlphaZero.Modules.Courses.Infrastructure.Sagas.CourseRevocation.CourseRevocationSaga
+info: MassTransit[0]
+      Configured endpoint dummy, Consumer: AlphaZero.Modules.VideoUploading.Infrastructure.Consumers.SQSVideoProcessingFailedConsumer
+info: MassTransit[0]
+      Configured endpoint dummy, Consumer: AlphaZero.Modules.VideoUploading.Infrastructure.Consumers.SQSVideoProgressConsumer
+info: MassTransit[0]
+      Configured endpoint dummy, Consumer: AlphaZero.Modules.VideoUploading.Infrastructure.Consumers.SQSVideoPublishedConsumer
+info: FastEndpoints.StartupTimer[1]
+      Registered 67 endpoints in 2,174 milliseconds.
+info: FastEndpoints.Swagger.ValidationSchemaProcessor[1]
+      No validators found in the system!
+info: MigrationRunner[0]
+      Starting automated database migrations for 7 modules...
+fail: Microsoft.EntityFrameworkCore.Database.Connection[20004]
+      An error occurred using the connection to database 'alphazero_demo_db' on server 'tcp://localhost:5432'.
+Unhandled exception. Npgsql.PostgresException (0x80004005): 28P01: password authentication failed for user "alphazeroUser"
+   at Npgsql.Internal.NpgsqlConnector.ReadMessageLong(Boolean async, DataRowLoadingMode dataRowLoadingMode, Boolean readingNotifications, Boolean isReadingPrependedMessage)
+   at System.Runtime.CompilerServices.PoolingAsyncValueTaskMethodBuilder`1.StateMachineBox`1.System.Threading.Tasks.Sources.IValueTaskSource<TResult>.GetResult(Int16 token)
+   at Npgsql.Internal.NpgsqlConnector.AuthenticateSASL(List`1 mechanisms, String username, Boolean async, CancellationToken cancellationToken)
+   at Npgsql.Internal.NpgsqlConnector.Authenticate(String username, NpgsqlTimeout timeout, Boolean async, CancellationToken cancellationToken)
+   at Npgsql.Internal.NpgsqlConnector.<Open>g__OpenCore|209_0(NpgsqlConnector conn, String username, SslMode sslMode, GssEncryptionMode gssEncMode, NpgsqlTimeout timeout, Boolean async, CancellationToken cancellationToken)
+   at Npgsql.Internal.NpgsqlConnector.<Open>g__OpenCore|209_0(NpgsqlConnector conn, String username, SslMode sslMode, GssEncryptionMode gssEncMode, NpgsqlTimeout timeout, Boolean async, CancellationToken cancellationToken)
+   at Npgsql.Internal.NpgsqlConnector.<Open>g__OpenCore|209_0(NpgsqlConnector conn, String username, SslMode sslMode, GssEncryptionMode gssEncMode, NpgsqlTimeout timeout, Boolean async, CancellationToken cancellationToken)
+   at Npgsql.Internal.NpgsqlConnector.Open(NpgsqlTimeout timeout, Boolean async, CancellationToken cancellationToken)
+   at Npgsql.PoolingDataSource.OpenNewConnector(NpgsqlConnection conn, NpgsqlTimeout timeout, Boolean async, CancellationToken cancellationToken)
+   at Npgsql.PoolingDataSource.<Get>g__RentAsync|33_0(NpgsqlConnection conn, NpgsqlTimeout timeout, Boolean async, CancellationToken cancellationToken)
+   at Npgsql.NpgsqlConnection.<Open>g__OpenAsync|42_0(Boolean async, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.Storage.RelationalConnection.OpenInternalAsync(Boolean errorsExpected, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.Storage.RelationalConnection.OpenInternalAsync(Boolean errorsExpected, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.Storage.RelationalConnection.OpenAsync(CancellationToken cancellationToken, Boolean errorsExpected)
+   at Microsoft.EntityFrameworkCore.Storage.RelationalCommand.ExecuteReaderAsync(RelationalCommandParameterObject parameterObject, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.Migrations.HistoryRepository.GetAppliedMigrationsAsync(CancellationToken cancellationToken)
+   at Npgsql.EntityFrameworkCore.PostgreSQL.Migrations.Internal.NpgsqlHistoryRepository.GetAppliedMigrationsAsync(CancellationToken cancellationToken)
+   at Npgsql.EntityFrameworkCore.PostgreSQL.Migrations.Internal.NpgsqlMigrator.MigrateAsync(String targetMigration, CancellationToken cancellationToken)
+   at AlphaZero.Shared.Infrastructure.MigrationRunner.RunMigrations(WebApplication app, List`1 modules) in /home/azero/Desktop/AlphaZeroLearningAcademy/src/alphazero-api/AlphaZero.Shared/Infrastructure/MigrationRunner.cs:line 25
+   at AlphaZero.API.Program.Main(String[] args) in /home/azero/Desktop/AlphaZeroLearningAcademy/src/alphazero-api/AlphaZero.API/Program.cs:line 71
+   at AlphaZero.API.Program.<Main>(String[] args)
+  Exception data:
+    Severity: FATAL
+    SqlState: 28P01
+    MessageText: password authentication failed for user "alphazeroUser"
+    File: auth.c
+    Line: 317
+    Routine: auth_failed

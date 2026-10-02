@@ -1,13 +1,15 @@
 using System.Net;
 using System.Net.Http.Json;
-using AlphaZero.Modules.Courses.Presentation.Courses.AddItem;
+using AlphaZero.Modules.Courses.Domain.Aggregates.Courses;
 using AlphaZero.Modules.Courses.Presentation.Courses.AddSection;
 using AlphaZero.Modules.Courses.Presentation.Courses.Create;
 using AlphaZero.Modules.Courses.Presentation.Courses.Get;
 using AlphaZero.Modules.Courses.Presentation.Courses.Plans.AddPlan;
+using AlphaZero.Modules.Courses.Presentation.Courses.Pool;
 using AlphaZero.Modules.Courses.Presentation.Enrollements.Dashboard;
 using AlphaZero.Modules.Courses.Presentation.Enrollements.Enroll;
 using AlphaZero.Modules.Courses.Presentation.Subjects.Create;
+using AlphaZero.Shared.Domain;
 using Courses.Tests.Integration.Abstractions;
 using FluentAssertions;
 
@@ -17,6 +19,18 @@ public class DashboardTests : BaseIntegrationTest
 {
     public DashboardTests(ApiFactory factory) : base(factory)
     {
+    }
+
+    private async Task<Guid> SeedAvailableVideoAsset(Guid courseId, Guid tenantId, string title = "Test Video")
+    {
+        var videoId = Guid.NewGuid();
+        var videoArn = ResourceArn.ForVideo(tenantId, videoId);
+        var asset = VideoCourseAsset.Create(videoId, tenantId, videoArn, title, courseId).Value;
+        asset.MarkAvailable();
+
+        DbContext.CourseAssets.Add(asset);
+        await DbContext.SaveChangesAsync();
+        return videoId;
     }
 
     private async Task<Guid> CreatePublishedCourse(Guid tenantId, string title)
@@ -31,7 +45,15 @@ public class DashboardTests : BaseIntegrationTest
         await Client.PostAsJsonAsync($"/courses/{courseId}/sections", new AddSectionRequest { Title = "S1" });
         var courseData = await Client.GetFromJsonAsync<CourseResponse>($"/courses/{courseId}");
         var sectionId = courseData!.Sections.First().Id;
-        await Client.PostAsJsonAsync($"/courses/{courseId}/sections/{sectionId}/lessons", new AddLessonRequest { Title = "L1", VideoId = Guid.NewGuid() });
+
+        var videoId = await SeedAvailableVideoAsset(courseId, tenantId, "L1");
+        await Client.PostAsJsonAsync($"/courses/{courseId}/pool/{videoId}/assign", new AssignAssetRequest
+        {
+            CourseId = courseId,
+            AssetId = videoId,
+            SectionId = sectionId,
+            Title = "L1"
+        });
 
         await Client.PatchAsJsonAsync($"/courses/{courseId}/review", new { });
         await Client.PatchAsJsonAsync($"/courses/{courseId}/approve", new { });

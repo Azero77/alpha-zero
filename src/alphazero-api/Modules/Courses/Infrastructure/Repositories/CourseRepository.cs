@@ -1,0 +1,68 @@
+using AlphaZero.Modules.Courses.Application.Repositories;
+using AlphaZero.Modules.Courses.Domain.Aggregates.Courses;
+using AlphaZero.Modules.Courses.Infrastructure.Persistance;
+using AlphaZero.Shared.Infrastructure.Repositores;
+using Microsoft.EntityFrameworkCore;
+
+namespace AlphaZero.Modules.Courses.Infrastructure.Repositories;
+
+public class CourseRepository : BaseRepository<AppDbContext, Course>, ICourseRepository
+{
+    public CourseRepository(AppDbContext context) : base(context)
+    {
+    }
+
+    public async Task<Course?> GetByIdWithSectionsAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        return await _context.Courses
+            .Include(c => c.Sections)
+                .ThenInclude(s => s.Items)
+            .FirstOrDefaultAsync(c => c.Id == id, cancellationToken);
+    }
+
+    public async Task<(Guid CourseId, int BitIndex)?> GetItemBitIndexByResourceIdAsync(Guid resourceId, CancellationToken cancellationToken = default)
+    {
+        var itemInfo = await _context.Courses
+            .SelectMany(c => c.Sections)
+            .SelectMany(s => s.Items)
+            .Where(i => i.Resources.Any(r => r.CourseAssetId == resourceId))
+            .Select(i => new { i.SectionId, i.BitIndex })
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (itemInfo == null) return null;
+
+        var courseId = await _context.Set<CourseSection>()
+            .Where(s => s.Id == itemInfo.SectionId)
+            .Select(s => s.CourseId)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        return (courseId, itemInfo.BitIndex);
+    }
+
+    public async Task<List<Course>> GetCoursesByResourceIdAsync(Guid resourceId, CancellationToken cancellationToken = default)
+    {
+        return await _context.Courses
+            .Include(c => c.Sections)
+                .ThenInclude(s => s.Items)
+            .Where(c => c.Sections.Any(s => s.Items.Any(i => i.Resources.Any(r => r.CourseAssetId == resourceId))))
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task<Course?> GetCourseAsync(Guid courseId, CancellationToken token = default)
+    {
+        return await _context.Courses
+            .Include(c => c.Sections)
+            .ThenInclude(c => c.Items)
+            .ThenInclude(item => item.Resources)
+            .Include(c => c.Plans)
+            .FirstOrDefaultAsync(c => c.Id == courseId, token);
+    }
+
+    public async Task<Course?> GetByIdWithSectionsAndAssetsAsync(Guid courseId, CancellationToken ct = default)
+        => await _context.Courses
+            .Include(c => c.Sections)
+                .ThenInclude(s => s.Items)
+                    .ThenInclude(i => i.Resources)
+            .Include(c => c.Assets)
+            .FirstOrDefaultAsync(c => c.Id == courseId, ct);
+}

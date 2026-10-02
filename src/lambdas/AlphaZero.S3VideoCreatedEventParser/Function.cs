@@ -1,0 +1,232 @@
+using AlphaZero.Modules.VideoUploading.IntegrationEvents;
+using Amazon.Lambda.Core;
+using Amazon.Lambda.RuntimeSupport;
+using Amazon.Lambda.Serialization.SystemTextJson;
+using Amazon.Runtime;
+using Amazon.S3;
+using Amazon.S3.Model;
+using System.Text.Json.Serialization;
+
+namespace AlphaZero.S3VideoCreatedEventParser;
+
+
+public class Function
+{
+    private readonly IAmazonS3 _s3Client;
+
+    public Function()
+        : this(new AmazonS3Client())
+    {
+    }
+
+    public Function(IAmazonS3 s3Client)
+    {
+        _s3Client = s3Client;
+    }
+
+    private static async Task Main()
+    {
+        Func<
+            S3VideoCreatedEventParserInput,
+            ILambdaContext,
+            Task<S3VideoCreatedEventParserOutput>
+        > handler = new Function().FunctionHandler;
+
+        await LambdaBootstrapBuilder
+            .Create(
+                handler,
+                new SourceGeneratorLambdaJsonSerializer<LambdaFunctionJsonSerializerContext>())
+            .Build()
+            .RunAsync();
+    }
+
+    public async Task<S3VideoCreatedEventParserOutput> FunctionHandler(
+        S3VideoCreatedEventParserInput input,
+        ILambdaContext context)
+    {
+        try
+        {
+            context.Logger.LogInformation(
+                $"Processing S3 object: " +
+                $"s3://{input.BucketName}/{input.SourceKey}");
+
+            var response = await GetObjectMetadataAsync(input, context);
+
+            var metadata = response.Metadata;
+
+            var videoId = GetRequiredMetadata(
+                metadata,
+                VideoObjectStorageMetadataTags.VideoId);
+
+            var tenantId = GetRequiredMetadata(
+                metadata, VideoObjectStorageMetadataTags.TenantId);
+
+            var targetResourceArn = GetRequiredMetadata(
+                metadata,
+                VideoObjectStorageMetadataTags.TargetResourceArn);
+
+            var encryptionMethod = GetRequiredMetadata(
+                metadata,
+                VideoObjectStorageMetadataTags.EncryptionMethod);
+
+            var transcodingMethod = GetRequiredMetadata(
+                metadata,
+                VideoObjectStorageMetadataTags.TranscodingMethod);
+
+            var title = GetRequiredMetadata(
+                metadata,
+                VideoObjectStorageMetadataTags.Title);
+
+            var fileName = GetRequiredMetadata(
+                metadata,
+                VideoObjectStorageMetadataTags.FileName);
+
+            var description = GetOptionalMetadata(
+                metadata,
+                VideoObjectStorageMetadataTags.Description);
+
+            var defaultThumbnailStr = GetOptionalMetadata(
+                metadata,
+                VideoObjectStorageMetadataTags.DefaultThumbnail);
+            
+            bool isDefaultThumbnail = true; // fallback
+            if (!string.IsNullOrWhiteSpace(defaultThumbnailStr) && bool.TryParse(defaultThumbnailStr, out var parsedDefaultThumbnail))
+            {
+                isDefaultThumbnail = parsedDefaultThumbnail;
+            }
+
+            context.Logger.LogInformation(
+                $"Successfully parsed metadata for video '{videoId}'.");
+
+            return new S3VideoCreatedEventParserOutput(
+                VideoId: videoId,
+                TenantId: tenantId,
+                SourceBucket: input.BucketName,
+                Description: description,
+                FileName: fileName,
+                Title: title,
+                SourceKey: input.SourceKey,
+                TargetResourceArn: targetResourceArn,
+                TranscodingEngine: transcodingMethod,
+                EncryptionMethod: encryptionMethod,
+                IsDefaultThumbnail: isDefaultThumbnail);
+        }
+        catch (AmazonS3Exception ex)
+        {
+            context.Logger.LogError(
+                $"S3 error while processing " +
+                $"s3://{input.BucketName}/{input.SourceKey}. " +
+                $"ErrorCode: {ex.ErrorCode}, " +
+                $"StatusCode: {ex.StatusCode}, " +
+                $"RequestId: {ex.RequestId}, " +
+                $"Message: {ex.Message}");
+
+            throw;
+        }
+        catch (AmazonServiceException ex)
+        {
+            context.Logger.LogError(
+                $"AWS service error while processing " +
+                $"s3://{input.BucketName}/{input.SourceKey}. " +
+                $"StatusCode: {ex.StatusCode}, " +
+                $"Message: {ex.Message}");
+
+            throw;
+        }
+        catch (InvalidOperationException ex)
+        {
+            context.Logger.LogError(
+                $"Invalid video metadata for " +
+                $"s3://{input.BucketName}/{input.SourceKey}. " +
+                $"Message: {ex.Message}");
+
+            throw;
+        }
+        catch (UriFormatException ex)
+        {
+            context.Logger.LogError(
+                $"Invalid URL-encoded metadata for " +
+                $"s3://{input.BucketName}/{input.SourceKey}. " +
+                $"Message: {ex.Message}");
+
+            throw;
+        }
+        catch (ArgumentException ex)
+        {
+            context.Logger.LogError(
+                $"Invalid argument while processing " +
+                $"s3://{input.BucketName}/{input.SourceKey}. " +
+                $"Message: {ex.Message}");
+
+            throw;
+        }
+        catch (Exception ex)
+        {
+            context.Logger.LogError(
+                $"Unexpected error while processing " +
+                $"s3://{input.BucketName}/{input.SourceKey}. " +
+                $"Exception: {ex}");
+
+            throw;
+        }
+    }
+
+    private async Task<GetObjectMetadataResponse> GetObjectMetadataAsync(
+        S3VideoCreatedEventParserInput input,
+        ILambdaContext context)
+    {
+        try
+        {
+            return await _s3Client.GetObjectMetadataAsync(
+                input.BucketName,
+                input.SourceKey);
+        }
+        catch (AmazonS3Exception ex)
+        {
+            context.Logger.LogError(
+                $"Failed to read S3 metadata. " +
+                $"Bucket: {input.BucketName}, " +
+                $"Key: {input.SourceKey}, " +
+                $"ErrorCode: {ex.ErrorCode}, " +
+                $"StatusCode: {ex.StatusCode}, " +
+                $"Message: {ex.Message}");
+
+            throw;
+        }
+    }
+
+    private static string GetRequiredMetadata(
+        MetadataCollection metadata,
+        string key)
+    {
+        var value = metadata[$"x-amz-meta-{key}"];
+
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            throw new InvalidOperationException(
+                $"Required S3 metadata '{key}' is missing.");
+        }
+
+        return Uri.UnescapeDataString(value);
+    }
+
+    private static string? GetOptionalMetadata(
+        MetadataCollection metadata,
+        string key)
+    {
+        var value = metadata[$"x-amz-meta-{key}"];
+
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return null;
+        }
+
+        return Uri.UnescapeDataString(value);
+    }
+}
+
+[JsonSerializable(typeof(S3VideoCreatedEventParserInput))]
+[JsonSerializable(typeof(S3VideoCreatedEventParserOutput))]
+public partial class LambdaFunctionJsonSerializerContext : JsonSerializerContext
+{
+}

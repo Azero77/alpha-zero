@@ -1,0 +1,43 @@
+using AlphaZero.Modules.Library.Infrastructure;
+using AlphaZero.Shared.Application;
+using AlphaZero.Shared.Presentation;
+using Autofac;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+
+using MassTransit;
+using AlphaZero.Shared.Infrastructure;
+
+namespace AlphaZero.Modules.Library.Presentation;
+
+public class LibraryModule : AppModule
+{
+    public override void RegisterGlobal(IServiceCollection globalServices)
+    {
+        if (Configuration is not null)
+            globalServices.AddLibraryGlobalInfrastructure(Configuration);
+        else
+            _logger?.LogWarning("Configuration is null in Library Module");
+    }
+
+    public override void RegisterPrivate(IServiceCollection moduleServices, ContainerBuilder builder)
+    {
+        if (Configuration is not null)
+            moduleServices.AddLibraryPrivateInfrastructure(Configuration);
+        else
+            _logger?.LogWarning("Configuration is null in Library Module (Private)");
+    }
+
+    public override void ConfigureModuleBus(IBusRegistrationConfigurator configuration)
+    {
+        configuration.AddEntityFrameworkOutbox<AlphaZero.Modules.Library.Infrastructure.Persistance.AppDbContext>(o =>
+        {
+            o.UsePostgres();
+            o.UseBusOutbox();
+            o.QueryDelay = TimeSpan.FromMinutes(5);
+            o.DuplicateDetectionWindow = TimeSpan.FromMinutes(30);
+        });
+
+        configuration.AddModuleConsumers<Infrastructure.Persistance.AppDbContext>(typeof(LibraryModule).Assembly);
+    }
+}

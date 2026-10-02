@@ -3,7 +3,7 @@
 AlphaZero uses a layered identity model to decouple global authentication from local authorization and contextual permissions.
 
 ## Layer 1: Global Identity (The "Person")
-**Entity:** Managed by AWS Cognito.
+**Entity:** Managed by KeyCloak.
 **Identifier:** `IdentityId` (the `sub` claim).
 
 The "Person" layer proves *who* someone is across the entire platform. It doesn't grant any permissions within an Academy. A person can belong to multiple Academies with different roles in each.

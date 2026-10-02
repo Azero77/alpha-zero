@@ -43,6 +43,9 @@ public class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
             services.RemoveAll<ITenantProvider>();
             services.AddHttpContextAccessor();
             services.AddScoped<ITenantProvider, TestTenantProvider>();
+
+            // Mock AWSResources so MassTransit SQS consumers can instantiate
+            services.AddSingleton(new Aspire.Shared.AWSResources { VideoProgressQueue = new Aspire.Shared.SQSQueueSettings { QueueUrl = "https://sqs.mock/mock-queue" }, VideoFailedQueue = new Aspire.Shared.SQSQueueSettings { QueueUrl = "https://sqs.mock/mock-queue-failed" }, VideoPublishedQueue = new Aspire.Shared.SQSQueueSettings { QueueUrl = "https://sqs.mock/mock-queue-pub" } });
         });
     }
 
@@ -65,7 +68,7 @@ public class TestTenantProvider : ITenantProvider
     public Guid? GetTenant()
     {
         var context = _httpContextAccessor.HttpContext;
-        if (context != null && context.Request.Headers.TryGetValue("X-Tenant-Id", out var tenantIdStr))
+        if (context != null && context.Request.Headers.TryGetValue("X-TenantId", out var tenantIdStr))
         {
             if (Guid.TryParse(tenantIdStr, out var tenantId))
             {

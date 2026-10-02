@@ -1,0 +1,198 @@
+Using launch settings from /home/azero/Desktop/AlphaZeroLearningAcademy/src/alphazero-api/AlphaZero.API/Properties/launchSettings.json...
+info: MassTransit[0]
+      Configured endpoint assign-student-role-from-saga, Consumer: AlphaZero.Modules.Identity.Infrastructure.Consumers.Saga.AssignStudentRoleFromSagaConsumer
+info: MassTransit[0]
+      Configured endpoint remove-student-role-from-saga, Consumer: AlphaZero.Modules.Identity.Infrastructure.Consumers.Saga.RemoveStudentRoleFromSagaConsumer
+info: MassTransit[0]
+      Configured endpoint tenant-branding-updated, Consumer: AlphaZero.Modules.Tenants.Infrastructure.Consumers.TenantBrandingUpdatedConsumer
+info: MassTransit[0]
+      Configured endpoint assessment-metadata-changed, Consumer: AlphaZero.Modules.Courses.Infrastructure.Consumers.AssessmentMetadataChangedConsumer
+info: MassTransit[0]
+      Configured endpoint document-metadata-changed, Consumer: AlphaZero.Modules.Courses.Infrastructure.Consumers.DocumentMetadataChangedConsumer
+info: MassTransit[0]
+      Configured endpoint video-metadata-changed, Consumer: AlphaZero.Modules.Courses.Infrastructure.Consumers.VideoMetadataChangedConsumer
+info: MassTransit[0]
+      Configured endpoint video-uploading-started-event-handler, Consumer: AlphaZero.Modules.Courses.Infrastructure.Consumers.Videos.VideoUploadingStartedEventHandler
+info: MassTransit[0]
+      Configured endpoint video-uploading-failed-event-handler, Consumer: AlphaZero.Modules.Courses.Infrastructure.Consumers.Videos.VideoUploadingFailedEventHandler
+info: MassTransit[0]
+      Configured endpoint video-uploaded-event-handler, Consumer: AlphaZero.Modules.Courses.Infrastructure.Consumers.Videos.VideoUploadedEventHandler
+info: MassTransit[0]
+      Configured endpoint enroll-student-from-saga, Consumer: AlphaZero.Modules.Courses.Infrastructure.Consumers.Saga.EnrollStudentFromSagaConsumer
+info: MassTransit[0]
+      Configured endpoint revoke-student-enrollment-from-saga, Consumer: AlphaZero.Modules.Courses.Infrastructure.Consumers.Saga.RevokeStudentEnrollmentFromSagaConsumer
+info: MassTransit[0]
+      Configured endpoint assessment-grading-completed, Consumer: AlphaZero.Modules.Courses.Infrastructure.Consumers.Assessments.AssessmentGradingCompletedConsumer
+info: MassTransit[0]
+      Configured endpoint course-analytics-updater, Consumer: AlphaZero.Modules.Courses.Infrastructure.Consumers.Analytics.CourseAnalyticsUpdaterConsumer
+info: MassTransit[0]
+      Configured endpoint document-queries, Consumer: AlphaZero.Modules.Documents.Infrastructure.Consumers.DocumentQueriesConsumer
+info: MassTransit[0]
+      Configured endpoint create-assessment-request-handler, Consumer: AlphaZero.Modules.Assessments.Infrastructure.Consumers.CreateAssessmentRequestHandler
+info: MassTransit[0]
+      Configured endpoint video-s3-sync-handlers, Consumer: AlphaZero.Modules.VideoUploading.Infrastructure.Consumers.VideoS3SyncHandlers
+info: MassTransit[0]
+      Configured endpoint initialize-video-state, Consumer: AlphaZero.Modules.VideoUploading.Infrastructure.Consumers.InitializeVideoStateConsumer
+info: MassTransit[0]
+      Configured endpoint get-video-metadata, Consumer: AlphaZero.Modules.VideoUploading.Infrastructure.Consumers.Queries.GetVideoMetadataConsumer
+info: MassTransit[0]
+      Configured endpoint job-type, Saga: MassTransit.JobTypeSaga, State Machine: MassTransit.JobTypeStateMachine
+info: MassTransit[0]
+      Configured endpoint job, Saga: MassTransit.JobSaga, State Machine: MassTransit.JobStateMachine
+info: MassTransit[0]
+      Configured endpoint job-attempt, Saga: MassTransit.JobAttemptSaga, State Machine: MassTransit.JobAttemptStateMachine
+info: MassTransit[0]
+      Configured endpoint course-redemption-state, Saga: AlphaZero.Modules.Courses.Infrastructure.Sagas.CourseRedemption.CourseRedemptionState, State Machine: AlphaZero.Modules.Courses.Infrastructure.Sagas.CourseRedemption.CourseRedemptionSaga
+info: MassTransit[0]
+      Configured endpoint course-revocation-state, Saga: AlphaZero.Modules.Courses.Infrastructure.Sagas.CourseRevocation.CourseRevocationState, State Machine: AlphaZero.Modules.Courses.Infrastructure.Sagas.CourseRevocation.CourseRevocationSaga
+Unhandled exception. System.InvalidOperationException: An exception was thrown while activating Microsoft.Extensions.Diagnostics.HealthChecks.DefaultHealthCheckService -> Microsoft.Extensions.Options.UnnamedOptionsManager`1[[Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckServiceOptions, Microsoft.Extensions.Diagnostics.HealthChecks, Version=10.0.0.0, Culture=neutral, PublicKeyToken=adb9793829ddae60]] -> Microsoft.Extensions.Options.OptionsFactory`1[[Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckServiceOptions, Microsoft.Extensions.Diagnostics.HealthChecks, Version=10.0.0.0, Culture=neutral, PublicKeyToken=adb9793829ddae60]] -> λ:Microsoft.Extensions.Options.IConfigureOptions`1[[Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckServiceOptions, Microsoft.Extensions.Diagnostics.HealthChecks, Version=10.0.0.0, Culture=neutral, PublicKeyToken=adb9793829ddae60]][] -> MassTransit.Monitoring.ConfigureBusHealthCheckServiceOptions -> λ:MassTransit.Transports.IBusInstance[] -> λ:MassTransit.Transports.IBusInstance.
+ ---> Autofac.Core.DependencyResolutionException: An exception was thrown while activating Microsoft.Extensions.Diagnostics.HealthChecks.DefaultHealthCheckService -> Microsoft.Extensions.Options.UnnamedOptionsManager`1[[Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckServiceOptions, Microsoft.Extensions.Diagnostics.HealthChecks, Version=10.0.0.0, Culture=neutral, PublicKeyToken=adb9793829ddae60]] -> Microsoft.Extensions.Options.OptionsFactory`1[[Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckServiceOptions, Microsoft.Extensions.Diagnostics.HealthChecks, Version=10.0.0.0, Culture=neutral, PublicKeyToken=adb9793829ddae60]] -> λ:Microsoft.Extensions.Options.IConfigureOptions`1[[Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckServiceOptions, Microsoft.Extensions.Diagnostics.HealthChecks, Version=10.0.0.0, Culture=neutral, PublicKeyToken=adb9793829ddae60]][] -> MassTransit.Monitoring.ConfigureBusHealthCheckServiceOptions -> λ:MassTransit.Transports.IBusInstance[] -> λ:MassTransit.Transports.IBusInstance.
+ ---> System.InvalidOperationException: An exception was thrown while activating λ:MassTransit.Transports.IBusInstance`1[[AlphaZero.Shared.Application.IExternalBus, AlphaZero.Shared, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]].
+ ---> Autofac.Core.DependencyResolutionException: An exception was thrown while activating λ:MassTransit.Transports.IBusInstance`1[[AlphaZero.Shared.Application.IExternalBus, AlphaZero.Shared, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]].
+ ---> System.InvalidOperationException: An exception was thrown while activating λ:MassTransit.DependencyInjection.Bind`2[[AlphaZero.Shared.Application.IExternalBus, AlphaZero.Shared, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null],[MassTransit.IConsumerDefinition`1[[AlphaZero.Modules.VideoUploading.Infrastructure.Consumers.SQSVideoProcessingFailedConsumer, AlphaZero.Modules.VideoUploading.Infrastructure, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]], MassTransit.Abstractions, Version=8.5.8.0, Culture=neutral, PublicKeyToken=b8e0e9f2f1e657fa]].
+ ---> Autofac.Core.DependencyResolutionException: An exception was thrown while activating λ:MassTransit.DependencyInjection.Bind`2[[AlphaZero.Shared.Application.IExternalBus, AlphaZero.Shared, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null],[MassTransit.IConsumerDefinition`1[[AlphaZero.Modules.VideoUploading.Infrastructure.Consumers.SQSVideoProcessingFailedConsumer, AlphaZero.Modules.VideoUploading.Infrastructure, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]], MassTransit.Abstractions, Version=8.5.8.0, Culture=neutral, PublicKeyToken=b8e0e9f2f1e657fa]].
+ ---> System.ArgumentException: Video Published Queue is not Configured
+   at AlphaZero.Modules.VideoUploading.Infrastructure.Consumers.SQSVideoProcessingFailedConsumerDefinition..ctor(AWSResources resources) in /home/azero/Desktop/AlphaZeroLearningAcademy/src/alphazero-api/Modules/VideoUploading/Infrastructure/Consumers/SQSVideoProcessingFailedConsumer.cs:line 53
+   at System.Reflection.ConstructorInvoker.InterpretedInvoke(Object obj, IntPtr* args)
+   at System.Reflection.ConstructorInvoker.InvokeDirectByRefWithFewArgs(Span`1 copyOfArgs)
+   at System.Reflection.ConstructorInvoker.InvokeDirectByRef(Object arg1, Object arg2, Object arg3, Object arg4)
+   at System.Reflection.ConstructorInvoker.InvokeImpl(Object arg1, Object arg2, Object arg3, Object arg4)
+   at Microsoft.Extensions.DependencyInjection.ActivatorUtilities.ConstructorMatcher.CreateInstance(IServiceProvider provider)
+   at Microsoft.Extensions.DependencyInjection.ActivatorUtilities.CreateInstance(IServiceProvider provider, Type instanceType, Object[] parameters)
+   at Microsoft.Extensions.DependencyInjection.ActivatorUtilities.CreateInstance[T](IServiceProvider provider, Object[] parameters)
+   at MassTransit.Configuration.DependencyInjectionContainerRegistrar`1.<>c__6`2.<AddDefinition>b__6_0(IServiceProvider provider) in /_/src/MassTransit/DependencyInjection/Configuration/DependencyInjectionContainerRegistrar.cs:line 218
+   at Autofac.Extensions.DependencyInjection.AutofacRegistration.<>c__DisplayClass5_0.<Register>b__1(IComponentContext context, IEnumerable`1 parameters)
+   at Autofac.Core.Activators.Delegate.DelegateActivator.ActivateInstance(IComponentContext context, IEnumerable`1 parameters)
+   at Autofac.Core.Activators.Delegate.DelegateActivator.<ConfigurePipeline>b__2_0(ResolveRequestContext context, Action`1 next)
+   at Autofac.Core.Resolving.Middleware.DelegateMiddleware.Execute(ResolveRequestContext context, Action`1 next)
+   at Autofac.Core.Resolving.Pipeline.ResolvePipelineBuilder.<>c__DisplayClass15_0.<BuildPipeline>b__1(ResolveRequestContext context)
+   at Autofac.Core.Resolving.Middleware.DisposalTrackingMiddleware.Execute(ResolveRequestContext context, Action`1 next)
+   at Autofac.Core.Resolving.Pipeline.ResolvePipelineBuilder.<>c__DisplayClass15_0.<BuildPipeline>b__1(ResolveRequestContext context)
+   at Autofac.Extensions.DependencyInjection.KeyedServiceMiddleware.Execute(ResolveRequestContext context, Action`1 next)
+   at Autofac.Core.Resolving.Pipeline.ResolvePipelineBuilder.<>c__DisplayClass15_0.<BuildPipeline>b__1(ResolveRequestContext context)
+   at Autofac.Core.Resolving.Middleware.ActivatorErrorHandlingMiddleware.Execute(ResolveRequestContext context, Action`1 next)
+   --- End of inner exception stack trace ---
+   at Autofac.Core.Resolving.Middleware.ActivatorErrorHandlingMiddleware.Execute(ResolveRequestContext context, Action`1 next)
+   at Autofac.Core.Resolving.Pipeline.ResolvePipelineBuilder.<>c__DisplayClass15_0.<BuildPipeline>b__1(ResolveRequestContext context)
+   at Autofac.Core.Pipeline.ResolvePipeline.Invoke(ResolveRequestContext context)
+   at Autofac.Core.Resolving.Middleware.RegistrationPipelineInvokeMiddleware.Execute(ResolveRequestContext context, Action`1 next)
+   at Autofac.Core.Resolving.Pipeline.ResolvePipelineBuilder.<>c__DisplayClass15_0.<BuildPipeline>b__1(ResolveRequestContext context)
+   at Autofac.Core.Resolving.Middleware.SharingMiddleware.<>c__DisplayClass5_0.<Execute>b__0()
+   at Autofac.Core.Lifetime.LifetimeScope.CreateSharedInstance(Guid id, Func`1 creator)
+   at Autofac.Core.Lifetime.LifetimeScope.CreateSharedInstance(Guid primaryId, Nullable`1 qualifyingId, Func`1 creator)
+   at Autofac.Core.Resolving.Middleware.SharingMiddleware.Execute(ResolveRequestContext context, Action`1 next)
+   at Autofac.Core.Resolving.Pipeline.ResolvePipelineBuilder.<>c__DisplayClass15_0.<BuildPipeline>b__1(ResolveRequestContext context)
+   at Autofac.Core.Resolving.Pipeline.ResolvePipelineBuilder.<>c__DisplayClass15_0.<BuildPipeline>b__1(ResolveRequestContext context)
+   at Autofac.Core.Resolving.Middleware.CircularDependencyDetectorMiddleware.Execute(ResolveRequestContext context, Action`1 next)
+   at Autofac.Core.Resolving.Pipeline.ResolvePipelineBuilder.<>c__DisplayClass15_0.<BuildPipeline>b__1(ResolveRequestContext context)
+   at Autofac.Core.Pipeline.ResolvePipeline.Invoke(ResolveRequestContext context)
+   at Autofac.Core.Resolving.ResolveOperation.GetOrCreateInstance(ISharingLifetimeScope currentOperationScope, ResolveRequest& request)
+   at Autofac.Core.Resolving.ResolveOperation.ExecuteOperation(ResolveRequest& request)
+   at Autofac.Core.Resolving.ResolveOperation.Execute(ResolveRequest& request)
+   at Autofac.Core.Lifetime.LifetimeScope.ResolveComponent(ResolveRequest& request)
+   at Autofac.Core.Lifetime.LifetimeScope.Autofac.IComponentContext.ResolveComponent(ResolveRequest& request)
+   at Autofac.ResolutionExtensions.TryResolveService(IComponentContext context, Service service, IEnumerable`1 parameters, Object& instance)
+   at Autofac.ResolutionExtensions.ResolveOptionalService(IComponentContext context, Service service, IEnumerable`1 parameters)
+   at Autofac.ResolutionExtensions.ResolveOptional(IComponentContext context, Type serviceType, IEnumerable`1 parameters)
+   at Autofac.ResolutionExtensions.ResolveOptional(IComponentContext context, Type serviceType)
+   at Autofac.Extensions.DependencyInjection.AutofacServiceProvider.GetService(Type serviceType)
+   --- End of inner exception stack trace ---
+   at Autofac.Extensions.DependencyInjection.AutofacServiceProvider.GetService(Type serviceType)
+   at MassTransit.Configuration.RegistrationContext.GetService(Type serviceType) in /_/src/MassTransit/DependencyInjection/Configuration/RegistrationContext.cs:line 151
+   at Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetService[T](IServiceProvider provider)
+   at MassTransit.Configuration.DependencyInjectionContainerRegistrar`1.GetDefinition[T](IServiceProvider provider) in /_/src/MassTransit/DependencyInjection/Configuration/DependencyInjectionContainerRegistrar.cs:line 206
+   at MassTransit.DependencyInjection.Registration.ConsumerRegistration`1.GetConsumerDefinition(IServiceProvider provider) in /_/src/MassTransit/DependencyInjection/DependencyInjection/Registration/Consumers/ConsumerRegistration.cs:line 84
+   at MassTransit.DependencyInjection.Registration.ConsumerRegistration`1.MassTransit.Configuration.IConsumerRegistration.GetDefinition(IRegistrationContext context) in /_/src/MassTransit/DependencyInjection/DependencyInjection/Registration/Consumers/ConsumerRegistration.cs:line 71
+   at MassTransit.Configuration.BusRegistrationContext.<>c__DisplayClass5_0`1.<ConfigureEndpoints>b__1(IConsumerRegistration x) in /_/src/MassTransit/DependencyInjection/Configuration/BusRegistrationContext.cs:line 43
+   at System.Linq.Enumerable.IEnumerableWhereSelectIterator`2.MoveNext()
+   at System.Linq.Lookup`2.Create(IEnumerable`1 source, Func`2 keySelector, IEqualityComparer`1 comparer)
+   at System.Linq.Enumerable.GroupByIterator`2.ToList()
+   at MassTransit.Configuration.BusRegistrationContext.ConfigureEndpoints[T](IReceiveConfigurator`1 configurator, IEndpointNameFormatter endpointNameFormatter, Action`1 configureFilter) in /_/src/MassTransit/DependencyInjection/Configuration/BusRegistrationContext.cs:line 41
+   at MassTransit.Configuration.BusRegistrationContext.ConfigureEndpoints[T](IReceiveConfigurator`1 configurator, IEndpointNameFormatter endpointNameFormatter) in /_/src/MassTransit/DependencyInjection/Configuration/BusRegistrationContext.cs:line 27
+   at MassTransit.RegistrationContextExtensions.ConfigureEndpoints[T](IBusFactoryConfigurator`1 configurator, IBusRegistrationContext registration, IEndpointNameFormatter endpointNameFormatter) in /_/src/MassTransit/Configuration/RegistrationContextExtensions.cs:line 23
+   at AlphaZero.API.Program.<>c__DisplayClass4_1.<ConfigureMassTransit>b__13(IBusRegistrationContext context, IAmazonSqsBusFactoryConfigurator cfg) in /home/azero/Desktop/AlphaZeroLearningAcademy/src/alphazero-api/AlphaZero.API/Program.cs:line 297
+   at MassTransit.Configuration.TransportRegistrationBusFactory`1.CreateBus[T,TConfigurator](T configurator, IBusRegistrationContext context, Action`2 configure, IEnumerable`1 specifications) in /_/src/MassTransit/DependencyInjection/Configuration/TransportRegistrationBusFactory.cs:line 43
+   at MassTransit.AmazonSqsTransport.Configuration.AmazonSqsRegistrationBusFactory.CreateBus(IBusRegistrationContext context, IEnumerable`1 specifications, String busName) in /_/src/Transports/MassTransit.AmazonSqsTransport/AmazonSqsTransport/Configuration/AmazonSqsRegistrationBusFactory.cs:line 57
+   at MassTransit.Configuration.ServiceCollectionBusConfigurator`2.CreateBus[T](T busFactory, IServiceProvider provider) in /_/src/MassTransit/DependencyInjection/Configuration/ServiceCollectionBusConfigurator.cs:line 257
+   at MassTransit.Configuration.ServiceCollectionBusConfigurator`2.<>c__DisplayClass2_0`1.<SetBusFactory>b__0(IServiceProvider provider) in /_/src/MassTransit/DependencyInjection/Configuration/ServiceCollectionBusConfigurator.cs:line 217
+   at Autofac.Extensions.DependencyInjection.AutofacRegistration.<>c__DisplayClass5_0.<Register>b__1(IComponentContext context, IEnumerable`1 parameters)
+   at Autofac.Core.Activators.Delegate.DelegateActivator.ActivateInstance(IComponentContext context, IEnumerable`1 parameters)
+   at Autofac.Core.Activators.Delegate.DelegateActivator.<ConfigurePipeline>b__2_0(ResolveRequestContext context, Action`1 next)
+   at Autofac.Core.Resolving.Middleware.DelegateMiddleware.Execute(ResolveRequestContext context, Action`1 next)
+   at Autofac.Core.Resolving.Pipeline.ResolvePipelineBuilder.<>c__DisplayClass15_0.<BuildPipeline>b__1(ResolveRequestContext context)
+   at Autofac.Core.Resolving.Middleware.DisposalTrackingMiddleware.Execute(ResolveRequestContext context, Action`1 next)
+   at Autofac.Core.Resolving.Pipeline.ResolvePipelineBuilder.<>c__DisplayClass15_0.<BuildPipeline>b__1(ResolveRequestContext context)
+   at Autofac.Extensions.DependencyInjection.KeyedServiceMiddleware.Execute(ResolveRequestContext context, Action`1 next)
+   at Autofac.Core.Resolving.Pipeline.ResolvePipelineBuilder.<>c__DisplayClass15_0.<BuildPipeline>b__1(ResolveRequestContext context)
+   at Autofac.Core.Resolving.Middleware.ActivatorErrorHandlingMiddleware.Execute(ResolveRequestContext context, Action`1 next)
+   --- End of inner exception stack trace ---
+   at Autofac.Core.Resolving.Middleware.ActivatorErrorHandlingMiddleware.Execute(ResolveRequestContext context, Action`1 next)
+   at Autofac.Core.Resolving.Pipeline.ResolvePipelineBuilder.<>c__DisplayClass15_0.<BuildPipeline>b__1(ResolveRequestContext context)
+   at Autofac.Core.Pipeline.ResolvePipeline.Invoke(ResolveRequestContext context)
+   at Autofac.Core.Resolving.Middleware.RegistrationPipelineInvokeMiddleware.Execute(ResolveRequestContext context, Action`1 next)
+   at Autofac.Core.Resolving.Pipeline.ResolvePipelineBuilder.<>c__DisplayClass15_0.<BuildPipeline>b__1(ResolveRequestContext context)
+   at Autofac.Core.Resolving.Middleware.SharingMiddleware.<>c__DisplayClass5_0.<Execute>b__0()
+   at Autofac.Core.Lifetime.LifetimeScope.CreateSharedInstance(Guid id, Func`1 creator)
+   at Autofac.Core.Lifetime.LifetimeScope.CreateSharedInstance(Guid primaryId, Nullable`1 qualifyingId, Func`1 creator)
+   at Autofac.Core.Resolving.Middleware.SharingMiddleware.Execute(ResolveRequestContext context, Action`1 next)
+   at Autofac.Core.Resolving.Pipeline.ResolvePipelineBuilder.<>c__DisplayClass15_0.<BuildPipeline>b__1(ResolveRequestContext context)
+   at Autofac.Core.Resolving.Pipeline.ResolvePipelineBuilder.<>c__DisplayClass15_0.<BuildPipeline>b__1(ResolveRequestContext context)
+   at Autofac.Core.Resolving.Middleware.CircularDependencyDetectorMiddleware.Execute(ResolveRequestContext context, Action`1 next)
+   at Autofac.Core.Resolving.Pipeline.ResolvePipelineBuilder.<>c__DisplayClass15_0.<BuildPipeline>b__1(ResolveRequestContext context)
+   at Autofac.Core.Pipeline.ResolvePipeline.Invoke(ResolveRequestContext context)
+   at Autofac.Core.Resolving.ResolveOperation.GetOrCreateInstance(ISharingLifetimeScope currentOperationScope, ResolveRequest& request)
+   at Autofac.Core.Resolving.ResolveOperation.ExecuteOperation(ResolveRequest& request)
+   at Autofac.Core.Resolving.ResolveOperation.Execute(ResolveRequest& request)
+   at Autofac.Core.Lifetime.LifetimeScope.ResolveComponent(ResolveRequest& request)
+   at Autofac.Core.Lifetime.LifetimeScope.Autofac.IComponentContext.ResolveComponent(ResolveRequest& request)
+   at Autofac.ResolutionExtensions.TryResolveService(IComponentContext context, Service service, IEnumerable`1 parameters, Object& instance)
+   at Autofac.ResolutionExtensions.ResolveService(IComponentContext context, Service service, IEnumerable`1 parameters)
+   at Autofac.ResolutionExtensions.Resolve(IComponentContext context, Type serviceType, IEnumerable`1 parameters)
+   at Autofac.ResolutionExtensions.Resolve(IComponentContext context, Type serviceType)
+   at Autofac.Extensions.DependencyInjection.AutofacServiceProvider.GetRequiredService(Type serviceType)
+   --- End of inner exception stack trace ---
+   at Autofac.Extensions.DependencyInjection.AutofacServiceProvider.GetRequiredService(Type serviceType)
+   at Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService[T](IServiceProvider provider)
+   at MassTransit.Configuration.ServiceCollectionBusConfigurator`2.<>c__2`1.<SetBusFactory>b__2_1(IServiceProvider provider) in /_/src/MassTransit/DependencyInjection/Configuration/ServiceCollectionBusConfigurator.cs:line 219
+   at Autofac.Extensions.DependencyInjection.AutofacRegistration.<>c__DisplayClass5_0.<Register>b__1(IComponentContext context, IEnumerable`1 parameters)
+   at Autofac.Core.Activators.Delegate.DelegateActivator.ActivateInstance(IComponentContext context, IEnumerable`1 parameters)
+   at Autofac.Core.Activators.Delegate.DelegateActivator.<ConfigurePipeline>b__2_0(ResolveRequestContext context, Action`1 next)
+   at Autofac.Core.Resolving.Middleware.DelegateMiddleware.Execute(ResolveRequestContext context, Action`1 next)
+   at Autofac.Core.Resolving.Pipeline.ResolvePipelineBuilder.<>c__DisplayClass15_0.<BuildPipeline>b__1(ResolveRequestContext context)
+   at Autofac.Core.Resolving.Middleware.DisposalTrackingMiddleware.Execute(ResolveRequestContext context, Action`1 next)
+   at Autofac.Core.Resolving.Pipeline.ResolvePipelineBuilder.<>c__DisplayClass15_0.<BuildPipeline>b__1(ResolveRequestContext context)
+   at Autofac.Extensions.DependencyInjection.KeyedServiceMiddleware.Execute(ResolveRequestContext context, Action`1 next)
+   at Autofac.Core.Resolving.Pipeline.ResolvePipelineBuilder.<>c__DisplayClass15_0.<BuildPipeline>b__1(ResolveRequestContext context)
+   at Autofac.Core.Resolving.Middleware.ActivatorErrorHandlingMiddleware.Execute(ResolveRequestContext context, Action`1 next)
+   --- End of inner exception stack trace ---
+   at Autofac.Core.Resolving.Middleware.ActivatorErrorHandlingMiddleware.Execute(ResolveRequestContext context, Action`1 next)
+   at Autofac.Core.Resolving.Pipeline.ResolvePipelineBuilder.<>c__DisplayClass15_0.<BuildPipeline>b__1(ResolveRequestContext context)
+   at Autofac.Core.Pipeline.ResolvePipeline.Invoke(ResolveRequestContext context)
+   at Autofac.Core.Resolving.Middleware.RegistrationPipelineInvokeMiddleware.Execute(ResolveRequestContext context, Action`1 next)
+   at Autofac.Core.Resolving.Pipeline.ResolvePipelineBuilder.<>c__DisplayClass15_0.<BuildPipeline>b__1(ResolveRequestContext context)
+   at Autofac.Core.Resolving.Middleware.SharingMiddleware.<>c__DisplayClass5_0.<Execute>b__0()
+   at Autofac.Core.Lifetime.LifetimeScope.CreateSharedInstance(Guid id, Func`1 creator)
+   at Autofac.Core.Lifetime.LifetimeScope.CreateSharedInstance(Guid primaryId, Nullable`1 qualifyingId, Func`1 creator)
+   at Autofac.Core.Resolving.Middleware.SharingMiddleware.Execute(ResolveRequestContext context, Action`1 next)
+   at Autofac.Core.Resolving.Pipeline.ResolvePipelineBuilder.<>c__DisplayClass15_0.<BuildPipeline>b__1(ResolveRequestContext context)
+   at Autofac.Core.Resolving.Pipeline.ResolvePipelineBuilder.<>c__DisplayClass15_0.<BuildPipeline>b__1(ResolveRequestContext context)
+   at Autofac.Core.Resolving.Middleware.CircularDependencyDetectorMiddleware.Execute(ResolveRequestContext context, Action`1 next)
+   at Autofac.Core.Resolving.Pipeline.ResolvePipelineBuilder.<>c__DisplayClass15_0.<BuildPipeline>b__1(ResolveRequestContext context)
+   at Autofac.Core.Pipeline.ResolvePipeline.Invoke(ResolveRequestContext context)
+   at Autofac.Core.Resolving.ResolveOperation.GetOrCreateInstance(ISharingLifetimeScope currentOperationScope, ResolveRequest& request)
+   at Autofac.Core.Resolving.ResolveOperation.ExecuteOperation(ResolveRequest& request)
+   at Autofac.Core.Resolving.ResolveOperation.Execute(ResolveRequest& request)
+   at Autofac.Core.Lifetime.LifetimeScope.ResolveComponent(ResolveRequest& request)
+   at Autofac.Core.Container.ResolveComponent(ResolveRequest& request)
+   at Autofac.Core.Container.Autofac.IComponentContext.ResolveComponent(ResolveRequest& request)
+   at Autofac.ResolutionExtensions.TryResolveService(IComponentContext context, Service service, IEnumerable`1 parameters, Object& instance)
+   at Autofac.ResolutionExtensions.ResolveOptionalService(IComponentContext context, Service service, IEnumerable`1 parameters)
+   at Autofac.ResolutionExtensions.ResolveOptional(IComponentContext context, Type serviceType, IEnumerable`1 parameters)
+   at Autofac.ResolutionExtensions.ResolveOptional(IComponentContext context, Type serviceType)
+   at Autofac.Extensions.DependencyInjection.AutofacServiceProvider.GetService(Type serviceType)
+   --- End of inner exception stack trace ---
+   at Autofac.Extensions.DependencyInjection.AutofacServiceProvider.GetService(Type serviceType)
+   at Microsoft.AspNetCore.Builder.HealthCheckEndpointRouteBuilderExtensions.MapHealthChecksCore(IEndpointRouteBuilder endpoints, String pattern, HealthCheckOptions options)
+   at Microsoft.Extensions.Hosting.Extensions.MapDefaultEndpoints(WebApplication app) in /home/azero/Desktop/AlphaZeroLearningAcademy/src/alphazero-api/aspire/AlphaZero.ServiceDefaults/Extensions.cs:line 115
+   at AlphaZero.API.Program.Main(String[] args) in /home/azero/Desktop/AlphaZeroLearningAcademy/src/alphazero-api/AlphaZero.API/Program.cs:line 39
+   at AlphaZero.API.Program.<Main>(String[] args)

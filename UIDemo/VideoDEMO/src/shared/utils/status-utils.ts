@@ -7,11 +7,12 @@ import type { VideoStatus } from '../../domain/models/video';
  * Also handles potential binding issues by checking both 'status' and 'Status' properties
  * if an object is passed.
  */
-export const normalizeVideoStatus = (input: any): VideoStatus => {
+export const normalizeVideoStatus = (input: unknown): VideoStatus => {
   // Extract status from object if necessary (handles PascalCase vs camelCase binding issues)
   let status = input;
   if (input && typeof input === 'object') {
-    status = input.status !== undefined ? input.status : input.Status;
+    const obj = input as Record<string, unknown>;
+    status = obj.status !== undefined ? obj.status : obj.Status;
   }
 
   if (status === undefined || status === null) return 'Processing';
@@ -48,7 +49,7 @@ export const normalizeVideoStatus = (input: any): VideoStatus => {
   }
 };
 
-export const isFinalState = (input: any): boolean => {
+export const isFinalState = (input: unknown): boolean => {
   const normalized = normalizeVideoStatus(input);
   return normalized === 'Published' || normalized === 'Failed' || normalized === 'Deleted';
 };

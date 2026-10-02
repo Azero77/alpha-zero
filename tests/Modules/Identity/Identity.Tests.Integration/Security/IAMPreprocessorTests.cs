@@ -1,6 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
-using AlphaZero.Modules.Courses.Presentation.Courses.AddItem;
+using AlphaZero.Modules.Courses.Presentation.Courses.AddSection;
 using AlphaZero.Shared.Authorization;
 using AlphaZero.Shared.Domain;
 using AlphaZero.Shared.Infrastructure.Tenats;
@@ -71,7 +71,7 @@ public class IAMPreprocessorTests : IClassFixture<SecurityApiFactory>
     }
 
     [Fact]
-    public async Task AddLesson_Should_EvaluateContext_With_SessionTenant()
+    public async Task AddSection_Should_EvaluateContext_With_SessionTenant()
     {
         // 1. Arrange: Setup Course in Tenant A
 
@@ -115,8 +115,8 @@ public class IAMPreprocessorTests : IClassFixture<SecurityApiFactory>
         }
 
         // 2. Act: Attempt to add lesson to Tenant A's course while acting as User in Tenant B
-        _client.DefaultRequestHeaders.Remove("X-Tenant-Id");
-        _client.DefaultRequestHeaders.Add("X-Tenant-Id", tenantB.ToString());
+        _client.DefaultRequestHeaders.Remove("X-TenantId");
+        _client.DefaultRequestHeaders.Add("X-TenantId", tenantB.ToString());
         
         // We set the auth claim headers that TestAuthHandler uses.
         // We use user.Id because CurrentTenantUserRepository searches by primary key.
@@ -126,15 +126,13 @@ public class IAMPreprocessorTests : IClassFixture<SecurityApiFactory>
         // We set evaluator to return Forbidden to simulate horizontal breakout prevention
         _factory.Evaluator.ResultToReturn = Error.Forbidden("Access.Denied", "Cannot access cross-tenant resource");
 
-        var request = new AddLessonRequest
+        var request = new AddSectionRequest
         {
             CourseId = courseId,
-            SectionId = Guid.NewGuid(),
-            Title = "Hacked Lesson",
-            VideoId = Guid.NewGuid()
+            Title = "Hacked Section"
         };
 
-        var response = await _client.PostAsJsonAsync($"/courses/{courseId}/sections/{request.SectionId}/lessons", request);
+        var response = await _client.PostAsJsonAsync($"/courses/{courseId}/sections", request);
 
         // 3. Assert
         response.StatusCode.Should().Be(HttpStatusCode.Forbidden);

@@ -24,17 +24,17 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\AlphaZero.Shared\AlphaZero.Shared.csproj" />
-    <ProjectReference Include="..\..\src\Modules\Courses\Domain\Domain.csproj" />
-    <ProjectReference Include="..\..\src\Modules\Courses\Application\Application.csproj" />
-    <ProjectReference Include="..\..\src\Modules\VideoUploading\Domain\Domain.csproj" />
-    <ProjectReference Include="..\..\src\Modules\VideoUploading\Application\Application.csproj" />
-    <ProjectReference Include="..\..\src\Modules\Assessments\Domain\Domain.csproj" />
-    <ProjectReference Include="..\..\src\Modules\Assessments\Application\Application.csproj" />
-    <ProjectReference Include="..\..\src\Modules\Library\Domain\Domain.csproj" />
-    <ProjectReference Include="..\..\src\Modules\Library\Application\Application.csproj" />
-    <ProjectReference Include="..\..\src\Modules\Tenants\Domain\Domain.csproj" />
-    <ProjectReference Include="..\..\src\Modules\Tenants\Application\Application.csproj" />
+    <ProjectReference Include="..\..\src\alphazero-api\AlphaZero.Shared\AlphaZero.Shared.csproj" />
+    <ProjectReference Include="..\..\src\alphazero-api\Modules\Courses\Domain\Domain.csproj" />
+    <ProjectReference Include="..\..\src\alphazero-api\Modules\Courses\Application\Application.csproj" />
+    <ProjectReference Include="..\..\src\alphazero-api\Modules\VideoUploading\Domain\Domain.csproj" />
+    <ProjectReference Include="..\..\src\alphazero-api\Modules\VideoUploading\Application\Application.csproj" />
+    <ProjectReference Include="..\..\src\alphazero-api\Modules\Assessments\Domain\Domain.csproj" />
+    <ProjectReference Include="..\..\src\alphazero-api\Modules\Assessments\Application\Application.csproj" />
+    <ProjectReference Include="..\..\src\alphazero-api\Modules\Library\Domain\Domain.csproj" />
+    <ProjectReference Include="..\..\src\alphazero-api\Modules\Library\Application\Application.csproj" />
+    <ProjectReference Include="..\..\src\alphazero-api\Modules\Tenants\Domain\Domain.csproj" />
+    <ProjectReference Include="..\..\src\alphazero-api\Modules\Tenants\Application\Application.csproj" />
   </ItemGroup>
 
   <ItemGroup>

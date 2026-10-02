@@ -1,0 +1,38 @@
+using AlphaZero.Modules.Assessments.Domain.Aggregates.Assessments;
+using AlphaZero.Modules.Assessments.Domain.Aggregates.Submissions;
+using AlphaZero.Shared.Infrastructure.Database;
+using AlphaZero.Shared.Infrastructure.Tenats;
+using Microsoft.EntityFrameworkCore;
+
+using MassTransit;
+
+namespace AlphaZero.Modules.Assessments.Infrastructure.Persistance;
+
+public class AppDbContext : DbContext, ITenantDbContext
+{
+    private readonly ITenantProvider _tenantProvider;
+    public const string Schema = "Assessments";
+
+    public AppDbContext(DbContextOptions<AppDbContext> options, ITenantProvider tenantProvider) : base(options)
+    {
+        _tenantProvider = tenantProvider;
+    }
+
+    public DbSet<Assessment> Assessments => Set<Assessment>();
+    public DbSet<AssessmentSubmission> Submissions => Set<AssessmentSubmission>();
+
+    public Guid? TenantId => _tenantProvider.GetTenant();
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        modelBuilder.HasDefaultSchema(Schema);
+        modelBuilder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
+        
+        modelBuilder.ApplyAlphaZeroGlobalFilters(this);
+
+        modelBuilder.AddInboxStateEntity();
+        modelBuilder.AddOutboxMessageEntity();
+        modelBuilder.AddOutboxStateEntity();
+
+        base.OnModelCreating(modelBuilder);
+    }
+}

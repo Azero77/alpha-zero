@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "Aspire_video-analyzer": {
+      "commandName": "Executable",
+      "executablePath": "dotnet",
+      "commandLineArgs": "exec --depsfile ./AlphaZero.VideoAnalyzer.deps.json --runtimeconfig ./AlphaZero.VideoAnalyzer.runtimeconfig.json $(HOME)/.dotnet/tools/.store/amazon.lambda.testtool/0.13.0/amazon.lambda.testtool/0.13.0/content/Amazon.Lambda.RuntimeSupport/net10.0/Amazon.Lambda.RuntimeSupport.TestTool.dll AlphaZero.VideoAnalyzer::AlphaZero.VideoAnalyzer.Function::FunctionHandler",
+      "workingDirectory": "bin/Debug/net10.0/"
+    }
+  }
+}

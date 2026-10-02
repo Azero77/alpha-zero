@@ -25,12 +25,12 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\..\..\src\Modules\Library\Domain\Domain.csproj" />
-    <ProjectReference Include="..\..\..\..\src\Modules\Library\Infrastructure\Infrastructure.csproj" />
-    <ProjectReference Include="..\..\..\..\src\AlphaZero.API\AlphaZero.API.csproj" />
-    <ProjectReference Include="..\..\..\..\src\AlphaZero.Shared\AlphaZero.Shared.csproj" />
-    <ProjectReference Include="..\..\..\..\src\Modules\Library\Application\Application.csproj" />
-    <ProjectReference Include="..\..\..\..\src\Modules\Library\Presentation\Presentation.csproj" />
+    <ProjectReference Include="..\..\..\..\src\alphazero-api\Modules\Library\Domain\Domain.csproj" />
+    <ProjectReference Include="..\..\..\..\src\alphazero-api\Modules\Library\Infrastructure\Infrastructure.csproj" />
+    <ProjectReference Include="..\..\..\..\src\alphazero-api\AlphaZero.API\AlphaZero.API.csproj" />
+    <ProjectReference Include="..\..\..\..\src\alphazero-api\AlphaZero.Shared\AlphaZero.Shared.csproj" />
+    <ProjectReference Include="..\..\..\..\src\alphazero-api\Modules\Library\Application\Application.csproj" />
+    <ProjectReference Include="..\..\..\..\src\alphazero-api\Modules\Library\Presentation\Presentation.csproj" />
   </ItemGroup>
 
   <ItemGroup>

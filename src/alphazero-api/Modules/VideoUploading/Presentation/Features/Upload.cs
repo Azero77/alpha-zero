@@ -1,0 +1,83 @@
+using AlphaZero.Shared.Presentation.Extensions;
+using AlphaZero.Modules.VideoUploading.Application.Commands.Upload;
+using AlphaZero.Shared.Authorization;
+using AlphaZero.Shared.Domain;
+using ErrorOr;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Routing;
+using AlphaZero.API.Shared;
+using AlphaZero.Modules.VideoUploading.Application;
+using Microsoft.EntityFrameworkCore.Metadata.Internal;
+
+namespace AlphaZero.Modules.VideoUploading.Presentation.Features;
+
+public static class Upload
+{
+    public record Request(
+        string fileName,
+        string contentType,
+        string title,
+        string? description,
+        string? transcodingMethod,
+        string? encryptionMethod,
+        string targetResourceArn,
+        string? ThumbnailFileName = null,
+        string? ThumbnailContentType = null);
+    public record Response(
+        Guid videoId,
+        Guid tenantId,
+        string key,
+        string preSignedUrl,
+        string transcodingMethod,
+        string encryptionMethod,
+        Dictionary<string, string> headers,
+        string? thumbnailKey = null,
+        string? thumbnailPreSignedUrl = null,
+        Dictionary<string, string>? thumbnailHeaders = null);
+
+    public class Endpoint : IEndpoint
+    {
+        public void MapEndpoint(IEndpointRouteBuilder app)
+        {
+            app.MapPost("api/video-uploading/upload", Handler)
+               .WithTags("Video Uploading")
+               .AccessControl("video:Upload", (req, tenantId) => ResourceArn.ForTenant(tenantId))
+               .WithSummary("Requests pre-signed URL for video upload")
+               .WithDescription("Initializes a video upload session and returns S3 pre-signed upload URLs.")
+               .Produces<Response>(StatusCodes.Status200OK)
+               .ProducesProblem(StatusCodes.Status400BadRequest)
+               .ProducesProblem(StatusCodes.Status401Unauthorized)
+               .ProducesProblem(StatusCodes.Status403Forbidden);
+        }
+
+        private async Task<IResult> Handler(Request request, VideoUploadingModule module, HttpContext context)
+        {
+            var command = new UploadCommand(
+                FileName: request.fileName,
+                ContentType: request.contentType,
+                Title: request.title,
+                Description: request.description,
+                TargetResourceArn: request.targetResourceArn,
+                VideoTranscodingMethod: request.transcodingMethod ?? VideoTranscodingMetehod.FFMPEG.ToString(),
+                VideoEncryptionMethod: request.encryptionMethod ?? VideoEncryptionMethod.None.ToString(),
+                UploadThumbnail: request.ThumbnailFileName is not null && request.ThumbnailContentType is not null ? new UploadThumbnailCommand(request.ThumbnailFileName, request.ThumbnailContentType)
+                : null
+                );
+            var response = await module.Send<UploadCommand, ErrorOr<UploadCommandResponse>>(command);
+            return response.Match(
+                res => Results.Ok(new Response(
+                    res.VideoId,
+                    res.TenantId,
+                    res.Key,
+                    res.PreSignedUrl,
+                    res.TranscodingMethod,
+                    res.EncryptionMethod,
+                    res.Headers,
+                    res.ThumbnailKey,
+                    res.ThumbnailPreSignedUrl,
+                    res.ThumbnailHeaders)),
+                errors => errors.ToMinimalResult());
+        }
+    }
+}

@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <Sdk Name="Aspire.AppHost.Sdk" Version="9.3.1" />
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <UserSecretsId>fedc7868-efbe-4c81-881b-042253b8e9c4</UserSecretsId>
+    <DefaultItemExcludes>$(DefaultItemExcludes);cdk.out\**;cdk.out/**</DefaultItemExcludes>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Aspire.Hosting.AppHost" />
+    <PackageReference Include="Aspire.Hosting.AWS" />
+    <PackageReference Include="Aspire.Hosting.PostgreSQL" />
+    <PackageReference Include="Keycloak.AuthServices.Aspire.Hosting" />
+    <PackageReference Include="MessagePack" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\AlphaZero.API\AlphaZero.API.csproj" />
+    <ProjectReference Include="..\..\..\lambdas\AlphaZero.VideoAnalyzer\AlphaZero.VideoAnalyzer.csproj" />
+    <ProjectReference Include="..\..\..\lambdas\AlphaZero.JobPreparer\src\AlphaZero.JobPreparer\AlphaZero.JobPreparer.csproj" />
+    <ProjectReference Include="..\..\..\lambdas\AlphaZero.S3VideoCreatedEventParser\S3VideoCreatedEventParser.csproj" />
+  </ItemGroup>
+
+</Project>
