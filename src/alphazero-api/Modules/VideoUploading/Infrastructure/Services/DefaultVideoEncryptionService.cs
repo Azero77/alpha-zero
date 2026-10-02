@@ -10,12 +10,15 @@ using System.Text;
 using Amazon.SimpleSystemsManagement;
 using Amazon.SimpleSystemsManagement.Model;
 using Aspire.Shared;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Microsoft.Extensions.Caching.Hybrid;
+using Microsoft.Extensions.Logging;
 
 namespace AlphaZero.Modules.VideoUploading.Infrastructure.Services;
 
 public class DefaultVideoEncryptionService(
     AppDbContext dbContext, 
+    ILogger<DefaultVideoEncryptionService> logger,
     Microsoft.Extensions.Configuration.IConfiguration configuration,
     IAmazonSimpleSystemsManagement ssmClient,
     AWSResources awsResources,
@@ -44,7 +47,15 @@ public class DefaultVideoEncryptionService(
         using var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(masterSecret));
         var hash = hmac.ComputeHash(Encoding.UTF8.GetBytes(videoId.ToString()));
         
-        return hash[..16];
+        // IMPORTANT: The Fargate transcoder (ffmpeg) uses the ASCII characters of the hex string
+        // as the actual AES key (it reads the first 16 bytes of the 32-byte hex string file).
+        // To match exactly what ffmpeg used, we must return the ASCII bytes of the hex string.
+        var hexString = Convert.ToHexString(hash[..16]).ToLowerInvariant();
+        var asciiBytes = Encoding.UTF8.GetBytes(hexString);
+
+        var returned = asciiBytes[..16];
+        logger.LogDebug("The Clear key in debugging is @{Key}",Encoding.UTF8.GetString(returned));
+        return returned;
     }
 
     public async Task<ErrorOr<EncryptionParams>> GetEncryptionParamsAsync(

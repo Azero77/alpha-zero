@@ -84,6 +84,7 @@ public class Function
             {
                 var masterSecret = await GetMasterSecretAsync();
                 var clearKey = GenerateClearKeySecret(masterSecret, input.VideoId);
+                context.Logger.LogInformation("The Clear key is @{Key}",clearKey);
                 var keyId = input.VideoId.Replace("-", "").ToLowerInvariant();
                 encryption = new EncryptionSettings(
                     KeyId: keyId,
@@ -182,6 +183,7 @@ public class Function
     {
         using var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(masterSecret));
         var hash = hmac.ComputeHash(Encoding.UTF8.GetBytes(videoId));
+        
         return Convert.ToHexString(hash[..16]).ToLowerInvariant();
     }
 }

@@ -1,5 +1,5 @@
 import Hls from 'hls.js';
-import { config } from '../../core/config';
+import { config as appConfig } from '../../core/config';
 
 export interface PlayerConfig {
   manifestUrl: string;
@@ -24,11 +24,11 @@ export class HlsPlayerManager {
         xhrSetup: (xhr: XMLHttpRequest, url: string) => {
           // Attach credentials to our backend API to identify the user
           if (url.includes('/api/video/keys')) {
-            if (config.tenantId) {
-              xhr.setRequestHeader('X-TenantId', config.tenantId);
+            if (appConfig.tenantId) {
+              xhr.setRequestHeader('X-TenantId', appConfig.tenantId);
             }
-            if (config.authToken) {
-              xhr.setRequestHeader('Authorization', `Bearer ${config.authToken}`);
+            if (appConfig.authToken) {
+              xhr.setRequestHeader('Authorization', `Bearer ${appConfig.authToken}`);
             }
           }
         },
