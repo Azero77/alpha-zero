@@ -31,6 +31,7 @@ public static class DependencyInjection
         services.AddAWSService<IAmazonS3>();
         services.AddAWSService<IAmazonSQS>();
         services.AddAWSService<IAmazonMediaConvert>();
+        services.AddAWSService<Amazon.SimpleSystemsManagement.IAmazonSimpleSystemsManagement>();
 
         // 3. Tenant Provider
         if (environment.IsDevelopment())

@@ -15,6 +15,7 @@
     <PackageReference Include="Autofac" />
     <PackageReference Include="Autofac.Extensions.DependencyInjection" />
     <PackageReference Include="AWSSDK.Core" />
+    <PackageReference Include="AWSSDK.SimpleSystemsManagement" />
     <PackageReference Include="ErrorOr" />
     <PackageReference Include="FastEndpoints.Swagger" />
     <PackageReference Include="FluentValidation.DependencyInjectionExtensions" />

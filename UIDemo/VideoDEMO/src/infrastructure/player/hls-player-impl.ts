@@ -1,4 +1,5 @@
 import Hls from 'hls.js';
+import { config } from '../../core/config';
 
 export interface PlayerConfig {
   manifestUrl: string;
@@ -16,13 +17,20 @@ export class HlsPlayerManager {
       videoElement.poster = config.posterUrl;
     }
 
+    let networkErrorCount = 0;
+
     if (Hls.isSupported()) {
       this.hls = new Hls({
-        xhrSetup: (xhr: XMLHttpRequest, _url: string) => {
-          // Temporarily disabled for the UI demo since the mock CDN (cdn.zadmuslim.cc) 
-          // may not be returning Access-Control-Allow-Credentials: true yet.
-          // Enable this once the Next.js BFF proxy & Cloudflare Worker are fully deployed.
-          // xhr.withCredentials = true;
+        xhrSetup: (xhr: XMLHttpRequest, url: string) => {
+          // Attach credentials to our backend API to identify the user
+          if (url.includes('/api/video/keys')) {
+            if (config.tenantId) {
+              xhr.setRequestHeader('X-TenantId', config.tenantId);
+            }
+            if (config.authToken) {
+              xhr.setRequestHeader('Authorization', `Bearer ${config.authToken}`);
+            }
+          }
         },
       });
 
@@ -33,9 +41,13 @@ export class HlsPlayerManager {
               if (data.response?.code === 410) {
                 console.warn('410 Gone encountered, recovering...');
                 this.hls?.recoverMediaError();
-              } else {
-                console.error("fatal network error encountered, try to recover", data);
+              } else if (networkErrorCount < 3) {
+                networkErrorCount++;
+                console.warn(`fatal network error encountered, try to recover (attempt ${networkErrorCount})`, data);
                 this.hls?.startLoad();
+              } else {
+                console.error("fatal network error, max retries reached. destroying player.", data);
+                this.hls?.destroy();
               }
               break;
             case Hls.ErrorTypes.MEDIA_ERROR:

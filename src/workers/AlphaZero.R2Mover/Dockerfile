@@ -4,6 +4,7 @@ WORKDIR /app
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 COPY ["src/workers/AlphaZero.R2Mover/AlphaZero.R2Mover.csproj", "src/workers/AlphaZero.R2Mover/"]
+COPY ["src/alphazero-api/Modules/VideoUploading/IntegrationEvents/IntegrationEvents.csproj", "src/alphazero-api/Modules/VideoUploading/IntegrationEvents/"]
 # Assuming Directory.Packages.props is in root
 COPY ["Directory.Packages.props", "."]
 RUN dotnet restore "src/workers/AlphaZero.R2Mover/AlphaZero.R2Mover.csproj"

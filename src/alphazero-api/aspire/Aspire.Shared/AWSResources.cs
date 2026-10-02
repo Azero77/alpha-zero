@@ -16,6 +16,7 @@ namespace Aspire.Shared
         public string StepFunctionArn { get; set; } = string.Empty;
         public string MediaConvertRoleArn { get; set; } = string.Empty;
         public string MediaConvertKeyKMSArn { get; set; } = string.Empty;
+        public string MasterClearKeyParameter { get; set; } = "/AlphaZero/VideoPipeline/MasterClearKey";
     }
     public class S3Settings
     {

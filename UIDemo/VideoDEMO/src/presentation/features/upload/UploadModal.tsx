@@ -70,7 +70,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose }) => 
     isDragActive: isThumbnailDragActive,
   } = useDropzone({
     onDrop: onThumbnailDrop,
-    accept: { 'image/jpeg': ['.jpg', '.jpeg'], 'image/webp': ['.webp'], 'image/png': ['.png'] },
+    accept: { 'image/jpeg': ['.jpg', '.jpeg'], 'image/webp': ['.webp'] },
     maxFiles: 1,
     disabled: status === 'uploading',
   });
@@ -291,7 +291,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose }) => 
                         <>
                           <ImageIcon size={24} className="mb-2 text-slate-400" />
                           <p className="text-xs font-medium text-slate-700">Drop poster image</p>
-                          <p className="text-[10px] text-slate-400 mt-0.5">.jpg, .webp, or .png</p>
+                          <p className="text-[10px] text-slate-400 mt-0.5">.jpg or .webp</p>
                         </>
                       )}
                     </div>

@@ -61,9 +61,17 @@ export const DashboardPage: React.FC = () => {
         manifestUrl = manifestUrl.replace('http://cdn.zadmuslim.cc', '/cdn-proxy');
       }
 
+      let posterUrl = video.thumbnailUrl
+        ? (video.thumbnailUrl.startsWith('http') ? video.thumbnailUrl : `${config.cdnUrl}/${video.thumbnailUrl}`)
+        : undefined;
+
+      if (posterUrl && posterUrl.startsWith('http://cdn.zadmuslim.cc')) {
+        posterUrl = posterUrl.replace('http://cdn.zadmuslim.cc', '/cdn-proxy');
+      }
+
       const playerConfig: PlayerConfig = {
         manifestUrl: manifestUrl,
-        posterUrl: video.thumbnailUrl || undefined,
+        posterUrl: posterUrl,
       };
 
       setActivePlayer({ video, config: playerConfig });

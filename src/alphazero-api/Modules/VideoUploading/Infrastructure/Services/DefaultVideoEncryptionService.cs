@@ -6,10 +6,47 @@ using ErrorOr;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Cryptography;
 
+using System.Text;
+using Amazon.SimpleSystemsManagement;
+using Amazon.SimpleSystemsManagement.Model;
+using Aspire.Shared;
+using Microsoft.Extensions.Caching.Hybrid;
+
 namespace AlphaZero.Modules.VideoUploading.Infrastructure.Services;
 
-public class DefaultVideoEncryptionService(AppDbContext dbContext, Microsoft.Extensions.Configuration.IConfiguration configuration) : IVideoEncryptionService
+public class DefaultVideoEncryptionService(
+    AppDbContext dbContext, 
+    Microsoft.Extensions.Configuration.IConfiguration configuration,
+    IAmazonSimpleSystemsManagement ssmClient,
+    AWSResources awsResources,
+    HybridCache cache) : IVideoEncryptionService
 {
+    public async Task<ErrorOr<byte[]>> GetClearKeyAsync(Guid videoId, CancellationToken ct = default)
+    {
+        var parameterName = awsResources.MasterClearKeyParameter 
+            ?? "/AlphaZero/VideoPipeline/MasterClearKey";
+
+        var masterSecret = await cache.GetOrCreateAsync(
+            "ssm:master-clear-key",
+            async cancel =>
+            {
+                var response = await ssmClient.GetParameterAsync(new GetParameterRequest
+                {
+                    Name = parameterName,
+                    WithDecryption = true
+                }, cancel);
+                return response.Parameter.Value;
+            }, cancellationToken: ct);
+
+        if (string.IsNullOrEmpty(masterSecret))
+            return Error.Failure("Encryption.KeyMissing", "Master ClearKey not found.");
+
+        using var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(masterSecret));
+        var hash = hmac.ComputeHash(Encoding.UTF8.GetBytes(videoId.ToString()));
+        
+        return hash[..16];
+    }
+
     public async Task<ErrorOr<EncryptionParams>> GetEncryptionParamsAsync(
         Guid videoId, 
         VideoEncryptionMethod method, 
