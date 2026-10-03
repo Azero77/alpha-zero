@@ -33,20 +33,15 @@ public class UpsertCourseOverviewCommandHandler : IRequestHandler<UpsertCourseOv
     {
         var tenantId = _tenantProvider.GetTenant();
         if (tenantId is null) return Error.Unauthorized("Tenant.NotFound", "Tenant not found.");
-
-        var courseExists = await _courseRepository.Any(x => x.Id == request.CourseId && x.TenantId == tenantId.Value, cancellationToken);
-        if (!courseExists)
-            return Error.NotFound("Course.NotFound", "Course not found.");
-
         var overview = await _courseOverviewRepository.GetByCourseIdAsync(request.CourseId, cancellationToken);
 
         var descDoc = RichText.Create(request.DescriptionContent).Value;
         var targetDoc = request.TargetAudienceContent != null ? RichText.Create(request.TargetAudienceContent).Value : null;
         var learningDoc = request.LearningObjectivesContent != null ? RichText.Create(request.LearningObjectivesContent).Value : null;
-
+        CourseOverview? UpdatedOrCreatedItem = null;
         if (overview is null)
         {
-            overview = CourseOverview.Create(
+            UpdatedOrCreatedItem = CourseOverview.Create(
                 Guid.NewGuid(),
                 tenantId.Value,
                 request.CourseId,
@@ -55,17 +50,20 @@ public class UpsertCourseOverviewCommandHandler : IRequestHandler<UpsertCourseOv
                 learningDoc,
                 null);
 
-            _courseOverviewRepository.Add(overview);
+            _courseOverviewRepository.Add(UpdatedOrCreatedItem);
         }
         else
         {
-            overview.Update(
+            UpdatedOrCreatedItem = CourseOverview.Create(
+                overview.Id,
+                tenantId.Value,
+                request.CourseId,
                 descDoc,
                 targetDoc,
                 learningDoc,
                 overview.CoverImageDocumentId);
                 
-            _courseOverviewRepository.Update(overview);
+            _courseOverviewRepository.Update(UpdatedOrCreatedItem);
         }
 
         return Result.Success;

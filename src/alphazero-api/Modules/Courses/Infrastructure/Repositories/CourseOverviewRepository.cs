@@ -1,3 +1,4 @@
+using AlphaZero.Modules.Courses.Application.Courses.Queries.GetCourseOverview;
 using AlphaZero.Modules.Courses.Application.Repositories;
 using AlphaZero.Modules.Courses.Domain.Aggregates.Courses;
 using AlphaZero.Modules.Courses.Infrastructure.Persistance;
@@ -12,9 +13,18 @@ internal sealed class CourseOverviewRepository : BaseRepository<AppDbContext, Co
     {
     }
 
-    public async Task<CourseOverview?> GetByCourseIdAsync(Guid courseId, CancellationToken cancellationToken = default)
+    public async Task<CourseOverviewDto?> GetByCourseIdAsync(Guid courseId, CancellationToken cancellationToken = default)
     {
-        return await _context.CourseOverviews
-            .FirstOrDefaultAsync(x => x.CourseId == courseId, cancellationToken);
+        var query = from course in _context.Courses
+            join courseOverview in _context.CourseOverviews
+                on course.Id equals courseOverview.CourseId
+            select new CourseOverviewDto(courseOverview.Id,course.Id, course.Status.ToString(),
+                courseOverview.DescriptionContent.Value,
+                courseOverview.TargetAudienceContent == null ? null : courseOverview.TargetAudienceContent.Value,
+                courseOverview.LearningObjectivesContent == null ? null : courseOverview.LearningObjectivesContent.Value,
+                courseOverview.CoverImageDocumentId,
+                courseOverview.ETag);
+        var result = await query.FirstOrDefaultAsync(cancellationToken);
+        return result;
     }
 }
