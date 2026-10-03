@@ -5,6 +5,7 @@ using AlphaZero.Shared.Presentation.Extensions;
 using FastEndpoints;
 using FluentValidation;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Builder;
 using System.Text.Json;
 
 namespace AlphaZero.Modules.Courses.Presentation.Courses.Overview;
@@ -17,28 +18,42 @@ public class UpsertCourseOverviewRequest
     public JsonElement? LearningObjectivesContent { get; set; }
 }
 
+public static class ValidatorExtensions 
+{
+    public static IRuleBuilderOptions<T, JsonElement> MustBeValidJsonBlock<T>(this IRuleBuilder<T, JsonElement> ruleBuilder)
+    {
+        return ruleBuilder.Must(element =>
+        {
+            if (element.ValueKind != JsonValueKind.Object) return false;
+            if (!element.TryGetProperty("type", out var typeProp)) return false;
+            return typeProp.GetString() == "doc";
+        }).WithMessage("'{PropertyName}' must be a valid ProseMirror document (type: 'doc').");
+    }
+
+    public static IRuleBuilderOptions<T, JsonElement?> MustBeValidOptionalJsonBlock<T>(this IRuleBuilder<T, JsonElement?> ruleBuilder)
+    {
+        return ruleBuilder.Must(element =>
+        {
+            if (!element.HasValue) return true;
+            if (element.Value.ValueKind != JsonValueKind.Object) return false;
+            if (!element.Value.TryGetProperty("type", out var typeProp)) return false;
+            return typeProp.GetString() == "doc";
+        }).WithMessage("'{PropertyName}' must be a valid ProseMirror document (type: 'doc').");
+    }
+}
+
 public class UpsertCourseOverviewValidator : Validator<UpsertCourseOverviewRequest>
 {
     public UpsertCourseOverviewValidator()
     {
         RuleFor(x => x.DescriptionContent)
-            .Must(IsValidJsonBlock)
-            .WithMessage("DescriptionContent must be a valid JSON block.");
+            .MustBeValidJsonBlock();
 
         RuleFor(x => x.TargetAudienceContent)
-            .Must(x => !x.HasValue || IsValidJsonBlock(x.Value))
-            .WithMessage("TargetAudienceContent must be a valid JSON block.");
+            .MustBeValidOptionalJsonBlock();
 
         RuleFor(x => x.LearningObjectivesContent)
-            .Must(x => !x.HasValue || IsValidJsonBlock(x.Value))
-            .WithMessage("LearningObjectivesContent must be a valid JSON block.");
-    }
-
-    private bool IsValidJsonBlock(JsonElement element)
-    {
-        // Must be an object, usually TipTap/ProseMirror has a "type": "doc" or similar.
-        // For ticket 20, just ensuring it's an object is sufficient as basic validation.
-        return element.ValueKind == JsonValueKind.Object;
+            .MustBeValidOptionalJsonBlock();
     }
 }
 
@@ -69,9 +84,9 @@ public class UpsertCourseOverviewEndpoint : Endpoint<UpsertCourseOverviewRequest
     {
         var command = new UpsertCourseOverviewCommand(
             req.Id, 
-            req.DescriptionContent, 
-            req.TargetAudienceContent, 
-            req.LearningObjectivesContent);
+            req.DescriptionContent.GetRawText(), 
+            req.TargetAudienceContent?.GetRawText(), 
+            req.LearningObjectivesContent?.GetRawText());
             
         var result = await _module.Send(command, ct);
         

@@ -5,7 +5,8 @@ using AlphaZero.Shared.Presentation.Extensions;
 using FastEndpoints;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Net.Http.Headers;
-using System.Text.Json;
+using Microsoft.Extensions.DependencyInjection;
+using System.Security.Claims;
 
 namespace AlphaZero.Modules.Courses.Presentation.Courses.Overview;
 
@@ -16,9 +17,9 @@ public class GetCourseOverviewRequest
 
 public record CourseOverviewResponse(
     Guid CourseId,
-    JsonDocument DescriptionContent,
-    JsonDocument? TargetAudienceContent,
-    JsonDocument? LearningObjectivesContent);
+    string DescriptionContent,
+    string? TargetAudienceContent,
+    string? LearningObjectivesContent);
 
 public class GetCourseOverviewEndpoint : Endpoint<GetCourseOverviewRequest, CourseOverviewResponse>
 {
@@ -60,14 +61,48 @@ public class GetCourseOverviewEndpoint : Endpoint<GetCourseOverviewRequest, Cour
         // Authorization check
         if (dto.CourseStatus != "Published")
         {
-            // If not published, the user MUST be authenticated AND have courses.overview:Manage (or courses:View)
-            var hasManagePermission = User.Identity?.IsAuthenticated == true && 
-                User.HasClaim("permission", "courses.overview:Manage"); // This is a simplified check.
-                
-            // Proper IAM check via typical AlphaZero pattern? Let's check how it's done typically.
-            // Usually we use endpoint policies but since it's anonymous, we check claims manually.
-            if (!hasManagePermission)
+            var policyEvaluator = HttpContext.RequestServices.GetService<IPolicyEvaluatorService>();
+            var authContextFactory = HttpContext.RequestServices.GetService<IAuthorizationContextFactory>();
+            var tenantProvider = HttpContext.RequestServices.GetService<AlphaZero.Shared.Infrastructure.Tenats.ITenantProvider>();
+            
+            if (policyEvaluator != null && authContextFactory != null && tenantProvider != null)
             {
+                var tenantId = tenantProvider.GetTenant();
+                if (tenantId == null || !User.Identity!.IsAuthenticated)
+                {
+                    HttpContext.Response.StatusCode = 404;
+                    return;
+                }
+
+                var idStr = User.Claims.FirstOrDefault(c => c.Type == "sub" || c.Type == ClaimTypes.NameIdentifier)?.Value;
+                var authSchemeStr = User.Claims.FirstOrDefault(c => c.Type == "auth_method")?.Value ?? "Principal";
+                
+                if (string.IsNullOrEmpty(idStr) || !Enum.TryParse<AuthenticationMethod>(authSchemeStr, true, out var authMethod))
+                {
+                    HttpContext.Response.StatusCode = 404;
+                    return;
+                }
+
+                var arn = ResourceArn.ForCourse(tenantId.Value, req.Id);
+                var authContextResult = await authContextFactory.Create("courses.overview:Manage", arn, authMethod, idStr, ct);
+                
+                if (authContextResult.IsError)
+                {
+                    HttpContext.Response.StatusCode = 404;
+                    return;
+                }
+                
+                var authResult = await policyEvaluator.Authorize(authContextResult.Value);
+                
+                if (authResult.IsError)
+                {
+                    HttpContext.Response.StatusCode = 404;
+                    return;
+                }
+            }
+            else 
+            {
+                // Fallback if services not injected correctly
                 HttpContext.Response.StatusCode = 404;
                 return;
             }

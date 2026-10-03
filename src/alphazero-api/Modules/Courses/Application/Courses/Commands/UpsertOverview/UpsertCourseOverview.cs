@@ -1,17 +1,17 @@
 using ErrorOr;
 using MediatR;
-using System.Text.Json;
 using AlphaZero.Modules.Courses.Domain.Aggregates.Courses;
 using AlphaZero.Modules.Courses.Application.Repositories;
 using AlphaZero.Shared.Infrastructure.Tenats;
+using AlphaZero.Modules.Courses.Domain.ValueObjects;
 
 namespace AlphaZero.Modules.Courses.Application.Courses.Commands.UpsertOverview;
 
 public record UpsertCourseOverviewCommand(
     Guid CourseId,
-    JsonElement DescriptionContent,
-    JsonElement? TargetAudienceContent,
-    JsonElement? LearningObjectivesContent) : IRequest<ErrorOr<Success>>;
+    string DescriptionContent,
+    string? TargetAudienceContent,
+    string? LearningObjectivesContent) : IRequest<ErrorOr<Success>>;
 
 public class UpsertCourseOverviewCommandHandler : IRequestHandler<UpsertCourseOverviewCommand, ErrorOr<Success>>
 {
@@ -40,10 +40,9 @@ public class UpsertCourseOverviewCommandHandler : IRequestHandler<UpsertCourseOv
 
         var overview = await _courseOverviewRepository.GetByCourseIdAsync(request.CourseId, cancellationToken);
 
-        // Map JsonElement to JsonDocument safely
-        var descDoc = JsonDocument.Parse(request.DescriptionContent.GetRawText());
-        var targetDoc = request.TargetAudienceContent.HasValue ? JsonDocument.Parse(request.TargetAudienceContent.Value.GetRawText()) : null;
-        var learningDoc = request.LearningObjectivesContent.HasValue ? JsonDocument.Parse(request.LearningObjectivesContent.Value.GetRawText()) : null;
+        var descDoc = RichText.Create(request.DescriptionContent).Value;
+        var targetDoc = request.TargetAudienceContent != null ? RichText.Create(request.TargetAudienceContent).Value : null;
+        var learningDoc = request.LearningObjectivesContent != null ? RichText.Create(request.LearningObjectivesContent).Value : null;
 
         if (overview is null)
         {
@@ -54,7 +53,7 @@ public class UpsertCourseOverviewCommandHandler : IRequestHandler<UpsertCourseOv
                 descDoc,
                 targetDoc,
                 learningDoc,
-                null); // CoverImageDocumentId is omitted in Ticket #20
+                null);
 
             _courseOverviewRepository.Add(overview);
         }
@@ -64,7 +63,7 @@ public class UpsertCourseOverviewCommandHandler : IRequestHandler<UpsertCourseOv
                 descDoc,
                 targetDoc,
                 learningDoc,
-                overview.CoverImageDocumentId); // Preserve cover image
+                overview.CoverImageDocumentId);
                 
             _courseOverviewRepository.Update(overview);
         }

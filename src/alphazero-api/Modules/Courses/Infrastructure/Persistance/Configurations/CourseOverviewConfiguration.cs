@@ -1,4 +1,5 @@
 using AlphaZero.Modules.Courses.Domain.Aggregates.Courses;
+using AlphaZero.Modules.Courses.Domain.ValueObjects;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -18,13 +19,22 @@ internal class CourseOverviewConfiguration : IEntityTypeConfiguration<CourseOver
                .OnDelete(DeleteBehavior.Cascade);
 
         builder.Property(x => x.DescriptionContent)
+               .HasConversion(
+                   v => v.Value,
+                   v => RichText.Create(v).Value)
                .IsRequired()
                .HasColumnType("jsonb");
 
         builder.Property(x => x.TargetAudienceContent)
+               .HasConversion(
+                   v => v != null ? v.Value : null,
+                   v => v != null ? RichText.Create(v).Value : null)
                .HasColumnType("jsonb");
 
         builder.Property(x => x.LearningObjectivesContent)
+               .HasConversion(
+                   v => v != null ? v.Value : null,
+                   v => v != null ? RichText.Create(v).Value : null)
                .HasColumnType("jsonb");
 
         builder.Property(x => x.ETag)

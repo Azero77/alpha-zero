@@ -1,18 +1,16 @@
 using ErrorOr;
 using MediatR;
-using System.Text.Json;
 using AlphaZero.Modules.Courses.Application.Repositories;
 using AlphaZero.Modules.Courses.Application.Queries;
-using AlphaZero.Modules.Courses.Domain.Aggregates.Courses;
 
 namespace AlphaZero.Modules.Courses.Application.Courses.Queries.GetCourseOverview;
 
 public record CourseOverviewDto(
     Guid CourseId,
     string CourseStatus,
-    JsonDocument DescriptionContent,
-    JsonDocument? TargetAudienceContent,
-    JsonDocument? LearningObjectivesContent,
+    string DescriptionContent,
+    string? TargetAudienceContent,
+    string? LearningObjectivesContent,
     Guid? CoverImageDocumentId,
     string ETag);
 
@@ -44,9 +42,9 @@ public class GetCourseOverviewQueryHandler : IRequestHandler<GetCourseOverviewQu
         return new CourseOverviewDto(
             overview.CourseId,
             course.Status,
-            overview.DescriptionContent,
-            overview.TargetAudienceContent,
-            overview.LearningObjectivesContent,
+            overview.DescriptionContent.Value,
+            overview.TargetAudienceContent?.Value,
+            overview.LearningObjectivesContent?.Value,
             overview.CoverImageDocumentId,
             overview.ETag);
     }

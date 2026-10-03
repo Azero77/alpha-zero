@@ -1,5 +1,5 @@
 using System;
-using System.Text.Json;
+using AlphaZero.Modules.Courses.Domain.ValueObjects;
 using AlphaZero.Shared.Domain;
 using AlphaZero.Shared.Infrastructure.Tenats;
 
@@ -9,9 +9,9 @@ public class CourseOverview : TenantOwnedEntity
 {
     public Guid CourseId { get; private set; }
     
-    public JsonDocument DescriptionContent { get; private set; }
-    public JsonDocument? TargetAudienceContent { get; private set; }
-    public JsonDocument? LearningObjectivesContent { get; private set; }
+    public RichText DescriptionContent { get; private set; }
+    public RichText? TargetAudienceContent { get; private set; }
+    public RichText? LearningObjectivesContent { get; private set; }
     
     public Guid? CoverImageDocumentId { get; private set; }
     
@@ -23,7 +23,7 @@ public class CourseOverview : TenantOwnedEntity
     // Required by EF Core
     private CourseOverview() : base(default, default) 
     {
-        DescriptionContent = JsonDocument.Parse("{}");
+        DescriptionContent = RichText.Create("{}").Value;
         ETag = "";
     }
 
@@ -31,9 +31,9 @@ public class CourseOverview : TenantOwnedEntity
         Guid id,
         Guid tenantId,
         Guid courseId,
-        JsonDocument descriptionContent,
-        JsonDocument? targetAudienceContent,
-        JsonDocument? learningObjectivesContent,
+        RichText descriptionContent,
+        RichText? targetAudienceContent,
+        RichText? learningObjectivesContent,
         Guid? coverImageDocumentId) : base(id, tenantId)
     {
         CourseId = courseId;
@@ -51,9 +51,9 @@ public class CourseOverview : TenantOwnedEntity
         Guid id,
         Guid tenantId,
         Guid courseId,
-        JsonDocument descriptionContent,
-        JsonDocument? targetAudienceContent,
-        JsonDocument? learningObjectivesContent,
+        RichText descriptionContent,
+        RichText? targetAudienceContent,
+        RichText? learningObjectivesContent,
         Guid? coverImageDocumentId)
     {
         return new CourseOverview(
@@ -67,9 +67,9 @@ public class CourseOverview : TenantOwnedEntity
     }
 
     public void Update(
-        JsonDocument descriptionContent,
-        JsonDocument? targetAudienceContent,
-        JsonDocument? learningObjectivesContent,
+        RichText descriptionContent,
+        RichText? targetAudienceContent,
+        RichText? learningObjectivesContent,
         Guid? coverImageDocumentId)
     {
         DescriptionContent = descriptionContent;
@@ -83,7 +83,6 @@ public class CourseOverview : TenantOwnedEntity
 
     private void UpdateETag()
     {
-        // Simple ETag generation based on updated time
         ETag = $"\"{Guid.NewGuid():N}\"";
     }
 }
