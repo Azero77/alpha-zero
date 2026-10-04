@@ -17,6 +17,8 @@ public interface IModule
 
     Task<TResponse> Send<TResponse>(IRequest<TResponse> request, CancellationToken cancellationToken = default);
 
+    Task Send(IRequest request, CancellationToken cancellationToken = default);
+
     void RegisterPrivate(IServiceCollection services, ContainerBuilder builder);
     void RegisterGlobal(IServiceCollection services);
 
@@ -77,6 +79,13 @@ public abstract class AppModule : Module, IModule
         using var requestScope = CreateScope();
         var mediatr = requestScope.Resolve<IMediator>();
         return await mediatr.Send(request, cancellationToken);
+    }
+
+    public virtual async Task Send(IRequest request, CancellationToken cancellationToken = default)
+    {
+        using var requestScope = CreateScope();
+        var mediatr = requestScope.Resolve<IMediator>();
+        await mediatr.Send(request, cancellationToken);
     }
 
     public abstract void RegisterPrivate(IServiceCollection services, ContainerBuilder builder);

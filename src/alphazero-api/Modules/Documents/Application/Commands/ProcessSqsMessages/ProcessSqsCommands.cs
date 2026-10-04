@@ -25,7 +25,7 @@ public class ProcessSqsCommandsHandler :
     public async Task Handle(ProcessDocumentUploadedCommand request, CancellationToken cancellationToken)
     {
         var msg = request.Message;
-        await _publishEndpoint.Publish(new DocumentUploadedToStorageEvent(
+        await _publishEndpoint.Publish(new DocumentProcessingRequestedEvent(
             msg.DocumentId, msg.TenantId, msg.S3Key, msg.FileHash, msg.Size), cancellationToken);
     }
 

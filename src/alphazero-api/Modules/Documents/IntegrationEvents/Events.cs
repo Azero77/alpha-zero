@@ -35,6 +35,13 @@ public record DocumentUploadInitiatedEvent(
     Guid DocumentId,
     Guid TenantId);
 
+public record DocumentProcessingRequestedEvent(
+    Guid DocumentId,
+    Guid TenantId,
+    string S3Key,
+    string FileHash,
+    long Size);
+
 public record DocumentUploadedToStorageEvent(
     Guid DocumentId,
     Guid TenantId,
