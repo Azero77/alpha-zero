@@ -1,4 +1,5 @@
 using AlphaZero.Modules.Documents.Application;
+using AlphaZero.Modules.Documents.Application.Sagas;
 using AlphaZero.Modules.Documents.Infrastructure;
 using AlphaZero.Modules.Documents.Infrastructure.Persistance;
 using AlphaZero.Shared.Application;
@@ -33,7 +34,14 @@ public class DocumentsModule : AppModule, IDocumentsModule
 
     public override void ConfigureModuleBus(IBusRegistrationConfigurator configuration)
     {
-        configuration.AddEntityFrameworkOutbox<AlphaZero.Modules.Documents.Infrastructure.Persistance.AppDbContext>(o =>
+        configuration.AddSagaStateMachine<DocumentProcessingSaga, DocumentProcessingSagaState>()
+            .EntityFrameworkRepository(r =>
+            {
+                r.ExistingDbContext<AppDbContext>();
+                r.UsePostgres();
+            });
+
+        configuration.AddEntityFrameworkOutbox<AppDbContext>(o =>
         {
             o.UsePostgres();
             o.UseBusOutbox();
@@ -41,7 +49,9 @@ public class DocumentsModule : AppModule, IDocumentsModule
             o.DuplicateDetectionWindow = TimeSpan.FromMinutes(30);
         });
 
-        configuration.AddModuleConsumers<Infrastructure.Persistance.AppDbContext>(typeof(DocumentsModule).Assembly);
-        configuration.AddModuleConsumers<Infrastructure.Persistance.AppDbContext>(typeof(Infrastructure.Persistance.AppDbContext).Assembly);
+        configuration.AddModuleConsumers<AppDbContext>(typeof(DocumentsModule).Assembly);
+        configuration.AddModuleConsumers<AppDbContext>(typeof(AppDbContext).Assembly);
+        // Register Saga assembly consumers in case they're separated
+        configuration.AddModuleConsumers<AppDbContext>(typeof(DocumentProcessingSaga).Assembly);
     }
 }

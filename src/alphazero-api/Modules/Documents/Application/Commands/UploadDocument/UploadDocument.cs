@@ -1,6 +1,7 @@
 using AlphaZero.Modules.Documents.Application.Services;
 using AlphaZero.Modules.Documents.Domain.Models;
 using AlphaZero.Modules.Documents.Domain.Repositories;
+using AlphaZero.Modules.Documents.IntegrationEvents;
 using AlphaZero.Shared.Application;
 using AlphaZero.Shared.Domain;
 using AlphaZero.Shared.Infrastructure.Repositores;
@@ -8,6 +9,7 @@ using AlphaZero.Shared.Infrastructure.Tenats;
 using ErrorOr;
 using FluentValidation;
 using MediatR;
+using MassTransit;
 using Microsoft.Extensions.Logging;
 
 namespace AlphaZero.Modules.Documents.Application.Commands.UploadDocument;
@@ -33,7 +35,8 @@ public class UploadDocumentCommandValidator : AbstractValidator<UploadDocumentCo
         RuleFor(x => x.Title).NotEmpty().MaximumLength(256);
         RuleFor(x => x.FileName).NotEmpty().MaximumLength(256);
         RuleFor(x => x.ContentType).NotEmpty().MaximumLength(100);
-        RuleFor(x => x.FileSizeBytes).GreaterThan(0);
+        RuleFor(x => x.FileSizeBytes).GreaterThan(0).LessThanOrEqualTo(5L * 1024 * 1024 * 1024) // 5GB limit
+            .WithMessage("File size cannot exceed 5GB.");
     }
 }
 
@@ -43,6 +46,7 @@ public sealed class UploadDocumentCommandHandler : IRequestHandler<UploadDocumen
     private readonly IDocumentStorageService _storageService;
     private readonly ITenantProvider _tenantProvider;
     private readonly IClock _clock;
+    private readonly IPublishEndpoint _publishEndpoint;
     private readonly ILogger<UploadDocumentCommandHandler> _logger;
 
     public UploadDocumentCommandHandler(
@@ -50,12 +54,14 @@ public sealed class UploadDocumentCommandHandler : IRequestHandler<UploadDocumen
         IDocumentStorageService storageService,
         ITenantProvider tenantProvider,
         IClock clock,
+        IPublishEndpoint publishEndpoint,
         ILogger<UploadDocumentCommandHandler> logger)
     {
         _documentRepository = documentRepository;
         _storageService = storageService;
         _tenantProvider = tenantProvider;
         _clock = clock;
+        _publishEndpoint = publishEndpoint;
         _logger = logger;
     }
 
@@ -93,6 +99,9 @@ public sealed class UploadDocumentCommandHandler : IRequestHandler<UploadDocumen
             TimeSpan.FromMinutes(30));
 
         _documentRepository.Add(documentResult.Value);
+        
+        await _publishEndpoint.Publish(new DocumentUploadInitiatedEvent(documentId, tenantId.Value), cancellationToken);
+
         _logger.LogInformation("Document {DocumentId} initialized for Tenant {TenantId}.", documentId, tenantId.Value);
 
         return new UploadDocumentResponse(

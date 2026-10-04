@@ -46,4 +46,14 @@ public class S3DocumentStorageService : IDocumentStorageService
 
         return await _s3Client.GetPreSignedURLAsync(request);
     }
+
+    public async Task DeleteObjectAsync(string key, CancellationToken cancellationToken = default)
+    {
+        var request = new DeleteObjectRequest
+        {
+            BucketName = _bucketName,
+            Key = key
+        };
+        await _s3Client.DeleteObjectAsync(request, cancellationToken);
+    }
 }

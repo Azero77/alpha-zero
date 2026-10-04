@@ -1,6 +1,7 @@
 using AlphaZero.Shared.Domain;
 using ErrorOr;
 using AlphaZero.Modules.Documents.Domain.Events;
+using System.Text.Json;
 
 namespace AlphaZero.Modules.Documents.Domain.Models;
 
@@ -12,6 +13,12 @@ public class Document : AggregateRoot, IDomainTenantOwned, ISoftDeletable
     public string FileType { get; private set; } = null!; // e.g. "pdf", "docx"
     public string S3Key { get; private set; } = null!;
     public long FileSizeBytes { get; private set; }
+    
+    public string? FileHash { get; private set; }
+    public DocumentType Type { get; private set; }
+    public DocumentStatus Status { get; private set; }
+    public Dictionary<string, object> Metadata { get; private set; } = new();
+
     public DateTime CreatedOn { get; private set; }
     public bool IsDeleted { get; private set; }
     public DateTime? OnDeleted { get; private set; }
@@ -26,6 +33,7 @@ public class Document : AggregateRoot, IDomainTenantOwned, ISoftDeletable
         string fileType,
         string s3Key,
         long fileSizeBytes,
+        DocumentType type,
         DateTime createdOn) : base(id)
     {
         TenantId = tenantId;
@@ -34,8 +42,11 @@ public class Document : AggregateRoot, IDomainTenantOwned, ISoftDeletable
         FileType = fileType;
         S3Key = s3Key;
         FileSizeBytes = fileSizeBytes;
+        Type = type;
+        Status = DocumentStatus.Pending;
         CreatedOn = createdOn;
         IsDeleted = false;
+        Metadata = new Dictionary<string, object>();
     }
 
     public static ErrorOr<Document> Create(
@@ -54,14 +65,26 @@ public class Document : AggregateRoot, IDomainTenantOwned, ISoftDeletable
         if (string.IsNullOrWhiteSpace(fileType))
             return Error.Validation("Document.FileType", "File type is required.");
 
+        var ext = fileType.ToLowerInvariant().TrimStart('.');
+        var type = ext switch
+        {
+            "jpg" or "jpeg" or "png" or "gif" or "webp" => DocumentType.Image,
+            "mp4" or "mkv" or "avi" or "mov" => DocumentType.Video,
+            "mp3" or "wav" or "ogg" => DocumentType.Audio,
+            "pdf" => DocumentType.Pdf,
+            "doc" or "docx" or "txt" => DocumentType.Document,
+            _ => DocumentType.Unknown
+        };
+
         return new Document(
             id,
             tenantId,
             title,
             description,
-            fileType.ToLowerInvariant().TrimStart('.'),
+            ext,
             s3Key,
             fileSizeBytes,
+            type,
             clock.Now);
     }
 
@@ -82,6 +105,30 @@ public class Document : AggregateRoot, IDomainTenantOwned, ISoftDeletable
         AddDomainEvent(new DocumentMetadataUpdatedDomainEvent(Id, Title, Description));
 
         return Result.Success;
+    }
+
+    public void LinkToExistingBlob(string hash, string s3Key)
+    {
+        FileHash = hash;
+        S3Key = s3Key;
+        Status = DocumentStatus.Ready;
+    }
+
+    public void ProcessingStarted(string hash)
+    {
+        FileHash = hash;
+        Status = DocumentStatus.Processing;
+    }
+
+    public void ProcessingCompleted(Dictionary<string, object> metadata)
+    {
+        Metadata = metadata;
+        Status = DocumentStatus.Ready;
+    }
+
+    public void MarkAsFaulted()
+    {
+        Status = DocumentStatus.Faulted;
     }
 
     public ResourceArn Arn => ResourceArn.ForDocument(TenantId, Id);

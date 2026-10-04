@@ -1,4 +1,5 @@
 using AlphaZero.Modules.Documents.Application;
+using AlphaZero.Modules.Documents.Application.Metadata;
 using AlphaZero.Modules.Documents.Application.Services;
 using AlphaZero.Modules.Documents.Domain.Repositories;
 using AlphaZero.Modules.Documents.Infrastructure.Persistance;
@@ -48,5 +49,9 @@ public static class DependencyInjection
 
         moduleServices.AddScoped<IDocumentRepository, DocumentRepository>();
         moduleServices.AddScoped<IUnitOfWork, UnitOfWork<AppDbContext>>();
+        
+        moduleServices.AddScoped<IDocumentMetadataPipeline, DocumentMetadataPipeline>();
+        // Add specific metadata sources here when implemented
+        // moduleServices.AddScoped<IDocumentMetadataSource, ImageMetadataSource>();
     }
 }

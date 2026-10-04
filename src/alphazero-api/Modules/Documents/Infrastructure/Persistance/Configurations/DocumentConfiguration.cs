@@ -32,6 +32,23 @@ public class DocumentConfiguration : IEntityTypeConfiguration<Document>
         builder.Property(d => d.FileSizeBytes)
             .IsRequired();
 
+        builder.Property(d => d.FileHash)
+            .HasMaxLength(1000);
+
+        builder.Property(d => d.Type)
+            .IsRequired()
+            .HasConversion<string>()
+            .HasMaxLength(50);
+
+        builder.Property(d => d.Status)
+            .IsRequired()
+            .HasConversion<string>()
+            .HasMaxLength(50);
+
+        builder.Property(d => d.Metadata)
+            .HasColumnType("jsonb")
+            .IsRequired();
+
         builder.Property(d => d.CreatedOn)
             .IsRequired();
 
@@ -41,5 +58,6 @@ public class DocumentConfiguration : IEntityTypeConfiguration<Document>
         builder.Property(d => d.OnDeleted);
 
         builder.HasIndex(d => new { d.TenantId, d.IsDeleted });
+        builder.HasIndex(d => d.FileHash); // Helpful for deduplication lookups
     }
 }
