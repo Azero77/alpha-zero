@@ -13,6 +13,9 @@ namespace Aspire.Shared
         public SQSQueueSettings? VideoProgressQueue { get; set; }
         public VideoUploadedSQSQueueSettings? VideoUploadedQueue { get; set; }
         public VideoUploadedSQSQueueSettings? VideoUploadedEvent { get; set; }
+        public SQSQueueSettings? DocumentUploadedQueue { get; set; }
+        public SQSQueueSettings? DocumentProcessingCompletedQueue { get; set; }
+        public SQSQueueSettings? DocumentProcessingFailedQueue { get; set; }
         public string StepFunctionArn { get; set; } = string.Empty;
         public string MediaConvertRoleArn { get; set; } = string.Empty;
         public string MediaConvertKeyKMSArn { get; set; } = string.Empty;
