@@ -1,12 +1,12 @@
-# 02: Document Metadata, Status, and Variant Tracking
+# 02: Document Upload & Saga State Tracking
 
-**What to build:** Enhancements to the Documents module to track the processing lifecycle of uploaded images. Clients can specify how an image will be used during upload, and the system can track when the optimized versions of that image are ready.
+**What to build:** Enhancements to the Documents module to initiate a document upload, record it, and set up the foundation for Saga state tracking (for multiple document types like images, PDFs, DOCX).
 
 **Blocked by:** None (can start immediately)
 
 **Status:** ready-for-agent
 
-- [ ] The `Document` database schema tracks a `Status` (Pending/Ready/Failed) and a list of `Variants` (e.g., URL, width, height).
-- [ ] The `POST /documents` upload API accepts an optional usage context (e.g., `CourseCover`, `CourseInline`).
-- [ ] The API attaches this usage context as S3 object metadata (`x-amz-meta-usagecontext`) when uploading the raw file.
-- [ ] The `GET /documents/{id}` query returns the best available URL (a processed variant if `Ready`, or the original URL if `Pending`).
+- [ ] The `Document` database schema tracks multiple document types (not just images).
+- [ ] Implement a MassTransit Saga State Machine (`DocumentProcessingState` using Entity Framework) to track the detailed steps of processing. This state should be designed to be deleted once the document processing is successfully completed.
+- [ ] `POST /documents/upload` generates a presigned URL targeting a `raw-documents` S3 bucket, saves a `Document` record in a `Pending` state, and prepares necessary metadata (`UsageContext`, `TenantId`, etc.).
+- [ ] `GET /documents/{id}` no longer does optimistic display. If the document is `Pending`, it returns a pending/processing indicator instead of the raw URL.
