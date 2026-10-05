@@ -19,7 +19,8 @@ public record UploadDocumentCommand(
     string? Description,
     string FileName,
     string ContentType,
-    long FileSizeBytes
+    long FileSizeBytes,
+    string? ProfileType = null
 ) : ICommand<UploadDocumentResponse>;
 
 public record UploadDocumentResponse(
@@ -88,15 +89,24 @@ public sealed class UploadDocumentCommandHandler : IRequestHandler<UploadDocumen
             extension,
             s3Key,
             request.FileSizeBytes,
+            request.ProfileType,
             _clock);
 
         if (documentResult.IsError)
             return documentResult.Errors;
 
+        var metadata = new Dictionary<string, string>();
+        if (!string.IsNullOrEmpty(request.ProfileType))
+        {
+            metadata["profile"] = request.ProfileType;
+        }
+        metadata["document-type"] = documentResult.Value.Type.ToString();
+
         var presignedUrl = await _storageService.GenerateUploadPresignedUrlAsync(
             s3Key,
             request.ContentType,
-            TimeSpan.FromMinutes(30));
+            TimeSpan.FromMinutes(30),
+            metadata);
 
         _documentRepository.Add(documentResult.Value);
         

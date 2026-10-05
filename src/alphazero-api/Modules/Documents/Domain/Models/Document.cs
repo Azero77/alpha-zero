@@ -57,6 +57,7 @@ public class Document : AggregateRoot, IDomainTenantOwned, ISoftDeletable
         string fileType,
         string s3Key,
         long fileSizeBytes,
+        string? profileType,
         IClock clock)
     {
         if (string.IsNullOrWhiteSpace(title))
@@ -76,7 +77,7 @@ public class Document : AggregateRoot, IDomainTenantOwned, ISoftDeletable
             _ => DocumentType.Unknown
         };
 
-        return new Document(
+        var doc = new Document(
             id,
             tenantId,
             title,
@@ -86,6 +87,13 @@ public class Document : AggregateRoot, IDomainTenantOwned, ISoftDeletable
             fileSizeBytes,
             type,
             clock.Now);
+            
+        if (!string.IsNullOrEmpty(profileType))
+        {
+            doc.Metadata["ProcessingProfile"] = profileType;
+        }
+        
+        return doc;
     }
 
     public void MarkAsDeleted(IClock clock)
@@ -122,7 +130,10 @@ public class Document : AggregateRoot, IDomainTenantOwned, ISoftDeletable
 
     public void ProcessingCompleted(Dictionary<string, object> metadata)
     {
-        Metadata = metadata;
+        foreach (var kvp in metadata)
+        {
+            Metadata[kvp.Key] = kvp.Value;
+        }
         Status = DocumentStatus.Ready;
     }
 

@@ -17,7 +17,8 @@ public static class UploadDocument
         string? Description,
         string FileName,
         string ContentType,
-        long FileSizeBytes);
+        long FileSizeBytes,
+        string? ProfileType);
 
     public record Response(
         Guid DocumentId,
@@ -47,7 +48,8 @@ public static class UploadDocument
                 request.Description,
                 request.FileName,
                 request.ContentType,
-                request.FileSizeBytes);
+                request.FileSizeBytes,
+                request.ProfileType);
 
             var response = await module.Send<UploadDocumentCommand, ErrorOr<UploadDocumentResponse>>(command);
 

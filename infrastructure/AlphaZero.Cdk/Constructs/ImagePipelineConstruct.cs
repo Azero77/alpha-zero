@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Amazon.CDK;
+using Amazon.CDK.AWS.IAM;
 using Amazon.CDK.AWS.Lambda;
 using Amazon.CDK.AWS.S3;
 using Amazon.CDK.AWS.SQS;
@@ -20,36 +21,63 @@ public class ImagePipelineConstructProps
 public class ImagePipelineConstruct : Construct
 {
     public StateMachine PipelineStateMachine { get; }
-    public Function ProcessImageLambda { get; }
+    public Function ParserLambda { get; }
+    public Function MoverLambda { get; }
 
     public ImagePipelineConstruct(Construct scope, string id, ImagePipelineConstructProps props) : base(scope, id)
     {
-        // 1. Define Lambda
-        ProcessImageLambda = new Function(this, "ProcessImageLambda", new FunctionProps
+        // 1. Define Lambdas
+        ParserLambda = new Function(this, "InputS3ImageUploadedEventParser", new FunctionProps
         {
-            FunctionName = "alphazero-process-image",
+            FunctionName = "alphazero-image-parser",
             Runtime = Runtime.PROVIDED_AL2023,
             Handler = "bootstrap",
-            Code = Code.FromAsset("src/lambdas/AlphaZero.ImageProcessing.Lambda/publish"),
+            Code = Code.FromAsset("src/lambdas/InputS3ImageUploadedEventParser/publish"),
+            Timeout = Duration.Seconds(30),
+            MemorySize = 256
+        });
+
+        MoverLambda = new Function(this, "ImageProcessorAndMoverToR2", new FunctionProps
+        {
+            FunctionName = "alphazero-process-and-move-to-r2",
+            Runtime = Runtime.PROVIDED_AL2023,
+            Handler = "bootstrap",
+            Code = Code.FromAsset("src/lambdas/ImageProcessorAndMoverToR2/publish"),
             Timeout = Duration.Minutes(2),
             MemorySize = 1536
         });
 
         // Grant S3 permissions
-        props.InputBucket.GrantRead(ProcessImageLambda);
-        props.CdnBucket.GrantReadWrite(ProcessImageLambda);
+        props.InputBucket.GrantRead(MoverLambda);
+
+        // Grant SSM permission for R2 credentials
+        MoverLambda.AddToRolePolicy(new PolicyStatement(new PolicyStatementProps
+        {
+            Effect = Effect.ALLOW,
+            Actions = new[] { "ssm:GetParameter" },
+            Resources = new[] { $"arn:aws:ssm:{Stack.Of(this).Region}:{Stack.Of(this).Account}:parameter/AlphaZero/VideoPipeline/R2Credentials" }
+        }));
 
         // 2. Step Functions Tasks
+        var parseEventTask = new LambdaInvoke(this, "ParseEventTask", new LambdaInvokeProps
+        {
+            LambdaFunction = ParserLambda,
+            PayloadResponseOnly = true,
+            ResultPath = "$.ParsedEvent"
+        });
+
         var processImageTask = new LambdaInvoke(this, "ProcessImageTask", new LambdaInvokeProps
         {
-            LambdaFunction = ProcessImageLambda,
+            LambdaFunction = MoverLambda,
             PayloadResponseOnly = true,
             Payload = TaskInput.FromObject(new Dictionary<string, object>
             {
-                ["InputBucket"] = props.InputBucket.BucketName,
-                ["InputKey"] = JsonPath.StringAt("$.detail.message.s3Key"),
-                ["OutputBucket"] = props.CdnBucket.BucketName,
-                ["OutputPrefix"] = JsonPath.Format("{}/{}", JsonPath.StringAt("$.detail.message.tenantId"), JsonPath.StringAt("$.detail.message.documentId"))
+                ["tenantId"] = JsonPath.StringAt("$.ParsedEvent.tenantId"),
+                ["documentId"] = JsonPath.StringAt("$.ParsedEvent.documentId"),
+                ["s3Bucket"] = JsonPath.StringAt("$.ParsedEvent.s3Bucket"),
+                ["s3Key"] = JsonPath.StringAt("$.ParsedEvent.s3Key"),
+                ["documentType"] = JsonPath.StringAt("$.ParsedEvent.documentType"),
+                ["profileType"] = JsonPath.StringAt("$.ParsedEvent.profileType")
             }),
             ResultPath = "$.ProcessResult"
         });
@@ -59,8 +87,8 @@ public class ImagePipelineConstruct : Construct
             Queue = props.DocumentProcessingCompletedQueue,
             MessageBody = TaskInput.FromObject(new Dictionary<string, object>
             {
-                ["DocumentId"] = JsonPath.StringAt("$.detail.message.documentId"),
-                ["TenantId"] = JsonPath.StringAt("$.detail.message.tenantId"),
+                ["DocumentId"] = JsonPath.StringAt("$.ParsedEvent.documentId"),
+                ["TenantId"] = JsonPath.StringAt("$.ParsedEvent.tenantId"),
                 ["Status"] = "Completed",
                 ["PayloadJson"] = JsonPath.JsonToString(JsonPath.ObjectAt("$.ProcessResult"))
             })
@@ -71,20 +99,36 @@ public class ImagePipelineConstruct : Construct
             Queue = props.DocumentProcessingFaultedQueue,
             MessageBody = TaskInput.FromObject(new Dictionary<string, object>
             {
-                ["DocumentId"] = JsonPath.StringAt("$.detail.message.documentId"),
-                ["TenantId"] = JsonPath.StringAt("$.detail.message.tenantId"),
+                ["DocumentId"] = JsonPath.StringAt("$.ParsedEvent.documentId"),
+                ["TenantId"] = JsonPath.StringAt("$.ParsedEvent.tenantId"),
                 ["ErrorMessage"] = JsonPath.StringAt("$.errorInfo.Cause")
             })
         }).Next(new Fail(this, "PipelineFailedState"));
+        
+        var notifyNonImageSuccessTask = new SqsSendMessage(this, "NotifyNonImageSuccessTask", new SqsSendMessageProps
+        {
+            Queue = props.DocumentProcessingCompletedQueue,
+            MessageBody = TaskInput.FromObject(new Dictionary<string, object>
+            {
+                ["DocumentId"] = JsonPath.StringAt("$.ParsedEvent.documentId"),
+                ["TenantId"] = JsonPath.StringAt("$.ParsedEvent.tenantId"),
+                ["Status"] = "Completed",
+                ["PayloadJson"] = "{}"
+            })
+        });
 
         var catchProps = new CatchProps
         {
             ResultPath = "$.errorInfo"
         };
         processImageTask.AddCatch(notifyFailureTask, catchProps);
+        
+        var router = new Choice(this, "DocumentTypeRouter")
+            .When(Condition.StringEquals("$.ParsedEvent.documentType", "Image"), processImageTask.Next(notifySuccessTask))
+            .Otherwise(notifyNonImageSuccessTask);
 
         // 3. Define State Machine
-        var definition = processImageTask.Next(notifySuccessTask);
+        var definition = parseEventTask.Next(router);
 
         PipelineStateMachine = new StateMachine(this, "AlphaZeroImagePipelineStateMachine", new StateMachineProps
         {
@@ -93,13 +137,17 @@ public class ImagePipelineConstruct : Construct
             Timeout = Duration.Minutes(5)
         });
 
-        // 4. EventBridge Trigger from MassTransit
+        // 4. EventBridge Trigger from S3 ObjectCreated
         var eventRule = new Amazon.CDK.AWS.Events.Rule(this, "ImageProcessingRule", new Amazon.CDK.AWS.Events.RuleProps
         {
             EventPattern = new Amazon.CDK.AWS.Events.EventPattern
             {
-                // MassTransit typically puts the message type in detail-type or we can match on the detail.message structure
-                DetailType = new[] { "DocumentProcessingRequestedEvent" }
+                Source = new[] { "aws.s3" },
+                DetailType = new[] { "Object Created" },
+                Detail = new Dictionary<string, object>
+                {
+                    { "bucket", new Dictionary<string, object> { { "name", new[] { props.InputBucket.BucketName } } } }
+                }
             }
         });
         eventRule.AddTarget(new Amazon.CDK.AWS.Events.Targets.SfnStateMachine(PipelineStateMachine));

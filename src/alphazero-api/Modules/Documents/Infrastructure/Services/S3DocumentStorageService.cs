@@ -16,7 +16,7 @@ public class S3DocumentStorageService : IDocumentStorageService
         _bucketName = awsResources.InputS3?.BucketName ?? "alphazero-documents";
     }
 
-    public async Task<string> GenerateUploadPresignedUrlAsync(string key, string contentType, TimeSpan expiresIn)
+    public async Task<string> GenerateUploadPresignedUrlAsync(string key, string contentType, TimeSpan expiresIn, Dictionary<string, string>? metadata = null)
     {
         var request = new GetPreSignedUrlRequest
         {
@@ -26,6 +26,14 @@ public class S3DocumentStorageService : IDocumentStorageService
             ContentType = contentType,
             Expires = DateTime.UtcNow.Add(expiresIn)
         };
+
+        if (metadata != null)
+        {
+            foreach (var kvp in metadata)
+            {
+                request.Metadata.Add(kvp.Key, kvp.Value);
+            }
+        }
 
         return await _s3Client.GetPreSignedURLAsync(request);
     }
