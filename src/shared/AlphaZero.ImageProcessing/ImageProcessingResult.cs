@@ -1,6 +1,4 @@
 using System.Collections.Generic;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace AlphaZero.ImageProcessing;
 
@@ -16,9 +14,4 @@ public record ImageProcessingResult
     /// Value: local file path to the generated WebP file
     /// </summary>
     public Dictionary<string, string> Variants { get; init; } = new();
-}
-
-public interface IImageProcessor
-{
-    Task<ImageProcessingResult> ProcessAsync(string inputFilePath, string outputDirectory, CancellationToken ct = default);
 }
