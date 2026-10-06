@@ -30,6 +30,7 @@ function App() {
   const [tenantId, setTenantId] = useState('00000000-0000-0000-0000-000000000001'); // Default test tenant
   const [scope, setScope] = useState('course/c1');
   const [profile, setProfile] = useState('Course Cover');
+  const [isPublic, setIsPublic] = useState(false);
   const [status, setStatus] = useState('');
   const [documentId, setDocumentId] = useState('');
   const [token, setToken] = useState('');
@@ -61,7 +62,8 @@ function App() {
         fileName: file.name,
         contentType: file.type || 'application/octet-stream',
         fileSizeBytes: file.size,
-        profileType: profile
+        profileType: profile,
+        isPublic
       };
 
       const uploadRes = await fetch(`${API_BASE}/api/documents/upload`, {
@@ -94,20 +96,24 @@ function App() {
         throw new Error('Failed to upload file to S3');
       }
 
-      setStatus('Requesting CDN access token from Identity module...');
-      const tokenRes = await fetch(`${API_BASE}/api/identity/tokens/document?scope=${encodeURIComponent(scope)}`, {
-        method: 'GET',
-        headers: {
-          'x-tenant-id': tenantId
+      if (!isPublic) {
+        setStatus('Requesting CDN access token from Identity module...');
+        const tokenRes = await fetch(`${API_BASE}/api/identity/tokens/document?scope=${encodeURIComponent(scope)}`, {
+          method: 'GET',
+          headers: {
+            'x-tenant-id': tenantId
+          }
+        });
+
+        if (!tokenRes.ok) {
+          throw new Error('Failed to fetch document token');
         }
-      });
 
-      if (!tokenRes.ok) {
-        throw new Error('Failed to fetch document token');
+        const tokenData = await tokenRes.json();
+        setToken(tokenData.token);
+      } else {
+        setToken('public');
       }
-
-      const tokenData = await tokenRes.json();
-      setToken(tokenData.token);
 
       setStatus('Pipeline completed successfully. Wait a few seconds for EventBridge/Step Functions to process variants, then refresh.');
       setVariantsVisible(true);
@@ -120,6 +126,9 @@ function App() {
 
   const getCdnUrl = (variantName: string) => {
     if (!documentId || !token) return '';
+    if (isPublic) {
+      return `${CDN_BASE}/documents/${tenantId}/images/${documentId}/${variantName}.webp`;
+    }
     return `${CDN_BASE}/documents/${tenantId}/${scope}/${documentId}/${variantName}?token=${token}`;
   };
 
@@ -158,6 +167,13 @@ function App() {
                   <option value="Course Cover">Course Cover</option>
                   <option value="Inline">Inline</option>
                 </select>
+              </div>
+
+              <div className="flex items-end pb-2">
+                <label className="flex items-center space-x-2 cursor-pointer">
+                  <input type="checkbox" checked={isPublic} onChange={e => setIsPublic(e.target.checked)} className="h-5 w-5 text-indigo-600 border-gray-300 rounded" />
+                  <span className="text-sm font-medium text-gray-700">Is Public</span>
+                </label>
               </div>
             </div>
 
