@@ -33,7 +33,7 @@ public class DocumentTests
             "pdf",
             "documents/tenant/id/syllabus.pdf",
             1024 * 1024,
-            _clock);
+            null, _clock);
 
         // Assert
         result.IsError.Should().BeFalse();
@@ -70,7 +70,7 @@ public class DocumentTests
             "pdf",
             "s3/key",
             100,
-            _clock);
+            null, _clock);
 
         // Assert
         result.IsError.Should().BeTrue();
@@ -96,7 +96,7 @@ public class DocumentTests
             fileType!,
             "s3/key",
             100,
-            _clock);
+            null, _clock);
 
         // Assert
         result.IsError.Should().BeTrue();
@@ -115,7 +115,7 @@ public class DocumentTests
             "pdf",
             "s3/key",
             100,
-            _clock).Value;
+            null, _clock).Value;
 
         var deleteTime = _now.AddDays(1);
         _clock.Now.Returns(deleteTime);
@@ -140,7 +140,7 @@ public class DocumentTests
             ".PDF",
             "s3/key",
             500,
-            _clock);
+            null, _clock);
 
         // Assert
         result.IsError.Should().BeFalse();
@@ -159,7 +159,7 @@ public class DocumentTests
             "pdf",
             "s3/key",
             100,
-            _clock).Value;
+            null, _clock).Value;
 
         // Act
         var result = doc.UpdateInformation("Updated Title", "Updated Desc");
@@ -192,7 +192,7 @@ public class DocumentTests
             "pdf",
             "s3/key",
             100,
-            _clock).Value;
+            null, _clock).Value;
 
         // Act
         var result = doc.UpdateInformation(title!, "Some Desc");

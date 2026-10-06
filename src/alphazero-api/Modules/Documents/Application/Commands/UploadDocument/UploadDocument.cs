@@ -79,7 +79,7 @@ public sealed class UploadDocumentCommandHandler : IRequestHandler<UploadDocumen
             extension = "bin";
         }
 
-        var s3Key = $"documents/{tenantId.Value}/{documentId}/{request.FileName}";
+        var s3Key = DocumentFileStorageConstants.GetDocumentS3Key(tenantId.Value.ToString(), documentId.ToString(), request.FileName);
 
         var documentResult = Document.Create(
             documentId,

@@ -144,3 +144,17 @@ public class Document : AggregateRoot, IDomainTenantOwned, ISoftDeletable
 
     public ResourceArn Arn => ResourceArn.ForDocument(TenantId, Id);
 }
+
+
+public static class DocumentFileStorageConstants
+{
+    public static string GetDocumentS3Key(string tenantId, string documentId, string fileName)
+    {
+        return $"documents/{tenantId}/{documentId}/{fileName}";
+    }
+
+    public static string GetDocumentS3Url(string bucketName, string tenantId, string documentId, string fileName)
+    {
+        return $"s3://{bucketName}/{GetDocumentS3Key(tenantId, documentId, fileName)}";
+    }
+}
