@@ -1,12 +1,12 @@
 /**
- * AlphaZero Cloudflare Edge Worker: Unified CDN Router
+ * AlphaZero Cloudflare Edge Worker: Dedicated Video CDN Router
  * 
  * Intercepts media requests under:
- * - /videos/{tenantId}/{videoId}/*
- * - /documents/{tenantId}/{scope}/*
+ * - /streaming/*
+ * - /videos/*
  * 
- * Validates HMAC-SHA256 edge capability cookies (cf_video_token / cf_document_token).
- * Fetches the requested objects directly from the bound R2 buckets (VIDEOS_BUCKET / DOCUMENTS_BUCKET).
+ * Validates HMAC-SHA256 edge capability cookies (cf_video_token).
+ * Fetches the requested objects directly from the bound R2 bucket (VIDEOS_BUCKET).
  */
 
 export default {
@@ -112,16 +112,16 @@ async function handleR2Request(request, url, bucketBinding, tokenStr, secretKey,
   }
 
   // Scope verification: path prefix
-  // e.g. tokenData.path = "/documents/tenant-1/course:101/"
-  // url.pathname = "/documents/tenant-1/course:101/syllabus.pdf"
+  // e.g. tokenData.path = "/videos/tenant-1/course:101/"
+  // url.pathname = "/videos/tenant-1/course:101/video.mp4"
   if (tokenData.path && !url.pathname.startsWith(tokenData.path)) {
     return createErrorResponse("Access Denied: Token path does not match requested resource.", 403, origin);
   }
 
   // 4. Authorized: Fetch from R2 Bucket Binding
   // Note: R2 get() requires the key name without the leading slash
-  // If url.pathname is "/documents/tenant/id/file", 
-  // Should we strip "/documents/" from the bucket key? 
+  // If url.pathname is "/videos/tenant/id/file", 
+  // Should we strip "/videos/" from the bucket key? 
   // It depends on how you store them in R2. Assuming the bucket root maps to the path root:
   const objectKey = url.pathname.substring(1); 
   
