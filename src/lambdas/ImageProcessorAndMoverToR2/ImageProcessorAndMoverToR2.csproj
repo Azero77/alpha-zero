@@ -24,6 +24,7 @@
         <PackageReference Include="AWSSDK.SimpleSystemsManagement" />
     </ItemGroup>
     <ItemGroup>
+        <ProjectReference Include="..\..\alphazero-api\Modules\Documents\Domain\Domain.csproj" />
         <ProjectReference Include="..\..\shared\AlphaZero.ImageProcessing\AlphaZero.ImageProcessing.csproj" />
     </ItemGroup>
     <ItemGroup>

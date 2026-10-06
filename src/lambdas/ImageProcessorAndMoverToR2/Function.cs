@@ -13,6 +13,7 @@ using Amazon.SimpleSystemsManagement;
 using Amazon.SimpleSystemsManagement.Model;
 using AlphaZero.ImageProcessing;
 using AlphaZero.ImageProcessing.Strategies;
+using AlphaZero.Modules.Documents.Domain.Models;
 
 namespace ImageProcessorAndMoverToR2;
 
@@ -64,14 +65,8 @@ public partial class LambdaFunctionJsonSerializerContext : JsonSerializerContext
 
 public class Function
 {
-    private readonly IAmazonS3 _awsS3Client;
-    private readonly IAmazonSimpleSystemsManagement _ssmClient;
-
-    public Function()
-    {
-        _awsS3Client = new AmazonS3Client();
-        _ssmClient = new AmazonSimpleSystemsManagementClient();
-    }
+    private readonly IAmazonS3 _awsS3Client = new AmazonS3Client();
+    private readonly IAmazonSimpleSystemsManagement _ssmClient = new AmazonSimpleSystemsManagementClient();
 
     private static async Task Main()
     {
@@ -131,13 +126,12 @@ public class Function
             // 3. Process
             string outputDir = Path.Combine(tmpDir, "output");
             
-            var factory = new ImageProcessorFactory(new IImageProcessingStrategy[] 
-            {
+            ImageProcessorFactory factory = new([
                 new CourseCoverProcessingStrategy(),
                 new VideoThumbnailProcessingStrategy(),
                 new InlineImageProcessingStrategy(),
                 new AvatarProcessingStrategy()
-            });
+            ]);
             var processor = factory.GetStrategy(request.ProfileType);
             
             var result = await processor.ProcessAsync(inputFilePath, outputDir);
@@ -149,8 +143,9 @@ public class Function
             {
                 string variantName = kvp.Key;
                 string localFilePath = kvp.Value;
-                // format: {tenantId}/{documentId}/{variant}.webp
-                string s3Key = $"{request.TenantId}/{request.DocumentId}/{variantName}.webp";
+                // format: documents/{tenantId}/{documentId}/{variant}.webp
+                
+                string s3Key = DocumentFileStorageConstants.GetDocumentS3Key(request.TenantId, request.DocumentId,$"{variantName}.webp" );
                 
                 var putRequest = new PutObjectRequest
                 {
