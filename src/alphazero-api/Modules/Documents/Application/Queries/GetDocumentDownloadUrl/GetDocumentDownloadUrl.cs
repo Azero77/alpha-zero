@@ -25,21 +25,15 @@ public class GetDocumentDownloadUrlQueryValidator : AbstractValidator<GetDocumen
 public class GetDocumentDownloadUrlQueryHandler : IRequestHandler<GetDocumentDownloadUrlQuery, ErrorOr<GetDocumentDownloadUrlResponse>>
 {
     private readonly ITenantProvider _tenantProvider;
-    private readonly IAuthorizationContextFactory _authorizationContextFactory;
-    private readonly IPolicyEvaluatorService _policyEvaluatorService;
     private readonly IDocumentStorageService _documentStorageService;
     private readonly IDocumentRepository _documentRepository;
 
     public GetDocumentDownloadUrlQueryHandler(
         ITenantProvider tenantProvider,
-        IAuthorizationContextFactory authorizationContextFactory,
-        IPolicyEvaluatorService policyEvaluatorService,
         IDocumentStorageService documentStorageService,
         IDocumentRepository documentRepository)
     {
         _tenantProvider = tenantProvider;
-        _authorizationContextFactory = authorizationContextFactory;
-        _policyEvaluatorService = policyEvaluatorService;
         _documentStorageService = documentStorageService;
         _documentRepository = documentRepository;
     }
@@ -53,35 +47,6 @@ public class GetDocumentDownloadUrlQueryHandler : IRequestHandler<GetDocumentDow
         var document = await _documentRepository.GetFirst(d => d.Id == request.DocumentId && d.TenantId == tenantId.Value, cancellationToken);
         if (document is null)
             return Error.NotFound("Document.NotFound", "Document not found.");
-
-        // The document's scope determines its authorization boundary.
-        var scope = document.Scope.Trim('/');
-        var parts = scope.Split('/');
-        if (parts.Length != 2)
-            return Error.Validation("Scope.Invalid", "Document scope must follow the format 'type/id'.");
-
-        var service = parts[0].ToLowerInvariant();
-        var arnResult = ResourceArn.Create(service, tenantId.Value.ToString(), scope);
-
-        if (arnResult.IsError)
-            return arnResult.Errors;
-
-        var contextResult = await _authorizationContextFactory.Create(
-            "content:read", 
-            arnResult.Value, 
-            AuthenticationMethod.TenantUser, 
-            arnResult.Value.Value, 
-            cancellationToken);
-
-        if (contextResult.IsError)
-            return contextResult.Errors;
-
-        var authResult = await _policyEvaluatorService.Authorize(contextResult.Value);
-        
-        if (authResult.IsError)
-        {
-            return Error.Forbidden("Access.Denied", "You do not have permission to download this document.");
-        }
 
         var downloadUrl = await _documentStorageService.GenerateDownloadPresignedUrlAsync(
             document.S3Key,
