@@ -17,6 +17,7 @@ namespace AlphaZero.Modules.Documents.Application.Commands.UploadDocument;
 public record UploadDocumentCommand(
     string Title,
     string? Description,
+    string Scope,
     string FileName,
     string ContentType,
     long FileSizeBytes,
@@ -34,6 +35,10 @@ public class UploadDocumentCommandValidator : AbstractValidator<UploadDocumentCo
     public UploadDocumentCommandValidator()
     {
         RuleFor(x => x.Title).NotEmpty().MaximumLength(256);
+        RuleFor(x => x.Scope)
+            .NotEmpty()
+            .Matches(@"^[a-zA-Z0-9_-]+/[a-zA-Z0-9_-]+$")
+            .WithMessage("Scope must match pattern (e.g., course/courseId)");
         RuleFor(x => x.FileName).NotEmpty().MaximumLength(256);
         RuleFor(x => x.ContentType).NotEmpty().MaximumLength(100);
         RuleFor(x => x.FileSizeBytes).GreaterThan(0).LessThanOrEqualTo(5L * 1024 * 1024 * 1024) // 5GB limit
@@ -79,13 +84,14 @@ public sealed class UploadDocumentCommandHandler : IRequestHandler<UploadDocumen
             extension = "bin";
         }
 
-        var s3Key = DocumentFileStorageConstants.GetDocumentS3Key(tenantId.Value.ToString(), documentId.ToString(), request.FileName);
+        var s3Key = DocumentFileStorageConstants.GetDocumentS3Key(tenantId.Value.ToString(), request.Scope, documentId.ToString(), request.FileName);
 
         var documentResult = Document.Create(
             documentId,
             tenantId.Value,
             request.Title,
             request.Description,
+            request.Scope,
             extension,
             s3Key,
             request.FileSizeBytes,
@@ -112,7 +118,7 @@ public sealed class UploadDocumentCommandHandler : IRequestHandler<UploadDocumen
         
         await _publishEndpoint.Publish(new DocumentUploadInitiatedEvent(documentId, tenantId.Value), cancellationToken);
 
-        _logger.LogInformation("Document {DocumentId} initialized for Tenant {TenantId}.", documentId, tenantId.Value);
+        _logger.LogInformation("Document {DocumentId} initialized for Tenant {TenantId} with Scope {Scope}.", documentId, tenantId.Value, request.Scope);
 
         return new UploadDocumentResponse(
             documentId,

@@ -10,6 +10,7 @@ public class Document : AggregateRoot, IDomainTenantOwned, ISoftDeletable
     public Guid TenantId { get; private set; }
     public string Title { get; private set; } = null!;
     public string? Description { get; private set; }
+    public string Scope { get; private set; } = null!;
     public string FileType { get; private set; } = null!; // e.g. "pdf", "docx"
     public string S3Key { get; private set; } = null!;
     public long FileSizeBytes { get; private set; }
@@ -30,6 +31,7 @@ public class Document : AggregateRoot, IDomainTenantOwned, ISoftDeletable
         Guid tenantId,
         string title,
         string? description,
+        string scope,
         string fileType,
         string s3Key,
         long fileSizeBytes,
@@ -39,6 +41,7 @@ public class Document : AggregateRoot, IDomainTenantOwned, ISoftDeletable
         TenantId = tenantId;
         Title = title;
         Description = description;
+        Scope = scope.Trim('/');
         FileType = fileType;
         S3Key = s3Key;
         FileSizeBytes = fileSizeBytes;
@@ -54,6 +57,7 @@ public class Document : AggregateRoot, IDomainTenantOwned, ISoftDeletable
         Guid tenantId,
         string title,
         string? description,
+        string scope,
         string fileType,
         string s3Key,
         long fileSizeBytes,
@@ -62,6 +66,9 @@ public class Document : AggregateRoot, IDomainTenantOwned, ISoftDeletable
     {
         if (string.IsNullOrWhiteSpace(title))
             return Error.Validation("Document.Title", "Title is required.");
+
+        if (string.IsNullOrWhiteSpace(scope))
+            return Error.Validation("Document.Scope", "Scope is required.");
 
         if (string.IsNullOrWhiteSpace(fileType))
             return Error.Validation("Document.FileType", "File type is required.");
@@ -82,6 +89,7 @@ public class Document : AggregateRoot, IDomainTenantOwned, ISoftDeletable
             tenantId,
             title,
             description,
+            scope,
             ext,
             s3Key,
             fileSizeBytes,
@@ -148,13 +156,13 @@ public class Document : AggregateRoot, IDomainTenantOwned, ISoftDeletable
 
 public static class DocumentFileStorageConstants
 {
-    public static string GetDocumentS3Key(string tenantId, string documentId, string fileName)
+    public static string GetDocumentS3Key(string tenantId, string scope, string documentId, string fileName)
     {
-        return $"documents/{tenantId}/{documentId}/{fileName}";
+        return $"documents/{tenantId}/{scope.Trim('/')}/{documentId}/{fileName.TrimStart('/')}";
     }
 
-    public static string GetDocumentS3Url(string bucketName, string tenantId, string documentId, string fileName)
+    public static string GetDocumentS3Url(string bucketName, string tenantId, string scope, string documentId, string fileName)
     {
-        return $"s3://{bucketName}/{GetDocumentS3Key(tenantId, documentId, fileName)}";
+        return $"s3://{bucketName}/{GetDocumentS3Key(tenantId, scope, documentId, fileName)}";
     }
 }
