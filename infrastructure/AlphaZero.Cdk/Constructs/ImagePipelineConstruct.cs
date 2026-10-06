@@ -55,10 +55,31 @@ public class ImagePipelineConstruct : Construct
         {
             Effect = Effect.ALLOW,
             Actions = new[] { "ssm:GetParameter" },
-            Resources = new[] { $"arn:aws:ssm:{Stack.Of(this).Region}:{Stack.Of(this).Account}:parameter/AlphaZero/ImagePipeline/R2Credentials" }
+            Resources = new[] { $"arn:aws:ssm:{Stack.Of(this).Region}:{Stack.Of(this).Account}:parameter/AlphaZero/VideoPipeline/R2Credentials" }
         }));
 
-        // 2. Step Functions Tasks
+        // 2. Step Functions Tasks & Failure Handling
+        var catchProps = new CatchProps
+        {
+            ResultPath = "$.errorInfo"
+        };
+
+        var notifyFailureTask = new SqsSendMessage(this, "NotifyFailureTask", new SqsSendMessageProps
+        {
+            Queue = props.DocumentProcessingFaultedQueue,
+            MessageBody = TaskInput.FromObject(new Dictionary<string, object>
+            {
+                ["DocumentId"] = JsonPath.StringAt("$.ParsedEvent.documentId"),
+                ["TenantId"] = JsonPath.StringAt("$.ParsedEvent.tenantId"),
+                ["Status"] = "Failed",
+                ["Error"] = new Dictionary<string, object>
+                {
+                    ["errorType"] = JsonPath.StringAt("$.errorInfo.Error"),
+                    ["cause"] = JsonPath.StringAt("$.errorInfo.Cause")
+                }
+            })
+        }).Next(new Fail(this, "PipelineFailedState"));
+
         var parseEventTask = new LambdaInvoke(this, "ParseEventTask", new LambdaInvokeProps
         {
             LambdaFunction = ParserLambda,
@@ -70,6 +91,7 @@ public class ImagePipelineConstruct : Construct
                 ["SourceKey"] = JsonPath.StringAt( "$.detail.object.key")
             }) 
         });
+        parseEventTask.AddCatch(notifyFailureTask, catchProps);
 
         var processImageTask = new LambdaInvoke(this, "ProcessImageTask", new LambdaInvokeProps
         {
@@ -86,6 +108,7 @@ public class ImagePipelineConstruct : Construct
             }),
             ResultPath = "$.ProcessResult"
         });
+        processImageTask.AddCatch(notifyFailureTask, catchProps);
 
         var notifySuccessTask = new SqsSendMessage(this, "NotifySuccessTask", new SqsSendMessageProps
         {
@@ -99,17 +122,7 @@ public class ImagePipelineConstruct : Construct
             })
         });
 
-        var notifyFailureTask = new SqsSendMessage(this, "NotifyFailureTask", new SqsSendMessageProps
-        {
-            Queue = props.DocumentProcessingFaultedQueue,
-            MessageBody = TaskInput.FromObject(new Dictionary<string, object>
-            {
-                ["DocumentId"] = JsonPath.StringAt("$.ParsedEvent.documentId"),
-                ["TenantId"] = JsonPath.StringAt("$.ParsedEvent.tenantId"),
-                ["ErrorMessage"] = JsonPath.StringAt("$.errorInfo.Cause")
-            })
-        }).Next(new Fail(this, "PipelineFailedState"));
-        
+
         var notifyNonImageSuccessTask = new SqsSendMessage(this, "NotifyNonImageSuccessTask", new SqsSendMessageProps
         {
             Queue = props.DocumentProcessingCompletedQueue,
@@ -121,12 +134,6 @@ public class ImagePipelineConstruct : Construct
                 ["PayloadJson"] = "{}"
             })
         });
-
-        var catchProps = new CatchProps
-        {
-            ResultPath = "$.errorInfo"
-        };
-        processImageTask.AddCatch(notifyFailureTask, catchProps);
         
         var router = new Choice(this, "DocumentTypeRouter")
             .When(Condition.StringEquals("$.ParsedEvent.documentType", "Image"), processImageTask.Next(notifySuccessTask))

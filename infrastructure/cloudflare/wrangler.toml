@@ -1,14 +1,21 @@
-name = "alphazero-video-auth-worker"
-main = "video-auth-worker.js"
+name = "alphazero-edge-router"
+main = "src/index.js"
 compatibility_date = "2024-09-01"
 
 # Routes routed through the edge authenticator
 routes = [
-  { pattern = "cdn.alphazero.academy/streaming/*", zone_name = "alphazero.academy" },
-  { pattern = "*.alphazero.academy/streaming/*", zone_name = "alphazero.academy" }
+  { pattern = "cdn.alphazero.academy/*", zone_name = "alphazero.academy" }
 ]
 
+[[r2_buckets]]
+binding = "VIDEOS_BUCKET"
+bucket_name = "alphazero-videos-prod"
+
+[[r2_buckets]]
+binding = "DOCUMENTS_BUCKET"
+bucket_name = "alphazero-documents-prod"
+
 [vars]
-# In production, set secrets via `wrangler secret put HMAC_SECRET` and `wrangler secret put S3_ORIGIN_AUTH_SECRET`
-HMAC_SECRET = "dev-cloudflare-video-hmac-secret-alphazero-default-change-in-prod-min32!"
-S3_ORIGIN_AUTH_SECRET = "dev-s3-origin-pre-shared-auth-secret-min32!"
+# In production, set secrets via `wrangler secret put ...`
+VIDEO_HMAC_SECRET = "dev-cloudflare-video-hmac-secret-alphazero-default-change-in-prod-min32!"
+DOCUMENT_HMAC_SECRET = "dev-cloudflare-docs-hmac-secret-alphazero-default-change-in-prod-min32!"
