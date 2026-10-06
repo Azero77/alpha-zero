@@ -27,15 +27,18 @@ public class GetDocumentDownloadUrlQueryHandler : IRequestHandler<GetDocumentDow
     private readonly ITenantProvider _tenantProvider;
     private readonly IDocumentStorageService _documentStorageService;
     private readonly IDocumentRepository _documentRepository;
+    private readonly Aspire.Shared.AWSResources _awsResources;
 
     public GetDocumentDownloadUrlQueryHandler(
         ITenantProvider tenantProvider,
         IDocumentStorageService documentStorageService,
-        IDocumentRepository documentRepository)
+        IDocumentRepository documentRepository,
+        Aspire.Shared.AWSResources awsResources)
     {
         _tenantProvider = tenantProvider;
         _documentStorageService = documentStorageService;
         _documentRepository = documentRepository;
+        _awsResources = awsResources;
     }
 
     public async Task<ErrorOr<GetDocumentDownloadUrlResponse>> Handle(GetDocumentDownloadUrlQuery request, CancellationToken cancellationToken)
@@ -47,6 +50,12 @@ public class GetDocumentDownloadUrlQueryHandler : IRequestHandler<GetDocumentDow
         var document = await _documentRepository.GetFirst(d => d.Id == request.DocumentId && d.TenantId == tenantId.Value, cancellationToken);
         if (document is null)
             return Error.NotFound("Document.NotFound", "Document not found.");
+
+        if (document.IsPublic && !string.IsNullOrEmpty(_awsResources.CdnDomain))
+        {
+            var publicUrl = $"https://{_awsResources.CdnDomain}/{document.S3Key}";
+            return new GetDocumentDownloadUrlResponse(publicUrl);
+        }
 
         var downloadUrl = await _documentStorageService.GenerateDownloadPresignedUrlAsync(
             document.S3Key,

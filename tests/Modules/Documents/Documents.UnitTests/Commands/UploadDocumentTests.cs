@@ -79,7 +79,7 @@ public class UploadDocumentCommandHandlerTests
         var tenantId = Guid.NewGuid();
         _tenantProvider.GetTenant().Returns(tenantId);
 
-        _storageService.GenerateUploadPresignedUrlAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<TimeSpan>(), Arg.Any<Dictionary<string, string>>())
+        _storageService.GenerateUploadPresignedUrlAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<TimeSpan>(), Arg.Any<Dictionary<string, string>>(), Arg.Any<bool>())
             .Returns("https://r2.cloudflare.com/upload-url");
 
         var command = new UploadDocumentCommand(

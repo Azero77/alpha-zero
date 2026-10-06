@@ -26,8 +26,8 @@ public class VerifyDocumentDeduplicationConsumer : IConsumer<VerifyDocumentDedup
     {
         var cmd = context.Message;
         
-        // Find existing document with same hash and tenant
-        var existingDoc = await _repository.GetFirst(d => d.TenantId == cmd.TenantId && d.FileHash == cmd.FileHash && d.Id != cmd.DocumentId && d.Status == DocumentStatus.Ready, context.CancellationToken);
+        // Find existing document with same hash, tenant, and IsPublic flag
+        var existingDoc = await _repository.GetFirst(d => d.TenantId == cmd.TenantId && d.FileHash == cmd.FileHash && d.Id != cmd.DocumentId && d.Status == DocumentStatus.Ready && d.IsPublic == cmd.IsPublic, context.CancellationToken);
 
         if (existingDoc != null)
         {

@@ -19,7 +19,8 @@ public static class UploadDocument
         string FileName,
         string ContentType,
         long FileSizeBytes,
-        string? ProfileType);
+        string? ProfileType,
+        bool IsPublic = false);
 
     public record Response(
         Guid DocumentId,
@@ -51,7 +52,8 @@ public static class UploadDocument
                 request.FileName,
                 request.ContentType,
                 request.FileSizeBytes,
-                request.ProfileType);
+                request.ProfileType,
+                request.IsPublic);
 
             var response = await module.Send<UploadDocumentCommand, ErrorOr<UploadDocumentResponse>>(command);
 

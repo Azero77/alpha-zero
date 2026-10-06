@@ -21,7 +21,7 @@ public class VideoPipelineStack : Stack
 
         Pipeline = new VideoPipelineConstruct(this, "VideoPipeline", new VideoPipelineConstructProps
         {
-            InputBucket = storage.InputBucket,
+            InputBucket = storage.InputBucketPrivate,
             TransientBucket = storage.TransientBucket,
             VideoPublishedQueue = storage.VideoPublishedQueue,
             VideoFailedQueue = storage.VideoFailedQueue,

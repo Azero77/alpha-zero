@@ -28,7 +28,8 @@ public class GetDocumentDownloadUrlTests
         _handler = new GetDocumentDownloadUrlQueryHandler(
             _tenantProvider,
             _documentStorageService,
-            _documentRepository);
+            _documentRepository,
+            new Aspire.Shared.AWSResources { CdnDomain = "public-cdn.alphazero.com" });
     }
 
     [Fact]
@@ -73,7 +74,7 @@ public class GetDocumentDownloadUrlTests
         var documentId = Guid.NewGuid();
         _tenantProvider.GetTenant().Returns(tenantId);
 
-        var document = Document.Create(documentId, tenantId, "Title", null, "course/123", "pdf", "s3key", 1024, null, Substitute.For<IClock>()).Value;
+        var document = Document.Create(documentId, tenantId, "Title", null, "course/123", "pdf", "s3key", 1024, null, false, Substitute.For<IClock>()).Value;
         
         _documentRepository.GetFirst(Arg.Any<Expression<Func<Document, bool>>>(), Arg.Any<CancellationToken>())
             .Returns(document);
@@ -89,5 +90,28 @@ public class GetDocumentDownloadUrlTests
         // Assert
         result.IsError.Should().BeFalse();
         result.Value.Url.Should().Be("https://r2.cloudflare.com/s3key?signature=abc");
+    }
+
+    [Fact]
+    public async Task Handle_ReturnsDirectUrl_WhenDocumentIsPublic()
+    {
+        // Arrange
+        var tenantId = Guid.NewGuid();
+        var documentId = Guid.NewGuid();
+        _tenantProvider.GetTenant().Returns(tenantId);
+
+        var document = Document.Create(documentId, tenantId, "Title", null, "course/123", "pdf", "s3key", 1024, null, true, Substitute.For<IClock>()).Value;
+        
+        _documentRepository.GetFirst(Arg.Any<Expression<Func<Document, bool>>>(), Arg.Any<CancellationToken>())
+            .Returns(document);
+
+        var query = new GetDocumentDownloadUrlQuery(documentId);
+
+        // Act
+        var result = await _handler.Handle(query, CancellationToken.None);
+
+        // Assert
+        result.IsError.Should().BeFalse();
+        result.Value.Url.Should().Be("https://public-cdn.alphazero.com/s3key");
     }
 }

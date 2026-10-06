@@ -4,6 +4,8 @@ namespace Aspire.Shared
     {
         public const string Section = "AWS:Resources";
         public S3Settings? InputS3 { get; set; }
+        public S3Settings? InputS3Private { get; set; }
+        public S3Settings? InputS3Public { get; set; }
         public S3Settings? TransientS3 { get; set; }
         public S3Settings? OutputS3 { get; set; }
         public S3Settings? CdnS3 { get; set; }

@@ -36,6 +36,9 @@ public record ProcessImageRequest
     
     [JsonPropertyName("profileType")]
     public string ProfileType { get; init; } = string.Empty;
+
+    [JsonPropertyName("isPublic")]
+    public bool IsPublic { get; init; } = false;
 }
 
 public record ProcessImageResponse
@@ -53,6 +56,8 @@ public class R2Credentials
     public string SecretAccessKey { get; set; } = string.Empty;
     public string ServiceUrl { get; set; } = string.Empty;
     public string BucketName { get; set; } = string.Empty;
+    public string PublicBucketName { get; set; } = string.Empty;
+    public string PrivateBucketName { get; set; } = string.Empty;
     public string PublicUrl { get; set; } = string.Empty;
 }
 
@@ -147,9 +152,13 @@ public class Function
                 
                 string s3Key = DocumentFileStorageConstants.GetDocumentS3Key(request.TenantId, "images", request.DocumentId, $"{variantName}.webp");
                 
+                var targetBucket = request.IsPublic 
+                    ? (!string.IsNullOrEmpty(r2Creds.PublicBucketName) ? r2Creds.PublicBucketName : r2Creds.BucketName)
+                    : (!string.IsNullOrEmpty(r2Creds.PrivateBucketName) ? r2Creds.PrivateBucketName : r2Creds.BucketName);
+                
                 var putRequest = new PutObjectRequest
                 {
-                    BucketName = r2Creds.BucketName,
+                    BucketName = targetBucket,
                     Key = s3Key,
                     FilePath = localFilePath,
                     ContentType = "image/webp",

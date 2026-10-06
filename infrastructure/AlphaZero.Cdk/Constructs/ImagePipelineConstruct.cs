@@ -12,7 +12,8 @@ namespace AlphaZero.Cdk.Constructs;
 
 public class ImagePipelineConstructProps
 {
-    public required IBucket InputBucket { get; set; }
+    public required IBucket InputBucketPrivate { get; set; }
+    public required IBucket InputBucketPublic { get; set; }
     public required IBucket CdnBucket { get; set; }
     public required IQueue DocumentProcessingCompletedQueue { get; set; }
     public required IQueue DocumentProcessingFaultedQueue { get; set; }
@@ -48,7 +49,8 @@ public class ImagePipelineConstruct : Construct
         });
 
         // Grant S3 permissions
-        props.InputBucket.GrantRead(MoverLambda);
+        props.InputBucketPrivate.GrantRead(MoverLambda);
+        props.InputBucketPublic.GrantRead(MoverLambda);
 
         // Grant SSM permission for R2 credentials
         MoverLambda.AddToRolePolicy(new PolicyStatement(new PolicyStatementProps
@@ -150,7 +152,7 @@ public class ImagePipelineConstruct : Construct
         });
 
         // 4. EventBridge Trigger from S3 ObjectCreated
-        var eventRule = new Amazon.CDK.AWS.Events.Rule(this, "ImageProcessingRule", new Amazon.CDK.AWS.Events.RuleProps
+        var eventRulePrivate = new Amazon.CDK.AWS.Events.Rule(this, "ImageProcessingRulePrivate", new Amazon.CDK.AWS.Events.RuleProps
         {
             EventPattern = new Amazon.CDK.AWS.Events.EventPattern
             {
@@ -158,10 +160,23 @@ public class ImagePipelineConstruct : Construct
                 DetailType = new[] { "Object Created" },
                 Detail = new Dictionary<string, object>
                 {
-                    { "bucket", new Dictionary<string, object> { { "name", new[] { props.InputBucket.BucketName } } } }
+                    { "bucket", new Dictionary<string, object> { { "name", new[] { props.InputBucketPrivate.BucketName } } } }
                 }
             }
         });
-        eventRule.AddTarget(new Amazon.CDK.AWS.Events.Targets.SfnStateMachine(PipelineStateMachine));
-    }
+        eventRulePrivate.AddTarget(new Amazon.CDK.AWS.Events.Targets.SfnStateMachine(PipelineStateMachine));
+
+        var eventRulePublic = new Amazon.CDK.AWS.Events.Rule(this, "ImageProcessingRulePublic", new Amazon.CDK.AWS.Events.RuleProps
+        {
+            EventPattern = new Amazon.CDK.AWS.Events.EventPattern
+            {
+                Source = new[] { "aws.s3" },
+                DetailType = new[] { "Object Created" },
+                Detail = new Dictionary<string, object>
+                {
+                    { "bucket", new Dictionary<string, object> { { "name", new[] { props.InputBucketPublic.BucketName } } } }
+                }
+            }
+        });
+        eventRulePublic.AddTarget(new Amazon.CDK.AWS.Events.Targets.SfnStateMachine(PipelineStateMachine));    }
 }

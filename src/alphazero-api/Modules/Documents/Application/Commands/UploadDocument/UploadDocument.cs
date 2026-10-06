@@ -21,7 +21,8 @@ public record UploadDocumentCommand(
     string FileName,
     string ContentType,
     long FileSizeBytes,
-    string? ProfileType = null
+    string? ProfileType = null,
+    bool IsPublic = false
 ) : ICommand<UploadDocumentResponse>;
 
 public record UploadDocumentResponse(
@@ -96,6 +97,7 @@ public sealed class UploadDocumentCommandHandler : IRequestHandler<UploadDocumen
             s3Key,
             request.FileSizeBytes,
             request.ProfileType,
+            request.IsPublic,
             _clock);
 
         if (documentResult.IsError)
@@ -112,7 +114,8 @@ public sealed class UploadDocumentCommandHandler : IRequestHandler<UploadDocumen
             s3Key,
             request.ContentType,
             TimeSpan.FromMinutes(30),
-            metadata);
+            metadata,
+            request.IsPublic);
 
         _documentRepository.Add(documentResult.Value);
         

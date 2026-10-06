@@ -60,6 +60,7 @@ public class DocumentProcessingSaga : MassTransitStateMachine<DocumentProcessing
                 .Then(context =>
                 {
                     context.Saga.UpdatedOn = DateTime.UtcNow;
+                    context.Saga.IsPublic = context.Message.IsPublic;
                     _logger.LogInformation("Document {DocumentId} uploaded to storage. Triggering deduplication check.", context.Message.DocumentId);
                 })
                 .Unschedule(UploadTimeout)
@@ -68,7 +69,8 @@ public class DocumentProcessingSaga : MassTransitStateMachine<DocumentProcessing
                     context.Saga.CorrelationId,
                     context.Saga.TenantId,
                     context.Message.FileHash,
-                    context.Message.S3Key)),
+                    context.Message.S3Key,
+                    context.Message.IsPublic)),
                     
             When(UploadTimeout.Received)
                 .Then(context =>
@@ -90,7 +92,8 @@ public class DocumentProcessingSaga : MassTransitStateMachine<DocumentProcessing
                             context.Saga.CorrelationId, 
                             context.Message.ExistingS3Key, 
                             context.Message.ExistingFileHash, 
-                            context.Message.ExistingMetadata))
+                            context.Message.ExistingMetadata,
+                            context.Saga.IsPublic))
                         .TransitionTo(Ready),
                     unique => unique
                         .Then(context => _logger.LogInformation("Document {DocumentId} is unique. Awaiting Step Function processing.", context.Saga.CorrelationId))
@@ -141,9 +144,9 @@ public class DocumentProcessingSaga : MassTransitStateMachine<DocumentProcessing
     public Schedule<DocumentProcessingSagaState, DocumentFaultedDeletionEvent> FaultedDeletion { get; private set; } = null!;
 }
 
-public record VerifyDocumentDeduplicationCommand(Guid DocumentId, Guid TenantId, string FileHash, string CurrentS3Key);
+public record VerifyDocumentDeduplicationCommand(Guid DocumentId, Guid TenantId, string FileHash, string CurrentS3Key, bool IsPublic);
 public record DocumentDeduplicationResultEvent(Guid DocumentId, bool IsDuplicate, string? ExistingS3Key = null, string? ExistingFileHash = null, System.Collections.Generic.Dictionary<string, object>? ExistingMetadata = null);
-public record CompleteDocumentProcessingCommand(Guid DocumentId, string? S3Key, string? FileHash, System.Collections.Generic.Dictionary<string, object>? Metadata);
+public record CompleteDocumentProcessingCommand(Guid DocumentId, string? S3Key, string? FileHash, System.Collections.Generic.Dictionary<string, object>? Metadata, bool IsPublic);
 public record FinalizeDocumentProcessingCommand(Guid DocumentId, string PayloadJson);
 public record MarkDocumentFaultedCommand(Guid DocumentId);
 public record DeleteFaultedDocumentCommand(Guid DocumentId);

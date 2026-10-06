@@ -47,12 +47,14 @@ public record DocumentUploadedToStorageEvent(
     Guid TenantId,
     string S3Key,
     string FileHash,
-    long Size);
+    long Size,
+    bool IsPublic = false);
 
 public record DocumentProcessingCompletedEvent(
     Guid DocumentId,
     Guid TenantId,
-    string PayloadJson);
+    string PayloadJson,
+    bool IsPublic = false);
 
 public record DocumentProcessingFaultedEvent(
     Guid DocumentId,

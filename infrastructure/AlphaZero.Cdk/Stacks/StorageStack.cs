@@ -15,7 +15,8 @@ public class StorageStackProps : StackProps
 
 public class StorageStack : Stack
 {
-    public IBucket InputBucket { get; }
+    public IBucket InputBucketPrivate { get; }
+    public IBucket InputBucketPublic { get; }
     public IBucket TransientBucket { get; }
     public IQueue VideoPublishedQueue { get; }
     public IQueue VideoFailedQueue { get; }
@@ -30,9 +31,25 @@ public class StorageStack : Stack
         var env = props?.Environment ?? "dev";
 
         // Input bucket for uploads with EventBridge notifications enabled
-        InputBucket = new Bucket(this, "RawUploadsBucket", new BucketProps
+                InputBucketPrivate = new Bucket(this, "RawUploadsBucketPrivate", new BucketProps
         {
-            BucketName = $"alphazero-raw-uploads-{env}",
+            BucketName = $"alphazero-raw-uploads-private-{env}",
+            EventBridgeEnabled = true,
+            Cors = new[]
+            {
+                new CorsRule
+                {
+                    AllowedMethods = new[] { HttpMethods.GET, HttpMethods.PUT },
+                    AllowedOrigins = new[] { "*" },
+                    AllowedHeaders = new[] { "*" },
+                    MaxAge = 3600
+                }
+            }
+        });
+
+        InputBucketPublic = new Bucket(this, "RawUploadsBucketPublic", new BucketProps
+        {
+            BucketName = $"alphazero-raw-uploads-public-{env}",
             EventBridgeEnabled = true,
             Cors = new[]
             {
@@ -98,7 +115,7 @@ public class StorageStack : Stack
         MediaConvertRole.AddToPolicy(new PolicyStatement(new PolicyStatementProps
         {
             Actions = new[] { "s3:GetObject", "s3:ListBucket", "s3:GetBucketLocation" },
-            Resources = new[] { InputBucket.BucketArn, $"{InputBucket.BucketArn}/*" }
+            Resources = new[] { InputBucketPrivate.BucketArn, $"{InputBucketPrivate.BucketArn}/*" }
         }));
         MediaConvertRole.AddToPolicy(new PolicyStatement(new PolicyStatementProps
         {
@@ -131,7 +148,8 @@ public class StorageStack : Stack
         MediaConvertRole.AddToPolicy(mediaConvertKmsPolicy);
 
         // Outputs for Aspire AppHost
-        new CfnOutput(this, "InputS3BucketName", new CfnOutputProps { Value = InputBucket.BucketName });
+        new CfnOutput(this, "InputS3BucketNamePrivate", new CfnOutputProps { Value = InputBucketPrivate.BucketName });
+        new CfnOutput(this, "InputS3BucketNamePublic", new CfnOutputProps { Value = InputBucketPublic.BucketName });
         new CfnOutput(this, "TransientS3BucketName", new CfnOutputProps { Value = TransientBucket.BucketName });
         new CfnOutput(this, "VideoPublishedQueueUrl", new CfnOutputProps { Value = VideoPublishedQueue.QueueUrl });
         new CfnOutput(this, "VideoFailedQueueUrl", new CfnOutputProps { Value = VideoFailedQueue.QueueUrl });

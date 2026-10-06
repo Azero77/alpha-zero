@@ -59,5 +59,9 @@ public class DocumentConfiguration : IEntityTypeConfiguration<Document>
 
         builder.HasIndex(d => new { d.TenantId, d.IsDeleted });
         builder.HasIndex(d => d.FileHash); // Helpful for deduplication lookups
+
+        builder.Property(d => d.IsPublic)
+            .IsRequired()
+            .HasDefaultValue(false);
     }
 }

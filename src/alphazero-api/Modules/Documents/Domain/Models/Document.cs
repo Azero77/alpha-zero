@@ -16,6 +16,7 @@ public class Document : AggregateRoot, IDomainTenantOwned, ISoftDeletable
     public long FileSizeBytes { get; private set; }
     
     public string? FileHash { get; private set; }
+    public bool IsPublic { get; private set; }
     public DocumentType Type { get; private set; }
     public DocumentStatus Status { get; private set; }
     public Dictionary<string, object> Metadata { get; private set; } = new();
@@ -36,6 +37,7 @@ public class Document : AggregateRoot, IDomainTenantOwned, ISoftDeletable
         string s3Key,
         long fileSizeBytes,
         DocumentType type,
+        bool isPublic,
         DateTime createdOn) : base(id)
     {
         TenantId = tenantId;
@@ -46,6 +48,7 @@ public class Document : AggregateRoot, IDomainTenantOwned, ISoftDeletable
         S3Key = s3Key;
         FileSizeBytes = fileSizeBytes;
         Type = type;
+        IsPublic = isPublic;
         Status = DocumentStatus.Pending;
         CreatedOn = createdOn;
         IsDeleted = false;
@@ -62,6 +65,7 @@ public class Document : AggregateRoot, IDomainTenantOwned, ISoftDeletable
         string s3Key,
         long fileSizeBytes,
         string? profileType,
+        bool isPublic,
         IClock clock)
     {
         if (string.IsNullOrWhiteSpace(title))
@@ -94,6 +98,7 @@ public class Document : AggregateRoot, IDomainTenantOwned, ISoftDeletable
             s3Key,
             fileSizeBytes,
             type,
+            isPublic,
             clock.Now);
             
         if (!string.IsNullOrEmpty(profileType))

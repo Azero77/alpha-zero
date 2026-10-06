@@ -31,6 +31,9 @@ public record ParserOutput
     
     [JsonPropertyName("profileType")]
     public string ProfileType { get; init; } = string.Empty;
+
+    [JsonPropertyName("isPublic")]
+    public bool IsPublic { get; init; } = false;
 }
 
 [JsonSerializable(typeof(JsonDocument))]
@@ -96,7 +99,8 @@ public class Function
                 S3Bucket = bucket,
                 S3Key = key,
                 DocumentType = documentType,
-                ProfileType = profileType
+                ProfileType = profileType,
+                IsPublic = bucket.Contains("-public-")
             };
         }
         catch (Exception ex)
