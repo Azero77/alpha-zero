@@ -1,7 +1,10 @@
 using AlphaZero.Modules.Documents.Application.Queries.GetDocumentDownloadUrl;
+using AlphaZero.Shared.Authorization;
 using AlphaZero.Shared.Domain;
 using AlphaZero.Shared.Presentation.Extensions;
 using FastEndpoints;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Builder;
 
 namespace AlphaZero.Modules.Documents.Presentation.Endpoints;
 

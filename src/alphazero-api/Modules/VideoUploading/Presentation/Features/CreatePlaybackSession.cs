@@ -50,7 +50,7 @@ public class CreatePlaybackSessionEndpoint : Endpoint<CreatePlaybackSessionReque
 
     public override async Task HandleAsync(CreatePlaybackSessionRequest req, CancellationToken ct)
     {
-        var command = new CreatePlaybackSessionCommand(req.VideoId, req.CourseId, req.ItemId);
+        var command = new CreatePlaybackSessionQuery(req.VideoId, req.CourseId, req.ItemId);
         var result = await _module.Send(command, ct);
 
         if (result.IsError)

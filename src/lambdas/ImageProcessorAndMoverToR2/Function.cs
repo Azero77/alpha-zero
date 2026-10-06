@@ -145,7 +145,7 @@ public class Function
                 string localFilePath = kvp.Value;
                 // format: documents/{tenantId}/{documentId}/{variant}.webp
                 
-                string s3Key = DocumentFileStorageConstants.GetDocumentS3Key(request.TenantId, request.DocumentId,$"{variantName}.webp" );
+                string s3Key = DocumentFileStorageConstants.GetDocumentS3Key(request.TenantId, "images", request.DocumentId, $"{variantName}.webp");
                 
                 var putRequest = new PutObjectRequest
                 {

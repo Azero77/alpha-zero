@@ -35,14 +35,14 @@ public record PlaybackSessionDto(
     EdgeCapabilityDto EdgeCapability,
     WatermarkContextDto WatermarkContext);
 
-public record CreatePlaybackSessionCommand(
+public record CreatePlaybackSessionQuery(
     Guid VideoId,
     Guid? CourseId = null,
-    Guid? ItemId = null) : ICommand<PlaybackSessionDto>;
+    Guid? ItemId = null) : IQuery<PlaybackSessionDto>;
 
-public class CreatePlaybackSessionCommandValidator : AbstractValidator<CreatePlaybackSessionCommand>
+public class CreatePlaybackSessionQueryValidator : AbstractValidator<CreatePlaybackSessionQuery>
 {
-    public CreatePlaybackSessionCommandValidator()
+    public CreatePlaybackSessionQueryValidator()
     {
         RuleFor(x => x.VideoId)
             .NotEmpty()
@@ -55,20 +55,20 @@ public class CreatePlaybackSessionCommandValidator : AbstractValidator<CreatePla
     }
 }
 
-public class CreatePlaybackSessionCommandHandler : IRequestHandler<CreatePlaybackSessionCommand, ErrorOr<PlaybackSessionDto>>
+public class CreatePlaybackSessionQueryHandler : IRequestHandler<CreatePlaybackSessionQuery, ErrorOr<PlaybackSessionDto>>
 {
     private readonly IVideoRepository _videoRepository;
     private readonly ICloudflareCookieSigner _cookieSigner;
     private readonly ICurrentTenantUserRepository _currentUserRepository;
     private readonly ITenantProvider _tenantProvider;
-    private readonly ILogger<CreatePlaybackSessionCommandHandler> _logger;
+    private readonly ILogger<CreatePlaybackSessionQueryHandler> _logger;
 
-    public CreatePlaybackSessionCommandHandler(
+    public CreatePlaybackSessionQueryHandler(
         IVideoRepository videoRepository,
         ICloudflareCookieSigner cookieSigner,
         ICurrentTenantUserRepository currentUserRepository,
         ITenantProvider tenantProvider,
-        ILogger<CreatePlaybackSessionCommandHandler> logger)
+        ILogger<CreatePlaybackSessionQueryHandler> logger)
     {
         _videoRepository = videoRepository;
         _cookieSigner = cookieSigner;
@@ -78,7 +78,7 @@ public class CreatePlaybackSessionCommandHandler : IRequestHandler<CreatePlaybac
     }
 
     public async Task<ErrorOr<PlaybackSessionDto>> Handle(
-        CreatePlaybackSessionCommand request,
+        CreatePlaybackSessionQuery request,
         CancellationToken cancellationToken)
     {
         // 1. Resolve User Context (Identity IAM already enforces video:Stream access control at endpoint level)
