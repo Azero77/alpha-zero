@@ -3,6 +3,28 @@ import { useState } from 'react';
 const API_BASE = 'http://localhost:5000'; // Adjust as needed for local API
 const CDN_BASE = 'https://cdn.alphazero.academy';
 
+function VariantImage({ variant, cdnUrl, refreshKey }: { variant: string, cdnUrl: string, refreshKey: number }) {
+  // Append a timestamp or refresh key to bust browser cache
+  const urlWithCacheBuster = cdnUrl ? `${cdnUrl}&_ts=${refreshKey}` : '';
+  
+  return (
+    <div className="border rounded-md p-4 flex flex-col items-center">
+      <h3 className="text-md font-medium text-gray-700 mb-2 capitalize">{variant.replace('-', ' ')}</h3>
+      {urlWithCacheBuster ? (
+        <img 
+          src={urlWithCacheBuster} 
+          alt={variant} 
+          className="max-w-full max-h-48 object-contain" 
+          onError={e => (e.currentTarget.style.display = 'none')} 
+          onLoad={e => (e.currentTarget.style.display = 'block')} 
+        />
+      ) : (
+        <div className="h-48 flex items-center justify-center text-gray-400">Loading...</div>
+      )}
+    </div>
+  );
+}
+
 function App() {
   const [file, setFile] = useState<File | null>(null);
   const [tenantId, setTenantId] = useState('00000000-0000-0000-0000-000000000001'); // Default test tenant
@@ -12,6 +34,7 @@ function App() {
   const [documentId, setDocumentId] = useState('');
   const [token, setToken] = useState('');
   const [variantsVisible, setVariantsVisible] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
@@ -88,6 +111,7 @@ function App() {
 
       setStatus('Pipeline completed successfully. Wait a few seconds for EventBridge/Step Functions to process variants, then refresh.');
       setVariantsVisible(true);
+      setRefreshKey(Date.now());
     } catch (err: any) {
       console.error(err);
       setStatus(`Error: ${err.message}`);
@@ -97,6 +121,10 @@ function App() {
   const getCdnUrl = (variantName: string) => {
     if (!documentId || !token) return '';
     return `${CDN_BASE}/documents/${tenantId}/${scope}/${documentId}/${variantName}?token=${token}`;
+  };
+
+  const handleRefresh = () => {
+    setRefreshKey(Date.now());
   };
 
   return (
@@ -153,7 +181,7 @@ function App() {
             <div className="flex justify-between items-center">
               <h2 className="text-xl font-bold text-gray-900">Generated Variants</h2>
               <button 
-                onClick={() => setVariantsVisible(v => !v)} // Hack to trigger re-render
+                onClick={handleRefresh}
                 className="py-1 px-3 border border-gray-300 rounded-md text-sm font-medium bg-white hover:bg-gray-50"
               >
                 Refresh Images
@@ -165,20 +193,9 @@ function App() {
             </p>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="border rounded-md p-4 flex flex-col items-center">
-                <h3 className="text-md font-medium text-gray-700 mb-2">Original</h3>
-                <img src={getCdnUrl('original')} alt="Original" className="max-w-full max-h-48 object-contain" onError={e => (e.currentTarget.style.display = 'none')} onLoad={e => (e.currentTarget.style.display = 'block')} />
-              </div>
-              
-              <div className="border rounded-md p-4 flex flex-col items-center">
-                <h3 className="text-md font-medium text-gray-700 mb-2">Thumbnail</h3>
-                <img src={getCdnUrl('thumbnail')} alt="Thumbnail" className="max-w-full max-h-48 object-contain" onError={e => (e.currentTarget.style.display = 'none')} onLoad={e => (e.currentTarget.style.display = 'block')} />
-              </div>
-              
-              <div className="border rounded-md p-4 flex flex-col items-center">
-                <h3 className="text-md font-medium text-gray-700 mb-2">Web-Optimized</h3>
-                <img src={getCdnUrl('web-optimized')} alt="Web Optimized" className="max-w-full max-h-48 object-contain" onError={e => (e.currentTarget.style.display = 'none')} onLoad={e => (e.currentTarget.style.display = 'block')} />
-              </div>
+              <VariantImage variant="original" cdnUrl={getCdnUrl('original')} refreshKey={refreshKey} />
+              <VariantImage variant="thumbnail" cdnUrl={getCdnUrl('thumbnail')} refreshKey={refreshKey} />
+              <VariantImage variant="web-optimized" cdnUrl={getCdnUrl('web-optimized')} refreshKey={refreshKey} />
             </div>
           </div>
         )}
