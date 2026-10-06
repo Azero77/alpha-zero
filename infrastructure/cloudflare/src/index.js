@@ -40,23 +40,20 @@ export default {
     // 3. Route Request
     try {
       if (url.pathname.startsWith("/documents/")) {
-        // Feature: Support token via query parameter (e.g. ?token=...)
-        const token = url.searchParams.get("token") || cookies["cf_document_token"];
         return await handleR2Request(
           request,
           url,
           env.DOCUMENTS_BUCKET,
-          token,
+          cookies["cf_document_token"],
           env.DOCUMENT_HMAC_SECRET,
           origin
         );
       } else if (url.pathname.startsWith("/streaming/") || url.pathname.startsWith("/videos/")) {
-        const token = url.searchParams.get("token") || cookies["cf_video_token"];
         return await handleR2Request(
           request,
           url,
           env.VIDEOS_BUCKET,
-          token,
+          cookies["cf_video_token"],
           env.VIDEO_HMAC_SECRET || env.HMAC_SECRET,
           origin
         );
@@ -126,20 +123,16 @@ async function handleR2Request(request, url, bucketBinding, tokenStr, secretKey,
   // Scope verification: path prefix
   // e.g. tokenData.path = "/documents/tenant-1/course:101/"
   // url.pathname = "/documents/tenant-1/course:101/syllabus.pdf"
-  let tokenPath = tokenData.path || "";
-  let reqPath = url.pathname;
-  
-  // Clean paths to avoid double slashes and issues using trimStart/trimEnd equivalents
-  const cleanTokenPath = tokenPath.replace(/^\/+/, '').replace(/\/+$/, '');
-  const cleanReqPath = reqPath.replace(/^\/+/, ''); // Clean leading slash for R2 object key
-
-  if (cleanTokenPath && !cleanReqPath.startsWith(cleanTokenPath)) {
+  if (tokenData.path && !url.pathname.startsWith(tokenData.path)) {
     return createErrorResponse("Access Denied: Token path does not match requested resource.", 403, origin);
   }
 
   // 4. Authorized: Fetch from R2 Bucket Binding
   // Note: R2 get() requires the key name without the leading slash
-  const objectKey = cleanReqPath; 
+  // If url.pathname is "/documents/tenant/id/file", 
+  // Should we strip "/documents/" from the bucket key? 
+  // It depends on how you store them in R2. Assuming the bucket root maps to the path root:
+  const objectKey = url.pathname.substring(1); 
   
   const object = await bucketBinding.get(objectKey);
 
