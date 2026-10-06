@@ -55,7 +55,7 @@ public class ImagePipelineConstruct : Construct
         {
             Effect = Effect.ALLOW,
             Actions = new[] { "ssm:GetParameter" },
-            Resources = new[] { $"arn:aws:ssm:{Stack.Of(this).Region}:{Stack.Of(this).Account}:parameter/AlphaZero/VideoPipeline/R2Credentials" }
+            Resources = new[] { $"arn:aws:ssm:{Stack.Of(this).Region}:{Stack.Of(this).Account}:parameter/AlphaZero/ImagePipeline/R2Credentials" }
         }));
 
         // 2. Step Functions Tasks
@@ -63,7 +63,12 @@ public class ImagePipelineConstruct : Construct
         {
             LambdaFunction = ParserLambda,
             PayloadResponseOnly = true,
-            ResultPath = "$.ParsedEvent"
+            ResultPath = "$.ParsedEvent",
+            Payload = TaskInput.FromObject(new Dictionary<string, object>()
+            {
+                ["BucketName"] = JsonPath.StringAt("$.detail.bucket.name"),
+                ["SourceKey"] = JsonPath.StringAt( "$.detail.object.key")
+            }) 
         });
 
         var processImageTask = new LambdaInvoke(this, "ProcessImageTask", new LambdaInvokeProps

@@ -88,7 +88,7 @@ public class Function
         // 1. Fetch R2 credentials
         var credRequest = new GetParameterRequest
         {
-            Name = "/AlphaZero/VideoPipeline/R2Credentials",
+            Name = "/AlphaZero/ImagePipeline/R2Credentials",
             WithDecryption = true
         };
 

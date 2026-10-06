@@ -9,7 +9,9 @@ using Amazon.S3;
 using Amazon.S3.Model;
 
 namespace DocumentUploadedS3EventParser;
-
+public record S3DocumentCreatedEventParserInput(
+    string BucketName,
+    string SourceKey);
 public record ParserOutput
 {
     [JsonPropertyName("tenantId")]
@@ -48,24 +50,19 @@ public class Function
 
     private static async Task Main()
     {
-        Func<JsonDocument, ILambdaContext, Task<ParserOutput>> handler = new Function().FunctionHandler;
+        Func<S3DocumentCreatedEventParserInput, ILambdaContext, Task<ParserOutput>> handler = new Function().FunctionHandler;
         await LambdaBootstrapBuilder.Create(handler,
                 new SourceGeneratorLambdaJsonSerializer<LambdaFunctionJsonSerializerContext>())
             .Build()
             .RunAsync();
     }
 
-    public async Task<ParserOutput> FunctionHandler(JsonDocument input, ILambdaContext context)
+    public async Task<ParserOutput> FunctionHandler(S3DocumentCreatedEventParserInput input, ILambdaContext context)
     {
         try
         {
-            var root = input.RootElement;
-            
-            // Navigate EventBridge payload: $.detail.bucket.name and $.detail.object.key
-            var detail = root.GetProperty("detail");
-            var bucket = detail.GetProperty("bucket").GetProperty("name").GetString()!;
-            var key = detail.GetProperty("object").GetProperty("key").GetString()!;
-
+            var bucket = input.BucketName;
+            var key = input.SourceKey;
             context.Logger.LogInformation($"Parsing event for bucket: {bucket}, key: {key}");
 
             // Key format from UploadDocumentCommand: documents/{tenantId}/{documentId}/{request.FileName}
