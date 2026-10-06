@@ -39,16 +39,7 @@ export default {
 
     // 3. Route Request
     try {
-      if (url.pathname.startsWith("/documents/")) {
-        return await handleR2Request(
-          request,
-          url,
-          env.DOCUMENTS_BUCKET,
-          cookies["cf_document_token"],
-          env.DOCUMENT_HMAC_SECRET,
-          origin
-        );
-      } else if (url.pathname.startsWith("/streaming/") || url.pathname.startsWith("/videos/")) {
+      if (url.pathname.startsWith("/streaming/") || url.pathname.startsWith("/videos/")) {
         return await handleR2Request(
           request,
           url,

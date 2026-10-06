@@ -1,21 +1,17 @@
-name = "alphazero-edge-router"
+name = "alphazero-video-edge"
 main = "src/index.js"
 compatibility_date = "2024-09-01"
 
 # Routes routed through the edge authenticator
 routes = [
-  { pattern = "cdn.alphazero.academy/*", zone_name = "alphazero.academy" }
+  { pattern = "cdn.zadmuslim.cc/streaming/*", zone_name = "alphazero.academy" },
+  { pattern = "cdn.zadmuslim.cc/videos/*", zone_name = "alphazero.academy" }
 ]
 
 [[r2_buckets]]
 binding = "VIDEOS_BUCKET"
 bucket_name = "alphazero-videos-prod"
 
-[[r2_buckets]]
-binding = "DOCUMENTS_BUCKET"
-bucket_name = "alphazero-documents-prod"
-
 [vars]
 # In production, set secrets via `wrangler secret put ...`
 VIDEO_HMAC_SECRET = "dev-cloudflare-video-hmac-secret-alphazero-default-change-in-prod-min32!"
-DOCUMENT_HMAC_SECRET = "dev-cloudflare-docs-hmac-secret-alphazero-default-change-in-prod-min32!"
