@@ -15,7 +15,6 @@ public record DocumentDetailsResponse(
     string? Description,
     string FileType,
     long FileSizeBytes,
-    string DownloadUrl,
     DateTime CreatedOn);
 
 public class GetDocumentQueryValidator : AbstractValidator<GetDocumentQuery>
@@ -29,14 +28,10 @@ public class GetDocumentQueryValidator : AbstractValidator<GetDocumentQuery>
 public sealed class GetDocumentQueryHandler : IRequestHandler<GetDocumentQuery, ErrorOr<DocumentDetailsResponse>>
 {
     private readonly IDocumentRepository _documentRepository;
-    private readonly IDocumentStorageService _storageService;
 
-    public GetDocumentQueryHandler(
-        IDocumentRepository documentRepository,
-        IDocumentStorageService storageService)
+    public GetDocumentQueryHandler(IDocumentRepository documentRepository)
     {
         _documentRepository = documentRepository;
-        _storageService = storageService;
     }
 
     public async Task<ErrorOr<DocumentDetailsResponse>> Handle(GetDocumentQuery request, CancellationToken cancellationToken)
@@ -45,11 +40,6 @@ public sealed class GetDocumentQueryHandler : IRequestHandler<GetDocumentQuery, 
         if (document is null)
             return Error.NotFound("Document.NotFound", "Document not found.");
 
-        var downloadUrl = await _storageService.GenerateDownloadPresignedUrlAsync(
-            document.S3Key,
-            $"{document.Title}.{document.FileType}",
-            TimeSpan.FromHours(1));
-
         return new DocumentDetailsResponse(
             document.Id,
             document.Arn.Value,
@@ -57,7 +47,6 @@ public sealed class GetDocumentQueryHandler : IRequestHandler<GetDocumentQuery, 
             document.Description,
             document.FileType,
             document.FileSizeBytes,
-            downloadUrl,
             document.CreatedOn);
     }
 }
