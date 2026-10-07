@@ -41,69 +41,6 @@ public class VerifyDocumentDeduplicationConsumer : IConsumer<VerifyDocumentDedup
         }
     }
 }
-
-public class CompleteDocumentProcessingConsumer : IConsumer<CompleteDocumentProcessingCommand>
-{
-    private readonly IDocumentRepository _repository;
-    private readonly IUnitOfWork _uow;
-
-    public CompleteDocumentProcessingConsumer(IDocumentRepository repository, IUnitOfWork uow)
-    {
-        _repository = repository;
-        _uow = uow;
-    }
-
-    public async Task Consume(ConsumeContext<CompleteDocumentProcessingCommand> context)
-    {
-        var cmd = context.Message;
-        var doc = await _repository.GetById(cmd.DocumentId, context.CancellationToken);
-        if (doc == null) return;
-
-        if (cmd.S3Key != null && cmd.FileHash != null)
-        {
-            doc.LinkToExistingBlob(cmd.FileHash, cmd.S3Key);
-            if (cmd.Metadata != null)
-            {
-                doc.ProcessingCompleted(cmd.Metadata);
-            }
-        }
-        
-        _repository.Update(doc);
-        await _uow.SaveChangesAsync(context.CancellationToken);
-        
-        await context.Publish(new DocumentStatusChangedIntegrationEvent(doc.Id, doc.TenantId, doc.Status.ToString()));
-    }
-}
-
-public class FinalizeDocumentProcessingConsumer : IConsumer<FinalizeDocumentProcessingCommand>
-{
-    private readonly IDocumentRepository _repository;
-    private readonly IUnitOfWork _uow;
-    private readonly Application.Metadata.IDocumentMetadataPipeline _pipeline;
-
-    public FinalizeDocumentProcessingConsumer(IDocumentRepository repository, IUnitOfWork uow, Application.Metadata.IDocumentMetadataPipeline pipeline)
-    {
-        _repository = repository;
-        _uow = uow;
-        _pipeline = pipeline;
-    }
-
-    public async Task Consume(ConsumeContext<FinalizeDocumentProcessingCommand> context)
-    {
-        var cmd = context.Message;
-        var doc = await _repository.GetById(cmd.DocumentId, context.CancellationToken);
-        if (doc == null) return;
-
-        var newMetadata = await _pipeline.ProcessAsync(doc.Type, cmd.PayloadJson, doc.Metadata, context.CancellationToken);
-        
-        doc.ProcessingCompleted(newMetadata);
-        _repository.Update(doc);
-        await _uow.SaveChangesAsync(context.CancellationToken);
-        
-        await context.Publish(new DocumentStatusChangedIntegrationEvent(doc.Id, doc.TenantId, doc.Status.ToString()));
-    }
-}
-
 public class MarkDocumentFaultedConsumer : IConsumer<MarkDocumentFaultedCommand>
 {
     private readonly IDocumentRepository _repository;

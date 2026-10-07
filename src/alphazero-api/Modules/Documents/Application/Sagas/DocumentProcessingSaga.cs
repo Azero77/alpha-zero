@@ -64,13 +64,14 @@ public class DocumentProcessingSaga : MassTransitStateMachine<DocumentProcessing
                     _logger.LogInformation("Document {DocumentId} uploaded to storage. Triggering deduplication check.", context.Message.DocumentId);
                 })
                 .Unschedule(UploadTimeout)
-                .TransitionTo(Processing)
-                .Publish(context => new VerifyDocumentDeduplicationCommand(
+                /*.Send(context => new VerifyDocumentDeduplicationCommand(
                     context.Saga.CorrelationId,
                     context.Saga.TenantId,
                     context.Message.FileHash,
                     context.Message.S3Key,
-                    context.Message.IsPublic)),
+                    context.Message.IsPublic))*/
+                /*.TransitionTo(VerifyingDuplication),*/
+                .TransitionTo(Processing),
                     
             When(UploadTimeout.Received)
                 .Then(context =>
@@ -79,34 +80,36 @@ public class DocumentProcessingSaga : MassTransitStateMachine<DocumentProcessing
                     _logger.LogWarning("Upload timeout for Document {DocumentId}. Transitioning to Faulted.", context.Saga.CorrelationId);
                 })
                 .TransitionTo(Faulted)
-                .Publish(context => new MarkDocumentFaultedCommand(context.Saga.CorrelationId))
+                .Send(context => new MarkDocumentFaultedCommand(context.Saga.CorrelationId))
                 .Schedule(FaultedDeletion, context => new DocumentFaultedDeletionEvent { CorrelationId = context.Saga.CorrelationId })
         );
-
-        During(Processing,
+        /*During(VerifyingDuplication,
             When(DeduplicationResult)
                 .IfElse(context => context.Message.IsDuplicate,
                     duplicate => duplicate
-                        .Then(context => _logger.LogInformation("Document {DocumentId} is a duplicate. Linking to existing.", context.Saga.CorrelationId))
-                        .Publish(context => new CompleteDocumentProcessingCommand(
-                            context.Saga.CorrelationId, 
-                            context.Message.ExistingS3Key, 
-                            context.Message.ExistingFileHash, 
+                        .Then(context =>
+                            _logger.LogInformation("Document {DocumentId} is a duplicate. Linking to existing.",
+                                context.Saga.CorrelationId))
+                        .Send(context => new CompleteAlreadyFoundBeforeDocumentProcessingCommand(
+                            context.Saga.CorrelationId,
+                            context.Message.ExistingS3Key,
+                            context.Message.ExistingFileHash,
                             context.Message.ExistingMetadata,
-                            context.Saga.IsPublic))
+                            context.Saga.IsPublic))//we will be working on this feature later, right now the command has no handlers
                         .TransitionTo(Ready),
                     unique => unique
-                        .Then(context => _logger.LogInformation("Document {DocumentId} is unique. Awaiting Step Function processing.", context.Saga.CorrelationId))
-                ),
-                
+                        .Then(context =>
+                            _logger.LogInformation(
+                                "Document {DocumentId} is unique. Awaiting Step Function processing.",
+                                context.Saga.CorrelationId))
+                        .TransitionTo(Processing)));*/
+        During(Processing,
             When(ProcessingCompleted)
                 .Then(context =>
                 {
                     context.Saga.UpdatedOn = DateTime.UtcNow;
                     _logger.LogInformation("Processing completed for Document {DocumentId}.", context.Saga.CorrelationId);
-                })
-                .Publish(context => new FinalizeDocumentProcessingCommand(context.Saga.CorrelationId, context.Message.PayloadJson))
-                .TransitionTo(Ready),
+                }).TransitionTo(Ready),
 
             When(ProcessingFaulted)
                 .Then(context =>
@@ -115,14 +118,14 @@ public class DocumentProcessingSaga : MassTransitStateMachine<DocumentProcessing
                     _logger.LogError("Processing failed for Document {DocumentId}. Reason: {Reason}", context.Saga.CorrelationId, context.Message.ErrorMessage);
                 })
                 .TransitionTo(Faulted)
-                .Publish(context => new MarkDocumentFaultedCommand(context.Saga.CorrelationId))
+                .Send(context => new MarkDocumentFaultedCommand(context.Saga.CorrelationId))
                 .Schedule(FaultedDeletion, context => new DocumentFaultedDeletionEvent { CorrelationId = context.Saga.CorrelationId })
         );
 
         During(Faulted,
             When(FaultedDeletion.Received)
                 .Then(context => _logger.LogInformation("Executing scheduled deletion for faulted Document {DocumentId}.", context.Saga.CorrelationId))
-                .Publish(context => new DeleteFaultedDocumentCommand(context.Saga.CorrelationId))
+                .Send(context => new DeleteFaultedDocumentCommand(context.Saga.CorrelationId))
                 .Finalize()
         );
         
@@ -133,6 +136,7 @@ public class DocumentProcessingSaga : MassTransitStateMachine<DocumentProcessing
     public State Processing { get; private set; } = null!;
     public State Ready { get; private set; } = null!;
     public State Faulted { get; private set; } = null!;
+    public State VerifyingDuplication { get; private set; } = null!;
 
     public Event<DocumentUploadInitiatedEvent> UploadInitiated { get; private set; } = null!;
     public Event<DocumentUploadedToStorageEvent> UploadedToStorage { get; private set; } = null!;
@@ -146,7 +150,6 @@ public class DocumentProcessingSaga : MassTransitStateMachine<DocumentProcessing
 
 public record VerifyDocumentDeduplicationCommand(Guid DocumentId, Guid TenantId, string FileHash, string CurrentS3Key, bool IsPublic);
 public record DocumentDeduplicationResultEvent(Guid DocumentId, bool IsDuplicate, string? ExistingS3Key = null, string? ExistingFileHash = null, System.Collections.Generic.Dictionary<string, object>? ExistingMetadata = null);
-public record CompleteDocumentProcessingCommand(Guid DocumentId, string? S3Key, string? FileHash, System.Collections.Generic.Dictionary<string, object>? Metadata, bool IsPublic);
-public record FinalizeDocumentProcessingCommand(Guid DocumentId, string PayloadJson);
+public record CompleteAlreadyFoundBeforeDocumentProcessingCommand(Guid DocumentId, string? S3Key, string? FileHash, System.Collections.Generic.Dictionary<string, object>? Metadata, bool IsPublic);
 public record MarkDocumentFaultedCommand(Guid DocumentId);
 public record DeleteFaultedDocumentCommand(Guid DocumentId);

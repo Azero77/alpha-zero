@@ -10,7 +10,6 @@ public class Document : AggregateRoot, IDomainTenantOwned, ISoftDeletable
     public Guid TenantId { get; private set; }
     public string Title { get; private set; } = null!;
     public string? Description { get; private set; }
-    public string Scope { get; private set; } = null!;
     public string FileType { get; private set; } = null!; // e.g. "pdf", "docx"
     public string S3Key { get; private set; } = null!;
     public long FileSizeBytes { get; private set; }
@@ -32,7 +31,6 @@ public class Document : AggregateRoot, IDomainTenantOwned, ISoftDeletable
         Guid tenantId,
         string title,
         string? description,
-        string scope,
         string fileType,
         string s3Key,
         long fileSizeBytes,
@@ -43,7 +41,6 @@ public class Document : AggregateRoot, IDomainTenantOwned, ISoftDeletable
         TenantId = tenantId;
         Title = title;
         Description = description;
-        Scope = scope.Trim('/');
         FileType = fileType;
         S3Key = s3Key;
         FileSizeBytes = fileSizeBytes;
@@ -60,7 +57,6 @@ public class Document : AggregateRoot, IDomainTenantOwned, ISoftDeletable
         Guid tenantId,
         string title,
         string? description,
-        string scope,
         string fileType,
         string s3Key,
         long fileSizeBytes,
@@ -70,10 +66,6 @@ public class Document : AggregateRoot, IDomainTenantOwned, ISoftDeletable
     {
         if (string.IsNullOrWhiteSpace(title))
             return Error.Validation("Document.Title", "Title is required.");
-
-        if (string.IsNullOrWhiteSpace(scope))
-            return Error.Validation("Document.Scope", "Scope is required.");
-
         if (string.IsNullOrWhiteSpace(fileType))
             return Error.Validation("Document.FileType", "File type is required.");
 
@@ -93,7 +85,6 @@ public class Document : AggregateRoot, IDomainTenantOwned, ISoftDeletable
             tenantId,
             title,
             description,
-            scope,
             ext,
             s3Key,
             fileSizeBytes,
@@ -141,13 +132,23 @@ public class Document : AggregateRoot, IDomainTenantOwned, ISoftDeletable
         Status = DocumentStatus.Processing;
     }
 
-    public void ProcessingCompleted(Dictionary<string, object> metadata)
+    public ErrorOr<Success> ProcessingCompleted(Dictionary<string, object> metadata, DateTime occuredOn)
     {
         foreach (var kvp in metadata)
         {
             Metadata[kvp.Key] = kvp.Value;
         }
         Status = DocumentStatus.Ready;
+        AddDomainEvent(new DocumentProcessingCompletedEvent(Guid.NewGuid(),Id, occuredOn));
+        return Result.Success;
+    }
+
+    public ErrorOr<Success> ProcessingCompleted(string metadataAsJson, DateTime occuredOn)
+    {
+        var dict = JsonSerializer.Deserialize<Dictionary<string, object>>(metadataAsJson);
+        if(dict is null)
+            return Error.Validation("Document.Metadata", "The string is serializable to json, revise it please ");
+        return ProcessingCompleted(dict, occuredOn);
     }
 
     public void MarkAsFaulted()
@@ -161,13 +162,14 @@ public class Document : AggregateRoot, IDomainTenantOwned, ISoftDeletable
 
 public static class DocumentFileStorageConstants
 {
-    public static string GetDocumentS3Key(string tenantId, string scope, string documentId, string fileName)
+    public static string GetDocumentS3Key(string tenantId, string documentId, string fileName)
     {
-        return $"documents/{tenantId}/{scope.Trim('/')}/{documentId}/{fileName.TrimStart('/')}";
+        return $"documents/{tenantId}/{documentId}/{fileName.TrimStart('/')}";
     }
 
-    public static string GetDocumentS3Url(string bucketName, string tenantId, string scope, string documentId, string fileName)
+    public static string GetDocumentS3Url(string bucketName, string tenantId,  string documentId, string fileName)
     {
-        return $"s3://{bucketName}/{GetDocumentS3Key(tenantId, scope, documentId, fileName)}";
+        return $"s3://{bucketName}/{GetDocumentS3Key(tenantId, documentId, fileName)}";
     }
 }
+public record DocumentProcessingCompletedEvent(Guid Id,Guid DocumentId, DateTime OccuredOn) : IDomainEvent;

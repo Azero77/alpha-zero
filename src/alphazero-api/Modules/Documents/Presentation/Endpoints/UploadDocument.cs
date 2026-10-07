@@ -15,7 +15,6 @@ public static class UploadDocument
     public record Request(
         string Title,
         string? Description,
-        string Scope,
         string FileName,
         string ContentType,
         long FileSizeBytes,
@@ -48,7 +47,6 @@ public static class UploadDocument
             var command = new UploadDocumentCommand(
                 request.Title,
                 request.Description,
-                request.Scope,
                 request.FileName,
                 request.ContentType,
                 request.FileSizeBytes,
