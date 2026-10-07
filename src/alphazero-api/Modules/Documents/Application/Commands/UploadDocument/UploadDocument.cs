@@ -98,7 +98,7 @@ public sealed class UploadDocumentCommandHandler : IRequestHandler<UploadDocumen
             request.FileSizeBytes,
             request.ProfileType,
             request.IsPublic,
-            _clock);
+            _clock.Now);
 
         if (documentResult.IsError)
             return documentResult.Errors;

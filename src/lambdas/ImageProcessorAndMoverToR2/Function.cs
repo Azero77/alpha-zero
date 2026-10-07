@@ -93,7 +93,7 @@ public class Function
         // 1. Fetch R2 credentials
         var credRequest = new GetParameterRequest
         {
-            Name = "/AlphaZero/ImagePipeline/R2Credentials",
+            Name = "/AlphaZero/DocumentPipeline/R2Credentials",
             WithDecryption = true
         };
 
@@ -152,9 +152,9 @@ public class Function
                 
                 string s3Key = DocumentFileStorageConstants.GetDocumentS3Key(request.TenantId, "images", request.DocumentId, $"{variantName}.webp");
                 
-                var targetBucket = request.IsPublic 
-                    ? (!string.IsNullOrEmpty(r2Creds.PublicBucketName) ? r2Creds.PublicBucketName : r2Creds.BucketName)
-                    : (!string.IsNullOrEmpty(r2Creds.PrivateBucketName) ? r2Creds.PrivateBucketName : r2Creds.BucketName);
+                var targetBucket = request.IsPublic ?
+                    r2Creds.PublicBucketName
+                    : r2Creds.PrivateBucketName ;
                 
                 var putRequest = new PutObjectRequest
                 {
@@ -167,6 +167,11 @@ public class Function
                 
                 await r2Client.PutObjectAsync(putRequest);
                 variantsS3Keys[variantName] = s3Key;
+            }
+            
+            if (Directory.Exists(tmpDir))
+            {
+                Directory.Delete(tmpDir, true);
             }
 
             // 5. Return

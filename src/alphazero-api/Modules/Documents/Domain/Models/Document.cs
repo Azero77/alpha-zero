@@ -66,7 +66,7 @@ public class Document : AggregateRoot, IDomainTenantOwned, ISoftDeletable
         long fileSizeBytes,
         string? profileType,
         bool isPublic,
-        IClock clock)
+        DateTime createdOn)
     {
         if (string.IsNullOrWhiteSpace(title))
             return Error.Validation("Document.Title", "Title is required.");
@@ -99,7 +99,7 @@ public class Document : AggregateRoot, IDomainTenantOwned, ISoftDeletable
             fileSizeBytes,
             type,
             isPublic,
-            clock.Now);
+            createdOn);
             
         if (!string.IsNullOrEmpty(profileType))
         {

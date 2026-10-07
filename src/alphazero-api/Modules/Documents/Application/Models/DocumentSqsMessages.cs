@@ -2,19 +2,19 @@ using System;
 
 namespace AlphaZero.Modules.Documents.Application.Models;
 
-public record DocumentUploadedQueueMessage(
+public record SQSDocumentUploadedEvent(
     Guid DocumentId,
     Guid TenantId,
     string S3Key,
     string FileHash,
     long Size);
 
-public record DocumentProcessingCompletedQueueMessage(
+public record SQSDocumentProcessingCompletedEvent(
     Guid DocumentId,
     Guid TenantId,
     string PayloadJson);
 
-public record DocumentProcessingFailedQueueMessage(
+public record SQSDocumentProcessingFailed(
     Guid DocumentId,
     Guid TenantId,
     string ErrorMessage);

@@ -10,7 +10,7 @@ using Constructs;
 
 namespace AlphaZero.Cdk.Constructs;
 
-public class ImagePipelineConstructProps
+public class DocumentPipelineConstructProps
 {
     public required IBucket InputBucketPrivate { get; set; }
     public required IBucket InputBucketPublic { get; set; }
@@ -19,13 +19,13 @@ public class ImagePipelineConstructProps
     public required IQueue DocumentProcessingFaultedQueue { get; set; }
 }
 
-public class ImagePipelineConstruct : Construct
+public class DocumentPipelineConstruct : Construct
 {
     public StateMachine PipelineStateMachine { get; }
     public Function ParserLambda { get; }
     public Function MoverLambda { get; }
 
-    public ImagePipelineConstruct(Construct scope, string id, ImagePipelineConstructProps props) : base(scope, id)
+    public DocumentPipelineConstruct(Construct scope, string id, DocumentPipelineConstructProps props) : base(scope, id)
     {
         // 1. Define Lambdas
         ParserLambda = new Function(this, "InputS3ImageUploadedEventParser", new FunctionProps
@@ -57,7 +57,7 @@ public class ImagePipelineConstruct : Construct
         {
             Effect = Effect.ALLOW,
             Actions = new[] { "ssm:GetParameter" },
-            Resources = new[] { $"arn:aws:ssm:{Stack.Of(this).Region}:{Stack.Of(this).Account}:parameter/AlphaZero/VideoPipeline/R2Credentials" }
+            Resources = new[] { $"arn:aws:ssm:{Stack.Of(this).Region}:{Stack.Of(this).Account}:parameter/AlphaZero/DocumentPipeline/R2Credentials" }
         }));
 
         // 2. Step Functions Tasks & Failure Handling
@@ -144,9 +144,9 @@ public class ImagePipelineConstruct : Construct
         // 3. Define State Machine
         var definition = parseEventTask.Next(router);
 
-        PipelineStateMachine = new StateMachine(this, "AlphaZeroImagePipelineStateMachine", new StateMachineProps
+        PipelineStateMachine = new StateMachine(this, "AlphaZeroDocumentPipelineStateMachine", new StateMachineProps
         {
-            StateMachineName = "AlphaZero-ImagePipeline",
+            StateMachineName = "AlphaZero-DocumentPipeline",
             DefinitionBody = DefinitionBody.FromChainable(definition),
             Timeout = Duration.Minutes(5)
         });

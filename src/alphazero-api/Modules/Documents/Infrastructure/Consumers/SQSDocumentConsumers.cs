@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 
 namespace AlphaZero.Modules.Documents.Infrastructure.Consumers;
 
-public class SQSDocumentUploadedConsumer : IConsumer<DocumentUploadedQueueMessage>
+public class SQSDocumentUploadedConsumer : IConsumer<SQSDocumentUploadedEvent>
 {
     private readonly IDocumentsModule _module;
     private readonly ILogger<SQSDocumentUploadedConsumer> _logger;
@@ -22,7 +22,7 @@ public class SQSDocumentUploadedConsumer : IConsumer<DocumentUploadedQueueMessag
         _logger = logger;
     }
 
-    public async Task Consume(ConsumeContext<DocumentUploadedQueueMessage> context)
+    public async Task Consume(ConsumeContext<SQSDocumentUploadedEvent> context)
     {
         _logger.LogInformation("[SQS] SQSDocumentUploadedConsumer triggered for Document {DocumentId}", context.Message.DocumentId);
         await _module.Send(new ProcessDocumentUploadedCommand(context.Message), context.CancellationToken);
@@ -45,7 +45,7 @@ public class SQSDocumentUploadedConsumerDefinition : ConsumerDefinition<SQSDocum
     }
 }
 
-public class SQSDocumentProcessingCompletedConsumer : IConsumer<DocumentProcessingCompletedQueueMessage>
+public class SQSDocumentProcessingCompletedConsumer : IConsumer<SQSDocumentProcessingCompletedEvent>
 {
     private readonly IDocumentsModule _module;
     private readonly ILogger<SQSDocumentProcessingCompletedConsumer> _logger;
@@ -56,7 +56,7 @@ public class SQSDocumentProcessingCompletedConsumer : IConsumer<DocumentProcessi
         _logger = logger;
     }
 
-    public async Task Consume(ConsumeContext<DocumentProcessingCompletedQueueMessage> context)
+    public async Task Consume(ConsumeContext<SQSDocumentProcessingCompletedEvent> context)
     {
         _logger.LogInformation("[SQS] SQSDocumentProcessingCompletedConsumer triggered for Document {DocumentId}", context.Message.DocumentId);
         await _module.Send(new ProcessDocumentCompletedCommand(context.Message), context.CancellationToken);
@@ -79,7 +79,7 @@ public class SQSDocumentProcessingCompletedConsumerDefinition : ConsumerDefiniti
     }
 }
 
-public class SQSDocumentProcessingFailedConsumer : IConsumer<DocumentProcessingFailedQueueMessage>
+public class SQSDocumentProcessingFailedConsumer : IConsumer<SQSDocumentProcessingFailed>
 {
     private readonly IDocumentsModule _module;
     private readonly ILogger<SQSDocumentProcessingFailedConsumer> _logger;
@@ -90,7 +90,7 @@ public class SQSDocumentProcessingFailedConsumer : IConsumer<DocumentProcessingF
         _logger = logger;
     }
 
-    public async Task Consume(ConsumeContext<DocumentProcessingFailedQueueMessage> context)
+    public async Task Consume(ConsumeContext<SQSDocumentProcessingFailed> context)
     {
         _logger.LogInformation("[SQS] SQSDocumentProcessingFailedConsumer triggered for Document {DocumentId}", context.Message.DocumentId);
         await _module.Send(new ProcessDocumentFailedCommand(context.Message), context.CancellationToken);

@@ -1,0 +1,1 @@
+5ec6d799 Fix DocumentTests.cs missing isPublic parameter

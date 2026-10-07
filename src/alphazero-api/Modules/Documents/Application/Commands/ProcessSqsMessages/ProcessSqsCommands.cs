@@ -6,9 +6,9 @@ using System.Threading.Tasks;
 
 namespace AlphaZero.Modules.Documents.Application.Commands.ProcessSqsMessages;
 
-public record ProcessDocumentUploadedCommand(DocumentUploadedQueueMessage Message) : IRequest;
-public record ProcessDocumentCompletedCommand(DocumentProcessingCompletedQueueMessage Message) : IRequest;
-public record ProcessDocumentFailedCommand(DocumentProcessingFailedQueueMessage Message) : IRequest;
+public record ProcessDocumentUploadedCommand(SQSDocumentUploadedEvent Message) : IRequest;
+public record ProcessDocumentCompletedCommand(SQSDocumentProcessingCompletedEvent Message) : IRequest;
+public record ProcessDocumentFailedCommand(SQSDocumentProcessingFailed Message) : IRequest;
 
 public class ProcessSqsCommandsHandler : 
     IRequestHandler<ProcessDocumentUploadedCommand>,
