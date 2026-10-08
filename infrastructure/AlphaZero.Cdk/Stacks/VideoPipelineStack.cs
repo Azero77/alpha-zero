@@ -21,13 +21,13 @@ public class VideoPipelineStack : Stack
 
         Pipeline = new VideoPipelineConstruct(this, "VideoPipeline", new VideoPipelineConstructProps
         {
-            InputBucket = storage.InputBucketPrivate,
-            TransientBucket = storage.TransientBucket,
+            InputBucket = storage.VideoInputBucketPrivate,
+            TransientBucket = storage.VideoTransientBucket,
             VideoPublishedQueue = storage.VideoPublishedQueue,
             VideoFailedQueue = storage.VideoFailedQueue,
             VideoProgressQueue = storage.VideoProgressQueue,
             MasterClearKey = storage.MasterClearKey,
-            R2Credentials = storage.R2Credentials,
+            R2Credentials = storage.VideoR2Credentials,
             MediaConvertRole = storage.MediaConvertRole
         });
 

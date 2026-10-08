@@ -12,8 +12,8 @@ namespace AlphaZero.Cdk.Constructs;
 
 public class DocumentPipelineConstructProps
 {
-    public required IBucket InputBucketPrivate { get; set; }
-    public required IBucket InputBucketPublic { get; set; }
+    public required IBucket DocumentInputBucketPrivate { get; set; }
+    public required IBucket DocumentInputBucketPublic { get; set; }
     public required IBucket CdnBucket { get; set; }
     public required IQueue DocumentProcessingCompletedQueue { get; set; }
     public required IQueue DocumentProcessingFaultedQueue { get; set; }
@@ -49,15 +49,17 @@ public class DocumentPipelineConstruct : Construct
         });
 
         // Grant S3 permissions
-        props.InputBucketPrivate.GrantRead(MoverLambda);
-        props.InputBucketPublic.GrantRead(MoverLambda);
+        props.DocumentInputBucketPrivate.GrantRead(MoverLambda);
+        props.DocumentInputBucketPublic.GrantRead(MoverLambda);
+        props.DocumentInputBucketPrivate.GrantRead(ParserLambda);
+        props.DocumentInputBucketPublic.GrantRead(ParserLambda);
 
         // Grant SSM permission for R2 credentials
         MoverLambda.AddToRolePolicy(new PolicyStatement(new PolicyStatementProps
         {
             Effect = Effect.ALLOW,
             Actions = new[] { "ssm:GetParameter" },
-            Resources = new[] { $"arn:aws:ssm:{Stack.Of(this).Region}:{Stack.Of(this).Account}:parameter/AlphaZero/DocumentPipeline/R2Credentials" }
+            Resources = new[] { $"arn:aws:ssm:{Stack.Of(this).Region}:{Stack.Of(this).Account}:parameter/AlphaZero/R2Credentials" }
         }));
 
         // 2. Step Functions Tasks & Failure Handling
@@ -151,6 +153,7 @@ public class DocumentPipelineConstruct : Construct
             Timeout = Duration.Minutes(5)
         });
 
+        /*
         // 4. EventBridge Trigger from S3 ObjectCreated
         var eventRulePrivate = new Amazon.CDK.AWS.Events.Rule(this, "ImageProcessingRulePrivate", new Amazon.CDK.AWS.Events.RuleProps
         {
@@ -177,6 +180,35 @@ public class DocumentPipelineConstruct : Construct
                     { "bucket", new Dictionary<string, object> { { "name", new[] { props.InputBucketPublic.BucketName } } } }
                 }
             }
+        });*/
+        //eventRulePublic.AddTarget(new Amazon.CDK.AWS.Events.Targets.SfnStateMachine(PipelineStateMachine));
+
+        var documentEventRulePrivate = new Amazon.CDK.AWS.Events.Rule(this, "DocumentProcessingRulePrivate", new Amazon.CDK.AWS.Events.RuleProps
+        {
+            EventPattern = new Amazon.CDK.AWS.Events.EventPattern
+            {
+                Source = new[] { "aws.s3" },
+                DetailType = new[] { "Object Created" },
+                Detail = new Dictionary<string, object>
+                {
+                    { "bucket", new Dictionary<string, object> { { "name", new[] { props.DocumentInputBucketPrivate.BucketName } } } }
+                }
+            }
         });
-        eventRulePublic.AddTarget(new Amazon.CDK.AWS.Events.Targets.SfnStateMachine(PipelineStateMachine));    }
+        documentEventRulePrivate.AddTarget(new Amazon.CDK.AWS.Events.Targets.SfnStateMachine(PipelineStateMachine));
+
+        var documentEventRulePublic = new Amazon.CDK.AWS.Events.Rule(this, "DocumentProcessingRulePublic", new Amazon.CDK.AWS.Events.RuleProps
+        {
+            EventPattern = new Amazon.CDK.AWS.Events.EventPattern
+            {
+                Source = new[] { "aws.s3" },
+                DetailType = new[] { "Object Created" },
+                Detail = new Dictionary<string, object>
+                {
+                    { "bucket", new Dictionary<string, object> { { "name", new[] { props.DocumentInputBucketPublic.BucketName } } } }
+                }
+            }
+        });
+        documentEventRulePublic.AddTarget(new Amazon.CDK.AWS.Events.Targets.SfnStateMachine(PipelineStateMachine));
+    }
 }

@@ -147,7 +147,11 @@ lib/
 #ignore certificates
 *.jwk
 *.env
+.env*
 *.pfx
 *.pem
 
 knowledgeResources/
+
+
+#ignore env

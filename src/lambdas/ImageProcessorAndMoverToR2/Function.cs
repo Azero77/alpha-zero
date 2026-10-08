@@ -55,10 +55,8 @@ public class R2Credentials
     public string AccessKeyId { get; set; } = string.Empty;
     public string SecretAccessKey { get; set; } = string.Empty;
     public string ServiceUrl { get; set; } = string.Empty;
-    public string BucketName { get; set; } = string.Empty;
     public string PublicBucketName { get; set; } = string.Empty;
     public string PrivateBucketName { get; set; } = string.Empty;
-    public string PublicUrl { get; set; } = string.Empty;
 }
 
 [JsonSerializable(typeof(ProcessImageRequest))]
@@ -93,7 +91,7 @@ public class Function
         // 1. Fetch R2 credentials
         var credRequest = new GetParameterRequest
         {
-            Name = "/AlphaZero/DocumentPipeline/R2Credentials",
+            Name = "/AlphaZero/R2Credentials",
             WithDecryption = true
         };
 

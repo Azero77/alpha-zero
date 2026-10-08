@@ -51,16 +51,9 @@ public class VideoPipelineConstruct : Construct
         var jobPreparerPath = "src/lambdas/AlphaZero.JobPreparer/publish";
         var r2MoverPath = Path.Combine(repoRoot, "src/workers/AlphaZero.R2Mover");
         // SSM Parameters
-        var masterClearKey = props.MasterClearKey ?? StringParameter.FromSecureStringParameterAttributes(this, "MasterClearKey", new SecureStringParameterAttributes
-        {
-            ParameterName = "/AlphaZero/VideoPipeline/MasterClearKey",
-        });
+        var masterClearKey = props.MasterClearKey;
 
-        var r2Credentials = props.R2Credentials ?? StringParameter.FromSecureStringParameterAttributes(this, "R2Credentials", new SecureStringParameterAttributes
-        {
-            ParameterName = "/AlphaZero/VideoPipeline/R2Credentials",
-            
-        });
+        var r2Credentials = props.R2Credentials;
 
         // 1. Lambda Functions
 
