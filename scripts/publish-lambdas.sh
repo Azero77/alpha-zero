@@ -10,11 +10,13 @@ echo "==========================================="
 CODE_LAMBDAS=(
     "src/lambdas/AlphaZero.JobPreparer/src/AlphaZero.JobPreparer/AlphaZero.JobPreparer.csproj"
     "src/lambdas/AlphaZero.S3VideoCreatedEventParser/S3VideoCreatedEventParser.csproj"
+    "src/lambdas/DocumentUploadedS3EventParser/DocumentUploadedS3EventParser.csproj"
+    "src/lambdas/ImageProcessorAndMoverToR2/ImageProcessorAndMoverToR2.csproj"
 )
 
 for csproj in "${CODE_LAMBDAS[@]}"; do
-    # Extract the base name (e.g. AlphaZero.JobPreparer) from the path
-    LAMBDA_NAME=$(echo "$csproj" | grep -o 'AlphaZero.[a-zA-Z0-9]*' | head -n 1)
+    # Extract the project name from the path to determine the output directory
+    LAMBDA_NAME=$(basename $(dirname "$csproj"))
     OUTPUT_DIR="${REPO_ROOT}/src/lambdas/${LAMBDA_NAME}/publish"
     
     echo "==> Publishing ${LAMBDA_NAME} to ${OUTPUT_DIR}..."
