@@ -20,7 +20,7 @@ public class S3UploadService : IUploadService
     public S3UploadService(IAmazonS3 client, AWSResources aWSResources)
     {
         _client = client;
-        _s3Settings = aWSResources.InputS3 ?? throw new ArgumentException("S3 input is not configured");
+        _s3Settings = aWSResources.VideosInputS3 ?? throw new ArgumentException("S3 input is not configured");
     }
 
     public async Task<ErrorOr<GetPresignedUrlResponse>> GetFile(string key)

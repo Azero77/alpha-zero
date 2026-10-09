@@ -1,6 +1,5 @@
 import { useState } from 'react';
 
-const API_BASE = 'http://localhost:5000'; // Adjust as needed for local API
 const CDN_BASE = 'https://cdn.alphazero.academy';
 
 function VariantImage({ variant, cdnUrl, refreshKey }: { variant: string, cdnUrl: string, refreshKey: number }) {
@@ -26,8 +25,10 @@ function VariantImage({ variant, cdnUrl, refreshKey }: { variant: string, cdnUrl
 }
 
 function App() {
+  const [apiBase, setApiBase] = useState('https://localhost:7016');
+  const [apiToken, setApiToken] = useState('');
   const [file, setFile] = useState<File | null>(null);
-  const [tenantId, setTenantId] = useState('00000000-0000-0000-0000-000000000001'); // Default test tenant
+  const [tenantId, setTenantId] = useState('9ac6bf72-f911-452e-a43a-ae9b3e26238c'); // Default test tenant
   const [scope, setScope] = useState('course/c1');
   const [profile, setProfile] = useState('Course Cover');
   const [isPublic, setIsPublic] = useState(false);
@@ -66,12 +67,18 @@ function App() {
         isPublic
       };
 
-      const uploadRes = await fetch(`${API_BASE}/api/documents/upload`, {
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+        'x-tenant-id': tenantId
+      };
+      
+      if (apiToken) {
+        headers['Authorization'] = `Bearer ${apiToken}`;
+      }
+
+      const uploadRes = await fetch(`${apiBase}/api/documents/upload`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-tenant-id': tenantId
-        },
+        headers,
         body: JSON.stringify(uploadReq)
       });
 
@@ -98,11 +105,17 @@ function App() {
 
       if (!isPublic) {
         setStatus('Requesting CDN access token from Identity module...');
-        const tokenRes = await fetch(`${API_BASE}/api/identity/tokens/document?scope=${encodeURIComponent(scope)}`, {
+        const tokenHeaders: HeadersInit = {
+          'x-tenant-id': tenantId
+        };
+        
+        if (apiToken) {
+          tokenHeaders['Authorization'] = `Bearer ${apiToken}`;
+        }
+
+        const tokenRes = await fetch(`${apiBase}/api/identity/tokens/document?scope=${encodeURIComponent(scope)}`, {
           method: 'GET',
-          headers: {
-            'x-tenant-id': tenantId
-          }
+          headers: tokenHeaders
         });
 
         if (!tokenRes.ok) {
@@ -147,6 +160,21 @@ function App() {
             <div>
               <label className="block text-sm font-medium text-gray-700">Image File</label>
               <input type="file" accept="image/*" onChange={handleFileChange} className="mt-1 block w-full border border-gray-300 rounded-md p-2" />
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div>
+                <label className="block text-sm font-medium text-gray-700">API Base URL</label>
+                <select value={apiBase} onChange={e => setApiBase(e.target.value)} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2">
+                  <option value="https://localhost:7016">https://localhost:7016</option>
+                  <option value="http://localhost:5053">http://localhost:5053</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700">API Token (Bearer)</label>
+                <input type="text" value={apiToken} onChange={e => setApiToken(e.target.value)} placeholder="e.g. eyJhbGci..." className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" />
+              </div>
             </div>
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">

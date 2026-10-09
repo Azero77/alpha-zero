@@ -32,7 +32,7 @@ public class DocumentPipelineConstruct : Construct
             FunctionName = "alphazero-image-parser",
             Runtime = Runtime.PROVIDED_AL2023,
             Handler = "bootstrap",
-            Code = Code.FromAsset("src/lambdas/InputS3ImageUploadedEventParser/publish"),
+            Code = Code.FromAsset("src/lambdas/DocumentUploadedS3EventParser/publish"),
             Timeout = Duration.Seconds(30),
             MemorySize = 256
         });
@@ -121,7 +121,7 @@ public class DocumentPipelineConstruct : Construct
                 ["DocumentId"] = JsonPath.StringAt("$.ParsedEvent.documentId"),
                 ["TenantId"] = JsonPath.StringAt("$.ParsedEvent.tenantId"),
                 ["Status"] = "Completed",
-                ["PayloadJson"] = JsonPath.JsonToString(JsonPath.ObjectAt("$.ProcessResult"))
+                ["PayloadJson"] = JsonPath.JsonToString(JsonPath.StringAt("$.ProcessResult"))
             })
         });
 

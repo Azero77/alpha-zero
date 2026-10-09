@@ -41,7 +41,9 @@ var api = builder.AddProject<Projects.AlphaZero_API>("alphazero-api")
     .WithEnvironment("Authentication__AuthorizationUrl", ReferenceExpression.Create($"{keycloakHttp}/realms/alpha-zero/protocol/openid-connect/auth"))
     .WithEnvironment("Authentication__TokenUrl", ReferenceExpression.Create($"{keycloakHttp}/realms/alpha-zero/protocol/openid-connect/token"))
     .WithEnvironment("Authentication__Authority", ReferenceExpression.Create($"{keycloakHttp}/realms/alpha-zero"))
-    .WithEnvironment("AWS__Resources__InputS3__BucketName", storageStackOutputs.GetOutput("InputS3BucketName"))
+    .WithEnvironment("AWS__Resources__VideosInputS3__BucketName", storageStackOutputs.GetOutput("VideosInputS3Bucket"))
+    .WithEnvironment("AWS__Resources__InputS3Private__BucketName", storageStackOutputs.GetOutput("DocumentInputS3BucketNamePrivate"))
+    .WithEnvironment("AWS__Resources__InputS3Public__BucketName", storageStackOutputs.GetOutput("DocumentInputS3BucketNamePublic"))
     .WithEnvironment("AWS__Resources__TransientS3__BucketName", storageStackOutputs.GetOutput("TransientS3BucketName"))
     .WithEnvironment("AWS__Resources__VideoPublishedQueue__QueueUrl", storageStackOutputs.GetOutput("VideoPublishedQueueUrl"))
     .WithEnvironment("AWS__Resources__VideoFailedQueue__QueueUrl", storageStackOutputs.GetOutput("VideoFailedQueueUrl"))
@@ -59,7 +61,7 @@ var api = builder.AddProject<Projects.AlphaZero_API>("alphazero-api")
 var s3EventParser = builder.AddAWSLambdaFunction<Projects.S3VideoCreatedEventParser>("alphazero-s3EventParser", "AlphaZero.S3VideoCreatedEventParser::AlphaZero.S3VideoCreatedEventParser.Function::FunctionHandler");
 var videoAnalyzer = builder.AddAWSLambdaFunction<Projects.AlphaZero_VideoAnalyzer>("video-analyzer", "AlphaZero.VideoAnalyzer::AlphaZero.VideoAnalyzer.Function::FunctionHandler")
     .WithReference(awsSdkConfig)
-    .WithEnvironment("AWS__Resources__InputS3__BucketName", storageStackOutputs.GetOutput("InputS3BucketName"));
+    .WithEnvironment("AWS__Resources__VideosInputS3__BucketName", storageStackOutputs.GetOutput("VideosInputS3Bucket"));
 
 var jobPreparer = builder.AddAWSLambdaFunction<Projects.AlphaZero_JobPreparer>("job-preparer", "AlphaZero.JobPreparer::AlphaZero.JobPreparer.Function::FunctionHandler")
     .WithReference(awsSdkConfig)

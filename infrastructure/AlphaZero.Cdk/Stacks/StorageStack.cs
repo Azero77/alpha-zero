@@ -193,7 +193,7 @@ public class StorageStack : Stack
         MediaConvertRole.AddToPolicy(mediaConvertKmsPolicy);
 
         // Outputs for Aspire AppHost
-        new CfnOutput(this, "InputS3BucketNamePrivate", new CfnOutputProps { Value = VideoInputBucketPrivate.BucketName });
+        new CfnOutput(this, "VideosInputS3Bucket", new CfnOutputProps { Value = VideoInputBucketPrivate.BucketName });
         new CfnOutput(this, "DocumentInputS3BucketNamePrivate", new CfnOutputProps { Value = DocumentInputBucketPrivate.BucketName });
         new CfnOutput(this, "DocumentInputS3BucketNamePublic", new CfnOutputProps { Value = DocumentInputBucketPublic.BucketName });
         new CfnOutput(this, "TransientS3BucketName", new CfnOutputProps { Value = VideoTransientBucket.BucketName });

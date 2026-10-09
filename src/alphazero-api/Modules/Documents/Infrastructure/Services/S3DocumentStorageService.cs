@@ -14,7 +14,7 @@ public class S3DocumentStorageService : IDocumentStorageService
     public S3DocumentStorageService(IAmazonS3 s3Client, AWSResources awsResources)
     {
         _s3Client = s3Client;
-        _bucketNamePrivate = awsResources.InputS3Private?.BucketName ?? awsResources.InputS3?.BucketName ?? "alphazero-documents";
+        _bucketNamePrivate = awsResources.InputS3Private?.BucketName ?? awsResources.VideosInputS3?.BucketName ?? "alphazero-documents";
         _bucketNamePublic = awsResources.InputS3Public?.BucketName ?? "alphazero-documents-public";
     }
 

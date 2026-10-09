@@ -14,6 +14,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
+using Npgsql;
+
 namespace AlphaZero.Modules.Documents.Infrastructure;
 
 public static class DependencyInjection
@@ -22,11 +24,15 @@ public static class DependencyInjection
     {
         var dbSettings = DatabaseSettings.GetDatabaseSettings(configuration);
 
+        var dataSource = new NpgsqlDataSourceBuilder(dbSettings.ConnectionString)
+            .EnableDynamicJson()
+            .Build();
+
         services.AddScoped<IDocumentStorageService, S3DocumentStorageService>();
 
         services.AddDbContext<AppDbContext>((sp, opts) =>
         {
-            opts.UseNpgsql(dbSettings.ConnectionString, h =>
+            opts.UseNpgsql(dataSource, h =>
             {
                 h.MigrationsAssembly(typeof(AppDbContext).Assembly.FullName);
                 h.MigrationsHistoryTable("__DocumentsMigrationHistory", AppDbContext.Schema);
