@@ -27,6 +27,12 @@ public static class Program
             Env = env
         });
 
+        new ImagePipelineStack(app, "AlphaZeroImagePipelineStack", new ImagePipelineStackProps
+        {
+            Storage = storageStack,
+            Env = env
+        });
+
         app.Synth();
     }
 }

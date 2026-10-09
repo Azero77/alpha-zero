@@ -85,14 +85,14 @@ public class CreatePlaybackSessionHandlerUnitTests
     {
         // Arrange
         _userRepo.UserToReturn = null;
-        var handler = new CreatePlaybackSessionCommandHandler(
+        var handler = new CreatePlaybackSessionQueryHandler(
             _videoRepo,
             _cookieSigner,
             _userRepo,
             _tenantProvider,
-            NullLogger<CreatePlaybackSessionCommandHandler>.Instance);
+            NullLogger<CreatePlaybackSessionQueryHandler>.Instance);
 
-        var command = new CreatePlaybackSessionCommand(Guid.NewGuid());
+        var command = new CreatePlaybackSessionQuery(Guid.NewGuid());
 
         // Act
         var result = await handler.Handle(command, CancellationToken.None);
@@ -111,15 +111,15 @@ public class CreatePlaybackSessionHandlerUnitTests
         _userRepo.UserToReturn = new TenantUserDTO(userId, "user-id", "Test Student", tenantId);
         _videoRepo.VideoToReturn = null;
 
-        var handler = new CreatePlaybackSessionCommandHandler(
+        var handler = new CreatePlaybackSessionQueryHandler(
             _videoRepo,
             _cookieSigner,
             _userRepo,
             _tenantProvider,
-            NullLogger<CreatePlaybackSessionCommandHandler>.Instance);
+            NullLogger<CreatePlaybackSessionQueryHandler>.Instance);
 
         var videoId = Guid.NewGuid();
-        var command = new CreatePlaybackSessionCommand(videoId);
+        var command = new CreatePlaybackSessionQuery(videoId);
 
         // Act
         var result = await handler.Handle(command, CancellationToken.None);
@@ -144,14 +144,14 @@ public class CreatePlaybackSessionHandlerUnitTests
         var video = Video.Create(Guid.NewGuid(), tenantId, "Test Title", "Desc",  metadata, clock.UtcNow).Value;
         _videoRepo.VideoToReturn = video;
 
-        var handler = new CreatePlaybackSessionCommandHandler(
+        var handler = new CreatePlaybackSessionQueryHandler(
             _videoRepo,
             _cookieSigner,
             _userRepo,
             _tenantProvider,
-            NullLogger<CreatePlaybackSessionCommandHandler>.Instance);
+            NullLogger<CreatePlaybackSessionQueryHandler>.Instance);
 
-        var command = new CreatePlaybackSessionCommand(video.Id);
+        var command = new CreatePlaybackSessionQuery(video.Id);
 
         // Act
         var result = await handler.Handle(command, CancellationToken.None);
@@ -178,14 +178,14 @@ public class CreatePlaybackSessionHandlerUnitTests
         video.MarkAsPublished(clock.UtcNow);
         _videoRepo.VideoToReturn = video;
 
-        var handler = new CreatePlaybackSessionCommandHandler(
+        var handler = new CreatePlaybackSessionQueryHandler(
             _videoRepo,
             _cookieSigner,
             _userRepo,
             _tenantProvider,
-            NullLogger<CreatePlaybackSessionCommandHandler>.Instance);
+            NullLogger<CreatePlaybackSessionQueryHandler>.Instance);
 
-        var command = new CreatePlaybackSessionCommand(video.Id);
+        var command = new CreatePlaybackSessionQuery(video.Id);
 
         // Act
         var result = await handler.Handle(command, CancellationToken.None);
@@ -215,22 +215,22 @@ public class CreatePlaybackSessionHandlerUnitTests
     [Fact]
     public void Validator_ShouldValidateVideoIdAndCourseIdRequirements()
     {
-        var validator = new CreatePlaybackSessionCommandValidator();
+        var validator = new CreatePlaybackSessionQueryValidator();
 
         // Empty VideoId -> invalid
-        var res1 = validator.Validate(new CreatePlaybackSessionCommand(Guid.Empty));
+        var res1 = validator.Validate(new CreatePlaybackSessionQuery(Guid.Empty));
         res1.IsValid.Should().BeFalse();
 
         // ItemId provided without CourseId -> invalid
-        var res2 = validator.Validate(new CreatePlaybackSessionCommand(Guid.NewGuid(), null, Guid.NewGuid()));
+        var res2 = validator.Validate(new CreatePlaybackSessionQuery(Guid.NewGuid(), null, Guid.NewGuid()));
         res2.IsValid.Should().BeFalse();
 
         // Valid with VideoId
-        var res3 = validator.Validate(new CreatePlaybackSessionCommand(Guid.NewGuid()));
+        var res3 = validator.Validate(new CreatePlaybackSessionQuery(Guid.NewGuid()));
         res3.IsValid.Should().BeTrue();
 
         // Valid with VideoId, CourseId, and ItemId
-        var res4 = validator.Validate(new CreatePlaybackSessionCommand(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid()));
+        var res4 = validator.Validate(new CreatePlaybackSessionQuery(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid()));
         res4.IsValid.Should().BeTrue();
     }
 }

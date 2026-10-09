@@ -16,7 +16,6 @@ namespace AlphaZero.Modules.Identity.Domain.Services;
 /// </summary>
 public class AuthorizationContextFactory(ICurrentTenantUserRepository currentTenantUserRepository,
     ITenantUserPrincipalAssignmentRepository tenantUserPrincipalAssignmentRepository,
-    IPrincipalRepository principalRepository,
     IDeviceProvider deviceProvider,
     IHttpContextAccessor accessor
     ) : IAuthorizationContextFactory

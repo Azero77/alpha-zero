@@ -8,7 +8,7 @@ namespace AlphaZero.Modules.Courses.Domain.Aggregates.Courses;
 
 public class Course : TenantOwnedAggregate, ISoftDeletable
 {
-    public string Title { get; private set; }
+    public string Title { get; private set; } = null!;
     public string? Description { get; private set; }
     public Guid SubjectId { get; private set; }
     public CourseStatus Status { get; private set; }

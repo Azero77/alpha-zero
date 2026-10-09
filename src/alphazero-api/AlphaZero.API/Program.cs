@@ -115,7 +115,7 @@ public class Program
             options.Audience = builder.Configuration["Authentication:Audience"];
             options.RequireHttpsMetadata = false;
             
-            var internalSecret = builder.Configuration["Jwt:Secret"];
+            var internalSecret = builder.Configuration["Jwt:Secret"] ?? string.Empty;
             var internalIssuer = builder.Configuration["Authentication:InternalIssuer"];
             var internalAudience = builder.Configuration["Authentication:InternalAudience"];
             var idpIssuer = builder.Configuration["Authentication:Authority"] ;

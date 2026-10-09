@@ -74,7 +74,7 @@ public class GetDocumentDownloadUrlTests
         var documentId = Guid.NewGuid();
         _tenantProvider.GetTenant().Returns(tenantId);
 
-        var document = Document.Create(documentId, tenantId, "Title", null, "course/123", "pdf", "s3key", 1024, null, false, Substitute.For<IClock>()).Value;
+        var document = Document.Create(documentId, tenantId, "Title", null, "pdf", "s3key", 1024, null, false, DateTime.UtcNow).Value;
         
         _documentRepository.GetFirst(Arg.Any<Expression<Func<Document, bool>>>(), Arg.Any<CancellationToken>())
             .Returns(document);
@@ -100,7 +100,7 @@ public class GetDocumentDownloadUrlTests
         var documentId = Guid.NewGuid();
         _tenantProvider.GetTenant().Returns(tenantId);
 
-        var document = Document.Create(documentId, tenantId, "Title", null, "course/123", "pdf", "s3key", 1024, null, true, Substitute.For<IClock>()).Value;
+        var document = Document.Create(documentId, tenantId, "Title", null, "pdf", "s3key", 1024, null, true, DateTime.UtcNow).Value;
         
         _documentRepository.GetFirst(Arg.Any<Expression<Func<Document, bool>>>(), Arg.Any<CancellationToken>())
             .Returns(document);

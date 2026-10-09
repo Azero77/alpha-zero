@@ -9,7 +9,7 @@ public class Enrollement : TenantOwnedAggregate
     public Guid StudentId { get; private set; }
     public Guid CourseId { get; private set; }
     public EnrollementStatus Status { get; private set; }
-    public Progress Progress { get; private set; }
+    public Progress Progress { get; private set; } = null!;
     public DateTime EnrolledOn { get; private set; }
 
     private Enrollement()

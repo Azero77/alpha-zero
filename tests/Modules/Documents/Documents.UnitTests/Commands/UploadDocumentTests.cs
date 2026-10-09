@@ -19,29 +19,6 @@ public class UploadDocumentValidatorTests
 {
     private readonly UploadDocumentCommandValidator _validator = new();
 
-    [Theory]
-    [InlineData("course/123")]
-    [InlineData("lesson/abc-def")]
-    [InlineData("tenant_resources/resource-1")]
-    public void Validator_ShouldNotHaveError_WhenScopeIsValid(string scope)
-    {
-        var model = new UploadDocumentCommand("Title", null, scope, "file.pdf", "application/pdf", 1024);
-        var result = _validator.TestValidate(model);
-        result.ShouldNotHaveValidationErrorFor(x => x.Scope);
-    }
-
-    [Theory]
-    [InlineData("")]
-    [InlineData("invalidscope")]
-    [InlineData("course/123/extra")]
-    [InlineData("course/../123")]
-    [InlineData("/course/123")]
-    public void Validator_ShouldHaveError_WhenScopeIsInvalid(string scope)
-    {
-        var model = new UploadDocumentCommand("Title", null, scope, "file.pdf", "application/pdf", 1024);
-        var result = _validator.TestValidate(model);
-        result.ShouldHaveValidationErrorFor(x => x.Scope);
-    }
 }
 
 public class UploadDocumentCommandHandlerTests
@@ -85,7 +62,7 @@ public class UploadDocumentCommandHandlerTests
         var command = new UploadDocumentCommand(
             "Test Document",
             "A test description",
-            "course/123",
+            
             "my_document.pdf",
             "application/pdf",
             2048);
@@ -103,7 +80,6 @@ public class UploadDocumentCommandHandlerTests
         _documentRepository.Received(1).Add(Arg.Is<Document>(d => 
             d.Id == result.Value.DocumentId &&
             d.TenantId == tenantId &&
-            d.Scope == "course/123" &&
             d.S3Key == expectedS3Key
         ));
     }

@@ -14,7 +14,6 @@ public class DocumentPipelineConstructProps
 {
     public required IBucket DocumentInputBucketPrivate { get; set; }
     public required IBucket DocumentInputBucketPublic { get; set; }
-    public required IBucket CdnBucket { get; set; }
     public required IQueue DocumentProcessingCompletedQueue { get; set; }
     public required IQueue DocumentProcessingFaultedQueue { get; set; }
 }

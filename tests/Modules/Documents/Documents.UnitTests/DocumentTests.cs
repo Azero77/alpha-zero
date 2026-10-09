@@ -30,11 +30,10 @@ public class DocumentTests
             tenantId,
             "Course Syllabus",
             "Full syllabus for 2026",
-            "course/c1",
             "pdf",
             "documents/tenant/course/c1/syllabus.pdf",
             1024 * 1024,
-            null, false, _clock);
+            null, false, _clock.Now);
 
         // Assert
         result.IsError.Should().BeFalse();
@@ -43,7 +42,6 @@ public class DocumentTests
         doc.TenantId.Should().Be(tenantId);
         doc.Title.Should().Be("Course Syllabus");
         doc.Description.Should().Be("Full syllabus for 2026");
-        doc.Scope.Should().Be("course/c1");
         doc.FileType.Should().Be("pdf");
         doc.S3Key.Should().Be("documents/tenant/course/c1/syllabus.pdf");
         doc.FileSizeBytes.Should().Be(1024 * 1024);
@@ -69,42 +67,14 @@ public class DocumentTests
             tenantId,
             title!,
             null,
-            "course/c1",
             "pdf",
             "s3/key",
             100,
-            null, false, _clock);
+            null, false, _clock.Now);
 
         // Assert
         result.IsError.Should().BeTrue();
         result.FirstError.Code.Should().Be("Document.Title");
-    }
-
-    [Theory]
-    [InlineData("")]
-    [InlineData(" ")]
-    [InlineData(null)]
-    public void Create_Should_Fail_WhenScopeIsEmpty(string? scope)
-    {
-        // Arrange
-        var id = Guid.NewGuid();
-        var tenantId = Guid.NewGuid();
-
-        // Act
-        var result = Document.Create(
-            id,
-            tenantId,
-            "Valid Title",
-            null,
-            scope!,
-            "pdf",
-            "s3/key",
-            100,
-            null, false, _clock);
-
-        // Assert
-        result.IsError.Should().BeTrue();
-        result.FirstError.Code.Should().Be("Document.Scope");
     }
 
     [Theory]
@@ -123,11 +93,10 @@ public class DocumentTests
             tenantId,
             "Valid Title",
             null,
-            "course/c1",
             fileType!,
             "s3/key",
             100,
-            null, false, _clock);
+            null, false, _clock.Now);
 
         // Assert
         result.IsError.Should().BeTrue();
@@ -143,11 +112,10 @@ public class DocumentTests
             Guid.NewGuid(),
             "Title",
             null,
-            "course/c1",
             "pdf",
             "s3/key",
             100,
-            null, false, _clock).Value;
+            null, false, _clock.Now).Value;
 
         var deleteTime = _now.AddDays(1);
         _clock.Now.Returns(deleteTime);
@@ -169,11 +137,10 @@ public class DocumentTests
             Guid.NewGuid(),
             "Test",
             null,
-            "course/c1",
             ".PDF",
             "s3/key",
             500,
-            null, false, _clock);
+            null, false, _clock.Now);
 
         // Assert
         result.IsError.Should().BeFalse();
@@ -189,11 +156,10 @@ public class DocumentTests
             Guid.NewGuid(),
             "Original Title",
             "Original Desc",
-            "course/c1",
             "pdf",
             "s3/key",
             100,
-            null, false, _clock).Value;
+            null, false, _clock.Now).Value;
 
         // Act
         var result = doc.UpdateInformation("Updated Title", "Updated Desc");
@@ -223,11 +189,10 @@ public class DocumentTests
             Guid.NewGuid(),
             "Original Title",
             "Original Desc",
-            "course/c1",
             "pdf",
             "s3/key",
             100,
-            null, false, _clock).Value;
+            null, false, _clock.Now).Value;
 
         // Act
         var result = doc.UpdateInformation(title!, "Some Desc");

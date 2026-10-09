@@ -18,7 +18,7 @@ public class CourseOverview : TenantOwnedEntity
     public DateTime CreatedAtUtc { get; private set; }
     public DateTime UpdatedAtUtc { get; private set; }
     
-    public string ETag { get; private set; }
+    public string ETag { get; private set; } = null!;
 
     // Required by EF Core
     private CourseOverview() : base(default, default) 
