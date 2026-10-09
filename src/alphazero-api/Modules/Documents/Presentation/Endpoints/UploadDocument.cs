@@ -25,7 +25,8 @@ public static class UploadDocument
         Guid DocumentId,
         string Arn,
         string UploadPresignedUrl,
-        string S3Key);
+        string S3Key,
+        Dictionary<string, string> Headers);
 
     public class Endpoint : IEndpoint
     {
@@ -60,7 +61,8 @@ public static class UploadDocument
                     res.DocumentId,
                     res.Arn,
                     res.UploadPresignedUrl,
-                    res.S3Key)),
+                    res.S3Key,
+                    res.Headers)),
                 errors => errors.ToMinimalResult());
         }
     }

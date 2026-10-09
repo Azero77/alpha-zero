@@ -87,13 +87,13 @@ function App() {
       }
 
       const uploadData = await uploadRes.json();
-      const { documentId: newDocId, uploadPresignedUrl } = uploadData;
+      const { documentId: newDocId, uploadPresignedUrl, headers: uploadHeaders } = uploadData;
       setDocumentId(newDocId);
 
       setStatus('Uploading file directly to S3...');
       const s3Res = await fetch(uploadPresignedUrl, {
         method: 'PUT',
-        headers: {
+        headers: uploadHeaders || {
           'Content-Type': file.type || 'application/octet-stream'
         },
         body: file

@@ -28,7 +28,8 @@ public record UploadDocumentResponse(
     Guid DocumentId,
     string Arn,
     string UploadPresignedUrl,
-    string S3Key);
+    string S3Key,
+    Dictionary<string, string> Headers);
 
 public class UploadDocumentCommandValidator : AbstractValidator<UploadDocumentCommand>
 {
@@ -111,6 +112,15 @@ public sealed class UploadDocumentCommandHandler : IRequestHandler<UploadDocumen
             metadata,
             request.IsPublic);
 
+        var headersToSign = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            { "content-type", request.ContentType }
+        };
+        foreach (var pair in metadata)
+        {
+            headersToSign.Add($"x-amz-meta-{pair.Key.ToLowerInvariant()}", pair.Value);
+        }
+
         _documentRepository.Add(documentResult.Value);
         
         await _publishEndpoint.Publish(new DocumentUploadInitiatedEvent(documentId, tenantId.Value), cancellationToken);
@@ -121,6 +131,7 @@ public sealed class UploadDocumentCommandHandler : IRequestHandler<UploadDocumen
             documentId,
             documentResult.Value.Arn.Value,
             presignedUrl,
-            s3Key);
+            s3Key,
+            headersToSign);
     }
 }

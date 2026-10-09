@@ -33,4 +33,9 @@
         <HintPath>..\..\..\..\..\.nuget\packages\amazon.lambda.serialization.systemtextjson\2.4.4\lib\net8.0\Amazon.Lambda.Serialization.SystemTextJson.dll</HintPath>
       </Reference>
     </ItemGroup>
+
+    <!-- Rename the compiled native binary to 'bootstrap' so AWS provided.al2023 runtime can execute it -->
+    <Target Name="RenameForLambda" AfterTargets="Publish">
+        <Move SourceFiles="$(PublishDir)$(AssemblyName)" DestinationFiles="$(PublishDir)bootstrap" Condition="Exists('$(PublishDir)$(AssemblyName)')" />
+    </Target>
 </Project>
