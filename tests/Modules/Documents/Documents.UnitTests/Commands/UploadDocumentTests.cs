@@ -73,7 +73,7 @@ public class UploadDocumentCommandHandlerTests
         // Assert
         result.IsError.Should().BeFalse();
         
-        var expectedS3Key = $"documents/{tenantId}/course/123/{result.Value.DocumentId}/my_document.pdf";
+        var expectedS3Key = $"documents/{tenantId}/{result.Value.DocumentId}/my_document.pdf";
         result.Value.S3Key.Should().Be(expectedS3Key);
         result.Value.UploadPresignedUrl.Should().Be("https://r2.cloudflare.com/upload-url");
 

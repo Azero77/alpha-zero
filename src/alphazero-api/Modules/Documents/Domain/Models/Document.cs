@@ -161,14 +161,17 @@ public class Document : AggregateRoot, IDomainTenantOwned, ISoftDeletable
     {
         if (Metadata.TryGetValue("Variants", out var value) && value is JsonElement { ValueKind: JsonValueKind.Object } variants)
         {
-            var variantKey = variants.TryGetPropertyValue<string>(variant,null);
-            if(variantKey is null)
-                return Error.Validation("Document.Variants", "Variant is not Found.");
-            return variantKey;
-
+            if (variants.TryGetProperty(variant, out var property) && property.ValueKind == JsonValueKind.String)
+            {
+                var variantKey = property.GetString();
+                if (!string.IsNullOrEmpty(variantKey))
+                {
+                    return variantKey;
+                }
+            }
+            return Error.Validation("Document.Variants", "Variant is not Found.");
         }
         return Error.Validation("Document.Metadata", "Variants For this Type of Document is Not Supported");
-
     }
     public ResourceArn Arn => ResourceArn.ForDocument(TenantId, Id);
 }

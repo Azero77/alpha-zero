@@ -8,6 +8,7 @@ using ErrorOr;
 using FluentAssertions;
 using NSubstitute;
 using System.Linq.Expressions;
+using System.Text.Json;
 using Xunit;
 
 namespace Documents.UnitTests.Queries;
@@ -29,7 +30,11 @@ public class GetDocumentDownloadUrlTests
             _tenantProvider,
             _documentStorageService,
             _documentRepository,
-            new Aspire.Shared.AWSResources { VideoCdnDomain = "public-cdn.alphazero.com" });
+            new Aspire.Shared.AWSResources 
+            { 
+                DocumentPublicCdnDomain = "public-cdn.alphazero.com",
+                DocumentPrivateCdnDomain = "private-cdn.alphazero.com"
+            });
     }
 
     [Fact]
@@ -37,7 +42,7 @@ public class GetDocumentDownloadUrlTests
     {
         // Arrange
         _tenantProvider.GetTenant().Returns((Guid?)null);
-        var query = new GetDocumentDownloadUrlQuery(Guid.NewGuid());
+        var query = new GetDocumentDownloadUrlQuery(Guid.NewGuid(), "thumbnail");
 
         // Act
         var result = await _handler.Handle(query, CancellationToken.None);
@@ -56,7 +61,7 @@ public class GetDocumentDownloadUrlTests
         _documentRepository.GetFirst(Arg.Any<Expression<Func<Document, bool>>>(), Arg.Any<CancellationToken>())
             .Returns((Document?)null);
         
-        var query = new GetDocumentDownloadUrlQuery(Guid.NewGuid());
+        var query = new GetDocumentDownloadUrlQuery(Guid.NewGuid(), "thumbnail");
 
         // Act
         var result = await _handler.Handle(query, CancellationToken.None);
@@ -67,29 +72,32 @@ public class GetDocumentDownloadUrlTests
     }
 
     [Fact]
-    public async Task Handle_ReturnsPresignedUrl_WhenAuthorized()
+    public async Task Handle_ReturnsPresignedUrl_WhenAuthorizedAndPrivate()
     {
         // Arrange
         var tenantId = Guid.NewGuid();
         var documentId = Guid.NewGuid();
+        var s3Key = $"documents/{tenantId}/{documentId}/thumbnail.webp";
         _tenantProvider.GetTenant().Returns(tenantId);
 
         var document = Document.Create(documentId, tenantId, "Title", null, "pdf", "s3key", 1024, null, false, DateTime.UtcNow).Value;
+        var metadataJson = $"{{\"Variants\": {{\"thumbnail\": \"{s3Key}\"}}}}";
+        document.ProcessingCompleted(metadataJson, DateTime.UtcNow);
         
         _documentRepository.GetFirst(Arg.Any<Expression<Func<Document, bool>>>(), Arg.Any<CancellationToken>())
             .Returns(document);
 
         _documentStorageService.GenerateDownloadPresignedUrlAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<TimeSpan>())
-            .Returns("https://r2.cloudflare.com/s3key?signature=abc");
+            .Returns($"https://r2.cloudflare.com/{s3Key}?signature=abc");
 
-        var query = new GetDocumentDownloadUrlQuery(documentId);
+        var query = new GetDocumentDownloadUrlQuery(documentId, "thumbnail");
 
         // Act
         var result = await _handler.Handle(query, CancellationToken.None);
 
         // Assert
-        result.IsError.Should().BeFalse();
-        result.Value.Url.Should().Be("https://r2.cloudflare.com/s3key?signature=abc");
+        result.IsError.Should().BeFalse(because: result.IsError ? result.FirstError.Description : "");
+        result.Value.Url.Should().Be($"https://r2.cloudflare.com/{s3Key}?signature=abc");
     }
 
     [Fact]
@@ -98,20 +106,23 @@ public class GetDocumentDownloadUrlTests
         // Arrange
         var tenantId = Guid.NewGuid();
         var documentId = Guid.NewGuid();
+        var s3Key = $"documents/{tenantId}/{documentId}/thumbnail.webp";
         _tenantProvider.GetTenant().Returns(tenantId);
 
         var document = Document.Create(documentId, tenantId, "Title", null, "pdf", "s3key", 1024, null, true, DateTime.UtcNow).Value;
+        var metadataJson = $"{{\"Variants\": {{\"thumbnail\": \"{s3Key}\"}}}}";
+        document.ProcessingCompleted(metadataJson, DateTime.UtcNow);
         
         _documentRepository.GetFirst(Arg.Any<Expression<Func<Document, bool>>>(), Arg.Any<CancellationToken>())
             .Returns(document);
 
-        var query = new GetDocumentDownloadUrlQuery(documentId);
+        var query = new GetDocumentDownloadUrlQuery(documentId, "thumbnail");
 
         // Act
         var result = await _handler.Handle(query, CancellationToken.None);
 
         // Assert
         result.IsError.Should().BeFalse();
-        result.Value.Url.Should().Be("https://public-cdn.alphazero.com/s3key");
+        result.Value.Url.Should().Be($"public-cdn.alphazero.com/{s3Key}");
     }
 }

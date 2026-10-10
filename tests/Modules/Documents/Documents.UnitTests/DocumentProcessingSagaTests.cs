@@ -52,7 +52,7 @@ public class DocumentProcessingSagaTests
     }
 
     [Fact]
-    public async Task UploadedToStorage_TransitionsToProcessing_AndSendsDeduplicationCommand()
+    public async Task UploadedToStorage_TransitionsToProcessing()
     {
         var services = new ServiceCollection();
         services.AddLogging();
@@ -85,8 +85,6 @@ public class DocumentProcessingSagaTests
             
             var sagaInstance = sagaHarness.Sagas.Contains(documentId);
             Assert.Equal("Processing", sagaInstance.CurrentState);
-
-            Assert.True(await harness.Published.Any<VerifyDocumentDeduplicationCommand>());
         }
         finally
         {

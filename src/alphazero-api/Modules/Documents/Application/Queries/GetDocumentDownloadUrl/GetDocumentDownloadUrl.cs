@@ -59,7 +59,7 @@ public class GetDocumentDownloadUrlQueryHandler : IRequestHandler<GetDocumentDow
         if (key.IsError)
             return key.Errors;
         if (document.IsPublic)
-            return new GetDocumentDownloadUrlResponse($"{domain}/{key}");
+            return new GetDocumentDownloadUrlResponse($"{domain}/{key.Value}");
         if (domain is null)
             return Error.NotFound("Document.Domain.NotFound", "Domain is Not Supported For Now");
        
