@@ -52,11 +52,23 @@ public record ProcessImageResponse
 
 public class R2Credentials
 {
+    [JsonPropertyName("AccessKeyId")]
     public string AccessKeyId { get; set; } = string.Empty;
+    
+    [JsonPropertyName("SecretAccessKey")]
     public string SecretAccessKey { get; set; } = string.Empty;
+    
+    [JsonPropertyName("ServiceURL")]
     public string ServiceUrl { get; set; } = string.Empty;
+    
+    [JsonPropertyName("PublicBucketName")]
     public string PublicBucketName { get; set; } = string.Empty;
+    
+    [JsonPropertyName("PrivateBucketName")]
     public string PrivateBucketName { get; set; } = string.Empty;
+    
+    [JsonPropertyName("VideosBucketName")]
+    public string VideosBucketName { get; set; } = string.Empty;
 }
 
 [JsonSerializable(typeof(ProcessImageRequest))]
@@ -104,6 +116,7 @@ public class Function
         var r2Config = new AmazonS3Config
         {
             ServiceURL = r2Creds.ServiceUrl,
+            AuthenticationRegion = "auto"
         };
         var r2Client = new AmazonS3Client(r2Creds.AccessKeyId, r2Creds.SecretAccessKey, r2Config);
 

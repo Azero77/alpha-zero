@@ -8,7 +8,11 @@ using Microsoft.AspNetCore.Builder;
 
 namespace AlphaZero.Modules.Documents.Presentation.Endpoints;
 
-public record GetDocumentDownloadUrlRequest { public Guid DocumentId { get; init; } }
+public record GetDocumentDownloadUrlRequest 
+{ 
+    public Guid DocumentId { get; init; } 
+    [FastEndpoints.QueryParam] public string? VariantName { get; init; } 
+}
 
 public class GetDocumentDownloadUrlSummary : Summary<GetDocumentDownloadUrlEndpoint>
 {
@@ -42,7 +46,7 @@ public class GetDocumentDownloadUrlEndpoint : Endpoint<GetDocumentDownloadUrlReq
 
     public override async Task HandleAsync(GetDocumentDownloadUrlRequest req, CancellationToken ct)
     {
-        var query = new GetDocumentDownloadUrlQuery(req.DocumentId);
+        var query = new GetDocumentDownloadUrlQuery(req.DocumentId, req.VariantName);
         var result = await _module.Send(query, ct);
 
         if (result.IsError)

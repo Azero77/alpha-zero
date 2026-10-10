@@ -3,7 +3,7 @@ set -e
 
 # Default values
 ENV_FILE=".env"
-PARAMETER_NAME="/AlphaZero/DocumentsPipeline/R2Credentials"
+PARAMETER_NAME="/AlphaZero/R2Credentials"
 
 # Parse arguments
 while [[ "$#" -gt 0 ]]; do

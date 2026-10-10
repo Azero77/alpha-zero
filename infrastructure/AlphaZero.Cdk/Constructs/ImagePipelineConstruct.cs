@@ -107,7 +107,8 @@ public class DocumentPipelineConstruct : Construct
                 ["s3Bucket"] = JsonPath.StringAt("$.ParsedEvent.s3Bucket"),
                 ["s3Key"] = JsonPath.StringAt("$.ParsedEvent.s3Key"),
                 ["documentType"] = JsonPath.StringAt("$.ParsedEvent.documentType"),
-                ["profileType"] = JsonPath.StringAt("$.ParsedEvent.profileType")
+                ["profileType"] = JsonPath.StringAt("$.ParsedEvent.profileType"),
+                ["isPublic"] = JsonPath.StringAt("$.ParsedEvent.isPublic")
             }),
             ResultPath = "$.ProcessResult"
         });

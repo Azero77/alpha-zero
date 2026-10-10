@@ -15,7 +15,11 @@ public record DocumentDetailsResponse(
     string? Description,
     string FileType,
     long FileSizeBytes,
-    DateTime CreatedOn);
+    DateTime CreatedOn,
+    string Type,
+    string Status,
+    bool IsPublic,
+    Dictionary<string, object> Metadata);
 
 public class GetDocumentQueryValidator : AbstractValidator<GetDocumentQuery>
 {
@@ -47,6 +51,10 @@ public sealed class GetDocumentQueryHandler : IRequestHandler<GetDocumentQuery, 
             document.Description,
             document.FileType,
             document.FileSizeBytes,
-            document.CreatedOn);
+            document.CreatedOn,
+            document.Type.ToString(),
+            document.Status.ToString(),
+            document.IsPublic,
+            document.Metadata);
     }
 }

@@ -1,40 +1,94 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
-const CDN_BASE = 'https://cdn.alphazero.academy';
+const CDN_BASE = import.meta.env.VITE_PUBLIC_CDN_BASE || 'https://documents.public.cdn.zadmuslim.cc';
 
-function VariantImage({ variant, cdnUrl, refreshKey }: { variant: string, cdnUrl: string, refreshKey: number }) {
-  // Append a timestamp or refresh key to bust browser cache
-  const urlWithCacheBuster = cdnUrl ? `${cdnUrl}&_ts=${refreshKey}` : '';
+function VariantImage({ variant, cdnUrl, documentId, tenantId, isPublic, apiBase, apiToken, refreshKey }: { variant: string, cdnUrl: string, documentId: string, tenantId: string, isPublic: boolean, apiBase: string, apiToken: string, refreshKey: number }) {
+  const [url, setUrl] = useState(isPublic ? cdnUrl : '');
+  
+  useEffect(() => {
+    if (isPublic) {
+      setUrl(cdnUrl);
+      return;
+    }
+    
+    if (!documentId) return;
+    
+    const fetchUrl = async () => {
+      try {
+        const headers: HeadersInit = { 'X-TenantId': tenantId };
+        if (apiToken) headers['Authorization'] = `Bearer ${apiToken}`;
+        
+        const res = await fetch(`${apiBase}/api/documents/${documentId}/download-url?VariantName=${variant}`, {
+          headers
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setUrl(data.url);
+        }
+      } catch (err) {
+        console.error('Failed to fetch presigned url', err);
+      }
+    };
+    fetchUrl();
+  }, [variant, documentId, tenantId, isPublic, apiBase, apiToken, cdnUrl, refreshKey]);
+
+  const separator = url.includes('?') ? '&' : '?';
+  const urlWithCacheBuster = url ? `${url}${separator}_ts=${refreshKey}` : '';
   
   return (
-    <div className="border rounded-md p-4 flex flex-col items-center">
-      <h3 className="text-md font-medium text-gray-700 mb-2 capitalize">{variant.replace('-', ' ')}</h3>
+    <div className="border border-brand-border bg-surface p-4 flex flex-col items-center group transition-all hover:border-accent">
+      <h3 className="text-xs font-bold text-accent mb-4 uppercase tracking-widest">{variant.replace('-', ' ')}</h3>
       {urlWithCacheBuster ? (
-        <img 
-          src={urlWithCacheBuster} 
-          alt={variant} 
-          className="max-w-full max-h-48 object-contain" 
-          onError={e => (e.currentTarget.style.display = 'none')} 
-          onLoad={e => (e.currentTarget.style.display = 'block')} 
-        />
+        <div className="relative w-full flex items-center justify-center h-48 bg-canvas">
+          <img 
+            src={urlWithCacheBuster} 
+            alt={variant} 
+            className="max-w-full max-h-48 object-contain transition-opacity duration-300" 
+            onError={e => {
+              e.currentTarget.style.display = 'none';
+              if (e.currentTarget.nextElementSibling) {
+                (e.currentTarget.nextElementSibling as HTMLElement).style.display = 'flex';
+              }
+            }} 
+            onLoad={e => {
+              e.currentTarget.style.display = 'block';
+              if (e.currentTarget.nextElementSibling) {
+                (e.currentTarget.nextElementSibling as HTMLElement).style.display = 'none';
+              }
+            }} 
+          />
+          <div className="absolute inset-0 flex items-center justify-center text-brand-dark/40 font-mono text-xs hidden">
+            PROCESSING
+          </div>
+        </div>
       ) : (
-        <div className="h-48 flex items-center justify-center text-gray-400">Loading...</div>
+        <div className="h-48 w-full flex items-center justify-center text-brand-dark/40 bg-canvas font-mono text-xs">AWAITING</div>
       )}
     </div>
   );
 }
 
+function MetadataCard({ metadata }: { metadata: any }) {
+  return (
+    <div className="border border-brand-border bg-surface p-4 text-xs font-mono w-full overflow-x-auto text-brand-dark/80 h-full">
+      <pre className="whitespace-pre-wrap">{JSON.stringify(metadata, null, 2)}</pre>
+    </div>
+  );
+}
+
 function App() {
-  const [apiBase, setApiBase] = useState('https://localhost:7016');
-  const [apiToken, setApiToken] = useState('');
+  const [apiBase, setApiBase] = useState(import.meta.env.VITE_API_BASE || 'https://localhost:7016');
+  const [apiToken, setApiToken] = useState(import.meta.env.VITE_API_TOKEN || '');
   const [file, setFile] = useState<File | null>(null);
-  const [tenantId, setTenantId] = useState('9ac6bf72-f911-452e-a43a-ae9b3e26238c'); // Default test tenant
-  const [scope, setScope] = useState('course/c1');
+  const [tenantId, setTenantId] = useState('9ac6bf72-f911-452e-a43a-ae9b3e26238c');
   const [profile, setProfile] = useState('Course Cover');
   const [isPublic, setIsPublic] = useState(false);
   const [status, setStatus] = useState('');
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [documentId, setDocumentId] = useState('');
-  const [token, setToken] = useState('');
+  const [documentStatus, setDocumentStatus] = useState('');
+  const [documentType, setDocumentType] = useState('');
+  const [documentMetadata, setDocumentMetadata] = useState<any>(null);
   const [variantsVisible, setVariantsVisible] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
 
@@ -53,23 +107,24 @@ function App() {
     try {
       setVariantsVisible(false);
       setDocumentId('');
-      setToken('');
+      setDocumentStatus('');
+      setDocumentMetadata(null);
+      setUploadProgress(0);
       setStatus('Requesting upload URL...');
       
       const uploadReq = {
         title: file.name,
         description: "Uploaded from UIDEMO",
-        scope,
         fileName: file.name,
         contentType: file.type || 'application/octet-stream',
         fileSizeBytes: file.size,
         profileType: profile,
-        isPublic
+        IsPublic: isPublic
       };
 
       const headers: HeadersInit = {
         'Content-Type': 'application/json',
-        'x-tenant-id': tenantId
+        'X-TenantId': tenantId
       };
       
       if (apiToken) {
@@ -91,159 +146,265 @@ function App() {
       setDocumentId(newDocId);
 
       setStatus('Uploading file directly to S3...');
-      const s3Res = await fetch(uploadPresignedUrl, {
-        method: 'PUT',
-        headers: uploadHeaders || {
-          'Content-Type': file.type || 'application/octet-stream'
-        },
-        body: file
+      
+      await new Promise<void>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open('PUT', uploadPresignedUrl, true);
+        
+        if (uploadHeaders && Object.keys(uploadHeaders).length > 0) {
+          let hasContentType = false;
+          for (const [key, value] of Object.entries(uploadHeaders)) {
+            xhr.setRequestHeader(key, value as string);
+            if (key.toLowerCase() === 'content-type') hasContentType = true;
+          }
+          if (!hasContentType) {
+            xhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream');
+          }
+        } else {
+          xhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream');
+        }
+
+        xhr.upload.onprogress = (e) => {
+          if (e.lengthComputable) {
+            const percentComplete = (e.loaded / e.total) * 100;
+            setUploadProgress(percentComplete);
+          }
+        };
+
+        xhr.onload = () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            resolve();
+          } else {
+            reject(new Error(`S3 upload failed with status ${xhr.status}`));
+          }
+        };
+
+        xhr.onerror = () => reject(new Error('S3 upload failed due to network error'));
+        xhr.send(file);
       });
 
-      if (!s3Res.ok) {
-        throw new Error('Failed to upload file to S3');
-      }
-
-      if (!isPublic) {
-        setStatus('Requesting CDN access token from Identity module...');
-        const tokenHeaders: HeadersInit = {
-          'x-tenant-id': tenantId
-        };
-        
-        if (apiToken) {
-          tokenHeaders['Authorization'] = `Bearer ${apiToken}`;
-        }
-
-        const tokenRes = await fetch(`${apiBase}/api/identity/tokens/document?scope=${encodeURIComponent(scope)}`, {
-          method: 'GET',
-          headers: tokenHeaders
-        });
-
-        if (!tokenRes.ok) {
-          throw new Error('Failed to fetch document token');
-        }
-
-        const tokenData = await tokenRes.json();
-        setToken(tokenData.token);
-      } else {
-        setToken('public');
-      }
-
-      setStatus('Pipeline completed successfully. Wait a few seconds for EventBridge/Step Functions to process variants, then refresh.');
+      setStatus('Upload complete. Waiting for processing...');
+      setDocumentStatus('Processing');
       setVariantsVisible(true);
       setRefreshKey(Date.now());
+      
+      setTimeout(() => {
+        setStatus('');
+        setUploadProgress(0);
+      }, 3000);
+      
     } catch (err: any) {
       console.error(err);
       setStatus(`Error: ${err.message}`);
+      setUploadProgress(0);
     }
   };
 
-  const getCdnUrl = (variantName: string) => {
-    if (!documentId || !token) return '';
-    if (isPublic) {
-      return `${CDN_BASE}/documents/${tenantId}/images/${documentId}/${variantName}.webp`;
+  const fetchDocumentDetails = async () => {
+    if (!documentId) return;
+    try {
+      const headers: HeadersInit = {
+        'X-TenantId': tenantId
+      };
+      if (apiToken) {
+        headers['Authorization'] = `Bearer ${apiToken}`;
+      }
+      
+      const res = await fetch(`${apiBase}/api/documents/${documentId}`, { headers });
+      if (!res.ok) throw new Error('Failed to fetch doc info');
+      const data = await res.json();
+      
+      setDocumentStatus(data.status);
+      setDocumentType(data.type);
+      if (data.metadata) {
+        setDocumentMetadata(data.metadata);
+      }
+    } catch (e) {
+      console.error('Polling error', e);
     }
-    return `${CDN_BASE}/documents/${tenantId}/${scope}/${documentId}/${variantName}?token=${token}`;
+  };
+
+  // Poll for document status
+  useEffect(() => {
+    if (documentId && documentStatus === 'Processing') {
+      const interval = setInterval(fetchDocumentDetails, 3000);
+      return () => clearInterval(interval);
+    }
+  }, [documentId, documentStatus, apiBase, tenantId, apiToken]);
+
+  const getCdnUrl = (variantPath: string) => {
+    if (!variantPath) return '';
+    
+    // Fix empty GUID placeholder from backend if present
+    const fixedPath = variantPath.replace('00000000-0000-0000-0000-000000000000', tenantId);
+
+    // The variant path from backend already has documents/{tenantId}/...
+    return `${CDN_BASE}/${fixedPath}`;
   };
 
   const handleRefresh = () => {
     setRefreshKey(Date.now());
+    fetchDocumentDetails();
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 py-10 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-4xl mx-auto space-y-8">
+    <div className="min-h-screen bg-canvas text-brand-dark py-12 px-4 sm:px-6 lg:px-8 font-sans selection:bg-accent selection:text-white">
+      <div className="max-w-5xl mx-auto space-y-12">
         
-        <div className="bg-white p-6 rounded-lg shadow">
-          <h1 className="text-2xl font-bold mb-6 text-gray-900">AlphaZero Image Pipeline Demo</h1>
+        <header className="border-b border-brand-border pb-6 flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight text-accent">AlphaZero</h1>
+            <p className="text-sm text-brand-dark/60 mt-1 font-mono uppercase tracking-widest">Image Pipeline Console</p>
+          </div>
+          <div className="text-xs font-mono px-3 py-1 bg-surface border border-brand-border text-brand-dark/70">
+            ENV: {import.meta.env.MODE || 'development'}
+          </div>
+        </header>
+        
+        <main className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Image File</label>
-              <input type="file" accept="image/*" onChange={handleFileChange} className="mt-1 block w-full border border-gray-300 rounded-md p-2" />
-            </div>
-
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div>
-                <label className="block text-sm font-medium text-gray-700">API Base URL</label>
-                <select value={apiBase} onChange={e => setApiBase(e.target.value)} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2">
-                  <option value="https://localhost:7016">https://localhost:7016</option>
-                  <option value="http://localhost:5053">http://localhost:5053</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700">API Token (Bearer)</label>
-                <input type="text" value={apiToken} onChange={e => setApiToken(e.target.value)} placeholder="e.g. eyJhbGci..." className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Tenant ID</label>
-                <input type="text" value={tenantId} onChange={e => setTenantId(e.target.value)} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" />
-              </div>
+          <div className="lg:col-span-5 space-y-8">
+            <section className="bg-surface p-6 border border-brand-border">
+              <h2 className="text-sm font-bold text-accent uppercase tracking-widest mb-6">Configuration</h2>
               
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Scope</label>
-                <input type="text" value={scope} onChange={e => setScope(e.target.value)} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" />
+              <div className="space-y-5">
+                <div>
+                  <label className="block text-xs font-bold text-brand-dark/70 uppercase tracking-wider mb-2">API Base URL</label>
+                  <input type="text" value={apiBase} onChange={e => setApiBase(e.target.value)} className="w-full bg-canvas border border-brand-border p-3 text-sm focus:outline-none focus:border-accent transition-colors font-mono" />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-brand-dark/70 uppercase tracking-wider mb-2">API Token</label>
+                  <input type="password" value={apiToken} onChange={e => setApiToken(e.target.value)} placeholder="Bearer token..." className="w-full bg-canvas border border-brand-border p-3 text-sm focus:outline-none focus:border-accent transition-colors font-mono" />
+                </div>
+                <div className="grid grid-cols-1 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-brand-dark/70 uppercase tracking-wider mb-2">Tenant ID</label>
+                    <input type="text" value={tenantId} onChange={e => setTenantId(e.target.value)} className="w-full bg-canvas border border-brand-border p-3 text-sm focus:outline-none focus:border-accent transition-colors font-mono" />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4 items-end">
+                  <div>
+                    <label className="block text-xs font-bold text-brand-dark/70 uppercase tracking-wider mb-2">Profile</label>
+                    <select value={profile} onChange={e => setProfile(e.target.value)} className="w-full bg-canvas border border-brand-border p-3 text-sm focus:outline-none focus:border-accent transition-colors appearance-none rounded-none">
+                      <option value="Avatar">Avatar</option>
+                      <option value="Course Cover">Course Cover</option>
+                      <option value="Inline">Inline</option>
+                    </select>
+                  </div>
+                  <div className="pb-3">
+                    <label className="flex items-center space-x-3 cursor-pointer group">
+                      <div className={`w-5 h-5 border flex items-center justify-center transition-colors ${isPublic ? 'bg-accent border-accent' : 'bg-canvas border-brand-border group-hover:border-accent'}`}>
+                        {isPublic && <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="square" strokeLinejoin="miter" strokeWidth="3" d="M5 13l4 4L19 7" /></svg>}
+                      </div>
+                      <input type="checkbox" checked={isPublic} onChange={e => setIsPublic(e.target.checked)} className="hidden" />
+                      <span className="text-xs font-bold uppercase tracking-wider text-brand-dark/80 group-hover:text-accent">Public Asset</span>
+                    </label>
+                  </div>
+                </div>
               </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Profile</label>
-                <select value={profile} onChange={e => setProfile(e.target.value)} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2">
-                  <option value="Avatar">Avatar</option>
-                  <option value="Course Cover">Course Cover</option>
-                  <option value="Inline">Inline</option>
-                </select>
+            </section>
+            
+            <section className="bg-surface p-6 border border-brand-border">
+              <h2 className="text-sm font-bold text-accent uppercase tracking-widest mb-6">Upload</h2>
+              
+              <div className="space-y-6">
+                <div>
+                  <div className="relative border-2 border-dashed border-brand-border bg-canvas p-8 text-center hover:border-accent transition-colors cursor-pointer group">
+                    <input type="file" onChange={handleFileChange} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
+                    <div className="text-sm font-mono text-brand-dark/60 group-hover:text-accent transition-colors">
+                      {file ? file.name : 'SELECT FILE'}
+                    </div>
+                  </div>
+                </div>
+                
+                <button 
+                  onClick={startPipeline}
+                  disabled={!file || status.includes('Requesting') || status.includes('Uploading')}
+                  className="w-full py-4 px-6 bg-accent text-white text-sm font-bold uppercase tracking-widest hover:bg-brand-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Execute Pipeline
+                </button>
+                
+                {status && (
+                  <div className="border border-brand-border bg-canvas p-4">
+                    <div className="flex justify-between items-center mb-2">
+                      <div className="text-xs font-mono text-accent">{status}</div>
+                      {uploadProgress > 0 && uploadProgress < 100 && (
+                        <div className="text-xs font-mono text-brand-dark/60">{Math.round(uploadProgress)}%</div>
+                      )}
+                    </div>
+                    {uploadProgress > 0 && uploadProgress < 100 && (
+                      <div className="w-full bg-brand-border h-1">
+                        <div className="bg-accent h-1 transition-all duration-300" style={{ width: `${uploadProgress}%` }}></div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
-
-              <div className="flex items-end pb-2">
-                <label className="flex items-center space-x-2 cursor-pointer">
-                  <input type="checkbox" checked={isPublic} onChange={e => setIsPublic(e.target.checked)} className="h-5 w-5 text-indigo-600 border-gray-300 rounded" />
-                  <span className="text-sm font-medium text-gray-700">Is Public</span>
-                </label>
-              </div>
-            </div>
-
-            <button 
-              onClick={startPipeline}
-              className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700"
-            >
-              Upload & Process
-            </button>
-
-            {status && (
-              <div className="mt-4 p-4 rounded-md bg-blue-50 text-blue-700">
-                {status}
-              </div>
+            </section>
+          </div>
+          
+          <div className="lg:col-span-7">
+            {variantsVisible && documentId ? (
+              <section className="bg-surface p-6 border border-brand-border h-full flex flex-col">
+                <div className="flex justify-between items-center mb-8">
+                  <h2 className="text-sm font-bold text-accent uppercase tracking-widest">
+                    Pipeline Status: <span className={documentStatus === 'Ready' ? 'text-brand-success' : 'text-brand-warning'}>{documentStatus || 'Pending'}</span>
+                  </h2>
+                  <button 
+                    onClick={handleRefresh}
+                    className="text-xs font-bold uppercase tracking-widest text-brand-dark/60 hover:text-accent transition-colors flex items-center space-x-2"
+                  >
+                    <span>Refresh</span>
+                    <svg className={`w-4 h-4 ${documentStatus === 'Processing' ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="square" strokeLinejoin="miter" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                  </button>
+                </div>
+                
+                <div className="flex-grow">
+                  {documentStatus === 'Ready' && documentMetadata && documentMetadata.Variants ? (
+                    documentType === 'Image' ? (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                        {Object.entries(documentMetadata.Variants).map(([key, path]) => (
+                          <VariantImage key={key} variant={key} cdnUrl={getCdnUrl(path as string)} refreshKey={refreshKey} documentId={documentId} tenantId={tenantId} isPublic={isPublic} apiBase={apiBase} apiToken={apiToken} />
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 gap-6">
+                        <MetadataCard metadata={documentMetadata} />
+                        <div className="text-xs font-mono text-brand-dark/60 uppercase tracking-widest">
+                          {documentType} type not supported for visual preview yet.
+                        </div>
+                      </div>
+                    )
+                  ) : (
+                    <div className="h-full flex items-center justify-center p-12">
+                      <div className="text-center">
+                        <div className="text-brand-dark/40 font-mono text-sm mb-4">
+                          {documentStatus === 'Processing' ? 'AWAITING EVENTBRIDGE WORKER...' : 'NO OUTPUT VARIANTS YET'}
+                        </div>
+                        {documentStatus === 'Processing' && (
+                          <div className="inline-block w-8 h-8 border-2 border-brand-border border-t-accent rounded-full animate-spin"></div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+                
+                <div className="mt-8 p-4 border border-brand-border bg-canvas text-xs font-mono text-brand-dark/60">
+                  <span className="text-accent font-bold">SYS_NOTE:</span> Images are delivered via Cloudflare Edge. Variants are fetched directly from document metadata JSONB.
+                </div>
+              </section>
+            ) : (
+              <section className="bg-canvas border border-brand-border border-dashed h-full min-h-[400px] flex items-center justify-center p-6 text-center">
+                <div className="text-brand-dark/40 font-mono text-sm">
+                  NO OUTPUT GENERATED<br/><br/>
+                  <span className="text-xs">EXECUTE PIPELINE TO VIEW VARIANTS</span>
+                </div>
+              </section>
             )}
           </div>
-        </div>
-
-        {variantsVisible && documentId && (
-          <div className="bg-white p-6 rounded-lg shadow space-y-6">
-            <div className="flex justify-between items-center">
-              <h2 className="text-xl font-bold text-gray-900">Generated Variants</h2>
-              <button 
-                onClick={handleRefresh}
-                className="py-1 px-3 border border-gray-300 rounded-md text-sm font-medium bg-white hover:bg-gray-50"
-              >
-                Refresh Images
-              </button>
-            </div>
-            
-            <p className="text-sm text-gray-500">
-              Note: Images are fetched via the Cloudflare CDN edge router. If you see broken images, ensure the Step Functions pipeline has finished processing.
-            </p>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <VariantImage variant="original" cdnUrl={getCdnUrl('original')} refreshKey={refreshKey} />
-              <VariantImage variant="thumbnail" cdnUrl={getCdnUrl('thumbnail')} refreshKey={refreshKey} />
-              <VariantImage variant="web-optimized" cdnUrl={getCdnUrl('web-optimized')} refreshKey={refreshKey} />
-            </div>
-          </div>
-        )}
-
+          
+        </main>
       </div>
     </div>
   );

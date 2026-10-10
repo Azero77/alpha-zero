@@ -10,7 +10,7 @@ using FluentValidation;
 
 namespace AlphaZero.Modules.Documents.Application.Queries.GetDocumentDownloadUrl;
 
-public record GetDocumentDownloadUrlQuery(Guid DocumentId) : IQuery<GetDocumentDownloadUrlResponse>;
+public record GetDocumentDownloadUrlQuery(Guid DocumentId, string? VariantName = null) : IQuery<GetDocumentDownloadUrlResponse>;
 
 public record GetDocumentDownloadUrlResponse(string Url);
 
@@ -51,15 +51,24 @@ public class GetDocumentDownloadUrlQueryHandler : IRequestHandler<GetDocumentDow
         if (document is null)
             return Error.NotFound("Document.NotFound", "Document not found.");
 
+        var key = document.S3Key;
+        var fileName = $"{document.Title}.{document.FileType}";
+
+        if (!string.IsNullOrEmpty(request.VariantName))
+        {
+            key = AlphaZero.Modules.Documents.Domain.Models.Document.GetDocumentS3Key(tenantId.Value.ToString(), document.Id.ToString(), $"{request.VariantName}.webp");
+            fileName = $"{document.Title}-{request.VariantName}.webp";
+        }
+
         if (document.IsPublic && !string.IsNullOrEmpty(_awsResources.CdnDomain))
         {
-            var publicUrl = $"https://{_awsResources.CdnDomain}/{document.S3Key}";
+            var publicUrl = $"https://{_awsResources.CdnDomain}/{key}";
             return new GetDocumentDownloadUrlResponse(publicUrl);
         }
 
         var downloadUrl = await _documentStorageService.GenerateDownloadPresignedUrlAsync(
-            document.S3Key,
-            $"{document.Title}.{document.FileType}",
+            key,
+            fileName,
             TimeSpan.FromHours(1));
 
         return new GetDocumentDownloadUrlResponse(downloadUrl);
