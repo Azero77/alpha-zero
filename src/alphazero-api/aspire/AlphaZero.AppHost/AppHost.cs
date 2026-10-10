@@ -11,7 +11,9 @@ var storageStackOutputs = builder.AddAWSCloudFormationStack("AlphaZeroStorageSta
 var pipelineStackOutputs = builder.AddAWSCloudFormationStack("AlphaZeroVideoPipelineStack")
                                   .WithReference(awsSdkConfig);
 
-var cdnDomain = builder.Configuration["CdnDomain"] ?? "" ;
+var videoCdnDomain = builder.Configuration["CdnDomains:VideoCdnDomain"] ?? "";
+var documentPrivateCdnDomain = builder.Configuration["CdnDomains:DocumentPrivateCdnDomain"] ?? "";
+var documentPublicCdnDomain = builder.Configuration["DocumentPublicCdnDomain"] ?? "";
 
 var postgres = builder.AddPostgres("postgres")
     .WithImage("postgis/postgis:16-3.5-alpine")
@@ -38,23 +40,36 @@ var api = builder.AddProject<Projects.AlphaZero_API>("alphazero-api")
     .WithReference(db)
     .WaitFor(db)
     .WithReference(keyCloak)
-    .WithEnvironment("Authentication__AuthorizationUrl", ReferenceExpression.Create($"{keycloakHttp}/realms/alpha-zero/protocol/openid-connect/auth"))
-    .WithEnvironment("Authentication__TokenUrl", ReferenceExpression.Create($"{keycloakHttp}/realms/alpha-zero/protocol/openid-connect/token"))
+    .WithEnvironment("Authentication__AuthorizationUrl",
+        ReferenceExpression.Create($"{keycloakHttp}/realms/alpha-zero/protocol/openid-connect/auth"))
+    .WithEnvironment("Authentication__TokenUrl",
+        ReferenceExpression.Create($"{keycloakHttp}/realms/alpha-zero/protocol/openid-connect/token"))
     .WithEnvironment("Authentication__Authority", ReferenceExpression.Create($"{keycloakHttp}/realms/alpha-zero"))
     .WithEnvironment("AWS__Resources__VideosInputS3__BucketName", storageStackOutputs.GetOutput("VideosInputS3Bucket"))
-    .WithEnvironment("AWS__Resources__InputS3Private__BucketName", storageStackOutputs.GetOutput("DocumentInputS3BucketNamePrivate"))
-    .WithEnvironment("AWS__Resources__InputS3Public__BucketName", storageStackOutputs.GetOutput("DocumentInputS3BucketNamePublic"))
+    .WithEnvironment("AWS__Resources__InputS3Private__BucketName",
+        storageStackOutputs.GetOutput("DocumentInputS3BucketNamePrivate"))
+    .WithEnvironment("AWS__Resources__InputS3Public__BucketName",
+        storageStackOutputs.GetOutput("DocumentInputS3BucketNamePublic"))
     .WithEnvironment("AWS__Resources__TransientS3__BucketName", storageStackOutputs.GetOutput("TransientS3BucketName"))
-    .WithEnvironment("AWS__Resources__VideoPublishedQueue__QueueUrl", storageStackOutputs.GetOutput("VideoPublishedQueueUrl"))
+    .WithEnvironment("AWS__Resources__VideoPublishedQueue__QueueUrl",
+        storageStackOutputs.GetOutput("VideoPublishedQueueUrl"))
     .WithEnvironment("AWS__Resources__VideoFailedQueue__QueueUrl", storageStackOutputs.GetOutput("VideoFailedQueueUrl"))
-    .WithEnvironment("AWS__Resources__VideoProgressQueue__QueueUrl", storageStackOutputs.GetOutput("VideoProgressQueueUrl"))
-    .WithEnvironment("AWS__Resources__DocumentUploadedQueue__QueueUrl", storageStackOutputs.GetOutput("DocumentUploadedQueueUrl"))
-    .WithEnvironment("AWS__Resources__DocumentProcessingCompletedQueue__QueueUrl", storageStackOutputs.GetOutput("DocumentProcessingCompletedQueueUrl"))
-    .WithEnvironment("AWS__Resources__DocumentProcessingFailedQueue__QueueUrl", storageStackOutputs.GetOutput("DocumentProcessingFaultedQueueUrl"))
+    .WithEnvironment("AWS__Resources__VideoProgressQueue__QueueUrl",
+        storageStackOutputs.GetOutput("VideoProgressQueueUrl"))
+    .WithEnvironment("AWS__Resources__DocumentUploadedQueue__QueueUrl",
+        storageStackOutputs.GetOutput("DocumentUploadedQueueUrl"))
+    .WithEnvironment("AWS__Resources__DocumentProcessingCompletedQueue__QueueUrl",
+        storageStackOutputs.GetOutput("DocumentProcessingCompletedQueueUrl"))
+    .WithEnvironment("AWS__Resources__DocumentProcessingFailedQueue__QueueUrl",
+        storageStackOutputs.GetOutput("DocumentProcessingFaultedQueueUrl"))
     .WithEnvironment("AWS__Resources__MediaConvertRoleArn", storageStackOutputs.GetOutput("MediaConvertRoleArnOutput"))
-    .WithEnvironment("AWS__Resources__MediaConvertKeyKMSArn", storageStackOutputs.GetOutput("MediaConvertKeyKMSArnOutput"))
+    .WithEnvironment("AWS__Resources__MediaConvertKeyKMSArn",
+        storageStackOutputs.GetOutput("MediaConvertKeyKMSArnOutput"))
     .WithEnvironment("AWS__Resources__StepFunctionArn", pipelineStackOutputs.GetOutput("StepFunctionArnOutput"))
-    .WithEnvironment("AWS__Resources__CdnDomain", cdnDomain);
+    .WithEnvironment("AWS__Resources__VideoCdnDomain", videoCdnDomain)
+    .WithEnvironment("AWS__Resources__DocumentPublicCdnDomain" , documentPublicCdnDomain)
+    .WithEnvironment("AWS__Resources__DocumentPrivateCdnDomain",  documentPrivateCdnDomain);
+    
 
 #pragma warning disable ASPIRE001
 

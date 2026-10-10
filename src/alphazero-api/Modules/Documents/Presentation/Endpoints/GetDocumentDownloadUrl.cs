@@ -11,7 +11,7 @@ namespace AlphaZero.Modules.Documents.Presentation.Endpoints;
 public record GetDocumentDownloadUrlRequest 
 { 
     public Guid DocumentId { get; init; } 
-    [FastEndpoints.QueryParam] public string? VariantName { get; init; } 
+    [QueryParam] public string? VariantName { get; init; } 
 }
 
 public class GetDocumentDownloadUrlSummary : Summary<GetDocumentDownloadUrlEndpoint>

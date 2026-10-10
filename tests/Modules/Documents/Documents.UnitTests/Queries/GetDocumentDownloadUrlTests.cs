@@ -29,7 +29,7 @@ public class GetDocumentDownloadUrlTests
             _tenantProvider,
             _documentStorageService,
             _documentRepository,
-            new Aspire.Shared.AWSResources { CdnDomain = "public-cdn.alphazero.com" });
+            new Aspire.Shared.AWSResources { VideoCdnDomain = "public-cdn.alphazero.com" });
     }
 
     [Fact]

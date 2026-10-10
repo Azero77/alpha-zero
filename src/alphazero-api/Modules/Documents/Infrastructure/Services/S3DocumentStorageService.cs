@@ -5,24 +5,22 @@ using Aspire.Shared;
 
 namespace AlphaZero.Modules.Documents.Infrastructure.Services;
 
-public class S3DocumentStorageService : IDocumentStorageService
+public class DocumentStorageService : IDocumentStorageService
 {
     private readonly IAmazonS3 _s3Client;
-    private readonly string _bucketNamePrivate;
-    private readonly string _bucketNamePublic;
+    private readonly string _bucketName;
 
-    public S3DocumentStorageService(IAmazonS3 s3Client, AWSResources awsResources)
+    public DocumentStorageService(IAmazonS3 s3Client, string bucketName)
     {
         _s3Client = s3Client;
-        _bucketNamePrivate = awsResources.InputS3Private?.BucketName ?? awsResources.VideosInputS3?.BucketName ?? "alphazero-documents";
-        _bucketNamePublic = awsResources.InputS3Public?.BucketName ?? "alphazero-documents-public";
+        _bucketName = bucketName;
     }
 
     public async Task<string> GenerateUploadPresignedUrlAsync(string key, string contentType, TimeSpan expiresIn, Dictionary<string, string>? metadata = null, bool isPublic = false)
     {
         var request = new GetPreSignedUrlRequest
         {
-            BucketName = isPublic ? _bucketNamePublic : _bucketNamePrivate,
+            BucketName = _bucketName,
             Key = key,
             Verb = HttpVerb.PUT,
             ContentType = contentType,
@@ -44,7 +42,7 @@ public class S3DocumentStorageService : IDocumentStorageService
     {
         var request = new GetPreSignedUrlRequest
         {
-            BucketName = _bucketNamePrivate, // Currently only private downloads are supported via presigned URL
+            BucketName = _bucketName, // Currently only private downloads are supported via presigned URL
             Key = key,
             Verb = HttpVerb.GET,
             Expires = DateTime.UtcNow.Add(expiresIn),
@@ -61,7 +59,7 @@ public class S3DocumentStorageService : IDocumentStorageService
     {
         var request = new DeleteObjectRequest
         {
-            BucketName = _bucketNamePrivate, // Note: If public deletions are needed, this should be modified
+            BucketName = _bucketName, // Note: If public deletions are needed, this should be modified
             Key = key
         };
         await _s3Client.DeleteObjectAsync(request, cancellationToken);

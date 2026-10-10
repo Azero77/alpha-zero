@@ -10,7 +10,7 @@ using FluentValidation;
 
 namespace AlphaZero.Modules.Documents.Application.Queries.GetDocumentDownloadUrl;
 
-public record GetDocumentDownloadUrlQuery(Guid DocumentId, string? VariantName = null) : IQuery<GetDocumentDownloadUrlResponse>;
+public record GetDocumentDownloadUrlQuery(Guid DocumentId, string VariantName) : IQuery<GetDocumentDownloadUrlResponse>;
 
 public record GetDocumentDownloadUrlResponse(string Url);
 
@@ -50,22 +50,12 @@ public class GetDocumentDownloadUrlQueryHandler : IRequestHandler<GetDocumentDow
         var document = await _documentRepository.GetFirst(d => d.Id == request.DocumentId && d.TenantId == tenantId.Value, cancellationToken);
         if (document is null)
             return Error.NotFound("Document.NotFound", "Document not found.");
-
-        var key = document.S3Key;
-        var fileName = $"{document.Title}.{document.FileType}";
-
-        if (!string.IsNullOrEmpty(request.VariantName))
-        {
-            key = AlphaZero.Modules.Documents.Domain.Models.Document.GetDocumentS3Key(tenantId.Value.ToString(), document.Id.ToString(), $"{request.VariantName}.webp");
-            fileName = $"{document.Title}-{request.VariantName}.webp";
-        }
-
-        if (document.IsPublic && !string.IsNullOrEmpty(_awsResources.CdnDomain))
-        {
-            var publicUrl = $"https://{_awsResources.CdnDomain}/{key}";
-            return new GetDocumentDownloadUrlResponse(publicUrl);
-        }
-
+        
+        var domain = document.IsPublic ? _awsResources.DocumentPublicCdnDomain : _awsResources.DocumentPrivateCdnDomain;
+        if (domain is null)
+            return Error.NotFound("Document.Domain.NotFound", "Domain is Not Supported For Now");
+        document.GetVariantDownloadUrl(domain,request.VariantName);
+        var fileName = $"{document.Title}-{request.VariantName}.webp";
         var downloadUrl = await _documentStorageService.GenerateDownloadPresignedUrlAsync(
             key,
             fileName,

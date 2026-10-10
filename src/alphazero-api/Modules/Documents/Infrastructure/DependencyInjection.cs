@@ -28,7 +28,7 @@ public static class DependencyInjection
             .EnableDynamicJson()
             .Build();
 
-        services.AddScoped<IDocumentStorageService, S3DocumentStorageService>();
+        services.AddScoped<IDocumentStorageService, DocumentStorageService>();
 
         services.AddDbContext<AppDbContext>((sp, opts) =>
         {

@@ -9,7 +9,9 @@ namespace Aspire.Shared
         public S3Settings? TransientS3 { get; set; }
         public S3Settings? OutputS3 { get; set; }
         public S3Settings? CdnS3 { get; set; }
-        public string? CdnDomain { get; set; }
+        public string? VideoCdnDomain { get; set; }
+        public string? DocumentPublicCdnDomain { get; set; }
+        public string? DocumentPrivateCdnDomain { get; set; }
         public SQSQueueSettings? VideoPublishedQueue { get; set; }
         public SQSQueueSettings? VideoFailedQueue { get; set; }
         public SQSQueueSettings? VideoProgressQueue { get; set; }

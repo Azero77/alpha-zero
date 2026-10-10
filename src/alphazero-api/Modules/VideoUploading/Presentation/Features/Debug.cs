@@ -35,7 +35,7 @@ public static class Debug
 
     private static VideoResponse MapToResponse(AlphaZero.Modules.VideoUploading.Domain.Models.Video video, AWSResources resources)
     {
-        var domain = resources.CdnDomain;
+        var domain = resources.VideoCdnDomain;
         
         string? thumbnailUrl = video.ThumbnailUrl;
         if (!string.IsNullOrEmpty(thumbnailUrl) && !thumbnailUrl.StartsWith("http"))

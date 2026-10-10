@@ -9,7 +9,7 @@ public class CloudFlareCdnVideoStreamingService(AWSResources resources) : IStrea
 {
     public Task<ErrorOr<StreamingInfoResponseDTO>> GetStreamingInfo(Guid videoId)
     {
-        var domain = resources.CdnDomain;
+        var domain = resources.VideoCdnDomain;
 
         var response = new StreamingInfoResponseDTO(
             url: $"http://{domain}/streaming/{videoId}/master.m3u8",
@@ -30,7 +30,7 @@ public class DatabaseCloudFlareCdnVideoStreamingService(AWSResources resources, 
             return Error.NotFound("Video.NotFound", $"Video with ID {videoId} was not found.");
         }
 
-        var domain = resources.CdnDomain;
+        var domain = resources.VideoCdnDomain;
         
         // We can now return the real streaming URL stored in the DB if available, 
         // or construct it if we follow a standard pattern.
