@@ -67,6 +67,10 @@ public static class DependencyInjection
             };
         });
         
+        services.AddOptions<R2Options>()
+            .BindConfiguration(R2Options.SectionName)
+            .ValidateOnStart();
+        
         return services;
     }
 

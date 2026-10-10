@@ -139,7 +139,6 @@ public class Program
 
         builder.Services.AddEndpointsApiExplorer();
         builder.Services.AddCors();
-
         builder.Services.AddFastEndpoints(o =>
         {
             o.SourceGeneratorDiscoveredTypes = new List<Type>(); // Disable SG to allow manual assembly scanning

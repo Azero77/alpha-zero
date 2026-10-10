@@ -46,9 +46,9 @@ var api = builder.AddProject<Projects.AlphaZero_API>("alphazero-api")
         ReferenceExpression.Create($"{keycloakHttp}/realms/alpha-zero/protocol/openid-connect/token"))
     .WithEnvironment("Authentication__Authority", ReferenceExpression.Create($"{keycloakHttp}/realms/alpha-zero"))
     .WithEnvironment("AWS__Resources__VideosInputS3__BucketName", storageStackOutputs.GetOutput("VideosInputS3Bucket"))
-    .WithEnvironment("AWS__Resources__InputS3Private__BucketName",
+    .WithEnvironment("AWS__Resources__DocumentInputS3Private__BucketName",
         storageStackOutputs.GetOutput("DocumentInputS3BucketNamePrivate"))
-    .WithEnvironment("AWS__Resources__InputS3Public__BucketName",
+    .WithEnvironment("AWS__Resources__DocumentInputS3Public__BucketName",
         storageStackOutputs.GetOutput("DocumentInputS3BucketNamePublic"))
     .WithEnvironment("AWS__Resources__TransientS3__BucketName", storageStackOutputs.GetOutput("TransientS3BucketName"))
     .WithEnvironment("AWS__Resources__VideoPublishedQueue__QueueUrl",

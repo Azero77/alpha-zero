@@ -157,17 +157,14 @@ public class Document : AggregateRoot, IDomainTenantOwned, ISoftDeletable
         Status = DocumentStatus.Faulted;
     }
 
-    public ErrorOr<string> GetVariantDownloadUrl(string domainUrl, string variant)
+    public ErrorOr<string> GetVariantDownloadKey(string variant)
     {
-        if (string.IsNullOrWhiteSpace(domainUrl))
-            return Error.Validation("Document.DomainUrl", "DomainUrl is required.");
-
         if (Metadata.TryGetValue("Variants", out var value) && value is JsonElement { ValueKind: JsonValueKind.Object } variants)
         {
             var variantKey = variants.TryGetPropertyValue<string>(variant,null);
             if(variantKey is null)
                 return Error.Validation("Document.Variants", "Variant is not Found.");
-            return $"{domainUrl}/{variantKey}";
+            return variantKey;
 
         }
         return Error.Validation("Document.Metadata", "Variants For this Type of Document is Not Supported");
