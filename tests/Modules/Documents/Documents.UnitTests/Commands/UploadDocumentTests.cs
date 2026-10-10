@@ -43,6 +43,7 @@ public class UploadDocumentCommandHandlerTests
         _handler = new UploadDocumentCommandHandler(
             _documentRepository,
             _storageService,
+            _storageService,
             _tenantProvider,
             _clock,
             _publishEndpoint,

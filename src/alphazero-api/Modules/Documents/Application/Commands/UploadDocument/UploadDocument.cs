@@ -46,7 +46,8 @@ public class UploadDocumentCommandValidator : AbstractValidator<UploadDocumentCo
 public sealed class UploadDocumentCommandHandler : IRequestHandler<UploadDocumentCommand, ErrorOr<UploadDocumentResponse>>
 {
     private readonly IDocumentRepository _documentRepository;
-    private readonly IDocumentStorageService _storageService;
+    private readonly IDocumentStorageService _privateStorageService;
+    private readonly IDocumentStorageService _publicStorageService;
     private readonly ITenantProvider _tenantProvider;
     private readonly IClock _clock;
     private readonly IPublishEndpoint _publishEndpoint;
@@ -54,14 +55,16 @@ public sealed class UploadDocumentCommandHandler : IRequestHandler<UploadDocumen
 
     public UploadDocumentCommandHandler(
         IDocumentRepository documentRepository,
-        IDocumentStorageService storageService,
+        [Microsoft.Extensions.DependencyInjection.FromKeyedServices(AlphaZero.Modules.Documents.Application.Models.StorageType.InputPrivate)] IDocumentStorageService privateStorageService,
+        [Microsoft.Extensions.DependencyInjection.FromKeyedServices(AlphaZero.Modules.Documents.Application.Models.StorageType.InputPublic)] IDocumentStorageService publicStorageService,
         ITenantProvider tenantProvider,
         IClock clock,
         IPublishEndpoint publishEndpoint,
         ILogger<UploadDocumentCommandHandler> logger)
     {
         _documentRepository = documentRepository;
-        _storageService = storageService;
+        _privateStorageService = privateStorageService;
+        _publicStorageService = publicStorageService;
         _tenantProvider = tenantProvider;
         _clock = clock;
         _publishEndpoint = publishEndpoint;
@@ -105,7 +108,9 @@ public sealed class UploadDocumentCommandHandler : IRequestHandler<UploadDocumen
         }
         metadata["document-type"] = documentResult.Value.Type.ToString();
 
-        var presignedUrl = await _storageService.GenerateUploadPresignedUrlAsync(
+        var storageService = request.IsPublic ? _publicStorageService : _privateStorageService;
+
+        var presignedUrl = await storageService.GenerateUploadPresignedUrlAsync(
             s3Key,
             request.ContentType,
             TimeSpan.FromMinutes(30),

@@ -70,14 +70,21 @@ public class DeleteFaultedDocumentConsumer : IConsumer<DeleteFaultedDocumentComm
 {
     private readonly IDocumentRepository _repository;
     private readonly IUnitOfWork _uow;
-    private readonly Application.Services.IDocumentStorageService _storageService;
+    private readonly Application.Services.IDocumentStorageService _privateStorageService;
+    private readonly Application.Services.IDocumentStorageService _publicStorageService;
     private readonly AlphaZero.Shared.Domain.IClock _clock;
 
-    public DeleteFaultedDocumentConsumer(IDocumentRepository repository, IUnitOfWork uow, Application.Services.IDocumentStorageService storageService, AlphaZero.Shared.Domain.IClock clock)
+    public DeleteFaultedDocumentConsumer(
+        IDocumentRepository repository, 
+        IUnitOfWork uow, 
+        [Microsoft.Extensions.DependencyInjection.FromKeyedServices(AlphaZero.Modules.Documents.Application.Models.StorageType.InputPrivate)] Application.Services.IDocumentStorageService privateStorageService, 
+        [Microsoft.Extensions.DependencyInjection.FromKeyedServices(AlphaZero.Modules.Documents.Application.Models.StorageType.InputPublic)] Application.Services.IDocumentStorageService publicStorageService, 
+        AlphaZero.Shared.Domain.IClock clock)
     {
         _repository = repository;
         _uow = uow;
-        _storageService = storageService;
+        _privateStorageService = privateStorageService;
+        _publicStorageService = publicStorageService;
         _clock = clock;
     }
 
@@ -87,8 +94,10 @@ public class DeleteFaultedDocumentConsumer : IConsumer<DeleteFaultedDocumentComm
         var doc = await _repository.GetById(cmd.DocumentId, context.CancellationToken);
         if (doc == null) return;
 
+        var storageService = doc.IsPublic ? _publicStorageService : _privateStorageService;
+
         // Delete from S3
-        await _storageService.DeleteObjectAsync(doc.S3Key, context.CancellationToken);
+        await storageService.DeleteObjectAsync(doc.S3Key, context.CancellationToken);
         
         doc.MarkAsDeleted(_clock);
         _repository.Update(doc);
