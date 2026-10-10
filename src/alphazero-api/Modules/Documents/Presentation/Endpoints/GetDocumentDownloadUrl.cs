@@ -46,7 +46,7 @@ public class GetDocumentDownloadUrlEndpoint : Endpoint<GetDocumentDownloadUrlReq
 
     public override async Task HandleAsync(GetDocumentDownloadUrlRequest req, CancellationToken ct)
     {
-        var query = new GetDocumentDownloadUrlQuery(req.DocumentId, req.VariantName);
+        var query = new GetDocumentDownloadUrlQuery(req.DocumentId, req.VariantName ?? "");
         var result = await _module.Send(query, ct);
 
         if (result.IsError)

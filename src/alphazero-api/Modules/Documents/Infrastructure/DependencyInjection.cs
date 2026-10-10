@@ -67,7 +67,7 @@ public static class DependencyInjection
         services.AddKeyedSingleton<IAmazonS3>("R2", (sp, _) =>
         {
             var options = sp
-                .GetRequiredService<R2Options>();
+                .GetRequiredService<Microsoft.Extensions.Options.IOptions<R2Options>>().Value;
 
             var config = new AmazonS3Config
             {
@@ -84,7 +84,7 @@ public static class DependencyInjection
         
         services.AddKeyedScoped<IDocumentStorageService, DocumentStorageService>(StorageType.OutputPrivate, (sp, _) =>
         {
-            var r2Options = sp.GetRequiredService<R2Options>();
+            var r2Options = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<R2Options>>().Value;
             ArgumentNullException.ThrowIfNull(r2Options);
             
             var bucketName = r2Options?.PrivateBucketName;
@@ -98,7 +98,7 @@ public static class DependencyInjection
         
         services.AddKeyedScoped<IDocumentStorageService, DocumentStorageService>(StorageType.OutputPublic, (sp, _) =>
         {
-            var r2Options = sp.GetRequiredService<R2Options>();
+            var r2Options = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<R2Options>>().Value;
             ArgumentNullException.ThrowIfNull(r2Options);
             
             var bucketName = r2Options?.PublicBucketName;

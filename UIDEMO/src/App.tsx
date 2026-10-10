@@ -18,7 +18,7 @@ function VariantImage({ variant, cdnUrl, documentId, tenantId, isPublic, apiBase
         const headers: HeadersInit = { 'X-TenantId': tenantId };
         if (apiToken) headers['Authorization'] = `Bearer ${apiToken}`;
         
-        const res = await fetch(`${apiBase}/api/documents/${documentId}/download-url?VariantName=${variant}`, {
+        const res = await fetch(`${apiBase}/documents/${documentId}/download-url?VariantName=${variant}`, {
           headers
         });
         if (res.ok) {
@@ -33,7 +33,7 @@ function VariantImage({ variant, cdnUrl, documentId, tenantId, isPublic, apiBase
   }, [variant, documentId, tenantId, isPublic, apiBase, apiToken, cdnUrl, refreshKey]);
 
   const separator = url.includes('?') ? '&' : '?';
-  const urlWithCacheBuster = url ? `${url}${separator}_ts=${refreshKey}` : '';
+  const urlWithCacheBuster = (url && isPublic) ? `${url}${separator}_ts=${refreshKey}` : url;
   
   return (
     <div className="border border-brand-border bg-surface p-4 flex flex-col items-center group transition-all hover:border-accent">

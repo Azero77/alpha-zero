@@ -29,12 +29,12 @@
   - `RegisterGlobal(IServiceCollection)`: For services shared across modules (e.g., global AWS clients, shared middleware).
   - `RegisterPrivate(IServiceCollection, ContainerBuilder)`: For internal module logic (Application/Infrastructure). Uses `Autofac.Populate(IServiceCollection)` to bridge MSDI and Autofac.
   - `Initialize(ILifetimeScope)`: Sets up the module's isolated scope after the application is built.
-- **Service Discovery:** `Program.cs` dynamically scans for `AppModule` and `IEndpoint` implementations.
+- **Service Discovery:** `Program.cs` dynamically scans for `AppModule` implementations, and FastEndpoints handles endpoint discovery.
 - **MassTransit & Messaging:** 
   - `AddMediator`: Used for in-memory messaging (Internal MediatR/MassTransit).
   - `AddMassTransit`: Used for external SQS-backed messaging.
   - **Convention:** Consumers with "sqs" in their name are registered for SQS; others are registered for the In-Memory Mediator.
-- **Endpoints:** Feature endpoints must implement `IEndpoint` and are automatically mapped during startup.
+- **Endpoints:** Feature endpoints must be implemented using **FastEndpoints** (e.g., inheriting from `Endpoint<TRequest, TResponse>`).
 
 ## 📂 Key Source of Truth
 - **Requirements:** `docs/PRD.md`
