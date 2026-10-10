@@ -9,6 +9,8 @@
         <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
         <!-- Generate Native AOT image during publishing to improve cold start time. -->
         <PublishAot>true</PublishAot>
+        <!-- Disable globalization since AWS provided.al2023 lacks libicu -->
+        <InvariantGlobalization>true</InvariantGlobalization>
         <!-- StripSymbols tells the compiler to strip debugging symbols from the final executable if we're on Linux and put them into their own file. 
         This will greatly reduce the final executable's size.-->
         <StripSymbols>true</StripSymbols>

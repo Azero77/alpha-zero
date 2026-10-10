@@ -38,6 +38,7 @@ public record ParserOutput
 
 [JsonSerializable(typeof(JsonDocument))]
 [JsonSerializable(typeof(ParserOutput))]
+[JsonSerializable(typeof(S3DocumentCreatedEventParserInput))]
 public partial class LambdaFunctionJsonSerializerContext : JsonSerializerContext
 {
 }

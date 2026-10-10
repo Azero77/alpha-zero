@@ -9,6 +9,8 @@
         <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
         <!-- Generate Native AOT image during publishing to improve cold start time. -->
         <PublishAot>true</PublishAot>
+        <!-- Disable globalization since AWS provided.al2023 lacks libicu -->
+        <InvariantGlobalization>true</InvariantGlobalization>
         <!-- StripSymbols tells the compiler to strip debugging symbols from the final executable if we're on Linux and put them into their own file. 
         This will greatly reduce the final executable's size.-->
         <StripSymbols>true</StripSymbols>
@@ -38,4 +40,9 @@
         <HintPath>..\..\..\..\..\.nuget\packages\amazon.lambda.serialization.systemtextjson\2.4.4\lib\net8.0\Amazon.Lambda.Serialization.SystemTextJson.dll</HintPath>
       </Reference>
     </ItemGroup>
+    
+    <!-- Rename the compiled native binary to 'bootstrap' so AWS provided.al2023 runtime can execute it -->
+    <Target Name="RenameForLambda" AfterTargets="Publish">
+        <Move SourceFiles="$(PublishDir)$(AssemblyName)" DestinationFiles="$(PublishDir)bootstrap" Condition="Exists('$(PublishDir)$(AssemblyName)')" />
+    </Target>
 </Project>
