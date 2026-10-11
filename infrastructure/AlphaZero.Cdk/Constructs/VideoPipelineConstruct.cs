@@ -51,16 +51,9 @@ public class VideoPipelineConstruct : Construct
         var jobPreparerPath = "src/lambdas/AlphaZero.JobPreparer/publish";
         var r2MoverPath = Path.Combine(repoRoot, "src/workers/AlphaZero.R2Mover");
         // SSM Parameters
-        var masterClearKey = props.MasterClearKey ?? StringParameter.FromSecureStringParameterAttributes(this, "MasterClearKey", new SecureStringParameterAttributes
-        {
-            ParameterName = "/AlphaZero/VideoPipeline/MasterClearKey",
-        });
+        var masterClearKey = props.MasterClearKey;
 
-        var r2Credentials = props.R2Credentials ?? StringParameter.FromSecureStringParameterAttributes(this, "R2Credentials", new SecureStringParameterAttributes
-        {
-            ParameterName = "/AlphaZero/VideoPipeline/R2Credentials",
-            
-        });
+        var r2Credentials = props.R2Credentials;
 
         // 1. Lambda Functions
 
@@ -88,7 +81,7 @@ public class VideoPipelineConstruct : Construct
             Code = DockerImageCode.FromImageAsset(repoRoot, new AssetImageCodeProps 
             {
                 File = analyzerDockerFilePath,
-                Exclude = new[] { ".git", "cdk.out" },
+                Exclude = new[] { ".git", "cdk.out", "UIDemo", "UIDEMO", "tests", "docs", "artifacts", "scratch", "plans", "src/alphazero-frontend", "**/bin", "**/obj", "**/publish" },
                 IgnoreMode = IgnoreMode.DOCKER
             }),
             Timeout = Duration.Minutes(2),
@@ -115,7 +108,7 @@ public class VideoPipelineConstruct : Construct
             }
         });
         props.InputBucket.GrantReadWrite(JobPreparerFunction);
-        masterClearKey.GrantRead(JobPreparerFunction);
+        masterClearKey?.GrantRead(JobPreparerFunction);
         props.VideoProgressQueue.GrantSendMessages(JobPreparerFunction);
 
         // 2. ECS Fargate Tasks
@@ -146,13 +139,13 @@ public class VideoPipelineConstruct : Construct
             Image = ContainerImage.FromAsset(repoRoot, new AssetImageProps
             {
                 File = "src/workers/AlphaZero.R2Mover/Dockerfile",
-                Exclude = new[] { ".git", "cdk.out" },
+                Exclude = new[] { ".git", "cdk.out", "UIDemo", "UIDEMO", "tests", "docs", "artifacts", "scratch", "plans", "src/alphazero-frontend", "**/bin", "**/obj", "**/publish" },
                 IgnoreMode = IgnoreMode.DOCKER
             }),
             Logging = LogDriver.AwsLogs(new AwsLogDriverProps { StreamPrefix = "R2Mover" })
         });
         props.TransientBucket.GrantRead(fargateR2MoverTaskDef.TaskRole);
-        r2Credentials.GrantRead(fargateR2MoverTaskDef.TaskRole);
+        r2Credentials?.GrantRead(fargateR2MoverTaskDef.TaskRole);
         props.VideoProgressQueue.GrantSendMessages(fargateR2MoverTaskDef.TaskRole);
 
         // 3. Retry Policies

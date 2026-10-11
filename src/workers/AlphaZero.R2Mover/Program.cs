@@ -13,8 +13,7 @@ public class R2Credentials
     public string AccessKeyId { get; set; } = "";
     public string SecretAccessKey { get; set; } = "";
     public string ServiceUrl { get; set; } = "";
-    public string BucketName { get; set; } = "";
-    public string PublicUrl { get; set; } = "";
+    public string VideosBucketName { get; set; } = "";
 }   
 
 public class Program
@@ -54,7 +53,7 @@ public class Program
         var ssmClient = new AmazonSimpleSystemsManagementClient();
         var credRequest = new GetParameterRequest
         {
-            Name = "/AlphaZero/VideoPipeline/R2Credentials",
+            Name = "/AlphaZero/R2Credentials",
             WithDecryption = true
         };
 
@@ -109,7 +108,7 @@ public class Program
                     
                     var putRequest = new PutObjectRequest
                     {
-                        BucketName = r2Creds.BucketName,
+                        BucketName = r2Creds.VideosBucketName,
                         Key = obj.Key,
                         InputStream = getResponse.ResponseStream,
                         ContentType = GetContentType(obj.Key),
@@ -129,9 +128,6 @@ public class Program
         await Task.WhenAll(tasks);
 
         Console.WriteLine("All files moved to R2 successfully.");
-        // We output a JSON that can be picked up if needed, though Fargate .sync doesn't easily capture it.
-        var resultUrl = $"{r2Creds.PublicUrl.TrimEnd('/')}/{tenantId}/{videoId}/master.m3u8";
-        Console.WriteLine(JsonSerializer.Serialize(new { playbackUrl = resultUrl }));
         return 0;
     }
 

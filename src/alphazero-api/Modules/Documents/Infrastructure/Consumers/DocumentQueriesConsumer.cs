@@ -10,14 +10,17 @@ public class DocumentQueriesConsumer :
     IConsumer<GetDocumentDownloadUrlQuery>
 {
     private readonly IDocumentRepository _documentRepository;
-    private readonly IDocumentStorageService _storageService;
+    private readonly IDocumentStorageService _privateStorageService;
+    private readonly IDocumentStorageService _publicStorageService;
 
     public DocumentQueriesConsumer(
         IDocumentRepository documentRepository,
-        IDocumentStorageService storageService)
+        [Microsoft.Extensions.DependencyInjection.FromKeyedServices(AlphaZero.Modules.Documents.Application.Models.StorageType.InputPrivate)] IDocumentStorageService privateStorageService,
+        [Microsoft.Extensions.DependencyInjection.FromKeyedServices(AlphaZero.Modules.Documents.Application.Models.StorageType.InputPublic)] IDocumentStorageService publicStorageService)
     {
         _documentRepository = documentRepository;
-        _storageService = storageService;
+        _privateStorageService = privateStorageService;
+        _publicStorageService = publicStorageService;
     }
 
     public async Task Consume(ConsumeContext<DocumentExistsQuery> context)
@@ -49,7 +52,9 @@ public class DocumentQueriesConsumer :
             return;
         }
 
-        var downloadUrl = await _storageService.GenerateDownloadPresignedUrlAsync(
+        var storageService = document.IsPublic ? _publicStorageService : _privateStorageService;
+
+        var downloadUrl = await storageService.GenerateDownloadPresignedUrlAsync(
             document.S3Key,
             $"{document.Title}.{document.FileType}",
             TimeSpan.FromHours(1));

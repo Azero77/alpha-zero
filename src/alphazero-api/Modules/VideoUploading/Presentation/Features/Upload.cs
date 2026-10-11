@@ -61,7 +61,7 @@ public static class Upload
                 TargetResourceArn: request.targetResourceArn,
                 VideoTranscodingMethod: request.transcodingMethod ?? VideoTranscodingMetehod.FFMPEG.ToString(),
                 VideoEncryptionMethod: request.encryptionMethod ?? VideoEncryptionMethod.None.ToString(),
-                UploadThumbnail: request.ThumbnailFileName is not null && request.ThumbnailContentType is not null ? new UploadThumbnailCommand(request.ThumbnailFileName, request.ThumbnailContentType)
+                UploadThumbnail: request.ThumbnailFileName is not null && request.ThumbnailContentType is not null ? new UploadThumbnailDto(request.ThumbnailFileName, request.ThumbnailContentType)
                 : null
                 );
             var response = await module.Send<UploadCommand, ErrorOr<UploadCommandResponse>>(command);

@@ -18,7 +18,7 @@ public interface IPrincipalRepository
     Task<IReadOnlyCollection<Principal>> GetPrincipalsByResourceAsync(Guid resourceId, string resourceType, CancellationToken ct = default);
 
     Task<Principal?> GetById(Guid id, CancellationToken token = default);
-    Task<Principal?> GetFirst(Expression<Func<Principal?, bool>> predicate, CancellationToken token = default);
+    Task<Principal?> GetFirst(Expression<Func<Principal, bool>> predicate, CancellationToken token = default);
     void Add(Principal entity);
     void Update(Principal entity);
     void Remove(Principal entity);

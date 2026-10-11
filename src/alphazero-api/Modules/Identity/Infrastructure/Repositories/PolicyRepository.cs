@@ -58,13 +58,13 @@ public class PrincipalRepository : IPrincipalRepository
         return MapToDomain(dataModel);
     }
 
-    public async Task<Principal?> GetFirst(Expression<Func<Principal?, bool>> predicate, CancellationToken token = default)
+    public async Task<Principal?> GetFirst(Expression<Func<Principal, bool>> predicate, CancellationToken token = default)
     {
         var dataModels = await _context.Principals
             .Include(p => p.ManagedPolicies)
             .ToListAsync(token);
         
-        return dataModels.Select(MapToDomain).AsQueryable().FirstOrDefault(predicate);
+        return dataModels.Select(MapToDomain).Where(p => p != null).AsQueryable().FirstOrDefault(predicate!);
     }
 
     public void Add(Principal entity)
@@ -124,10 +124,10 @@ public class PrincipalRepository : IPrincipalRepository
         if (existing != null) _context.Principals.Remove(existing);
     }
 
-    public async Task<bool> Any(Expression<Func<Principal?, bool>> predicate, CancellationToken token = default)
+    public async Task<bool> Any(Expression<Func<Principal, bool>> predicate, CancellationToken token = default)
     {
         var dataModels = await _context.Principals.ToListAsync(token);
-        return dataModels.Select(MapToDomain).AsQueryable().Any(predicate);
+        return dataModels.Select(MapToDomain).Where(p => p != null).AsQueryable().Any(predicate!);
     }
 
     public async Task<IReadOnlyCollection<Principal>> GetPrincipalsByResourceAsync(Guid resourceId, string resourceType, CancellationToken ct = default)

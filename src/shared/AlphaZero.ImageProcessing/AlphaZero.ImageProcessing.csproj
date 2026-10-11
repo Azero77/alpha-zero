@@ -6,13 +6,21 @@
     <Nullable>enable</Nullable>
     <IsPackable>true</IsPackable>
     <PackageId>AlphaZero.ImageProcessing</PackageId>
-    <Version>1.0.1</Version>
+    <Version>2.0.0</Version>
     <Authors>AlphaZero</Authors>
     <Description>Shared image processing library for AlphaZero Learning Academy.</Description>
+    <SixLaborsLicenseKey>dummy-license-key-for-oss</SixLaborsLicenseKey>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="SixLabors.ImageSharp" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+    <PackageReference Include="SixLabors.ImageSharp" ExcludeAssets="build;buildTransitive" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="Microsoft.Extensions.DependencyInjection.Abstractions">
+      <HintPath>..\..\..\..\..\.nuget\packages\microsoft.extensions.dependencyinjection.abstractions\10.0.0\lib\net10.0\Microsoft.Extensions.DependencyInjection.Abstractions.dll</HintPath>
+    </Reference>
   </ItemGroup>
 
 </Project>

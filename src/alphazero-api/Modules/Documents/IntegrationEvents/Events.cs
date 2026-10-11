@@ -29,3 +29,39 @@ public record DocumentMetadataChangedIntegrationEvent(
     string? Description,
     string FileType,
     long FileSizeBytes);
+
+
+public record DocumentUploadInitiatedEvent(
+    Guid DocumentId,
+    Guid TenantId);
+
+public record DocumentProcessingRequestedEvent(
+    Guid DocumentId,
+    Guid TenantId,
+    string S3Key,
+    string FileHash,
+    long Size);
+
+public record DocumentUploadedToStorageEvent(
+    Guid DocumentId,
+    Guid TenantId,
+    string S3Key,
+    string FileHash,
+    long Size,
+    bool IsPublic = false);
+
+public record DocumentProcessingCompletedEvent(
+    Guid DocumentId,
+    Guid TenantId,
+    string PayloadJson,
+    bool IsPublic = false);
+
+public record DocumentProcessingFaultedEvent(
+    Guid DocumentId,
+    Guid TenantId,
+    string ErrorMessage);
+
+public record DocumentStatusChangedIntegrationEvent(
+    Guid DocumentId,
+    Guid TenantId,
+    string Status);

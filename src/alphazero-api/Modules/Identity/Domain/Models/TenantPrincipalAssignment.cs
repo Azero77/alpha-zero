@@ -26,10 +26,10 @@ public class TenantUserPrincipalAssignment : AggregateRoot, IDomainTenantOwned
 
     public Guid TenantId { get; private set; }
 
-    public TenantUser TenantUser { get; private set; }
-    public Principal Principal { get; private set; }
+    public TenantUser TenantUser { get; private set; } = null!;
+    public Principal Principal { get; private set; } = null!;
     public Guid PrincipalId { get; private set; }
-    public ResourceArn Resource { get; private set; }
+    public ResourceArn Resource { get; private set; } = null!;
     public DateTime TimeCreated { get; private set; }
     public IReadOnlyCollection<IPolicy> Policies => Principal.Policies;
 

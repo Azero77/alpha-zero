@@ -188,7 +188,7 @@ public class SyncResourceMetadataIntegrationTests : BaseIntegrationTest
         await DbContext.SaveChangesAsync();
 
         using var scope = Factory.Services.CreateScope();
-        var bus = scope.ServiceProvider.GetRequiredService<IModuleBus>();
+        var bus = scope.ServiceProvider.GetRequiredService<MassTransit.IPublishEndpoint>();
 
         // Act: Publish integration event
         await bus.Publish(new VideoMetadataChangedIntegrationEvent(
@@ -229,7 +229,7 @@ public class SyncResourceMetadataIntegrationTests : BaseIntegrationTest
         await DbContext.SaveChangesAsync();
 
         using var scope = Factory.Services.CreateScope();
-        var bus = scope.ServiceProvider.GetRequiredService<IModuleBus>();
+        var bus = scope.ServiceProvider.GetRequiredService<MassTransit.IPublishEndpoint>();
 
         // Act: Publish integration event
         await bus.Publish(new DocumentMetadataChangedIntegrationEvent(

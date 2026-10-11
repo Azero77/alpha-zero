@@ -10,21 +10,31 @@ echo "==========================================="
 CODE_LAMBDAS=(
     "src/lambdas/AlphaZero.JobPreparer/src/AlphaZero.JobPreparer/AlphaZero.JobPreparer.csproj"
     "src/lambdas/AlphaZero.S3VideoCreatedEventParser/S3VideoCreatedEventParser.csproj"
+    "src/lambdas/DocumentUploadedS3EventParser/DocumentUploadedS3EventParser.csproj"
+    "src/lambdas/ImageProcessorAndMoverToR2/ImageProcessorAndMoverToR2.csproj"
 )
 
+BUILDER_IMAGE="aot-builder:latest"
+
+if ! docker image inspect "$BUILDER_IMAGE" > /dev/null 2>&1; then
+    echo "==> Building AOT Builder Image ($BUILDER_IMAGE) for AL2023..."
+    docker build -t "$BUILDER_IMAGE" -f "${REPO_ROOT}/scripts/Dockerfile.builder" "${REPO_ROOT}/scripts"
+fi
+
 for csproj in "${CODE_LAMBDAS[@]}"; do
-    # Extract the base name (e.g. AlphaZero.JobPreparer) from the path
-    LAMBDA_NAME=$(echo "$csproj" | grep -o 'AlphaZero.[a-zA-Z0-9]*' | head -n 1)
+    # Extract the project name from the path to determine the output directory
+    LAMBDA_NAME=$(basename $(dirname "$csproj"))
     OUTPUT_DIR="${REPO_ROOT}/src/lambdas/${LAMBDA_NAME}/publish"
     
-    echo "==> Publishing ${LAMBDA_NAME} to ${OUTPUT_DIR}..."
+    echo "==> Publishing ${LAMBDA_NAME} to ${OUTPUT_DIR} via Docker..."
     mkdir -p "${OUTPUT_DIR}"
     
-    dotnet publish "${REPO_ROOT}/${csproj}" \
+    docker run --rm -v "${REPO_ROOT}:/workspace" -w "/workspace" "$BUILDER_IMAGE" \
+        dotnet publish "${csproj}" \
         -c Release \
         -r linux-x64 \
         --self-contained \
-        -o "${OUTPUT_DIR}"
+        -o "src/lambdas/${LAMBDA_NAME}/publish"
     
     echo "  -> Published ${LAMBDA_NAME} successfully!"
 done

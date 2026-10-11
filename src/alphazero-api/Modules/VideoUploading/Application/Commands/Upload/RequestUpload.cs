@@ -24,10 +24,10 @@ public record UploadCommand(
     string TargetResourceArn,
     string VideoTranscodingMethod, 
     string VideoEncryptionMethod,
-    UploadThumbnailCommand? UploadThumbnail
+    UploadThumbnailDto? UploadThumbnail
     ): ICommand<UploadCommandResponse>;
 
-public record UploadThumbnailCommand(string FileName, string ContentType);
+public record UploadThumbnailDto(string FileName, string ContentType);
 
 public class UploadCommandValidator : AbstractValidator<UploadCommand>
 {

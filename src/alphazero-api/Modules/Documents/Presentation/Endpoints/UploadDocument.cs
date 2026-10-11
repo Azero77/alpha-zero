@@ -17,13 +17,16 @@ public static class UploadDocument
         string? Description,
         string FileName,
         string ContentType,
-        long FileSizeBytes);
+        long FileSizeBytes,
+        string? ProfileType,
+        bool IsPublic = false);
 
     public record Response(
         Guid DocumentId,
         string Arn,
         string UploadPresignedUrl,
-        string S3Key);
+        string S3Key,
+        Dictionary<string, string> Headers);
 
     public class Endpoint : IEndpoint
     {
@@ -47,7 +50,9 @@ public static class UploadDocument
                 request.Description,
                 request.FileName,
                 request.ContentType,
-                request.FileSizeBytes);
+                request.FileSizeBytes,
+                request.ProfileType,
+                request.IsPublic);
 
             var response = await module.Send<UploadDocumentCommand, ErrorOr<UploadDocumentResponse>>(command);
 
@@ -56,7 +61,8 @@ public static class UploadDocument
                     res.DocumentId,
                     res.Arn,
                     res.UploadPresignedUrl,
-                    res.S3Key)),
+                    res.S3Key,
+                    res.Headers)),
                 errors => errors.ToMinimalResult());
         }
     }

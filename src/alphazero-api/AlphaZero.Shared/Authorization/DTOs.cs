@@ -61,10 +61,14 @@ public static class EndpointExtensions
     }
 }
 
-public class IAMPreprocessor(IAuthorizationContextFactory authorizationContextFactory, IPolicyEvaluatorService evaluator, ITenantProvider tenantProvider) : IGlobalPreProcessor
+public class IAMPreprocessor : IGlobalPreProcessor
 {
     public async Task PreProcessAsync(IPreProcessorContext context, CancellationToken ct)
     {
+        var authorizationContextFactory = context.HttpContext.RequestServices.GetRequiredService<IAuthorizationContextFactory>();
+        var evaluator = context.HttpContext.RequestServices.GetRequiredService<IPolicyEvaluatorService>();
+        var tenantProvider = context.HttpContext.RequestServices.GetRequiredService<ITenantProvider>();
+
         var globalRequirement = context.HttpContext.GetEndpoint()?.Metadata.GetMetadata<GlobalAccessControlRequirement>();
         var tenantScopedRequirement = context.HttpContext.GetEndpoint()?.Metadata.GetMetadata<AccessControlWithTenantRequirement>();
         

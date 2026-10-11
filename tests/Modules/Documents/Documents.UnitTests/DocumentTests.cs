@@ -31,9 +31,9 @@ public class DocumentTests
             "Course Syllabus",
             "Full syllabus for 2026",
             "pdf",
-            "documents/tenant/id/syllabus.pdf",
+            "documents/tenant/course/c1/syllabus.pdf",
             1024 * 1024,
-            _clock);
+            null, false, _clock.Now);
 
         // Assert
         result.IsError.Should().BeFalse();
@@ -43,7 +43,7 @@ public class DocumentTests
         doc.Title.Should().Be("Course Syllabus");
         doc.Description.Should().Be("Full syllabus for 2026");
         doc.FileType.Should().Be("pdf");
-        doc.S3Key.Should().Be("documents/tenant/id/syllabus.pdf");
+        doc.S3Key.Should().Be("documents/tenant/course/c1/syllabus.pdf");
         doc.FileSizeBytes.Should().Be(1024 * 1024);
         doc.CreatedOn.Should().Be(_now);
         doc.IsDeleted.Should().BeFalse();
@@ -70,7 +70,7 @@ public class DocumentTests
             "pdf",
             "s3/key",
             100,
-            _clock);
+            null, false, _clock.Now);
 
         // Assert
         result.IsError.Should().BeTrue();
@@ -96,7 +96,7 @@ public class DocumentTests
             fileType!,
             "s3/key",
             100,
-            _clock);
+            null, false, _clock.Now);
 
         // Assert
         result.IsError.Should().BeTrue();
@@ -115,7 +115,7 @@ public class DocumentTests
             "pdf",
             "s3/key",
             100,
-            _clock).Value;
+            null, false, _clock.Now).Value;
 
         var deleteTime = _now.AddDays(1);
         _clock.Now.Returns(deleteTime);
@@ -140,7 +140,7 @@ public class DocumentTests
             ".PDF",
             "s3/key",
             500,
-            _clock);
+            null, false, _clock.Now);
 
         // Assert
         result.IsError.Should().BeFalse();
@@ -159,7 +159,7 @@ public class DocumentTests
             "pdf",
             "s3/key",
             100,
-            _clock).Value;
+            null, false, _clock.Now).Value;
 
         // Act
         var result = doc.UpdateInformation("Updated Title", "Updated Desc");
@@ -192,7 +192,7 @@ public class DocumentTests
             "pdf",
             "s3/key",
             100,
-            _clock).Value;
+            null, false, _clock.Now).Value;
 
         // Act
         var result = doc.UpdateInformation(title!, "Some Desc");

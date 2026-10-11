@@ -15,13 +15,19 @@ public class StorageStackProps : StackProps
 
 public class StorageStack : Stack
 {
-    public IBucket InputBucket { get; }
-    public IBucket TransientBucket { get; }
+    public IBucket VideoInputBucketPrivate { get; }
+    public IBucket DocumentInputBucketPrivate { get; }
+    public IBucket DocumentInputBucketPublic { get; }
+    public IBucket VideoTransientBucket { get; }
     public IQueue VideoPublishedQueue { get; }
     public IQueue VideoFailedQueue { get; }
     public IQueue VideoProgressQueue { get; }
+    public IQueue DocumentProcessingCompletedQueue { get; }
+    public IQueue DocumentProcessingFaultedQueue { get; }
+    public IQueue DocumentUploadedQueue { get; }
     public IStringParameter MasterClearKey { get; }
-    public IStringParameter R2Credentials { get; }
+    public IStringParameter VideoR2Credentials { get; }
+    public IStringParameter DocumentR2Credentials { get; }
     public Role MediaConvertRole {get;}
     public string MediaConvertKmsKeyArn {get;}
 
@@ -30,12 +36,12 @@ public class StorageStack : Stack
         var env = props?.Environment ?? "dev";
 
         // Input bucket for uploads with EventBridge notifications enabled
-        InputBucket = new Bucket(this, "RawUploadsBucket", new BucketProps
+        VideoInputBucketPrivate = new Bucket(this, "RawUploadsBucket", new BucketProps
         {
             BucketName = $"alphazero-raw-uploads-{env}",
             EventBridgeEnabled = true,
-            Cors = new[]
-            {
+            Cors =
+            [
                 new CorsRule
                 {
                     AllowedMethods = new[] { HttpMethods.GET, HttpMethods.PUT },
@@ -43,11 +49,44 @@ public class StorageStack : Stack
                     AllowedHeaders = new[] { "*" },
                     MaxAge = 3600
                 }
-            }
+            ]
+        });
+
+        // Document input buckets
+        DocumentInputBucketPrivate = new Bucket(this, "DocumentInputBucketPrivate", new BucketProps
+        {
+            BucketName = $"alphazero-docs-in-private-{env}",
+            EventBridgeEnabled = true,
+            Cors =
+            [
+                new CorsRule
+                {
+                    AllowedMethods = new[] { HttpMethods.GET, HttpMethods.PUT },
+                    AllowedOrigins = new[] { "*" },
+                    AllowedHeaders = new[] { "*" },
+                    MaxAge = 3600
+                }
+            ]
+        });
+
+        DocumentInputBucketPublic = new Bucket(this, "DocumentInputBucketPublic", new BucketProps
+        {
+            BucketName = $"alphazero-docs-in-public-{env}",
+            EventBridgeEnabled = true,
+            Cors =
+            [
+                new CorsRule
+                {
+                    AllowedMethods = new[] { HttpMethods.GET, HttpMethods.PUT },
+                    AllowedOrigins = new[] { "*" },
+                    AllowedHeaders = new[] { "*" },
+                    MaxAge = 3600
+                }
+            ]
         });
 
         // Transient processing bucket with 24-hour lifecycle expiration rule
-        TransientBucket = new Bucket(this, "TransientProcessingBucket", new BucketProps
+        VideoTransientBucket = new Bucket(this, "TransientProcessingBucket", new BucketProps
         {
             BucketName = $"alphazero-transient-processing-{env}",
             LifecycleRules = new[]
@@ -77,15 +116,38 @@ public class StorageStack : Stack
             QueueName = $"VideoProcessingProgressQueue-{env}"
         });
 
+        DocumentUploadedQueue = new Queue(this, "DocumentUploadedQueue", new QueueProps
+        {
+            QueueName = $"DocumentUploadedQueue-{env}"
+        });
+
+        DocumentProcessingCompletedQueue = new Queue(this, "DocumentProcessingCompletedQueue", new QueueProps
+        {
+            QueueName = $"DocumentProcessingCompletedQueue-{env}"
+        });
+
+        DocumentProcessingFaultedQueue = new Queue(this, "DocumentProcessingFaultedQueue", new QueueProps
+        {
+            QueueName = $"DocumentProcessingFaultedQueue-{env}"
+        });
+
         // SSM Parameters (SecureString references)
         MasterClearKey = StringParameter.FromSecureStringParameterAttributes(this, "MasterClearKey", new SecureStringParameterAttributes
         {
             ParameterName = "/AlphaZero/VideoPipeline/MasterClearKey"
         });
 
-        R2Credentials = StringParameter.FromSecureStringParameterAttributes(this, "R2Credentials", new SecureStringParameterAttributes
+        VideoR2Credentials = StringParameter.FromSecureStringParameterAttributes(this, "VideoR2Credentials", new SecureStringParameterAttributes
         {
-            ParameterName = "/AlphaZero/VideoPipeline/R2Credentials"
+            ParameterName = "/AlphaZero/R2Credentials"
+        });
+
+        // CI/CD Note: The following SSM Parameter must be seeded with a JSON payload containing the Cloudflare
+        // Access Key, Secret Key, PublicBucketName, and PrivateBucketName before deploying this CDK stack.
+        // e.g., via GitHub Actions: aws ssm put-parameter --name "/AlphaZero/R2Credentials" --value '{"AccessKey":"...","SecretKey":"...","PublicBucketName":"...","PrivateBucketName":"..."}' --type "SecureString" --overwrite
+        DocumentR2Credentials = StringParameter.FromSecureStringParameterAttributes(this, "DocumentR2Credentials", new SecureStringParameterAttributes
+        {
+            ParameterName = "/AlphaZero/R2Credentials"
         });
 
 // 3. MediaConvert Role
@@ -98,12 +160,12 @@ public class StorageStack : Stack
         MediaConvertRole.AddToPolicy(new PolicyStatement(new PolicyStatementProps
         {
             Actions = new[] { "s3:GetObject", "s3:ListBucket", "s3:GetBucketLocation" },
-            Resources = new[] { InputBucket.BucketArn, $"{InputBucket.BucketArn}/*" }
+            Resources = new[] { VideoInputBucketPrivate.BucketArn, $"{VideoInputBucketPrivate.BucketArn}/*" }
         }));
         MediaConvertRole.AddToPolicy(new PolicyStatement(new PolicyStatementProps
         {
             Actions = new[] { "s3:PutObject", "s3:GetObject", "s3:ListBucket", "s3:PutObjectAcl", "s3:AbortMultipartUpload", "s3:GetBucketLocation" },
-            Resources = new[] { TransientBucket.BucketArn, $"{TransientBucket.BucketArn}/*" }
+            Resources = new[] { VideoTransientBucket.BucketArn, $"{VideoTransientBucket.BucketArn}/*" }
         }));
         var kms = new Key(this, "MediaConvertKMS", new KeyProps
         {
@@ -131,11 +193,16 @@ public class StorageStack : Stack
         MediaConvertRole.AddToPolicy(mediaConvertKmsPolicy);
 
         // Outputs for Aspire AppHost
-        new CfnOutput(this, "InputS3BucketName", new CfnOutputProps { Value = InputBucket.BucketName });
-        new CfnOutput(this, "TransientS3BucketName", new CfnOutputProps { Value = TransientBucket.BucketName });
+        new CfnOutput(this, "VideosInputS3Bucket", new CfnOutputProps { Value = VideoInputBucketPrivate.BucketName });
+        new CfnOutput(this, "DocumentInputS3BucketNamePrivate", new CfnOutputProps { Value = DocumentInputBucketPrivate.BucketName });
+        new CfnOutput(this, "DocumentInputS3BucketNamePublic", new CfnOutputProps { Value = DocumentInputBucketPublic.BucketName });
+        new CfnOutput(this, "TransientS3BucketName", new CfnOutputProps { Value = VideoTransientBucket.BucketName });
         new CfnOutput(this, "VideoPublishedQueueUrl", new CfnOutputProps { Value = VideoPublishedQueue.QueueUrl });
         new CfnOutput(this, "VideoFailedQueueUrl", new CfnOutputProps { Value = VideoFailedQueue.QueueUrl });
         new CfnOutput(this, "VideoProgressQueueUrl", new CfnOutputProps { Value = VideoProgressQueue.QueueUrl });
+        new CfnOutput(this, "DocumentUploadedQueueUrl", new CfnOutputProps { Value = DocumentUploadedQueue.QueueUrl });
+        new CfnOutput(this, "DocumentProcessingCompletedQueueUrl", new CfnOutputProps { Value = DocumentProcessingCompletedQueue.QueueUrl });
+        new CfnOutput(this, "DocumentProcessingFaultedQueueUrl", new CfnOutputProps { Value = DocumentProcessingFaultedQueue.QueueUrl });
         new CfnOutput(this, "MediaConvertRoleArnOutput", new CfnOutputProps { Value = MediaConvertRole.RoleArn });
         new CfnOutput(this, "MediaConvertKeyKMSArnOutput", new CfnOutputProps { Value = MediaConvertKmsKeyArn });
     }

@@ -42,6 +42,7 @@ public static class DependencyInjection
     public static void AddCoursesPrivateInfrastructure(this IServiceCollection moduleServices, IConfiguration configuration)
     {
         moduleServices.AddScoped<ICourseRepository, CourseRepository>();
+        moduleServices.AddScoped<ICourseOverviewRepository, CourseOverviewRepository>();
         moduleServices.AddScoped<IRepository<CourseAsset>, BaseRepository<AppDbContext, CourseAsset>>();
         moduleServices.AddScoped<ISubjectRepository, SubjectRepository>();
         moduleServices.AddScoped<IEnrollementRepository, EnrollementRepository>();

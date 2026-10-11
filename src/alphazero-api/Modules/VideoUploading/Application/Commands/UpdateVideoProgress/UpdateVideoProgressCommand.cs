@@ -1,6 +1,7 @@
 using AlphaZero.Modules.VideoUploading.Application.Repositories;
 using AlphaZero.Modules.VideoUploading.Application.Services;
 using AlphaZero.Modules.VideoUploading.Application.Models;
+using AlphaZero.Shared.Application;
 using ErrorOr;
 using MediatR;
 
@@ -11,7 +12,7 @@ public record UpdateVideoProgressCommand(
     Guid TenantId,
     PipelineStage Stage,
     string Status,
-    string? Metadata) : IRequest<ErrorOr<Success>>;
+    string? Metadata) : ICommand<Success>;
 
 public class UpdateVideoProgressCommandHandler : IRequestHandler<UpdateVideoProgressCommand, ErrorOr<Success>>
 {

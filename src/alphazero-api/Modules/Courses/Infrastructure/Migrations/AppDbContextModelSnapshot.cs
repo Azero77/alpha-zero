@@ -114,6 +114,50 @@ namespace AlphaZero.Modules.Courses.Infrastructure.Migrations
                     b.UseTphMappingStrategy();
                 });
 
+            modelBuilder.Entity("AlphaZero.Modules.Courses.Domain.Aggregates.Courses.CourseOverview", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CourseId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("CoverImageDocumentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<JsonDocument>("DescriptionContent")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<string>("ETag")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<JsonDocument>("LearningObjectivesContent")
+                        .HasColumnType("jsonb");
+
+                    b.Property<JsonDocument>("TargetAudienceContent")
+                        .HasColumnType("jsonb");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CourseId")
+                        .IsUnique();
+
+                    b.ToTable("CourseOverviews", "Courses");
+                });
+
             modelBuilder.Entity("AlphaZero.Modules.Courses.Domain.Aggregates.Courses.CoursePlan", b =>
                 {
                     b.Property<Guid>("Id")
@@ -607,6 +651,15 @@ namespace AlphaZero.Modules.Courses.Infrastructure.Migrations
                     b.HasOne("AlphaZero.Modules.Courses.Domain.Aggregates.Courses.Course", null)
                         .WithMany("Assets")
                         .HasForeignKey("CourseId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("AlphaZero.Modules.Courses.Domain.Aggregates.Courses.CourseOverview", b =>
+                {
+                    b.HasOne("AlphaZero.Modules.Courses.Domain.Aggregates.Courses.Course", null)
+                        .WithOne()
+                        .HasForeignKey("AlphaZero.Modules.Courses.Domain.Aggregates.Courses.CourseOverview", "CourseId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });

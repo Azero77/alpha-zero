@@ -1,6 +1,8 @@
 using AlphaZero.Shared.Domain;
 using ErrorOr;
 using AlphaZero.Modules.Documents.Domain.Events;
+using Namotion.Reflection;
+using System.Text.Json;
 
 namespace AlphaZero.Modules.Documents.Domain.Models;
 
@@ -12,6 +14,13 @@ public class Document : AggregateRoot, IDomainTenantOwned, ISoftDeletable
     public string FileType { get; private set; } = null!; // e.g. "pdf", "docx"
     public string S3Key { get; private set; } = null!;
     public long FileSizeBytes { get; private set; }
+    
+    public string? FileHash { get; private set; }
+    public bool IsPublic { get; private set; }
+    public DocumentType Type { get; private set; }
+    public DocumentStatus Status { get; private set; }
+    public Dictionary<string, object> Metadata { get; private set; } = new();
+
     public DateTime CreatedOn { get; private set; }
     public bool IsDeleted { get; private set; }
     public DateTime? OnDeleted { get; private set; }
@@ -26,6 +35,8 @@ public class Document : AggregateRoot, IDomainTenantOwned, ISoftDeletable
         string fileType,
         string s3Key,
         long fileSizeBytes,
+        DocumentType type,
+        bool isPublic,
         DateTime createdOn) : base(id)
     {
         TenantId = tenantId;
@@ -34,8 +45,12 @@ public class Document : AggregateRoot, IDomainTenantOwned, ISoftDeletable
         FileType = fileType;
         S3Key = s3Key;
         FileSizeBytes = fileSizeBytes;
+        Type = type;
+        IsPublic = isPublic;
+        Status = DocumentStatus.Pending;
         CreatedOn = createdOn;
         IsDeleted = false;
+        Metadata = new Dictionary<string, object>();
     }
 
     public static ErrorOr<Document> Create(
@@ -46,23 +61,44 @@ public class Document : AggregateRoot, IDomainTenantOwned, ISoftDeletable
         string fileType,
         string s3Key,
         long fileSizeBytes,
-        IClock clock)
+        string? profileType,
+        bool isPublic,
+        DateTime createdOn)
     {
         if (string.IsNullOrWhiteSpace(title))
             return Error.Validation("Document.Title", "Title is required.");
-
         if (string.IsNullOrWhiteSpace(fileType))
             return Error.Validation("Document.FileType", "File type is required.");
 
-        return new Document(
+        var ext = fileType.ToLowerInvariant().TrimStart('.');
+        var type = ext switch
+        {
+            "jpg" or "jpeg" or "png" or "gif" or "webp" => DocumentType.Image,
+            "mp4" or "mkv" or "avi" or "mov" => DocumentType.Video,
+            "mp3" or "wav" or "ogg" => DocumentType.Audio,
+            "pdf" => DocumentType.Pdf,
+            "doc" or "docx" or "txt" => DocumentType.Document,
+            _ => DocumentType.Unknown
+        };
+
+        var doc = new Document(
             id,
             tenantId,
             title,
             description,
-            fileType.ToLowerInvariant().TrimStart('.'),
+            ext,
             s3Key,
             fileSizeBytes,
-            clock.Now);
+            type,
+            isPublic,
+            createdOn);
+            
+        if (!string.IsNullOrEmpty(profileType))
+        {
+            doc.Metadata["ProcessingProfile"] = profileType;
+        }
+        
+        return doc;
     }
 
     public void MarkAsDeleted(IClock clock)
@@ -84,5 +120,73 @@ public class Document : AggregateRoot, IDomainTenantOwned, ISoftDeletable
         return Result.Success;
     }
 
+    public void LinkToExistingBlob(string hash, string s3Key)
+    {
+        FileHash = hash;
+        S3Key = s3Key;
+        Status = DocumentStatus.Ready;
+    }
+
+    public void ProcessingStarted(string hash)
+    {
+        FileHash = hash;
+        Status = DocumentStatus.Processing;
+    }
+
+    public ErrorOr<Success> ProcessingCompleted(Dictionary<string, object> metadata, DateTime occuredOn)
+    {
+        foreach (var kvp in metadata)
+        {
+            Metadata[kvp.Key] = kvp.Value;
+        }
+        Status = DocumentStatus.Ready;
+        AddDomainEvent(new DocumentProcessingCompletedEvent(Guid.NewGuid(),Id, occuredOn));
+        return Result.Success;
+    }
+
+    public ErrorOr<Success> ProcessingCompleted(string metadataAsJson, DateTime occuredOn)
+    {
+        var dict = JsonSerializer.Deserialize<Dictionary<string, object>>(metadataAsJson);
+        if(dict is null)
+            return Error.Validation("Document.Metadata", "The string is serializable to json, revise it please ");
+        return ProcessingCompleted(dict, occuredOn);
+    }
+
+    public void MarkAsFaulted()
+    {
+        Status = DocumentStatus.Faulted;
+    }
+
+    public ErrorOr<string> GetVariantDownloadKey(string variant)
+    {
+        if (Metadata.TryGetValue("Variants", out var value) && value is JsonElement { ValueKind: JsonValueKind.Object } variants)
+        {
+            if (variants.TryGetProperty(variant, out var property) && property.ValueKind == JsonValueKind.String)
+            {
+                var variantKey = property.GetString();
+                if (!string.IsNullOrEmpty(variantKey))
+                {
+                    return variantKey;
+                }
+            }
+            return Error.Validation("Document.Variants", "Variant is not Found.");
+        }
+        return Error.Validation("Document.Metadata", "Variants For this Type of Document is Not Supported");
+    }
     public ResourceArn Arn => ResourceArn.ForDocument(TenantId, Id);
 }
+
+
+public static class DocumentFileStorageConstants
+{
+    public static string GetDocumentS3Key(string tenantId, string documentId, string fileName)
+    {
+        return $"documents/{tenantId}/{documentId}/{fileName.TrimStart('/')}";
+    }
+
+    public static string GetDocumentS3Url(string bucketName, string tenantId,  string documentId, string fileName)
+    {
+        return $"s3://{bucketName}/{GetDocumentS3Key(tenantId, documentId, fileName)}";
+    }
+}
+public record DocumentProcessingCompletedEvent(Guid Id,Guid DocumentId, DateTime OccuredOn) : IDomainEvent;
