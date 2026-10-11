@@ -54,6 +54,7 @@ public class CourseRepository : BaseRepository<AppDbContext, Course>, ICourseRep
             .Include(c => c.Sections)
             .ThenInclude(c => c.Items)
             .ThenInclude(item => item.Resources)
+            .Include(c => c.Assets)
             .Include(c => c.Plans)
             .FirstOrDefaultAsync(c => c.Id == courseId, token);
     }
@@ -64,5 +65,6 @@ public class CourseRepository : BaseRepository<AppDbContext, Course>, ICourseRep
                 .ThenInclude(s => s.Items)
                     .ThenInclude(i => i.Resources)
             .Include(c => c.Assets)
+            .Include(c => c.Plans)
             .FirstOrDefaultAsync(c => c.Id == courseId, ct);
 }

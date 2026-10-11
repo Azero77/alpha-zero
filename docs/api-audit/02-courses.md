@@ -220,7 +220,8 @@ This file details all audited endpoints, request/response models, FluentValidati
   - `401 Unauthorized` (`ProblemDetails`): Unauthenticated request
   - `403 Forbidden` (`ProblemDetails`): Missing `courses:Publish` permission
   - `404 Not Found` (`ProblemDetails`): `Course.NotFound`
-  - `409 Conflict` (`ProblemDetails`): `Course.Status` ("Only approved courses can be published.")
+  - `409 Conflict` (`ProblemDetails`): `Course.Status` ("Only draft or approved courses can be published.")
+  - `422 Unprocessable Entity` (`ProblemDetails`): `Course.NotReady` ("readiness checks failed / attached assets not ready")
 
 ---
 
@@ -429,3 +430,84 @@ This file details all audited endpoints, request/response models, FluentValidati
 - **Error Codes & Status Mappings:**
   - `401 Unauthorized` (`ProblemDetails`): Unauthenticated request
   - `403 Forbidden` (`ProblemDetails`): Missing `courses:ViewAnalytics` permission
+
+---
+
+## Composite Curriculum Items & Readiness (Issue #27)
+
+### 25. `POST /courses/{CourseId}/sections/{SectionId}/items`
+- **File:** `src/alphazero-api/Modules/Courses/Presentation/Courses/Items/CreateCourseSectionItem.cs`
+- **Endpoint:** `CreateCourseSectionItemEndpoint`
+- **Command:** `CreateCourseSectionItemCommand(Guid CourseId, Guid SectionId, string Title, string MainType, JsonElement Content)`
+- **Request DTO:** `CreateCourseSectionItemRequest { Guid CourseId, Guid SectionId, string Title, string MainType, JsonElement Content }`
+- **Response DTO:** `CurriculumItemDto(Guid Id, Guid SectionId, string Title, string MainType, int Order, int BitIndex, JsonElement Content)`
+- **Success Status:** `201 Created`
+- **Authorization:** `courses:Edit` on `ResourceArn.ForCourse(tenantId, req.CourseId)`
+- **FluentValidation Rules (`CreateCourseSectionItemCommandValidator`):**
+  - `CourseId`, `SectionId`: NotEmpty
+  - `Title`: NotEmpty, MaximumLength(256)
+  - `MainType`: NotEmpty, Must be one of `Video`, `Document`, `Article`, `Quiz`
+- **Error Codes & Status Mappings:**
+  - `400 Bad Request` (`ProblemDetails`): FluentValidation rules, `CurriculumItem.InvalidMainType`
+  - `401 Unauthorized` (`ProblemDetails`): Unauthenticated request
+  - `403 Forbidden` (`ProblemDetails`): Missing `courses:Edit` permission
+  - `404 Not Found` (`ProblemDetails`): `Course.NotFound`, `Course.Section`, `CourseAsset.NotFound`
+  - `409 Conflict` (`ProblemDetails`): `CourseAsset.State` ("Asset is in Pending/Failed/Archived state")
+
+---
+
+### 26. `PUT /courses/{CourseId}/sections/{SectionId}/items/{ItemId}`
+- **File:** `src/alphazero-api/Modules/Courses/Presentation/Courses/Items/UpdateCourseSectionItem.cs`
+- **Endpoint:** `UpdateCourseSectionItemEndpoint`
+- **Command:** `UpdateCourseSectionItemCommand(Guid CourseId, Guid SectionId, Guid ItemId, string Title, string MainType, JsonElement Content)`
+- **Request DTO:** `UpdateCourseSectionItemRequest { Guid CourseId, Guid SectionId, Guid ItemId, string Title, string MainType, JsonElement Content }`
+- **Response DTO:** `CurriculumItemDto(Guid Id, Guid SectionId, string Title, string MainType, int Order, int BitIndex, JsonElement Content)`
+- **Success Status:** `200 OK`
+- **Authorization:** `courses:Edit` on `ResourceArn.ForCourse(tenantId, req.CourseId)`
+- **FluentValidation Rules (`UpdateCourseSectionItemCommandValidator`):**
+  - `CourseId`, `SectionId`, `ItemId`: NotEmpty
+  - `Title`: NotEmpty, MaximumLength(256)
+  - `MainType`: NotEmpty, Must be one of `Video`, `Document`, `Article`, `Quiz`
+- **Error Codes & Status Mappings:**
+  - `400 Bad Request` (`ProblemDetails`): FluentValidation rules, `CurriculumItem.InvalidMainType`
+  - `401 Unauthorized` (`ProblemDetails`): Unauthenticated request
+  - `403 Forbidden` (`ProblemDetails`): Missing `courses:Edit` permission
+  - `404 Not Found` (`ProblemDetails`): `Course.NotFound`, `Course.Section`, `CurriculumItem.NotFound`, `CourseAsset.NotFound`
+  - `409 Conflict` (`ProblemDetails`): `CourseAsset.State`
+
+---
+
+### 27. `DELETE /courses/{CourseId}/sections/{SectionId}/items/{ItemId}`
+- **File:** `src/alphazero-api/Modules/Courses/Presentation/Courses/Items/DeleteCourseSectionItem.cs`
+- **Endpoint:** `DeleteCourseSectionItemEndpoint`
+- **Command:** `DeleteCourseSectionItemCommand(Guid CourseId, Guid SectionId, Guid ItemId)`
+- **Request DTO:** `DeleteCourseSectionItemRequest { Guid CourseId, Guid SectionId, Guid ItemId }`
+- **Response DTO:** None (`Send.NoContentAsync`)
+- **Success Status:** `204 NoContent`
+- **Authorization:** `courses:Edit` on `ResourceArn.ForCourse(tenantId, req.CourseId)`
+- **FluentValidation Rules (`DeleteCourseSectionItemCommandValidator`):**
+  - `CourseId`, `SectionId`, `ItemId`: NotEmpty
+- **Error Codes & Status Mappings:**
+  - `400 Bad Request` (`ProblemDetails`): FluentValidation rules
+  - `401 Unauthorized` (`ProblemDetails`): Unauthenticated request
+  - `403 Forbidden` (`ProblemDetails`): Missing `courses:Edit` permission
+  - `404 Not Found` (`ProblemDetails`): `Course.NotFound`, `Course.Section`, `CurriculumItem.NotFound`
+
+---
+
+### 28. `GET /courses/{CourseId}/readiness`
+- **File:** `src/alphazero-api/Modules/Courses/Presentation/Courses/Readiness/GetCourseReadiness.cs`
+- **Endpoint:** `GetCourseReadinessEndpoint`
+- **Query:** `GetCourseReadinessQuery(Guid CourseId)`
+- **Request DTO:** `GetCourseReadinessRequest { Guid CourseId }`
+- **Response DTO:** `CourseReadiness(bool CanPublish, bool CanSubmitForReview, CourseReadinessChecks Checks, IReadOnlyList<string> BlockingReasons)`
+- **Success Status:** `200 OK`
+- **Authorization:** `courses:View` on `ResourceArn.ForCourse(tenantId, req.CourseId)`
+- **FluentValidation Rules (`GetCourseReadinessQueryValidator`):**
+  - `CourseId`: NotEmpty
+- **Error Codes & Status Mappings:**
+  - `400 Bad Request` (`ProblemDetails`): FluentValidation rules
+  - `401 Unauthorized` (`ProblemDetails`): Unauthenticated request
+  - `403 Forbidden` (`ProblemDetails`): Missing `courses:View` permission
+  - `404 Not Found` (`ProblemDetails`): `Course.NotFound`
+

@@ -79,6 +79,11 @@ namespace AlphaZero.Modules.Courses.Infrastructure.Migrations
                     b.Property<Guid>("CourseId")
                         .HasColumnType("uuid");
 
+                    b.Property<int>("RefCount")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0);
+
                     b.Property<string>("ResourceArn")
                         .IsRequired()
                         .HasMaxLength(500)
@@ -129,7 +134,7 @@ namespace AlphaZero.Modules.Courses.Infrastructure.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<JsonDocument>("DescriptionContent")
+                    b.Property<string>("DescriptionContent")
                         .IsRequired()
                         .HasColumnType("jsonb");
 
@@ -138,10 +143,10 @@ namespace AlphaZero.Modules.Courses.Infrastructure.Migrations
                         .HasMaxLength(64)
                         .HasColumnType("character varying(64)");
 
-                    b.Property<JsonDocument>("LearningObjectivesContent")
+                    b.Property<string>("LearningObjectivesContent")
                         .HasColumnType("jsonb");
 
-                    b.Property<JsonDocument>("TargetAudienceContent")
+                    b.Property<string>("TargetAudienceContent")
                         .HasColumnType("jsonb");
 
                     b.Property<Guid>("TenantId")
@@ -224,6 +229,9 @@ namespace AlphaZero.Modules.Courses.Infrastructure.Migrations
 
                     b.Property<int>("BitIndex")
                         .HasColumnType("integer");
+
+                    b.Property<JsonElement>("Content")
+                        .HasColumnType("jsonb");
 
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");

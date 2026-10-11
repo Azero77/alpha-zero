@@ -28,6 +28,7 @@ public abstract class CourseAsset : TenantOwnedEntity
     public Guid CourseId { get; private set; }
     public CourseAssetState State { get; private set; }
     public DateTime UploadedUtcAt { get; private set; }
+    public int RefCount { get; private set; }
 
     // ─── State Transitions ───
 
@@ -49,27 +50,43 @@ public abstract class CourseAsset : TenantOwnedEntity
         return Result.Success;
     }
 
-    public ErrorOr<Success> MarkInUse()
+    public ErrorOr<Success> AssignToItem()
     {
-        if (State != CourseAssetState.Available)
-            return Error.Conflict("CourseAsset.State", 
-                $"Cannot mark asset as in-use from state '{State}'. Must be Available.");
+        if (State != CourseAssetState.Available && State != CourseAssetState.InUse)
+            return Error.Conflict("CourseAsset.State",
+                $"Cannot assign asset in state '{State}' to curriculum item. Must be Available or InUse.");
+
+        RefCount++;
         State = CourseAssetState.InUse;
         return Result.Success;
     }
 
-    public ErrorOr<Success> ReturnToPool()
+    public ErrorOr<Success> ReleaseFromItem()
     {
         if (State != CourseAssetState.InUse)
-            return Error.Conflict("CourseAsset.State", 
+            return Error.Conflict("CourseAsset.State",
                 $"Cannot return asset to pool from state '{State}'. Must be InUse.");
-        State = CourseAssetState.Available;
+
+        if (RefCount <= 0)
+            return Error.Conflict("CourseAsset.RefCount",
+                "Cannot release asset: RefCount is already 0.");
+
+        RefCount--;
+        if (RefCount == 0)
+        {
+            State = CourseAssetState.Available;
+        }
+
         return Result.Success;
     }
 
+    public ErrorOr<Success> MarkInUse() => AssignToItem();
+
+    public ErrorOr<Success> ReturnToPool() => ReleaseFromItem();
+
     public ErrorOr<Success> Archive()
     {
-        if (State == CourseAssetState.InUse)
+        if (State == CourseAssetState.InUse || RefCount > 0)
             return Error.Conflict("CourseAsset.State", 
                 "Cannot archive an asset that is currently in use. Unassign it first.");
         State = CourseAssetState.Archived;

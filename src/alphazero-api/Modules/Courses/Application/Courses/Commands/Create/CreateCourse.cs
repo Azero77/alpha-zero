@@ -24,17 +24,20 @@ public sealed class CreateCourseCommandHandler : IRequestHandler<CreateCourseCom
 {
     private readonly ICourseRepository _courseRepository;
     private readonly ISubjectRepository _subjectRepository;
+    private readonly ICourseOverviewRepository _courseOverviewRepository;
     private readonly ITenantProvider _tenantProvider;
     private readonly ILogger<CreateCourseCommandHandler> _logger;
 
     public CreateCourseCommandHandler(
         ICourseRepository courseRepository,
         ISubjectRepository subjectRepository,
+        ICourseOverviewRepository courseOverviewRepository,
         ITenantProvider tenantProvider,
         ILogger<CreateCourseCommandHandler> logger)
     {
         _courseRepository = courseRepository;
         _subjectRepository = subjectRepository;
+        _courseOverviewRepository = courseOverviewRepository;
         _tenantProvider = tenantProvider;
         _logger = logger;
     }
@@ -53,7 +56,18 @@ public sealed class CreateCourseCommandHandler : IRequestHandler<CreateCourseCom
         if (courseResult.IsError) return courseResult.Errors;
 
         _courseRepository.Add(courseResult.Value);
-        _logger.LogInformation("Course {CourseId} created.", courseId);
+
+        var overview = CourseOverview.Create(
+            Guid.NewGuid(),
+            tenantId.Value,
+            courseId,
+            AlphaZero.Modules.Courses.Domain.ValueObjects.RichText.Create("{}").Value,
+            null,
+            null,
+            null);
+        _courseOverviewRepository.Add(overview);
+
+        _logger.LogInformation("Course {CourseId} created with auto-seeded overview.", courseId);
 
         return courseId;
     }

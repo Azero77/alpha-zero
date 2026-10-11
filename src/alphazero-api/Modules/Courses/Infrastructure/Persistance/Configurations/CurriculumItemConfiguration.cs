@@ -23,6 +23,10 @@ public class CurriculumItemConfiguration : IEntityTypeConfiguration<CurriculumIt
             .IsRequired()
             .HasMaxLength(50);
 
+        builder.Property(i => i.Content)
+            .IsRequired()
+            .HasColumnType("jsonb");
+
         builder.OwnsMany(i => i.Resources, rb =>
         {
             rb.ToTable("CurriculumResources", "Courses");

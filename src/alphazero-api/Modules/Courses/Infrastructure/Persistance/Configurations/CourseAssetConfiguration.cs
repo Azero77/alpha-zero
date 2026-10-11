@@ -32,6 +32,7 @@ public class CourseAssetConfiguration : IEntityTypeConfiguration<CourseAsset>
         builder.Property(a => a.State).IsRequired()
             .HasConversion<string>().HasMaxLength(20);
         builder.Property(a => a.UploadedUtcAt).IsRequired();
+        builder.Property(a => a.RefCount).IsRequired().HasDefaultValue(0);
 
         builder.HasIndex(a => new { a.CourseId, a.State });
         builder.HasIndex(a => a.ResourceArn).IsUnique();

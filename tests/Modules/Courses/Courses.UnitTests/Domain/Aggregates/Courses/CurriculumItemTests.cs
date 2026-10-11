@@ -102,4 +102,80 @@ public class CurriculumItemTests
         item.IsDeleted.Should().BeFalse();
         item.OnDeleted.Should().BeNull();
     }
+
+    [Theory]
+    [InlineData("Video")]
+    [InlineData("Document")]
+    [InlineData("Article")]
+    [InlineData("Quiz")]
+    [InlineData("video")] // Case-insensitive
+    public void Create_Should_Succeed_For_ValidMainTypes(string mainType)
+    {
+        var content = JsonDocument.Parse("[{\"type\":\"inline\",\"text\":\"hello\"}]").RootElement;
+        var result = CurriculumItem.Create(Guid.NewGuid(), TenantId, SectionId, "Lesson 1", 0, 5, mainType, content);
+
+        result.IsError.Should().BeFalse();
+        result.Value.BitIndex.Should().Be(5);
+        result.Value.Content.ValueKind.Should().Be(JsonValueKind.Array);
+    }
+
+    [Fact]
+    public void Create_Should_Fail_When_MainTypeIsInvalid()
+    {
+        var content = JsonDocument.Parse("[]").RootElement;
+        var result = CurriculumItem.Create(Guid.NewGuid(), TenantId, SectionId, "Lesson 1", 0, 0, "InvalidType", content);
+
+        result.IsError.Should().BeTrue();
+        result.FirstError.Code.Should().Be("CurriculumItem.MainType");
+    }
+
+    [Fact]
+    public void Create_Should_Fail_When_TitleIsEmpty()
+    {
+        var content = JsonDocument.Parse("[]").RootElement;
+        var result = CurriculumItem.Create(Guid.NewGuid(), TenantId, SectionId, "  ", 0, 0, "Video", content);
+
+        result.IsError.Should().BeTrue();
+        result.FirstError.Code.Should().Be("CurriculumItem.Title");
+    }
+
+    [Fact]
+    public void UpdateContent_Should_UpdateFields_And_ValidateMainType()
+    {
+        var initialContent = JsonDocument.Parse("[{\"type\":\"video\"}]").RootElement;
+        var item = CurriculumItem.Create(Guid.NewGuid(), TenantId, SectionId, "Lesson 1", 0, 0, "Video", initialContent).Value;
+
+        var newContent = JsonDocument.Parse("[{\"type\":\"document\",\"title\":\"Cheatsheet\"}]").RootElement;
+        var updateResult = item.UpdateContent("Updated Lesson", "Document", newContent);
+
+        updateResult.IsError.Should().BeFalse();
+        item.Title.Should().Be("Updated Lesson");
+        item.MainType.Should().Be("Document");
+        item.Content.GetRawText().Should().Be(newContent.GetRawText());
+    }
+
+    [Fact]
+    public void UpdateContent_Should_Fail_When_MainTypeIsInvalid()
+    {
+        var initialContent = JsonDocument.Parse("[]").RootElement;
+        var item = CurriculumItem.Create(Guid.NewGuid(), TenantId, SectionId, "Lesson 1", 0, 0, "Video", initialContent).Value;
+
+        var result = item.UpdateContent("Updated", "RandomType", initialContent);
+
+        result.IsError.Should().BeTrue();
+        result.FirstError.Code.Should().Be("CurriculumItem.MainType");
+    }
+
+    [Fact]
+    public void Delete_Should_RetainBitIndex_And_MarkDeleted()
+    {
+        var content = JsonDocument.Parse("[]").RootElement;
+        var item = CurriculumItem.Create(Guid.NewGuid(), TenantId, SectionId, "Lesson 1", 0, 7, "Video", content).Value;
+
+        item.Delete();
+
+        item.IsDeleted.Should().BeTrue();
+        item.BitIndex.Should().Be(7); // BitIndex burned permanently
+    }
 }
+

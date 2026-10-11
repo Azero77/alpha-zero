@@ -13,6 +13,7 @@ public class CreateCourseCommandHandlerTests
 {
     private readonly ICourseRepository _courseRepository;
     private readonly ISubjectRepository _subjectRepository;
+    private readonly ICourseOverviewRepository _courseOverviewRepository;
     private readonly ITenantProvider _tenantProvider;
     private readonly ILogger<CreateCourseCommandHandler> _logger;
     private readonly CreateCourseCommandHandler _handler;
@@ -21,12 +22,14 @@ public class CreateCourseCommandHandlerTests
     {
         _courseRepository = Substitute.For<ICourseRepository>();
         _subjectRepository = Substitute.For<ISubjectRepository>();
+        _courseOverviewRepository = Substitute.For<ICourseOverviewRepository>();
         _tenantProvider = Substitute.For<ITenantProvider>();
         _logger = Substitute.For<ILogger<CreateCourseCommandHandler>>();
         
         _handler = new CreateCourseCommandHandler(
             _courseRepository,
             _subjectRepository,
+            _courseOverviewRepository,
             _tenantProvider,
             _logger);
     }
@@ -54,6 +57,10 @@ public class CreateCourseCommandHandlerTests
             c.Title == "Test Course" && 
             c.TenantId == tenantId && 
             c.SubjectId == subjectId));
+
+        _courseOverviewRepository.Received(1).Add(Arg.Is<CourseOverview>(o =>
+            o.CourseId == result.Value &&
+            o.TenantId == tenantId));
     }
 
     [Fact]

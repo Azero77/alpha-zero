@@ -10,7 +10,7 @@ namespace AlphaZero.Modules.Courses.Application.Courses.Commands.State;
 public record SubmitCourseForReviewCommand(Guid CourseId) : ICommand<Success>;
 public record ApproveCourseCommand(Guid CourseId) : ICommand<Success>;
 public record RejectCourseCommand(Guid CourseId, string Reason) : ICommand<Success>;
-public record PublishCourseCommand(Guid CourseId) : ICommand<Success>;
+public record PublishCourseCommand(Guid CourseId, bool IsTenantAdmin = false) : ICommand<Success>;
 public record ArchiveCourseCommand(Guid CourseId) : ICommand<Success>;
 
 // Handlers
@@ -22,11 +22,16 @@ public sealed class CourseStateHandlers :
     IRequestHandler<ArchiveCourseCommand, ErrorOr<Success>>
 {
     private readonly ICourseRepository _courseRepository;
+    private readonly ICourseOverviewRepository _courseOverviewRepository;
     private readonly ILogger<CourseStateHandlers> _logger;
 
-    public CourseStateHandlers(ICourseRepository courseRepository, ILogger<CourseStateHandlers> logger)
+    public CourseStateHandlers(
+        ICourseRepository courseRepository,
+        ICourseOverviewRepository courseOverviewRepository,
+        ILogger<CourseStateHandlers> logger)
     {
         _courseRepository = courseRepository;
+        _courseOverviewRepository = courseOverviewRepository;
         _logger = logger;
     }
 
@@ -73,7 +78,9 @@ public sealed class CourseStateHandlers :
     {
         var course = await _courseRepository.GetCourseAsync(request.CourseId, cancellationToken);
         if (course is null) return Error.NotFound("Course.NotFound", "Course not found.");
-        var result = course.Publish();
+
+        var overview = await _courseOverviewRepository.GetFirst(o => o.CourseId == request.CourseId, cancellationToken);
+        var result = course.Publish(overview, request.IsTenantAdmin);
         if (!result.IsError)
         {
             _courseRepository.Update(course);
