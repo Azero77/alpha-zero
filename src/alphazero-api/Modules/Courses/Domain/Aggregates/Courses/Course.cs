@@ -48,10 +48,13 @@ public class Course : TenantOwnedAggregate, ISoftDeletable
         return course;
     }
 
-    public void AddSection(string title)
+    public ErrorOr<Success> AddSection(Guid id,string title)
     {
-        var section = CourseSection.Create(TenantId, title, _sections.Count, this.Id);
-        _sections.Add(section);
+        var section = CourseSection.Create(id,title, _sections.Count, this.Id, null);
+        if (section.IsError)
+            return section.Errors;
+        _sections.Add(section.Value);
+        return Result.Success;
     }
 
     public int AllocateNextBitIndex() => NextAvailableBitIndex++;

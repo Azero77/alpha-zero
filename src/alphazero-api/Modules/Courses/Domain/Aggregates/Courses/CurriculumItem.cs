@@ -4,43 +4,38 @@ using ErrorOr;
 
 namespace AlphaZero.Modules.Courses.Domain.Aggregates.Courses;
 
-public class CurriculumItem : TenantOwnedEntity, ISoftDeletable
+public class CurriculumItem : Entity, ISoftDeletable
 {
     public string Title { get; private set; }
     public Guid SectionId { get; private set; }
     public int Order { get; internal set; } // UI Display Order
     public int BitIndex { get; private set; } // Immutable Bitmask Pointer
-    public string MainType { get; private set; } // "Video", "Document", "Article", "Quiz"
+    public ResourceType MainResourceType { get; private set; } // "Video", "Document", "Article", "Quiz"
     public bool IsDeleted { get; private set; }
     public DateTime? OnDeleted { get; private set; } = null;
-
-    public static readonly string[] ValidMainTypes = ["Video", "Document", "Article", "Quiz"];
 
     private readonly List<CurriculumResource> _resources = new();
     public IReadOnlyCollection<CurriculumResource> Resources => _resources.AsReadOnly();
 
-    private CurriculumItem() : base(default, default)
+    private CurriculumItem()
     {
-        Title = string.Empty;
-        MainType = "Video";
     } // EF Core
 
     public CurriculumItem(
         Guid id,
-        Guid tenantId,
         Guid sectionId,
         string title,
         int order,
         int bitIndex,
-        string mainType,
+        ResourceType mainType,
         IEnumerable<CurriculumResource>? resources = null)
-        : base(id, tenantId)
+        : base(id)
     {
         SectionId = sectionId;
         Title = title;
         Order = order;
         BitIndex = bitIndex;
-        MainType = NormalizeMainType(mainType);
+        MainResourceType = mainType;
         if (resources != null)
         {
             SetResources(resources);
@@ -49,47 +44,26 @@ public class CurriculumItem : TenantOwnedEntity, ISoftDeletable
 
     public static ErrorOr<CurriculumItem> Create(
         Guid id,
-        Guid tenantId,
         Guid sectionId,
         string title,
         int order,
         int bitIndex,
-        string mainType,
+        ResourceType mainType,
         IEnumerable<CurriculumResource>? resources = null)
     {
         if (string.IsNullOrWhiteSpace(title))
             return Error.Validation("CurriculumItem.Title", "Title is required.");
 
-        if (!IsValidMainType(mainType))
-            return Error.Validation("CurriculumItem.MainType",
-                $"MainType must be one of: {string.Join(", ", ValidMainTypes)}.");
-
-        return new CurriculumItem(id, tenantId, sectionId, title, order, bitIndex, NormalizeMainType(mainType), resources);
+        return new CurriculumItem(id, sectionId, title, order, bitIndex, mainType, resources);
     }
 
-    public static bool IsValidMainType(string mainType)
-    {
-        if (string.IsNullOrWhiteSpace(mainType)) return false;
-        return ValidMainTypes.Any(t => string.Equals(t, mainType, StringComparison.OrdinalIgnoreCase));
-    }
-
-    public static string NormalizeMainType(string mainType)
-    {
-        var matched = ValidMainTypes.FirstOrDefault(t => string.Equals(t, mainType, StringComparison.OrdinalIgnoreCase));
-        return matched ?? mainType;
-    }
-
-    public ErrorOr<Success> Update(string title, string mainType, IEnumerable<CurriculumResource>? resources = null)
+    public ErrorOr<Success> Update(string title, ResourceType mainType, IEnumerable<CurriculumResource>? resources = null)
     {
         if (string.IsNullOrWhiteSpace(title))
             return Error.Validation("CurriculumItem.Title", "Title is required.");
 
-        if (!IsValidMainType(mainType))
-            return Error.Validation("CurriculumItem.MainType",
-                $"MainType must be one of: {string.Join(", ", ValidMainTypes)}.");
-
         Title = title;
-        MainType = NormalizeMainType(mainType);
+        MainResourceType = mainType;
 
         if (resources != null)
         {

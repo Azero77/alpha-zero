@@ -4,7 +4,7 @@ using ErrorOr;
 
 namespace AlphaZero.Modules.Courses.Domain.Aggregates.Courses;
 
-public class CourseSection : TenantOwnedEntity, ISoftDeletable
+public class CourseSection : Entity, ISoftDeletable
 {
     public string Title { get; private set; }
     public int Order { get; private set; }
@@ -15,16 +15,20 @@ public class CourseSection : TenantOwnedEntity, ISoftDeletable
 
     public DateTime? OnDeleted { get; private set; } = null;
 
-    private CourseSection(Guid id, Guid tenantId, string title, int order, Guid courseId) : base(id, tenantId)
+    private CourseSection(Guid id, string title, int order, Guid courseId, List<CurriculumItem>? items) : base(id)
     {
         Title = title;
         Order = order;
         CourseId = courseId;
+        _items = items;
     }
 
-    internal static CourseSection Create(Guid tenantId, string title, int order, Guid courseId)
+    internal static ErrorOr<CourseSection> Create(Guid id, string title, int order, Guid courseId,
+        List<CurriculumItem>? items = null)
     {
-        return new CourseSection(Guid.NewGuid(), tenantId, title, order, courseId);
+        if (string.IsNullOrEmpty(title))
+            return Error.Validation("","");
+        return new CourseSection(id, title, order, courseId, items);
     }
 
     public void AddItem(CurriculumItem item)
@@ -35,13 +39,12 @@ public class CourseSection : TenantOwnedEntity, ISoftDeletable
 
     public ErrorOr<CurriculumItem> AddItem(
         Guid id,
-        Guid tenantId,
         string title,
-        string mainType,
+        ResourceType mainType,
         int bitIndex,
         IEnumerable<CurriculumResource>? resources = null)
     {
-        var itemResult = CurriculumItem.Create(id, tenantId, Id, title, _items.Count, bitIndex, mainType, resources);
+        var itemResult = CurriculumItem.Create(id, Id, title, _items.Count, bitIndex, mainType, resources);
         if (itemResult.IsError)
             return itemResult.Errors;
 
@@ -52,7 +55,7 @@ public class CourseSection : TenantOwnedEntity, ISoftDeletable
     public ErrorOr<CurriculumItem> UpdateItem(
         Guid itemId,
         string title,
-        string mainType,
+        ResourceType mainType,
         IEnumerable<CurriculumResource>? resources = null)
     {
         var item = _items.FirstOrDefault(i => i.Id == itemId && !i.IsDeleted);
