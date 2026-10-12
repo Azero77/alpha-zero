@@ -1,4 +1,4 @@
-using AlphaZero.Modules.Courses.Application.Repositories;
+using AlphaZero.Modules.Courses.Application.Queries;
 using AlphaZero.Modules.Courses.Domain.Aggregates.Courses;
 using AlphaZero.Shared.Application;
 using ErrorOr;
@@ -19,25 +19,19 @@ public class GetCourseReadinessQueryValidator : AbstractValidator<GetCourseReadi
 
 public sealed class GetCourseReadinessQueryHandler : IRequestHandler<GetCourseReadinessQuery, ErrorOr<CourseReadiness>>
 {
-    private readonly ICourseRepository _courseRepository;
-    private readonly ICourseOverviewRepository _courseOverviewRepository;
+    private readonly ICourseQueryService _courseQueryService;
 
-    public GetCourseReadinessQueryHandler(
-        ICourseRepository courseRepository,
-        ICourseOverviewRepository courseOverviewRepository)
+    public GetCourseReadinessQueryHandler(ICourseQueryService courseQueryService)
     {
-        _courseRepository = courseRepository;
-        _courseOverviewRepository = courseOverviewRepository;
+        _courseQueryService = courseQueryService;
     }
 
     public async Task<ErrorOr<CourseReadiness>> Handle(GetCourseReadinessQuery request, CancellationToken cancellationToken)
     {
-        var course = await _courseRepository.GetByIdWithSectionsAndAssetsAsync(request.CourseId, cancellationToken);
-        if (course is null)
+        var readiness = await _courseQueryService.GetCourseReadinessAsync(request.CourseId, cancellationToken);
+        if (readiness is null)
             return Error.NotFound("Course.NotFound", "Course not found.");
 
-        var overview = await _courseOverviewRepository.GetFirst(o => o.CourseId == request.CourseId, cancellationToken);
-        var readiness = course.EvaluateReadiness(overview);
         return readiness;
     }
 }

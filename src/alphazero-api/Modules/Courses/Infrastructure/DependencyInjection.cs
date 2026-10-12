@@ -52,6 +52,10 @@ public static class DependencyInjection
         moduleServices.AddScoped<IAssessmentService, AssessmentService>();
         moduleServices.AddScoped<IUnitOfWork, UnitOfWork<AppDbContext>>();
 
+        // Domain Services
+        moduleServices.AddScoped<AlphaZero.Modules.Courses.Domain.Services.CourseReadinessService>();
+        moduleServices.AddScoped<AlphaZero.Modules.Courses.Domain.Services.CoursePublishingService>();
+
         // Asset Readiness Strategies
         moduleServices.AddScoped<ICourseAssetReadinessStrategy, VideoAssetReadinessStrategy>();
         moduleServices.AddScoped<ICourseAssetReadinessStrategy, DocumentAssetReadinessStrategy>();

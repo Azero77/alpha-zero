@@ -22,16 +22,67 @@ public class CourseSection : TenantOwnedEntity, ISoftDeletable
         CourseId = courseId;
     }
 
-    internal static CourseSection Create(Guid tenantId, string title, int order,Guid courseId)
+    internal static CourseSection Create(Guid tenantId, string title, int order, Guid courseId)
     {
         return new CourseSection(Guid.NewGuid(), tenantId, title, order, courseId);
     }
 
-    internal void AddItem(CurriculumItem item)
+    public void AddItem(CurriculumItem item)
     {
+        item.Order = _items.Count;
         _items.Add(item);
     }
 
+    public ErrorOr<CurriculumItem> AddItem(
+        Guid id,
+        Guid tenantId,
+        string title,
+        string mainType,
+        int bitIndex,
+        IEnumerable<CurriculumResource>? resources = null)
+    {
+        var itemResult = CurriculumItem.Create(id, tenantId, Id, title, _items.Count, bitIndex, mainType, resources);
+        if (itemResult.IsError)
+            return itemResult.Errors;
+
+        _items.Add(itemResult.Value);
+        return itemResult.Value;
+    }
+
+    public ErrorOr<CurriculumItem> UpdateItem(
+        Guid itemId,
+        string title,
+        string mainType,
+        IEnumerable<CurriculumResource>? resources = null)
+    {
+        var item = _items.FirstOrDefault(i => i.Id == itemId && !i.IsDeleted);
+        if (item is null)
+            return Error.NotFound("CurriculumItem.NotFound", "Item not found in section.");
+
+        var updateResult = item.Update(title, mainType, resources);
+        if (updateResult.IsError)
+            return updateResult.Errors;
+
+        return item;
+    }
+
+    public ErrorOr<CurriculumItem> RemoveItem(Guid itemId)
+    {
+        var item = _items.FirstOrDefault(i => i.Id == itemId && !i.IsDeleted);
+        if (item is null)
+            return Error.NotFound("CurriculumItem.NotFound", "Item not found in section.");
+
+        var delResult = item.Delete();
+        if (delResult.IsError)
+            return delResult.Errors;
+
+        return item;
+    }
+
+    public CurriculumItem? GetItem(Guid itemId)
+    {
+        return _items.FirstOrDefault(i => i.Id == itemId && !i.IsDeleted);
+    }
 
     internal void ReorderInternal()
     {
@@ -47,12 +98,14 @@ public class CourseSection : TenantOwnedEntity, ISoftDeletable
         Title = title;
         Order = order;
     }
+
     internal ErrorOr<Success> Delete()
     {
         if (IsDeleted)
             return Error.Failure("Section.Failure", "Section is already deleted.");
         
         IsDeleted = true;
+        OnDeleted = DateTime.UtcNow;
         return Result.Success;
     }
 
@@ -62,8 +115,7 @@ public class CourseSection : TenantOwnedEntity, ISoftDeletable
             return Error.Failure("Section.Failure", "Section is not deleted.");
 
         IsDeleted = false;
+        OnDeleted = null;
         return Result.Success;
     }
 }
-
-

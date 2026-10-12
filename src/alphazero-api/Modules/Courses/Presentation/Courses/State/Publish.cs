@@ -3,7 +3,6 @@ using AlphaZero.Shared.Authorization;
 using AlphaZero.Shared.Domain;
 using AlphaZero.Shared.Presentation.Extensions;
 using FastEndpoints;
-using MediatR;
 using Microsoft.AspNetCore.Http;
 
 namespace AlphaZero.Modules.Courses.Presentation.Courses.State;
@@ -37,6 +36,7 @@ public class PublishCourseEndpoint : Endpoint<PublishCourseRequest>
     {
         _module = module;
     }
+
     public override void Configure()
     {
         Patch("/courses/{CourseId}/publish");
@@ -49,12 +49,16 @@ public class PublishCourseEndpoint : Endpoint<PublishCourseRequest>
 
     public override async Task HandleAsync(PublishCourseRequest req, CancellationToken ct)
     {
-        var command = new PublishCourseCommand(req.CourseId, IsTenantAdmin: true);
+        var command = new PublishCourseCommand(req.CourseId, CanDirectPublish: true);
         var result = await _module.Send(command, ct);
 
         if (result.IsError)
         {
-            await this.SendErrorResponseAsync(result.Errors, ct);
+            var statusCode = result.Errors.Any(e => e.Code == "Course.NotReady")
+                ? StatusCodes.Status422UnprocessableEntity
+                : (int?)null;
+
+            await this.SendErrorResponseAsync(result.Errors, statusCode, ct);
             return;
         }
 

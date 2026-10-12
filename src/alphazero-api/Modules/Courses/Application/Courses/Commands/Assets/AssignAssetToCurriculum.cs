@@ -1,4 +1,5 @@
 using AlphaZero.Modules.Courses.Application.Repositories;
+using AlphaZero.Modules.Courses.Domain.Aggregates.Courses;
 using AlphaZero.Shared.Application;
 using ErrorOr;
 using MediatR;
@@ -29,9 +30,37 @@ public sealed class AssignAssetToCurriculumCommandHandler
         if (course is null)
             return Error.NotFound("Course.NotFound", "Course not found.");
 
-        var metadata = request.Metadata ?? JsonDocument.Parse("{}").RootElement;
-        var itemResult = course.AssignAssetToCurriculum(request.AssetId, request.SectionId, request.Title, metadata);
-        if (itemResult.IsError) return itemResult.Errors;
+        var section = course.Sections.FirstOrDefault(s => s.Id == request.SectionId && !s.IsDeleted);
+        if (section is null)
+            return Error.NotFound("Course.Section", "Section not found.");
+
+        var assignResult = course.AssignAsset(request.AssetId);
+        if (assignResult.IsError)
+            return assignResult.Errors;
+
+        var asset = assignResult.Value;
+        CurriculumResource resource = asset.CourseAssetType switch
+        {
+            CourseAssetType.Video => new VideoCurriculumResource(Guid.NewGuid(), 0, asset.Id, asset.Id),
+            CourseAssetType.Document => new DocumentCurriculumResource(Guid.NewGuid(), 0, asset.Id, request.Title, courseAssetId: asset.Id),
+            CourseAssetType.Assessment => new QuizCurriculumResource(Guid.NewGuid(), 0, asset.Id, courseAssetId: asset.Id),
+            _ => new ArticleCurriculumResource(Guid.NewGuid(), 0, request.Title, asset.Id)
+        };
+
+        var bitIndex = course.AllocateNextBitIndex();
+        var itemResult = section.AddItem(
+            Guid.NewGuid(),
+            course.TenantId,
+            request.Title,
+            asset.CourseAssetType.ToString(),
+            bitIndex,
+            new[] { resource });
+
+        if (itemResult.IsError)
+        {
+            course.ReleaseAsset(request.AssetId);
+            return itemResult.Errors;
+        }
 
         _courseRepository.Update(course);
         return itemResult.Value.Id;

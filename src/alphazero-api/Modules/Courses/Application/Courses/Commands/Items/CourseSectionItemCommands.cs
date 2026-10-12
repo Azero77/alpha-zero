@@ -9,6 +9,46 @@ using System.Text.Json;
 
 namespace AlphaZero.Modules.Courses.Application.Courses.Commands.Items;
 
+public record CurriculumResourceDto(
+    Guid Id,
+    int Order,
+    string ResourceType,
+    Guid? CourseAssetId,
+    Guid? VideoId = null,
+    double? DurationSeconds = null,
+    Guid? DocumentId = null,
+    string? DocumentTitle = null,
+    string? DocumentType = null,
+    bool? IsPublic = null,
+    string? VariantName = null,
+    string? DocUri = null,
+    string? TextContent = null,
+    Guid? AssessmentId = null,
+    int? PassingScore = null)
+{
+    public static CurriculumResourceDto From(CurriculumResource resource) => resource switch
+    {
+        VideoCurriculumResource v => new(
+            v.Id, v.Order, v.ResourceType, v.CourseAssetId,
+            VideoId: v.VideoId, DurationSeconds: v.DurationSeconds),
+
+        DocumentCurriculumResource d => new(
+            d.Id, d.Order, d.ResourceType, d.CourseAssetId,
+            DocumentId: d.DocumentId, DocumentTitle: d.Title, DocumentType: d.DocumentType,
+            IsPublic: d.IsPublic, VariantName: d.VariantName, DocUri: d.DocUri),
+
+        ArticleCurriculumResource a => new(
+            a.Id, a.Order, a.ResourceType, a.CourseAssetId,
+            TextContent: a.TextContent),
+
+        QuizCurriculumResource q => new(
+            q.Id, q.Order, q.ResourceType, q.CourseAssetId,
+            AssessmentId: q.AssessmentId, PassingScore: q.PassingScore),
+
+        _ => new(resource.Id, resource.Order, resource.ResourceType, resource.CourseAssetId)
+    };
+}
+
 public record CurriculumItemDto(
     Guid Id,
     Guid SectionId,
@@ -16,7 +56,107 @@ public record CurriculumItemDto(
     string MainType,
     int Order,
     int BitIndex,
-    JsonElement Content);
+    JsonElement Content,
+    List<CurriculumResourceDto>? Resources = null)
+{
+    private static readonly JsonElement EmptyArrayElement = JsonDocument.Parse("[]").RootElement.Clone();
+
+    public static CurriculumItemDto From(CurriculumItem item, JsonElement? rawContent = null)
+    {
+        var content = rawContent.HasValue && rawContent.Value.ValueKind != JsonValueKind.Undefined
+            ? rawContent.Value.Clone()
+            : EmptyArrayElement;
+
+        var resources = item.Resources.Select(CurriculumResourceDto.From).ToList();
+
+        return new CurriculumItemDto(
+            item.Id,
+            item.SectionId,
+            item.Title,
+            item.MainType,
+            item.Order,
+            item.BitIndex,
+            content,
+            resources);
+    }
+}
+
+public static class CurriculumResourceParser
+{
+    public static List<CurriculumResource> Parse(string mainType, JsonElement content)
+    {
+        var resources = new List<CurriculumResource>();
+        if (content.ValueKind != JsonValueKind.Array)
+            return resources;
+
+        int order = 0;
+        foreach (var block in content.EnumerateArray())
+        {
+            if (block.ValueKind != JsonValueKind.Object) continue;
+
+            var type = block.TryGetProperty("type", out var typeProp) ? typeProp.GetString() : mainType;
+            Guid? courseAssetId = null;
+            if (block.TryGetProperty("courseAssetId", out var caProp) && Guid.TryParse(caProp.GetString(), out var caId))
+            {
+                courseAssetId = caId;
+            }
+
+            var normalizedType = (type ?? mainType).ToLowerInvariant();
+
+            if (normalizedType is "video")
+            {
+                var videoId = block.TryGetProperty("videoId", out var vProp) && Guid.TryParse(vProp.GetString(), out var vId)
+                    ? vId
+                    : (courseAssetId ?? Guid.NewGuid());
+                var duration = block.TryGetProperty("durationSeconds", out var dProp) && dProp.TryGetDouble(out var d) ? d : 0;
+                resources.Add(new VideoCurriculumResource(Guid.NewGuid(), order++, courseAssetId ?? videoId, videoId, duration));
+            }
+            else if (normalizedType is "document")
+            {
+                var docId = block.TryGetProperty("documentId", out var docProp) && Guid.TryParse(docProp.GetString(), out var dId)
+                    ? dId
+                    : (courseAssetId ?? Guid.NewGuid());
+                var title = block.TryGetProperty("title", out var tProp) ? tProp.GetString() ?? "Document" : "Document";
+                var docType = block.TryGetProperty("documentType", out var dtProp) ? dtProp.GetString() ?? "pdf" : "pdf";
+                var isPublic = !block.TryGetProperty("isPublic", out var pubProp) || pubProp.GetBoolean();
+                var variant = block.TryGetProperty("variantName", out var varProp) ? varProp.GetString() : null;
+
+                if (block.TryGetProperty("docUri", out var uriProp) && !string.IsNullOrWhiteSpace(uriProp.GetString()))
+                {
+                    try
+                    {
+                        var parsed = DocumentCurriculumResource.ParseDocUri(uriProp.GetString()!);
+                        isPublic = parsed.IsPublic;
+                        docId = parsed.DocumentId;
+                        variant = parsed.VariantName;
+                    }
+                    catch
+                    {
+                        // Fall back to original properties
+                    }
+                }
+
+                resources.Add(new DocumentCurriculumResource(Guid.NewGuid(), order++, docId, title, docType, isPublic, variant, courseAssetId));
+            }
+            else if (normalizedType is "quiz" or "assessment")
+            {
+                var assessmentId = block.TryGetProperty("assessmentId", out var aProp) && Guid.TryParse(aProp.GetString(), out var aId)
+                    ? aId
+                    : (courseAssetId ?? Guid.NewGuid());
+                var passingScore = block.TryGetProperty("passingScore", out var pProp) && pProp.TryGetInt32(out var p) ? p : 80;
+                resources.Add(new QuizCurriculumResource(Guid.NewGuid(), order++, assessmentId, passingScore, courseAssetId));
+            }
+            else
+            {
+                // Article / text / inline
+                var text = block.TryGetProperty("text", out var txtProp) ? txtProp.GetString() ?? "" : block.GetRawText();
+                resources.Add(new ArticleCurriculumResource(Guid.NewGuid(), order++, text, courseAssetId));
+            }
+        }
+
+        return resources;
+    }
+}
 
 public record CreateCourseSectionItemCommand(
     Guid CourseId,
@@ -96,28 +236,44 @@ public sealed class CourseSectionItemHandlers :
         if (course is null)
             return Error.NotFound("Course.NotFound", "Course not found.");
 
-        var itemResult = course.AddSectionItem(
-            request.SectionId,
+        var section = course.Sections.FirstOrDefault(s => s.Id == request.SectionId && !s.IsDeleted);
+        if (section is null)
+            return Error.NotFound("Course.Section", "Section not found.");
+
+        var resources = CurriculumResourceParser.Parse(request.MainType, request.Content);
+
+        var assignedAssets = new List<Guid>();
+        foreach (var res in resources.Where(r => r.CourseAssetId.HasValue))
+        {
+            var assignResult = course.AssignAsset(res.CourseAssetId!.Value);
+            if (assignResult.IsError)
+            {
+                foreach (var assigned in assignedAssets) course.ReleaseAsset(assigned);
+                return assignResult.Errors;
+            }
+            assignedAssets.Add(res.CourseAssetId!.Value);
+        }
+
+        var bitIndex = course.AllocateNextBitIndex();
+        var itemResult = section.AddItem(
+            Guid.NewGuid(),
+            course.TenantId,
             request.Title,
             request.MainType,
-            request.Content);
+            bitIndex,
+            resources);
 
         if (itemResult.IsError)
+        {
+            foreach (var assigned in assignedAssets) course.ReleaseAsset(assigned);
             return itemResult.Errors;
+        }
 
         _courseRepository.Update(course);
         _logger.LogInformation("Added curriculum item {ItemId} to course {CourseId}, section {SectionId}.",
             itemResult.Value.Id, request.CourseId, request.SectionId);
 
-        var item = itemResult.Value;
-        return new CurriculumItemDto(
-            item.Id,
-            item.SectionId,
-            item.Title,
-            item.MainType,
-            item.Order,
-            item.BitIndex,
-            item.Content);
+        return CurriculumItemDto.From(itemResult.Value, request.Content);
     }
 
     public async Task<ErrorOr<CurriculumItemDto>> Handle(
@@ -127,29 +283,48 @@ public sealed class CourseSectionItemHandlers :
         if (course is null)
             return Error.NotFound("Course.NotFound", "Course not found.");
 
-        var itemResult = course.UpdateSectionItem(
-            request.SectionId,
-            request.ItemId,
-            request.Title,
-            request.MainType,
-            request.Content);
+        var section = course.Sections.FirstOrDefault(s => s.Id == request.SectionId && !s.IsDeleted);
+        if (section is null)
+            return Error.NotFound("Course.Section", "Section not found.");
 
-        if (itemResult.IsError)
-            return itemResult.Errors;
+        var item = section.Items.FirstOrDefault(i => i.Id == request.ItemId && !i.IsDeleted);
+        if (item is null)
+            return Error.NotFound("CurriculumItem.NotFound", "Item not found in section.");
+
+        var newResources = CurriculumResourceParser.Parse(request.MainType, request.Content);
+
+        var oldAssetIds = item.Resources.Where(r => r.CourseAssetId.HasValue).Select(r => r.CourseAssetId!.Value).Distinct().ToList();
+        var newAssetIds = newResources.Where(r => r.CourseAssetId.HasValue).Select(r => r.CourseAssetId!.Value).Distinct().ToList();
+
+        var toAddIds = newAssetIds.Except(oldAssetIds).ToList();
+        var toRemoveIds = oldAssetIds.Except(newAssetIds).ToList();
+
+        var assignedAssets = new List<Guid>();
+        foreach (var assetId in toAddIds)
+        {
+            var assignResult = course.AssignAsset(assetId);
+            if (assignResult.IsError)
+            {
+                foreach (var assigned in assignedAssets) course.ReleaseAsset(assigned);
+                return assignResult.Errors;
+            }
+            assignedAssets.Add(assetId);
+        }
+
+        foreach (var assetId in toRemoveIds)
+        {
+            course.ReleaseAsset(assetId);
+        }
+
+        var updateResult = section.UpdateItem(request.ItemId, request.Title, request.MainType, newResources);
+        if (updateResult.IsError)
+            return updateResult.Errors;
 
         _courseRepository.Update(course);
         _logger.LogInformation("Updated curriculum item {ItemId} in course {CourseId}.",
             request.ItemId, request.CourseId);
 
-        var item = itemResult.Value;
-        return new CurriculumItemDto(
-            item.Id,
-            item.SectionId,
-            item.Title,
-            item.MainType,
-            item.Order,
-            item.BitIndex,
-            item.Content);
+        return CurriculumItemDto.From(item, request.Content);
     }
 
     public async Task<ErrorOr<Success>> Handle(
@@ -159,9 +334,22 @@ public sealed class CourseSectionItemHandlers :
         if (course is null)
             return Error.NotFound("Course.NotFound", "Course not found.");
 
-        var deleteResult = course.DeleteSectionItem(request.SectionId, request.ItemId);
-        if (deleteResult.IsError)
-            return deleteResult.Errors;
+        var section = course.Sections.FirstOrDefault(s => s.Id == request.SectionId && !s.IsDeleted);
+        if (section is null)
+            return Error.NotFound("Course.Section", "Section not found.");
+
+        var item = section.Items.FirstOrDefault(i => i.Id == request.ItemId && !i.IsDeleted);
+        if (item is null)
+            return Error.NotFound("CurriculumItem.NotFound", "Item not found.");
+
+        foreach (var res in item.Resources.Where(r => r.CourseAssetId.HasValue))
+        {
+            course.ReleaseAsset(res.CourseAssetId!.Value);
+        }
+
+        var removeResult = section.RemoveItem(request.ItemId);
+        if (removeResult.IsError)
+            return removeResult.Errors;
 
         _courseRepository.Update(course);
         _logger.LogInformation("Deleted curriculum item {ItemId} from course {CourseId}.",

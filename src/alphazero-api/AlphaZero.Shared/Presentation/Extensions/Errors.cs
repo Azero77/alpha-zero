@@ -36,6 +36,15 @@ public static class ErrorExtension
         List<Error> errors,
         CancellationToken ct = default)
     {
+        await endpoint.SendErrorResponseAsync(errors, statusCodeOverride: null, ct);
+    }
+
+    public static async Task SendErrorResponseAsync(
+        this FastEndpoints.IEndpoint endpoint,
+        List<Error> errors,
+        int? statusCodeOverride,
+        CancellationToken ct = default)
+    {
         if (!errors.Any())
         {
             await endpoint.HttpContext.Response.SendAsync(
@@ -45,7 +54,7 @@ public static class ErrorExtension
             return;
         }
 
-        var statusCode = ResolveStatusCode(errors);
+        var statusCode = statusCodeOverride ?? ResolveStatusCode(errors);
         var body = UnifiedErrorBody.From(errors, statusCode);
 
         await endpoint.HttpContext.Response.SendAsync(body, statusCode, cancellation: ct);
@@ -73,7 +82,7 @@ public static class ErrorExtension
     public static ProblemDetails ToProblemDetails(this List<Error> errors)
     {
         var statusCode = errors.Count == 1
-            ? (errors[0].NumericType >= 400 && errors[0].NumericType <= 599 ? errors[0].NumericType : MapSingleErrorStatus(errors[0].Type))
+            ? MapSingleErrorStatus(errors[0].Type)
             : StatusCodes.Status400BadRequest;
 
         return new ProblemDetails
@@ -96,9 +105,6 @@ public static class ErrorExtension
         // Multiple errors → always 400 (typically all are validation)
         if (errors.Count > 1)
             return StatusCodes.Status400BadRequest;
-
-        if (errors[0].NumericType >= 400 && errors[0].NumericType <= 599)
-            return errors[0].NumericType;
 
         return MapSingleErrorStatus(errors[0].Type);
     }

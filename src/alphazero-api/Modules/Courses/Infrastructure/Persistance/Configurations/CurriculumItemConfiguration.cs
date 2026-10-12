@@ -1,5 +1,4 @@
 using AlphaZero.Modules.Courses.Domain.Aggregates.Courses;
-using AlphaZero.Shared.Domain;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -23,28 +22,17 @@ public class CurriculumItemConfiguration : IEntityTypeConfiguration<CurriculumIt
             .IsRequired()
             .HasMaxLength(50);
 
-        builder.Property(i => i.Content)
-            .IsRequired()
-            .HasColumnType("jsonb");
+        builder.Property(i => i.BitIndex)
+            .IsRequired();
 
-        builder.OwnsMany(i => i.Resources, rb =>
-        {
-            rb.ToTable("CurriculumResources", "Courses");
-            rb.WithOwner().HasForeignKey("CurriculumItemId");
-            rb.Property<Guid>("Id").ValueGeneratedOnAdd();
-            rb.HasKey("Id");
+        builder.Property(i => i.Order)
+            .IsRequired();
 
-            rb.Property(r => r.CourseAssetId).IsRequired();
-            rb.HasOne(r => r.Asset)
-                .WithMany()
-                .HasForeignKey(r => r.CourseAssetId)
-                .OnDelete(DeleteBehavior.Restrict);
+        builder.HasMany(i => i.Resources)
+            .WithOne()
+            .HasForeignKey(r => r.CurriculumItemId)
+            .OnDelete(DeleteBehavior.Cascade);
 
-            rb.Property(r => r.Order)
-                .IsRequired();
-
-            rb.Property(r => r.Metadata)
-                .HasColumnType("jsonb");
-        });
+        builder.HasIndex(i => i.SectionId);
     }
 }

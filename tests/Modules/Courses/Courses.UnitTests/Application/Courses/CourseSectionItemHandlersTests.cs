@@ -3,7 +3,6 @@ using AlphaZero.Modules.Courses.Application.Courses.Commands.Items;
 using AlphaZero.Modules.Courses.Application.Repositories;
 using AlphaZero.Modules.Courses.Domain.Aggregates.Courses;
 using AlphaZero.Shared.Domain;
-using ErrorOr;
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
@@ -137,7 +136,8 @@ public class CourseSectionItemHandlersTests
         var tenantId = Guid.NewGuid();
         var course = Course.Create(Guid.NewGuid(), tenantId, "Title", "Desc", Guid.NewGuid()).Value;
         course.AddSection("Section 1");
-        var sectionId = course.Sections.First().Id;
+        var section = course.Sections.First();
+        var sectionId = section.Id;
 
         var asset1Id = Guid.NewGuid();
         var asset2Id = Guid.NewGuid();
@@ -146,11 +146,9 @@ public class CourseSectionItemHandlersTests
         course.MarkAssetAvailable(asset1Id);
         course.MarkAssetAvailable(asset2Id);
 
-        var initialContent = JsonDocument.Parse($@"[
-            {{ ""type"": ""video"", ""courseAssetId"": ""{asset1Id}"" }}
-        ]").RootElement;
-
-        var item = course.AddSectionItem(sectionId, "Lesson 1", "Video", initialContent).Value;
+        course.AssignAsset(asset1Id);
+        var res1 = new VideoCurriculumResource(Guid.NewGuid(), 0, asset1Id, asset1Id);
+        var item = section.AddItem(Guid.NewGuid(), tenantId, "Lesson 1", "Video", course.AllocateNextBitIndex(), new[] { res1 }).Value;
 
         _courseRepository.GetByIdWithSectionsAndAssetsAsync(course.Id, Arg.Any<CancellationToken>())
             .Returns(course);
@@ -188,17 +186,16 @@ public class CourseSectionItemHandlersTests
         var tenantId = Guid.NewGuid();
         var course = Course.Create(Guid.NewGuid(), tenantId, "Title", "Desc", Guid.NewGuid()).Value;
         course.AddSection("Section 1");
-        var sectionId = course.Sections.First().Id;
+        var section = course.Sections.First();
+        var sectionId = section.Id;
 
         var assetId = Guid.NewGuid();
         course.AddVideoAsset(assetId, ResourceArn.ForVideo(tenantId, assetId), "Video 1");
         course.MarkAssetAvailable(assetId);
+        course.AssignAsset(assetId);
 
-        var content = JsonDocument.Parse($@"[
-            {{ ""type"": ""video"", ""courseAssetId"": ""{assetId}"" }}
-        ]").RootElement;
-
-        var item = course.AddSectionItem(sectionId, "Lesson 1", "Video", content).Value;
+        var res = new VideoCurriculumResource(Guid.NewGuid(), 0, assetId, assetId);
+        var item = section.AddItem(Guid.NewGuid(), tenantId, "Lesson 1", "Video", course.AllocateNextBitIndex(), new[] { res }).Value;
 
         _courseRepository.GetByIdWithSectionsAndAssetsAsync(course.Id, Arg.Any<CancellationToken>())
             .Returns(course);

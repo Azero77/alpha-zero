@@ -1,7 +1,7 @@
 using AlphaZero.Modules.Courses.Domain.Aggregates.Courses;
+using AlphaZero.Modules.Courses.Domain.Services;
 using AlphaZero.Shared.Domain;
 using FluentAssertions;
-using System.Text.Json;
 using Xunit;
 
 namespace AlphaZero.Modules.Courses.UnitTests.Domain.Aggregates.Courses;
@@ -35,11 +35,10 @@ public class CourseAggregateTests
     }
 
     [Fact]
-    public void AssignAssetToCurriculum_Should_CreateItem_And_TransitionAssetToInUse()
+    public void AssignAsset_Should_TransitionAssetToInUse_AndIncrementRefCount()
     {
         var course = CreateTestCourse();
         course.AddSection("Section 1");
-        var sectionId = course.Sections.First().Id;
 
         var videoId = Guid.NewGuid();
         var videoArn = ResourceArn.ForVideo(TenantId, videoId);
@@ -49,60 +48,48 @@ public class CourseAggregateTests
         course.PoolAssets.Should().HaveCount(1);
 
         // Act
-        var result = course.AssignAssetToCurriculum(videoId, sectionId, "Lesson 1", JsonDocument.Parse("{}").RootElement);
+        var assignResult = course.AssignAsset(videoId);
 
         // Assert
-        result.IsError.Should().BeFalse();
-        var item = result.Value;
-        item.Title.Should().Be("Lesson 1");
-        item.BitIndex.Should().Be(0);
-        course.TotalTrackedItems.Should().Be(1);
-
+        assignResult.IsError.Should().BeFalse();
         var asset = course.Assets.First(a => a.Id == videoId);
         asset.State.Should().Be(CourseAssetState.InUse);
+        asset.RefCount.Should().Be(1);
         course.PoolAssets.Should().BeEmpty();
     }
 
     [Fact]
-    public void AssignAssetToCurriculum_Should_Fail_WhenAssetIsNotAvailable()
+    public void AssignAsset_Should_Fail_WhenAssetIsNotAvailable()
     {
         var course = CreateTestCourse();
-        course.AddSection("Section 1");
-        var sectionId = course.Sections.First().Id;
-
         var videoId = Guid.NewGuid();
         course.AddVideoAsset(videoId, ResourceArn.ForVideo(TenantId, videoId), "Pending Video");
-        // Still in Pending state
 
-        var result = course.AssignAssetToCurriculum(videoId, sectionId, "Lesson 1", JsonDocument.Parse("{}").RootElement);
+        var result = course.AssignAsset(videoId);
 
         result.IsError.Should().BeTrue();
-        result.FirstError.Code.Should().Be("CourseAsset.NotAvailable");
+        result.FirstError.Code.Should().Be("CourseAsset.State");
     }
 
     [Fact]
-    public void UnassignFromCurriculum_Should_ReturnAssetsToPool_And_SoftDeleteItem()
+    public void ReleaseAsset_Should_DecrementRefCount_AndReturnToPoolWhenZero()
     {
         var course = CreateTestCourse();
-        course.AddSection("Section 1");
-        var sectionId = course.Sections.First().Id;
-
         var videoId = Guid.NewGuid();
         course.AddVideoAsset(videoId, ResourceArn.ForVideo(TenantId, videoId), "Lesson Video");
         course.MarkAssetAvailable(videoId);
-        var item = course.AssignAssetToCurriculum(videoId, sectionId, "Lesson 1", JsonDocument.Parse("{}").RootElement).Value;
+        course.AssignAsset(videoId);
 
         course.PoolAssets.Should().BeEmpty();
 
         // Act
-        var unassignResult = course.UnassignFromCurriculum(item.Id);
+        var releaseResult = course.ReleaseAsset(videoId);
 
         // Assert
-        unassignResult.IsError.Should().BeFalse();
-        item.IsDeleted.Should().BeTrue();
-
+        releaseResult.IsError.Should().BeFalse();
         var asset = course.Assets.First(a => a.Id == videoId);
         asset.State.Should().Be(CourseAssetState.Available);
+        asset.RefCount.Should().Be(0);
         course.PoolAssets.Should().HaveCount(1);
     }
 
@@ -122,151 +109,74 @@ public class CourseAggregateTests
     }
 
     [Fact]
-    public void Publish_Should_Succeed_EvenWhenAssetsRemainInPool()
+    public void Section_AddItem_Should_AssignOrder_AndStoreInItems()
     {
         var course = CreateTestCourse();
-        course.AddSection("Section 1");
-        var sectionId = course.Sections.First().Id;
-
-        var v1Id = Guid.NewGuid();
-        course.AddVideoAsset(v1Id, ResourceArn.ForVideo(TenantId, v1Id), "Assigned Video");
-        course.MarkAssetAvailable(v1Id);
-        course.AssignAssetToCurriculum(v1Id, sectionId, "Lesson 1", JsonDocument.Parse("{}").RootElement);
-
-        // Staged/upcoming asset left in pool
-        var v2Id = Guid.NewGuid();
-        course.AddVideoAsset(v2Id, ResourceArn.ForVideo(TenantId, v2Id), "Pool Video for Future");
-        course.MarkAssetAvailable(v2Id);
-
-        course.AddPlan("Standard", Guid.NewGuid());
-        course.SubmitForReview();
-        course.Approve();
-
-        // Act
-        var result = course.Publish();
-
-        // Assert
-        result.IsError.Should().BeFalse();
-        course.Status.Should().Be(CourseStatus.Published);
-        course.PoolAssets.Should().HaveCount(1);
-    }
-
-    [Fact]
-    public void AddSectionItem_Should_AssignAssetsAndIncrementRefCount_AndBurnBitIndex()
-    {
-        // Arrange
-        var course = Course.Create(Guid.NewGuid(), TenantId, "Physics", "Intro Physics", SubjectId).Value;
         course.AddSection("Mechanics");
-        var sectionId = course.Sections.First().Id;
+        var section = course.Sections.First();
 
         var vId = Guid.NewGuid();
-        course.AddVideoAsset(vId, ResourceArn.ForVideo(TenantId, vId), "Kinematics Video");
-        course.MarkAssetAvailable(vId);
+        var videoResource = new VideoCurriculumResource(Guid.NewGuid(), 0, vId, vId);
 
-        var docId = Guid.NewGuid();
-        course.AddDocumentAsset(docId, ResourceArn.ForDocument(TenantId, docId), "Formula Sheet", "formulas.pdf", 1024, "application/pdf");
-        course.MarkAssetAvailable(docId);
+        var bitIndex = course.AllocateNextBitIndex();
+        var result = section.AddItem(Guid.NewGuid(), TenantId, "Kinematics Lesson", "Video", bitIndex, new[] { videoResource });
 
-        var content = JsonDocument.Parse($@"[
-            {{ ""type"": ""video"", ""courseAssetId"": ""{vId}"" }},
-            {{ ""type"": ""document"", ""courseAssetId"": ""{docId}"" }}
-        ]").RootElement;
-
-        // Act
-        var result = course.AddSectionItem(sectionId, "Kinematics Lesson", "Video", content);
-
-        // Assert
         result.IsError.Should().BeFalse();
         var item = result.Value;
         item.BitIndex.Should().Be(0);
-        item.Resources.Should().HaveCount(2);
-
-        var videoAsset = course.Assets.First(a => a.Id == vId);
-        videoAsset.RefCount.Should().Be(1);
-        videoAsset.State.Should().Be(CourseAssetState.InUse);
-
-        var docAsset = course.Assets.First(a => a.Id == docId);
-        docAsset.RefCount.Should().Be(1);
-        docAsset.State.Should().Be(CourseAssetState.InUse);
+        item.Order.Should().Be(0);
+        section.Items.Should().HaveCount(1);
     }
 
     [Fact]
-    public void UpdateSectionItem_Should_AdjustRefCount_ReturningRemovedAssetToPool()
+    public void Section_UpdateItem_Should_UpdateItemFields()
     {
-        // Arrange
-        var course = Course.Create(Guid.NewGuid(), TenantId, "Physics", "Intro Physics", SubjectId).Value;
+        var course = CreateTestCourse();
         course.AddSection("Mechanics");
-        var sectionId = course.Sections.First().Id;
+        var section = course.Sections.First();
 
-        var v1Id = Guid.NewGuid();
-        course.AddVideoAsset(v1Id, ResourceArn.ForVideo(TenantId, v1Id), "Video 1");
-        course.MarkAssetAvailable(v1Id);
+        var bitIndex = course.AllocateNextBitIndex();
+        var item = section.AddItem(Guid.NewGuid(), TenantId, "Lesson 1", "Video", bitIndex).Value;
 
-        var v2Id = Guid.NewGuid();
-        course.AddVideoAsset(v2Id, ResourceArn.ForVideo(TenantId, v2Id), "Video 2");
-        course.MarkAssetAvailable(v2Id);
+        var newResource = new ArticleCurriculumResource(Guid.NewGuid(), 0, "Updated Content");
+        var updateResult = section.UpdateItem(item.Id, "Updated Lesson 1", "Article", new[] { newResource });
 
-        var initialContent = JsonDocument.Parse($@"[{{ ""type"": ""video"", ""courseAssetId"": ""{v1Id}"" }}]").RootElement;
-        var item = course.AddSectionItem(sectionId, "Lesson", "Video", initialContent).Value;
-
-        // Act: update to reference v2 instead of v1
-        var newContent = JsonDocument.Parse($@"[{{ ""type"": ""video"", ""courseAssetId"": ""{v2Id}"" }}]").RootElement;
-        var updateResult = course.UpdateSectionItem(sectionId, item.Id, "Updated Lesson", "Video", newContent);
-
-        // Assert
         updateResult.IsError.Should().BeFalse();
-        var v1Asset = course.Assets.First(a => a.Id == v1Id);
-        v1Asset.RefCount.Should().Be(0);
-        v1Asset.State.Should().Be(CourseAssetState.Available); // Returned to pool
-
-        var v2Asset = course.Assets.First(a => a.Id == v2Id);
-        v2Asset.RefCount.Should().Be(1);
-        v2Asset.State.Should().Be(CourseAssetState.InUse);
+        item.Title.Should().Be("Updated Lesson 1");
+        item.MainType.Should().Be("Article");
+        item.Resources.Should().HaveCount(1);
     }
 
     [Fact]
-    public void DeleteSectionItem_Should_SoftDelete_BurnBitIndex_AndReleaseAssetToPool()
+    public void Section_RemoveItem_Should_SoftDeleteItem()
     {
-        // Arrange
-        var course = Course.Create(Guid.NewGuid(), TenantId, "Physics", "Intro Physics", SubjectId).Value;
+        var course = CreateTestCourse();
         course.AddSection("Mechanics");
-        var sectionId = course.Sections.First().Id;
+        var section = course.Sections.First();
 
-        var vId = Guid.NewGuid();
-        course.AddVideoAsset(vId, ResourceArn.ForVideo(TenantId, vId), "Video 1");
-        course.MarkAssetAvailable(vId);
+        var bitIndex = course.AllocateNextBitIndex();
+        var item = section.AddItem(Guid.NewGuid(), TenantId, "Lesson 1", "Video", bitIndex).Value;
 
-        var content = JsonDocument.Parse($@"[{{ ""type"": ""video"", ""courseAssetId"": ""{vId}"" }}]").RootElement;
-        var item = course.AddSectionItem(sectionId, "Lesson 1", "Video", content).Value;
-        item.BitIndex.Should().Be(0);
+        var removeResult = section.RemoveItem(item.Id);
 
-        // Act
-        var deleteResult = course.DeleteSectionItem(sectionId, item.Id);
-
-        // Assert
-        deleteResult.IsError.Should().BeFalse();
+        removeResult.IsError.Should().BeFalse();
         item.IsDeleted.Should().BeTrue();
-        item.BitIndex.Should().Be(0); // BitIndex burned
-
-        var asset = course.Assets.First(a => a.Id == vId);
-        asset.RefCount.Should().Be(0);
-        asset.State.Should().Be(CourseAssetState.Available);
     }
 
     [Fact]
-    public void FastPathPublish_Should_Succeed_WhenTenantAdminAndAllReadinessGatesPass()
+    public void CoursePublishingService_DirectPublish_Should_Succeed_WhenCanDirectPublishAndReady()
     {
-        // Arrange
         var course = Course.Create(Guid.NewGuid(), TenantId, "Quantum Computing", "Advanced quantum concepts", SubjectId).Value;
         course.AddSection("Foundations");
-        var sectionId = course.Sections.First().Id;
+        var section = course.Sections.First();
 
         var vId = Guid.NewGuid();
         course.AddVideoAsset(vId, ResourceArn.ForVideo(TenantId, vId), "Qubit Basics");
         course.MarkAssetAvailable(vId);
+        course.AssignAsset(vId);
 
-        var content = JsonDocument.Parse($@"[{{ ""type"": ""video"", ""courseAssetId"": ""{vId}"" }}]").RootElement;
-        course.AddSectionItem(sectionId, "Qubits", "Video", content);
+        var resource = new VideoCurriculumResource(Guid.NewGuid(), 0, vId, vId);
+        section.AddItem(Guid.NewGuid(), TenantId, "Qubits", "Video", course.AllocateNextBitIndex(), new[] { resource });
         course.AddPlan("Pro", Guid.NewGuid());
 
         var overview = CourseOverview.Create(
@@ -274,8 +184,10 @@ public class CourseAggregateTests
             AlphaZero.Modules.Courses.Domain.ValueObjects.RichText.Create("{\"type\":\"doc\"}").Value,
             null, null, Guid.NewGuid()); // Has cover image
 
-        // Act: Direct publish from Draft by TenantAdmin
-        var result = course.Publish(overview, isTenantAdmin: true);
+        var service = new CoursePublishingService(new CourseReadinessService());
+
+        // Act
+        var result = service.Publish(course, overview, canDirectPublish: true);
 
         // Assert
         result.IsError.Should().BeFalse();
@@ -283,61 +195,46 @@ public class CourseAggregateTests
     }
 
     [Fact]
-    public void FastPathPublish_Should_FailWith422_WhenAttachedAssetIsStillPending()
+    public void CoursePublishingService_DirectPublish_Should_Fail_WhenOverviewMissingCover()
     {
-        // Arrange
         var course = Course.Create(Guid.NewGuid(), TenantId, "Quantum Computing", "Advanced quantum concepts", SubjectId).Value;
         course.AddSection("Foundations");
-        var sectionId = course.Sections.First().Id;
+        var section = course.Sections.First();
 
         var vId = Guid.NewGuid();
-        course.AddVideoAsset(vId, ResourceArn.ForVideo(TenantId, vId), "Transcoding Video");
-        course.MarkAssetAvailable(vId); // Available so it can be assigned
-        var content = JsonDocument.Parse($@"[{{ ""type"": ""video"", ""courseAssetId"": ""{vId}"" }}]").RootElement;
-        course.AddSectionItem(sectionId, "Qubits", "Video", content);
+        course.AddVideoAsset(vId, ResourceArn.ForVideo(TenantId, vId), "Qubit Basics");
+        course.MarkAssetAvailable(vId);
+        course.AssignAsset(vId);
+
+        var resource = new VideoCurriculumResource(Guid.NewGuid(), 0, vId, vId);
+        section.AddItem(Guid.NewGuid(), TenantId, "Qubits", "Video", course.AllocateNextBitIndex(), new[] { resource });
         course.AddPlan("Pro", Guid.NewGuid());
 
-        // Now simulate video failed or pending transcoding
-        var videoAsset = course.Assets.First(a => a.Id == vId);
-        // We can inspect readiness when an asset attached is unready (e.g. MarkFailed)
-        // Let's test readiness when unready
-        var overview = CourseOverview.Create(
-            Guid.NewGuid(), TenantId, course.Id,
-            AlphaZero.Modules.Courses.Domain.ValueObjects.RichText.Create("{\"type\":\"doc\"}").Value,
-            null, null, Guid.NewGuid());
-
-        // Fast path publish without cover image should fail
         var overviewNoCover = CourseOverview.Create(
             Guid.NewGuid(), TenantId, course.Id,
             AlphaZero.Modules.Courses.Domain.ValueObjects.RichText.Create("{\"type\":\"doc\"}").Value,
             null, null, null); // Missing cover image
 
-        var result = course.Publish(overviewNoCover, isTenantAdmin: true);
+        var service = new CoursePublishingService(new CourseReadinessService());
+
+        var result = service.Publish(course, overviewNoCover, canDirectPublish: true);
 
         result.IsError.Should().BeTrue();
-        result.FirstError.NumericType.Should().Be(422);
         result.FirstError.Code.Should().Be("Course.NotReady");
     }
 
     [Fact]
-    public void FastPathPublish_Should_FailWithConflict_WhenTeacherAttemptsDirectPublishFromDraft()
+    public void CoursePublishingService_DirectPublish_Should_FailWithConflict_WhenNotAuthorized()
     {
-        // Arrange
         var course = Course.Create(Guid.NewGuid(), TenantId, "Quantum Computing", "Description", SubjectId).Value;
         course.AddSection("Foundations");
-        var vId = Guid.NewGuid();
-        course.AddVideoAsset(vId, ResourceArn.ForVideo(TenantId, vId), "Video");
-        course.MarkAssetAvailable(vId);
-        var content = JsonDocument.Parse($@"[{{ ""type"": ""video"", ""courseAssetId"": ""{vId}"" }}]").RootElement;
-        course.AddSectionItem(course.Sections.First().Id, "Lesson", "Video", content);
         course.AddPlan("Standard", Guid.NewGuid());
 
-        // Act: Teacher (isTenantAdmin = false) tries to publish from Draft
-        var result = course.Publish(overview: null, isTenantAdmin: false);
+        var service = new CoursePublishingService(new CourseReadinessService());
 
-        // Assert
+        var result = service.Publish(course, overview: null, canDirectPublish: false);
+
         result.IsError.Should().BeTrue();
         result.FirstError.Code.Should().Be("Course.Status");
     }
 }
-

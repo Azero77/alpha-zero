@@ -24,8 +24,22 @@ public sealed class UnassignAssetFromCurriculumCommandHandler
         var course = await _courseRepository.GetByIdWithSectionsAndAssetsAsync(request.CourseId, ct);
         if (course is null) return Error.NotFound("Course.NotFound");
 
-        var result = course.UnassignFromCurriculum(request.ItemId);
-        if (result.IsError) return result.Errors;
+        var section = course.Sections.FirstOrDefault(s => s.Items.Any(i => i.Id == request.ItemId));
+        if (section is null)
+            return Error.NotFound("Section.NotFound", "No section contains this item.");
+
+        var item = section.Items.FirstOrDefault(i => i.Id == request.ItemId);
+        if (item is null)
+            return Error.NotFound("CurriculumItem.NotFound");
+
+        foreach (var res in item.Resources.Where(r => r.CourseAssetId.HasValue))
+        {
+            course.ReleaseAsset(res.CourseAssetId!.Value);
+        }
+
+        var removeResult = section.RemoveItem(request.ItemId);
+        if (removeResult.IsError)
+            return removeResult.Errors;
 
         _courseRepository.Update(course);
         return Result.Success;

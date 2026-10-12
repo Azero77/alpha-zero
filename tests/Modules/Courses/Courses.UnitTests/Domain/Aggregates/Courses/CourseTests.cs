@@ -1,8 +1,9 @@
 using AlphaZero.Modules.Courses.Domain.Aggregates.Courses;
 using AlphaZero.Modules.Courses.Domain.Events;
+using AlphaZero.Modules.Courses.Domain.Services;
 using AlphaZero.Shared.Domain;
 using FluentAssertions;
-using System.Text.Json;
+using Xunit;
 
 namespace AlphaZero.Modules.Courses.UnitTests.Domain.Aggregates.Courses;
 
@@ -45,12 +46,15 @@ public class CourseTests : DomainTest
         var videoId = Guid.NewGuid();
         course.AddVideoAsset(videoId, ResourceArn.ForVideo(TenantId, videoId), "Video 1");
         course.MarkAssetAvailable(videoId);
-        course.AssignAssetToCurriculum(videoId, course.Sections.First().Id, "Lesson 1", JsonDocument.Parse("{}").RootElement);
+        course.AssignAsset(videoId);
+        var res = new VideoCurriculumResource(Guid.NewGuid(), 0, videoId, videoId);
+        course.Sections.First().AddItem(Guid.NewGuid(), TenantId, "Lesson 1", "Video", course.AllocateNextBitIndex(), new[] { res });
         course.SubmitForReview();
         course.Approve();
 
         // Act
-        var result = course.Publish();
+        var service = new CoursePublishingService(new CourseReadinessService());
+        var result = service.Publish(course, overview: null);
 
         // Assert
         result.IsError.Should().BeTrue();
@@ -58,18 +62,10 @@ public class CourseTests : DomainTest
     }
 
     [Fact]
-    public void Publish_Should_RaiseDomainEvent_WhenApprovedAndHasPlan()
+    public void Publish_Should_RaiseDomainEvent_WhenCalled()
     {
         // Arrange
         var course = Course.Create(Guid.NewGuid(), TenantId, "Title", null, SubjectId).Value;
-        course.AddSection("Section 1");
-        var videoId = Guid.NewGuid();
-        course.AddVideoAsset(videoId, ResourceArn.ForVideo(TenantId, videoId), "Video 1");
-        course.MarkAssetAvailable(videoId);
-        course.AssignAssetToCurriculum(videoId, course.Sections.First().Id, "Lesson 1", JsonDocument.Parse("{}").RootElement);
-        course.AddPlan("Standard", Guid.NewGuid());
-        course.SubmitForReview();
-        course.Approve();
 
         // Act
         var result = course.Publish();
@@ -90,7 +86,9 @@ public class CourseTests : DomainTest
         var videoId = Guid.NewGuid();
         course.AddVideoAsset(videoId, ResourceArn.ForVideo(TenantId, videoId), "Video 1");
         course.MarkAssetAvailable(videoId);
-        course.AssignAssetToCurriculum(videoId, course.Sections.First().Id, "L1", JsonDocument.Parse("{}").RootElement);
+        course.AssignAsset(videoId);
+        var res = new VideoCurriculumResource(Guid.NewGuid(), 0, videoId, videoId);
+        course.Sections.First().AddItem(Guid.NewGuid(), TenantId, "L1", "Video", course.AllocateNextBitIndex(), new[] { res });
         course.AddPlan("Standard", Guid.NewGuid());
         course.SubmitForReview();
         course.Approve();

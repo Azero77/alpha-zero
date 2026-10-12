@@ -1,12 +1,12 @@
 using AlphaZero.Modules.Courses.Application.Courses.Commands.State;
 using AlphaZero.Modules.Courses.Application.Repositories;
 using AlphaZero.Modules.Courses.Domain.Aggregates.Courses;
+using AlphaZero.Modules.Courses.Domain.Services;
 using AlphaZero.Shared.Domain;
 using ErrorOr;
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
-using System.Text.Json;
 using Xunit;
 
 namespace AlphaZero.Modules.Courses.UnitTests.Application.Courses;
@@ -15,6 +15,7 @@ public class CourseStateHandlersTests
 {
     private readonly ICourseRepository _courseRepository;
     private readonly ICourseOverviewRepository _courseOverviewRepository;
+    private readonly CoursePublishingService _publishingService;
     private readonly ILogger<CourseStateHandlers> _logger;
     private readonly CourseStateHandlers _handler;
 
@@ -22,8 +23,9 @@ public class CourseStateHandlersTests
     {
         _courseRepository = Substitute.For<ICourseRepository>();
         _courseOverviewRepository = Substitute.For<ICourseOverviewRepository>();
+        _publishingService = new CoursePublishingService(new CourseReadinessService());
         _logger = Substitute.For<ILogger<CourseStateHandlers>>();
-        _handler = new CourseStateHandlers(_courseRepository, _courseOverviewRepository, _logger);
+        _handler = new CourseStateHandlers(_courseRepository, _courseOverviewRepository, _publishingService, _logger);
     }
 
     [Fact]
@@ -71,10 +73,13 @@ public class CourseStateHandlersTests
         var subjectId = Guid.NewGuid();
         var course = Course.Create(Guid.NewGuid(), tenantId, "Title", "Desc", subjectId).Value;
         course.AddSection("S1");
+        var section = course.Sections.First();
         var v1Id = Guid.NewGuid();
         course.AddVideoAsset(v1Id, ResourceArn.ForVideo(tenantId, v1Id), "L1");
         course.MarkAssetAvailable(v1Id);
-        course.AssignAssetToCurriculum(v1Id, course.Sections.First().Id, "L1", JsonDocument.Parse("{}").RootElement);
+        course.AssignAsset(v1Id);
+        var resource = new VideoCurriculumResource(Guid.NewGuid(), 0, v1Id, v1Id);
+        section.AddItem(Guid.NewGuid(), tenantId, "L1", "Video", course.AllocateNextBitIndex(), new[] { resource });
         course.SubmitForReview(); // Now UnderReview
 
         _courseRepository.GetCourseAsync(course.Id, Arg.Any<CancellationToken>()).Returns(course);
@@ -96,10 +101,13 @@ public class CourseStateHandlersTests
         var subjectId = Guid.NewGuid();
         var course = Course.Create(Guid.NewGuid(), tenantId, "Title", "Desc", subjectId).Value;
         course.AddSection("S1");
+        var section = course.Sections.First();
         var v2Id = Guid.NewGuid();
         course.AddVideoAsset(v2Id, ResourceArn.ForVideo(tenantId, v2Id), "L1");
         course.MarkAssetAvailable(v2Id);
-        course.AssignAssetToCurriculum(v2Id, course.Sections.First().Id, "L1", JsonDocument.Parse("{}").RootElement);
+        course.AssignAsset(v2Id);
+        var resource = new VideoCurriculumResource(Guid.NewGuid(), 0, v2Id, v2Id);
+        section.AddItem(Guid.NewGuid(), tenantId, "L1", "Video", course.AllocateNextBitIndex(), new[] { resource });
         course.SubmitForReview();
 
         _courseRepository.GetCourseAsync(course.Id, Arg.Any<CancellationToken>()).Returns(course);
@@ -114,7 +122,7 @@ public class CourseStateHandlersTests
     }
 
     [Fact]
-    public async Task Publish_Should_FailWithConflict_WhenDraftCourseAndCallerIsNotTenantAdmin()
+    public async Task Publish_Should_FailWithConflict_WhenDraftCourseAndCallerCannotDirectPublish()
     {
         // Arrange
         var tenantId = Guid.NewGuid();
@@ -122,7 +130,7 @@ public class CourseStateHandlersTests
         // Status is Draft
 
         _courseRepository.GetCourseAsync(course.Id, Arg.Any<CancellationToken>()).Returns(course);
-        var command = new PublishCourseCommand(course.Id, IsTenantAdmin: false);
+        var command = new PublishCourseCommand(course.Id, CanDirectPublish: false);
 
         // Act
         var result = await _handler.Handle(command, CancellationToken.None);
@@ -134,7 +142,7 @@ public class CourseStateHandlersTests
     }
 
     [Fact]
-    public async Task Publish_Should_FailWith422_WhenDraftCourseAndCallerIsTenantAdmin_ButReadinessFails()
+    public async Task Publish_Should_Fail_WhenDraftCourseAndCallerCanDirectPublish_ButReadinessFails()
     {
         // Arrange
         var tenantId = Guid.NewGuid();
@@ -142,7 +150,7 @@ public class CourseStateHandlersTests
         // Status is Draft, has no sections or plans
 
         _courseRepository.GetCourseAsync(course.Id, Arg.Any<CancellationToken>()).Returns(course);
-        var command = new PublishCourseCommand(course.Id, IsTenantAdmin: true);
+        var command = new PublishCourseCommand(course.Id, CanDirectPublish: true);
 
         // Act
         var result = await _handler.Handle(command, CancellationToken.None);
@@ -154,7 +162,7 @@ public class CourseStateHandlersTests
     }
 
     [Fact]
-    public async Task Publish_Should_FailWith422_WhenDraftCourseHasPlan_ButReadinessCheckFails()
+    public async Task Publish_Should_FailWithCourseNotReady_WhenDraftCourseHasPlan_ButReadinessCheckFails()
     {
         // Arrange
         var tenantId = Guid.NewGuid();
@@ -163,7 +171,7 @@ public class CourseStateHandlersTests
         // Status is Draft, has plan, but no sections or cover image
 
         _courseRepository.GetCourseAsync(course.Id, Arg.Any<CancellationToken>()).Returns(course);
-        var command = new PublishCourseCommand(course.Id, IsTenantAdmin: true);
+        var command = new PublishCourseCommand(course.Id, CanDirectPublish: true);
 
         // Act
         var result = await _handler.Handle(command, CancellationToken.None);
@@ -171,26 +179,24 @@ public class CourseStateHandlersTests
         // Assert
         result.IsError.Should().BeTrue();
         result.FirstError.Code.Should().Be("Course.NotReady");
-        result.FirstError.NumericType.Should().Be(422);
     }
 
     [Fact]
-    public async Task Publish_Should_Succeed_WhenDraftCourseAndCallerIsTenantAdmin_AndAllReadinessPasses()
+    public async Task Publish_Should_Succeed_WhenDraftCourseAndCanDirectPublish_AndAllReadinessPasses()
     {
         // Arrange
         var tenantId = Guid.NewGuid();
         var course = Course.Create(Guid.NewGuid(), tenantId, "Title", "Desc", Guid.NewGuid()).Value;
         course.AddSection("S1");
-        var sectionId = course.Sections.First().Id;
+        var section = course.Sections.First();
 
         var assetId = Guid.NewGuid();
         course.AddVideoAsset(assetId, ResourceArn.ForVideo(tenantId, assetId), "Video 1");
         course.MarkAssetAvailable(assetId);
+        course.AssignAsset(assetId);
 
-        var content = JsonDocument.Parse($@"[
-            {{ ""type"": ""video"", ""courseAssetId"": ""{assetId}"" }}
-        ]").RootElement;
-        course.AddSectionItem(sectionId, "Item 1", "Video", content);
+        var resource = new VideoCurriculumResource(Guid.NewGuid(), 0, assetId, assetId);
+        section.AddItem(Guid.NewGuid(), tenantId, "Item 1", "Video", course.AllocateNextBitIndex(), new[] { resource });
         course.AddPlan("Standard", Guid.NewGuid());
 
         var overview = CourseOverview.Create(
@@ -208,7 +214,7 @@ public class CourseStateHandlersTests
             Arg.Any<CancellationToken>())
             .Returns(overview);
 
-        var command = new PublishCourseCommand(course.Id, IsTenantAdmin: true);
+        var command = new PublishCourseCommand(course.Id, CanDirectPublish: true);
 
         // Act
         var result = await _handler.Handle(command, CancellationToken.None);
