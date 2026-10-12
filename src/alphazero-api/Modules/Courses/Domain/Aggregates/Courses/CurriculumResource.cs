@@ -1,5 +1,6 @@
 using AlphaZero.Shared.Domain;
 using ErrorOr;
+using System.Text.Json;
 
 namespace AlphaZero.Modules.Courses.Domain.Aggregates.Courses;
 
@@ -8,18 +9,15 @@ public abstract class CurriculumResource : Entity
     public Guid CurriculumItemId { get; internal set; }
     public int Order { get; internal set; }
     public Guid? CourseAssetId { get; protected set; }
-    public CourseAsset? Asset { get; protected set; }
-    public string ResourceType { get; protected set; } = null!;
+    protected abstract ResourceType ResourceType { get; }
 
     protected CurriculumResource() { } // EF Core
 
-    protected CurriculumResource(Guid id, int order, string resourceType, Guid? courseAssetId = null, CourseAsset? asset = null)
+    protected CurriculumResource(Guid id, int order, Guid? courseAssetId = null)
         : base(id)
     {
         Order = order;
-        ResourceType = resourceType;
-        CourseAssetId = courseAssetId ?? asset?.Id;
-        Asset = asset;
+        CourseAssetId = courseAssetId;
     }
 
     public ErrorOr<Success> UpdateOrder(int order)
@@ -33,52 +31,65 @@ public abstract class CurriculumResource : Entity
 
 public class VideoCurriculumResource : CurriculumResource
 {
-    public Guid VideoId { get; private set; }
     public double DurationSeconds { get; private set; }
+    
+    private VideoCurriculumResource() { } // EF Core
 
-    private VideoCurriculumResource() { ResourceType = "Video"; } // EF Core
-
-    public VideoCurriculumResource(Guid id, int order, Guid courseAssetId, Guid videoId, double durationSeconds = 0, CourseAsset? asset = null)
-        : base(id, order, "Video", courseAssetId, asset)
+    public VideoCurriculumResource(Guid id, int order, Guid courseAssetId, double durationSeconds = 0, CourseAsset? asset = null)
+        : base(id, order, courseAssetId)
     {
-        VideoId = videoId;
         DurationSeconds = durationSeconds;
     }
 
     public bool CanComplete(double watchedSeconds) =>
         DurationSeconds <= 0 || (watchedSeconds / DurationSeconds) >= 0.8;
+
+    protected override ResourceType ResourceType => ResourceType.Video;
 }
 
 public class DocumentCurriculumResource : CurriculumResource
 {
-    public Guid DocumentId { get; private set; }
     public string Title { get; private set; } = string.Empty;
     public string DocumentType { get; private set; } = "pdf";
     public bool IsPublic { get; private set; }
     public string? VariantName { get; private set; }
 
-    private DocumentCurriculumResource() { ResourceType = "Document"; } // EF Core
-
-    public DocumentCurriculumResource(
+    private DocumentCurriculumResource()
+    {
+        
+    }
+    private DocumentCurriculumResource(
         Guid id,
         int order,
-        Guid documentId,
         string title,
+        Guid courseAssetId,
         string documentType = "pdf",
         bool isPublic = true,
-        string? variantName = null,
-        Guid? courseAssetId = null,
-        CourseAsset? asset = null)
-        : base(id, order, "Document", courseAssetId, asset)
+        string? variantName = null
+        )
+        : base(id, order, courseAssetId)
     {
-        DocumentId = documentId;
         Title = title;
         DocumentType = documentType;
         IsPublic = isPublic;
         VariantName = variantName;
     }
 
-    public string DocUri => $"doc://{(IsPublic ? "public" : "private")}/{DocumentId}{(string.IsNullOrEmpty(VariantName) ? "" : $"?variantName={VariantName}")}";
+    public static ErrorOr<DocumentCurriculumResource> Create(Guid id,
+        int order,
+        string title,
+        Guid courseAssetId,
+        string documentType = "pdf",
+        bool isPublic = true,
+        string? variantName = null)
+    {
+        if (courseAssetId == Guid.Empty)
+            return Error.Validation("Course.Items.Document.Validation", "Guid Item Can't Be Empty");
+
+        return new  DocumentCurriculumResource(id,order,title,courseAssetId, documentType, isPublic, variantName);
+    } 
+
+    public string DocUri => $"doc://{(IsPublic ? "public" : "private")}/{CourseAssetId!}{(string.IsNullOrEmpty(VariantName) ? "" : $"?variantName={VariantName}")}";
 
     public static (bool IsPublic, Guid DocumentId, string? VariantName) ParseDocUri(string uri)
     {
@@ -109,39 +120,48 @@ public class DocumentCurriculumResource : CurriculumResource
 
         return (isPublic, docId, variant);
     }
+
+    protected override ResourceType ResourceType => ResourceType.Document;
 }
 
 public class ArticleCurriculumResource : CurriculumResource
 {
-    public string TextContent { get; private set; } = string.Empty;
+    public JsonElement Content { get; private set; }
+    private ArticleCurriculumResource() { }
 
-    private ArticleCurriculumResource() { ResourceType = "Article"; } // EF Core
-
-    public ArticleCurriculumResource(Guid id, int order, string textContent, Guid? courseAssetId = null, CourseAsset? asset = null)
-        : base(id, order, "Article", courseAssetId, asset)
+    public ArticleCurriculumResource(Guid id, int order, JsonElement content, Guid? courseAssetId = null )
+        : base(id, order, courseAssetId)
     {
-        TextContent = textContent;
+        Content = content;
+    }
+    public void UpdateContent(JsonElement content)
+    {
+        Content = content;
     }
 
-    public void UpdateContent(string textContent)
-    {
-        TextContent = textContent;
-    }
+    protected override ResourceType ResourceType => ResourceType.Article;
 }
 
-public class QuizCurriculumResource : CurriculumResource
+public class AssessmentCurriculumResource : CurriculumResource
 {
-    public Guid AssessmentId { get; private set; }
-    public int PassingScore { get; private set; }
+    public int PassingScore { get;  }
 
-    private QuizCurriculumResource() { ResourceType = "Quiz"; } // EF Core
+    private AssessmentCurriculumResource() { } 
 
-    public QuizCurriculumResource(Guid id, int order, Guid assessmentId, int passingScore = 80, Guid? courseAssetId = null, CourseAsset? asset = null)
-        : base(id, order, "Quiz", courseAssetId, asset)
+    public AssessmentCurriculumResource(Guid id, int order, int passingScore, Guid courseAssetId)
+        : base(id, order, courseAssetId)
     {
-        AssessmentId = assessmentId;
         PassingScore = passingScore;
     }
 
     public bool CanComplete(int score) => score >= PassingScore;
+    protected override ResourceType ResourceType => ResourceType.Assessment;
+}
+
+public enum ResourceType
+{
+    Assessment,
+    Article,
+    Document,
+    Video
 }

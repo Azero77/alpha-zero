@@ -54,7 +54,7 @@ public class CurriculumResourceTests
     public void QuizCurriculumResource_Should_CheckPassingScore()
     {
         var assessmentId = Guid.NewGuid();
-        var resource = new QuizCurriculumResource(Guid.NewGuid(), 0, assessmentId, passingScore: 85);
+        var resource = new AssessmentCurriculumResource(Guid.NewGuid(), 0, passingScore: 85);
 
         resource.ResourceType.Should().Be("Quiz");
         resource.AssessmentId.Should().Be(assessmentId);

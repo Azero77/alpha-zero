@@ -18,7 +18,7 @@ public class CurriculumResourceConfiguration : IEntityTypeConfiguration<Curricul
             .HasValue<VideoCurriculumResource>("Video")
             .HasValue<DocumentCurriculumResource>("Document")
             .HasValue<ArticleCurriculumResource>("Article")
-            .HasValue<QuizCurriculumResource>("Quiz");
+            .HasValue<AssessmentCurriculumResource>("Quiz");
 
         builder.Property(r => r.Order)
             .IsRequired();
@@ -65,9 +65,9 @@ public class ArticleCurriculumResourceConfiguration : IEntityTypeConfiguration<A
     }
 }
 
-public class QuizCurriculumResourceConfiguration : IEntityTypeConfiguration<QuizCurriculumResource>
+public class QuizCurriculumResourceConfiguration : IEntityTypeConfiguration<AssessmentCurriculumResource>
 {
-    public void Configure(EntityTypeBuilder<QuizCurriculumResource> builder)
+    public void Configure(EntityTypeBuilder<AssessmentCurriculumResource> builder)
     {
         builder.Property(q => q.AssessmentId);
         builder.Property(q => q.PassingScore);

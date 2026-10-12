@@ -246,7 +246,7 @@ public class Course : TenantOwnedAggregate, ISoftDeletable
         return Result.Success;
     }
 
-    public ErrorOr<Success> Publish()
+    internal ErrorOr<Success> Publish()
     {
         Status = CourseStatus.Published;
         AddDomainEvent(new CoursePublishedDomainEvent(Id));

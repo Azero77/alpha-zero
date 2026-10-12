@@ -43,7 +43,7 @@ public sealed class AssignAssetToCurriculumCommandHandler
         {
             CourseAssetType.Video => new VideoCurriculumResource(Guid.NewGuid(), 0, asset.Id, asset.Id),
             CourseAssetType.Document => new DocumentCurriculumResource(Guid.NewGuid(), 0, asset.Id, request.Title, courseAssetId: asset.Id),
-            CourseAssetType.Assessment => new QuizCurriculumResource(Guid.NewGuid(), 0, asset.Id, courseAssetId: asset.Id),
+            CourseAssetType.Assessment => new AssessmentCurriculumResource(Guid.NewGuid(), 0, courseAssetId: asset.Id),
             _ => new ArticleCurriculumResource(Guid.NewGuid(), 0, request.Title, asset.Id)
         };
 

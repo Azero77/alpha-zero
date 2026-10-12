@@ -41,7 +41,7 @@ public record CurriculumResourceDto(
             a.Id, a.Order, a.ResourceType, a.CourseAssetId,
             TextContent: a.TextContent),
 
-        QuizCurriculumResource q => new(
+        AssessmentCurriculumResource q => new(
             q.Id, q.Order, q.ResourceType, q.CourseAssetId,
             AssessmentId: q.AssessmentId, PassingScore: q.PassingScore),
 
@@ -144,7 +144,7 @@ public static class CurriculumResourceParser
                     ? aId
                     : (courseAssetId ?? Guid.NewGuid());
                 var passingScore = block.TryGetProperty("passingScore", out var pProp) && pProp.TryGetInt32(out var p) ? p : 80;
-                resources.Add(new QuizCurriculumResource(Guid.NewGuid(), order++, assessmentId, passingScore, courseAssetId));
+                resources.Add(new AssessmentCurriculumResource(Guid.NewGuid(), order++, passingScore, courseAssetId));
             }
             else
             {
