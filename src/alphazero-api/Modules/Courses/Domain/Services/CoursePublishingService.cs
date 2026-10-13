@@ -12,7 +12,7 @@ public class CoursePublishingService
         _readinessService = readinessService;
     }
 
-    public ErrorOr<Success> Publish(Course course, CourseOverview? overview, bool canDirectPublish = false)
+    public ErrorOr<Success> Publish(Course course, CourseOverview? overview, bool canDirectPublish = false, IEnumerable<CourseAsset>? assets = null)
     {
         if (course.Status != CourseStatus.Approved && !(canDirectPublish && course.Status == CourseStatus.Draft))
         {
@@ -25,7 +25,7 @@ public class CoursePublishingService
         if (course.Plans.Count == 0)
             return Error.Validation("Course.NoPlans", "Course must have at least one plan before it can be published.");
 
-        var readiness = _readinessService.Evaluate(course, overview);
+        var readiness = _readinessService.Evaluate(course, overview, assets);
         if (canDirectPublish && course.Status == CourseStatus.Draft && !readiness.CanPublish)
         {
             return Error.Failure("Course.NotReady",

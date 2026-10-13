@@ -10,7 +10,9 @@ public class EnrollStudentFromSagaConsumer(ICoursesModule coursesModule, ICourse
 {
     public async Task Consume(ConsumeContext<EnrollStudentFromSagaCommand> context)
     {
-        var course = await courseRepository.GetCourseAsync(context.Message.CourseId);
+        var course = await courseRepository.Query(context.Message.CourseId)
+            .WithPlans()
+            .ExecuteAsync(context.CancellationToken);
         if (course == null)
         {
             await context.Publish(new StudentEnrollmentFailedEvent(context.Message.CorrelationId, "Course not found."));

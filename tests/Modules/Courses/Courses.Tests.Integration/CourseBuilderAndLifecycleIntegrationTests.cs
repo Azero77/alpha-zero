@@ -136,11 +136,9 @@ public class CourseBuilderAndLifecycleIntegrationTests : BaseIntegrationTest
         item1Dto!.BitIndex.Should().Be(0);
         item1Dto.MainType.Should().Be("Video");
 
-        // Verify Asset RefCount incremented to 1 and State == InUse
-        var assetInDb = await DbContext.CourseAssets.AsNoTracking().FirstOrDefaultAsync(a => a.Id == assetId);
-        assetInDb.Should().NotBeNull();
-        assetInDb!.RefCount.Should().Be(1);
-        assetInDb.State.Should().Be(CourseAssetState.InUse);
+        // Verify Asset is attached to curriculum resource
+        var resourceInDb = await DbContext.CurriculumResources.AsNoTracking().FirstOrDefaultAsync(r => r.CourseAssetId == assetId);
+        resourceInDb.Should().NotBeNull();
 
         // 2. CREATE Item 2 without asset -> BitIndex should be 1
         var compositeContent2 = JsonDocument.Parse(@"[
@@ -164,7 +162,7 @@ public class CourseBuilderAndLifecycleIntegrationTests : BaseIntegrationTest
         var item2Dto = await item2Response.Content.ReadFromJsonAsync<CurriculumItemDto>();
         item2Dto!.BitIndex.Should().Be(1);
 
-        // 3. UPDATE Item 1 to remove asset reference -> RefCount drops to 0, returns to Available, BitIndex unchanged
+        // 3. UPDATE Item 1 to remove asset reference -> Disassociated from resource, BitIndex unchanged
         var updatedContent1 = JsonDocument.Parse(@"[
             {
                 ""type"": ""inline"",
@@ -187,9 +185,8 @@ public class CourseBuilderAndLifecycleIntegrationTests : BaseIntegrationTest
         var updatedItem1Dto = await updateResponse.Content.ReadFromJsonAsync<CurriculumItemDto>();
         updatedItem1Dto!.BitIndex.Should().Be(0); // BitIndex strictly immutable
 
-        assetInDb = await DbContext.CourseAssets.AsNoTracking().FirstOrDefaultAsync(a => a.Id == assetId);
-        assetInDb!.RefCount.Should().Be(0);
-        assetInDb.State.Should().Be(CourseAssetState.Available);
+        resourceInDb = await DbContext.CurriculumResources.AsNoTracking().FirstOrDefaultAsync(r => r.CourseAssetId == assetId);
+        resourceInDb.Should().BeNull();
 
         // 4. DELETE Item 2 -> BitIndex 1 burned
         var deleteResponse = await Client.DeleteAsync($"/courses/{courseId}/sections/{sectionId}/items/{item2Dto.Id}");

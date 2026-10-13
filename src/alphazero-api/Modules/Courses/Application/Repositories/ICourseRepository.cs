@@ -1,4 +1,3 @@
-
 using AlphaZero.Modules.Courses.Domain.Aggregates.Courses;
 using AlphaZero.Shared.Infrastructure.Repositores;
 
@@ -6,18 +5,10 @@ namespace AlphaZero.Modules.Courses.Application.Repositories;
 
 public interface ICourseRepository : IRepository<Course>
 {
-    Task<Course?> GetByIdWithSectionsAsync(Guid id, CancellationToken cancellationToken = default);
+    ICourseQueryBuilder Query();
+    ICourseQueryBuilder Query(Guid courseId);
+
+    Task<bool> IsAssetInUseAsync(Guid assetId, CancellationToken cancellationToken = default);
     Task<(Guid CourseId, int BitIndex)?> GetItemBitIndexByResourceIdAsync(Guid resourceId, CancellationToken cancellationToken = default);
     Task<List<Course>> GetCoursesByResourceIdAsync(Guid resourceId, CancellationToken cancellationToken = default);
-
-
-    /// <summary>
-    /// Get Course With Sections, Items and Resources for a given courseId
-    /// </summary>
-    /// <param name="courseId"></param>
-    /// <returns></returns>
-    /// 
-    Task<Course?> GetCourseAsync(Guid courseId, CancellationToken cancellationToken = default);
-
-    Task<Course?> GetByIdWithSectionsAndAssetsAsync(Guid courseId, CancellationToken cancellationToken = default);
 }

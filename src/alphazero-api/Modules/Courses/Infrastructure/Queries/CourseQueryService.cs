@@ -38,12 +38,12 @@ public class CourseQueryService : ICourseQueryService
                     s.Items.OrderBy(i => i.Order).Select(i => new ItemDto(
                         i.Id,
                         i.Title,
-                        i.MainType,
+                        i.MainResourceType.ToString(),
                         i.Order,
                         i.BitIndex,
                         i.Resources.OrderBy(r => r.Order).Select(r => new ResourceDto(
-                            r.Asset != null ? r.Asset.ResourceArn.Value : (r.CourseAssetId != null ? r.CourseAssetId.Value.ToString() : ""),
-                            r.ResourceType,
+                            r.CourseAssetId != null ? r.CourseAssetId.Value.ToString() : string.Empty,
+                            r.ResourceType.ToString(),
                             r.Order,
                             EmptyJsonElement)).ToList())).ToList())).ToList()))
             .FirstOrDefaultAsync(cancellationToken);
@@ -89,16 +89,12 @@ public class CourseQueryService : ICourseQueryService
                 HasSections = c.Sections.Any(s => !s.IsDeleted),
                 HasItems = c.Sections.Where(s => !s.IsDeleted).Any(s => s.Items.Any(i => !i.IsDeleted)),
                 HasActivePricingPlan = c.Plans.Any(),
-                AttachedAssets = c.Sections.Where(s => !s.IsDeleted)
+                AssetIds = c.Sections.Where(s => !s.IsDeleted)
                     .SelectMany(s => s.Items.Where(i => !i.IsDeleted))
                     .SelectMany(i => i.Resources)
                     .Where(r => r.CourseAssetId != null)
-                    .Select(r => new
-                    {
-                        AssetId = r.CourseAssetId!.Value,
-                        Title = r.Asset != null ? r.Asset.Title : "",
-                        State = r.Asset != null ? r.Asset.State : CourseAssetState.Pending
-                    })
+                    .Select(r => r.CourseAssetId!.Value)
+                    .Distinct()
                     .ToList()
             })
             .FirstOrDefaultAsync(cancellationToken);
@@ -132,15 +128,23 @@ public class CourseQueryService : ICourseQueryService
         if (!hasSections) blockingReasons.Add("Course must have at least one section.");
         if (!hasItems) blockingReasons.Add("Course curriculum must have at least one item.");
 
-        var distinctAttached = courseData.AttachedAssets
-            .GroupBy(a => a.AssetId)
-            .Select(g => g.First())
-            .ToList();
+        var assetData = await _context.Set<CourseAsset>()
+            .AsNoTracking()
+            .Where(a => courseData.AssetIds.Contains(a.Id))
+            .Select(a => new { a.Id, a.Title, a.State })
+            .ToListAsync(cancellationToken);
 
-        var unreadyAssets = distinctAttached
-            .Where(a => a.State != CourseAssetState.Available && a.State != CourseAssetState.InUse)
+        var foundAssetIds = assetData.Select(a => a.Id).ToHashSet();
+        var missingAssetIds = courseData.AssetIds.Where(id => !foundAssetIds.Contains(id)).ToList();
+        if (missingAssetIds.Any())
+        {
+            blockingReasons.Add($"Course references {missingAssetIds.Count} asset(s) that could not be found.");
+        }
+
+        var unreadyAssets = assetData
+            .Where(a => a.State != CourseAssetState.Available)
             .ToList();
-        var allAttachedAssetsReady = unreadyAssets.Count == 0;
+        var allAttachedAssetsReady = unreadyAssets.Count == 0 && missingAssetIds.Count == 0;
 
         foreach (var unready in unreadyAssets)
         {

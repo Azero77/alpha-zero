@@ -20,7 +20,7 @@ public class CourseSection : Entity, ISoftDeletable
         Title = title;
         Order = order;
         CourseId = courseId;
-        _items = items;
+        _items = items ?? new();
     }
 
     internal static ErrorOr<CourseSection> Create(Guid id, string title, int order, Guid courseId,
@@ -52,6 +52,18 @@ public class CourseSection : Entity, ISoftDeletable
         return itemResult.Value;
     }
 
+    public ErrorOr<CurriculumItem> AddItem(
+        Guid id,
+        string title,
+        string mainType,
+        int bitIndex,
+        IEnumerable<CurriculumResource>? resources = null)
+    {
+        if (!CurriculumItem.IsValidMainType(mainType))
+            return Error.Validation("CurriculumItem.MainType", $"Invalid main resource type '{mainType}'.");
+        return AddItem(id, title, CurriculumItem.ParseMainType(mainType), bitIndex, resources);
+    }
+
     public ErrorOr<CurriculumItem> UpdateItem(
         Guid itemId,
         string title,
@@ -67,6 +79,17 @@ public class CourseSection : Entity, ISoftDeletable
             return updateResult.Errors;
 
         return item;
+    }
+
+    public ErrorOr<CurriculumItem> UpdateItem(
+        Guid itemId,
+        string title,
+        string mainType,
+        IEnumerable<CurriculumResource>? resources = null)
+    {
+        if (!CurriculumItem.IsValidMainType(mainType))
+            return Error.Validation("CurriculumItem.MainType", $"Invalid main resource type '{mainType}'.");
+        return UpdateItem(itemId, title, CurriculumItem.ParseMainType(mainType), resources);
     }
 
     public ErrorOr<CurriculumItem> RemoveItem(Guid itemId)

@@ -27,7 +27,9 @@ public sealed class ReorderCommandsHandlers :
 
     public async Task<ErrorOr<Success>> Handle(ReorderSectionsCommand request, CancellationToken cancellationToken)
     {
-        var course = await _courseRepository.GetByIdWithSectionsAsync(request.CourseId, cancellationToken);
+        var course = await _courseRepository.Query(request.CourseId)
+            .WithSections()
+            .ExecuteAsync(cancellationToken);
         if (course is null) return Error.NotFound("Course.NotFound", "Course not found.");
 
         var result = course.ReorderSections(request.SectionIds);
@@ -37,7 +39,10 @@ public sealed class ReorderCommandsHandlers :
 
     public async Task<ErrorOr<Success>> Handle(ReorderItemsCommand request, CancellationToken cancellationToken)
     {
-        var course = await _courseRepository.GetByIdWithSectionsAsync(request.CourseId, cancellationToken);
+        var course = await _courseRepository.Query(request.CourseId)
+            .WithSection(request.SectionId)
+            .WithItems()
+            .ExecuteAsync(cancellationToken);
         if (course is null) return Error.NotFound("Course.NotFound", "Course not found.");
 
         var result = course.ReorderItems(request.SectionId, request.ItemIds);

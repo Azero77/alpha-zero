@@ -12,12 +12,14 @@ public class CourseRepository : BaseRepository<AppDbContext, Course>, ICourseRep
     {
     }
 
-    public async Task<Course?> GetByIdWithSectionsAsync(Guid id, CancellationToken cancellationToken = default)
+    public ICourseQueryBuilder Query() => new CourseQueryBuilder(_context);
+
+    public ICourseQueryBuilder Query(Guid courseId) => new CourseQueryBuilder(_context).ForCourse(courseId);
+
+    public async Task<bool> IsAssetInUseAsync(Guid assetId, CancellationToken cancellationToken = default)
     {
-        return await _context.Courses
-            .Include(c => c.Sections)
-                .ThenInclude(s => s.Items)
-            .FirstOrDefaultAsync(c => c.Id == id, cancellationToken);
+        return await _context.Set<CurriculumResource>()
+            .AnyAsync(r => r.CourseAssetId == assetId, cancellationToken);
     }
 
     public async Task<(Guid CourseId, int BitIndex)?> GetItemBitIndexByResourceIdAsync(Guid resourceId, CancellationToken cancellationToken = default)
@@ -47,24 +49,4 @@ public class CourseRepository : BaseRepository<AppDbContext, Course>, ICourseRep
             .Where(c => c.Sections.Any(s => s.Items.Any(i => i.Resources.Any(r => r.CourseAssetId == resourceId))))
             .ToListAsync(cancellationToken);
     }
-
-    public async Task<Course?> GetCourseAsync(Guid courseId, CancellationToken token = default)
-    {
-        return await _context.Courses
-            .Include(c => c.Sections)
-            .ThenInclude(c => c.Items)
-            .ThenInclude(item => item.Resources)
-            .Include(c => c.Assets)
-            .Include(c => c.Plans)
-            .FirstOrDefaultAsync(c => c.Id == courseId, token);
-    }
-
-    public async Task<Course?> GetByIdWithSectionsAndAssetsAsync(Guid courseId, CancellationToken ct = default)
-        => await _context.Courses
-            .Include(c => c.Sections)
-                .ThenInclude(s => s.Items)
-                    .ThenInclude(i => i.Resources)
-            .Include(c => c.Assets)
-            .Include(c => c.Plans)
-            .FirstOrDefaultAsync(c => c.Id == courseId, ct);
 }

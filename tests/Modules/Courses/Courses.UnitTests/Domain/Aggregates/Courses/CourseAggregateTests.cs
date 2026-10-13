@@ -17,95 +17,35 @@ public class CourseAggregateTests
     }
 
     [Fact]
-    public void AddAssetMethods_Should_AddAssets_Idempotently()
+    public void AddSection_Should_AppendSectionWithCorrectOrder()
     {
         var course = CreateTestCourse();
-        var videoId = Guid.NewGuid();
-        var videoArn = ResourceArn.ForVideo(TenantId, videoId);
+        var s1Result = course.AddSection("Section 1");
+        var s2Result = course.AddSection("Section 2");
 
-        var first = course.AddVideoAsset(videoId, videoArn, "Intro");
-        first.IsError.Should().BeFalse();
-        course.Assets.Should().HaveCount(1);
-
-        // Second call with same ID is idempotent
-        var second = course.AddVideoAsset(videoId, videoArn, "Intro Duplicate");
-        second.IsError.Should().BeFalse();
-        second.Value.Id.Should().Be(videoId);
-        course.Assets.Should().HaveCount(1);
+        s1Result.IsError.Should().BeFalse();
+        s2Result.IsError.Should().BeFalse();
+        course.Sections.Should().HaveCount(2);
+        course.Sections.ElementAt(0).Title.Should().Be("Section 1");
+        course.Sections.ElementAt(0).Order.Should().Be(0);
+        course.Sections.ElementAt(1).Title.Should().Be("Section 2");
+        course.Sections.ElementAt(1).Order.Should().Be(1);
     }
 
     [Fact]
-    public void AssignAsset_Should_TransitionAssetToInUse_AndIncrementRefCount()
+    public void AddPlan_And_RemovePlan_Should_ManagePricingPlans()
     {
         var course = CreateTestCourse();
-        course.AddSection("Section 1");
+        var principalId = Guid.NewGuid();
+        var planResult = course.AddPlan("Standard", principalId);
 
-        var videoId = Guid.NewGuid();
-        var videoArn = ResourceArn.ForVideo(TenantId, videoId);
-        course.AddVideoAsset(videoId, videoArn, "Lesson Video");
-        course.MarkAssetAvailable(videoId);
+        planResult.IsError.Should().BeFalse();
+        course.Plans.Should().HaveCount(1);
+        course.Plans.First().Name.Should().Be("Standard");
 
-        course.PoolAssets.Should().HaveCount(1);
-
-        // Act
-        var assignResult = course.AssignAsset(videoId);
-
-        // Assert
-        assignResult.IsError.Should().BeFalse();
-        var asset = course.Assets.First(a => a.Id == videoId);
-        asset.State.Should().Be(CourseAssetState.InUse);
-        asset.RefCount.Should().Be(1);
-        course.PoolAssets.Should().BeEmpty();
-    }
-
-    [Fact]
-    public void AssignAsset_Should_Fail_WhenAssetIsNotAvailable()
-    {
-        var course = CreateTestCourse();
-        var videoId = Guid.NewGuid();
-        course.AddVideoAsset(videoId, ResourceArn.ForVideo(TenantId, videoId), "Pending Video");
-
-        var result = course.AssignAsset(videoId);
-
-        result.IsError.Should().BeTrue();
-        result.FirstError.Code.Should().Be("CourseAsset.State");
-    }
-
-    [Fact]
-    public void ReleaseAsset_Should_DecrementRefCount_AndReturnToPoolWhenZero()
-    {
-        var course = CreateTestCourse();
-        var videoId = Guid.NewGuid();
-        course.AddVideoAsset(videoId, ResourceArn.ForVideo(TenantId, videoId), "Lesson Video");
-        course.MarkAssetAvailable(videoId);
-        course.AssignAsset(videoId);
-
-        course.PoolAssets.Should().BeEmpty();
-
-        // Act
-        var releaseResult = course.ReleaseAsset(videoId);
-
-        // Assert
-        releaseResult.IsError.Should().BeFalse();
-        var asset = course.Assets.First(a => a.Id == videoId);
-        asset.State.Should().Be(CourseAssetState.Available);
-        asset.RefCount.Should().Be(0);
-        course.PoolAssets.Should().HaveCount(1);
-    }
-
-    [Fact]
-    public void DismissAsset_Should_ArchiveAvailableAsset()
-    {
-        var course = CreateTestCourse();
-        var videoId = Guid.NewGuid();
-        course.AddVideoAsset(videoId, ResourceArn.ForVideo(TenantId, videoId), "Unused Video");
-        course.MarkAssetAvailable(videoId);
-
-        var result = course.DismissAsset(videoId);
-
-        result.IsError.Should().BeFalse();
-        course.Assets.First(a => a.Id == videoId).State.Should().Be(CourseAssetState.Archived);
-        course.PoolAssets.Should().BeEmpty();
+        var removeResult = course.RemovePlan(planResult.Value.Id);
+        removeResult.IsError.Should().BeFalse();
+        course.Plans.Should().BeEmpty();
     }
 
     [Fact]
@@ -116,10 +56,10 @@ public class CourseAggregateTests
         var section = course.Sections.First();
 
         var vId = Guid.NewGuid();
-        var videoResource = new VideoCurriculumResource(Guid.NewGuid(), 0, vId, vId);
+        var videoResource = new VideoCurriculumResource(Guid.NewGuid(), 0, vId, 120);
 
         var bitIndex = course.AllocateNextBitIndex();
-        var result = section.AddItem(Guid.NewGuid(), TenantId, "Kinematics Lesson", "Video", bitIndex, new[] { videoResource });
+        var result = section.AddItem(Guid.NewGuid(), "Kinematics Lesson", "Video", bitIndex, new[] { videoResource });
 
         result.IsError.Should().BeFalse();
         var item = result.Value;
@@ -136,9 +76,10 @@ public class CourseAggregateTests
         var section = course.Sections.First();
 
         var bitIndex = course.AllocateNextBitIndex();
-        var item = section.AddItem(Guid.NewGuid(), TenantId, "Lesson 1", "Video", bitIndex).Value;
+        var item = section.AddItem(Guid.NewGuid(), "Lesson 1", "Video", bitIndex).Value;
 
-        var newResource = new ArticleCurriculumResource(Guid.NewGuid(), 0, "Updated Content");
+        var jsonContent = System.Text.Json.JsonSerializer.SerializeToElement("Updated Content");
+        var newResource = new ArticleCurriculumResource(Guid.NewGuid(), 0, jsonContent);
         var updateResult = section.UpdateItem(item.Id, "Updated Lesson 1", "Article", new[] { newResource });
 
         updateResult.IsError.Should().BeFalse();
@@ -155,7 +96,7 @@ public class CourseAggregateTests
         var section = course.Sections.First();
 
         var bitIndex = course.AllocateNextBitIndex();
-        var item = section.AddItem(Guid.NewGuid(), TenantId, "Lesson 1", "Video", bitIndex).Value;
+        var item = section.AddItem(Guid.NewGuid(), "Lesson 1", "Video", bitIndex).Value;
 
         var removeResult = section.RemoveItem(item.Id);
 
@@ -171,12 +112,11 @@ public class CourseAggregateTests
         var section = course.Sections.First();
 
         var vId = Guid.NewGuid();
-        course.AddVideoAsset(vId, ResourceArn.ForVideo(TenantId, vId), "Qubit Basics");
-        course.MarkAssetAvailable(vId);
-        course.AssignAsset(vId);
+        var asset = VideoCourseAsset.Create(vId, TenantId, ResourceArn.ForVideo(TenantId, vId), "Qubit Basics", course.Id).Value;
+        asset.MarkAvailable();
 
-        var resource = new VideoCurriculumResource(Guid.NewGuid(), 0, vId, vId);
-        section.AddItem(Guid.NewGuid(), TenantId, "Qubits", "Video", course.AllocateNextBitIndex(), new[] { resource });
+        var resource = new VideoCurriculumResource(Guid.NewGuid(), 0, vId, 100);
+        section.AddItem(Guid.NewGuid(), "Qubits", "Video", course.AllocateNextBitIndex(), new[] { resource });
         course.AddPlan("Pro", Guid.NewGuid());
 
         var overview = CourseOverview.Create(
@@ -187,7 +127,7 @@ public class CourseAggregateTests
         var service = new CoursePublishingService(new CourseReadinessService());
 
         // Act
-        var result = service.Publish(course, overview, canDirectPublish: true);
+        var result = service.Publish(course, overview, canDirectPublish: true, assets: new[] { asset });
 
         // Assert
         result.IsError.Should().BeFalse();
@@ -202,12 +142,11 @@ public class CourseAggregateTests
         var section = course.Sections.First();
 
         var vId = Guid.NewGuid();
-        course.AddVideoAsset(vId, ResourceArn.ForVideo(TenantId, vId), "Qubit Basics");
-        course.MarkAssetAvailable(vId);
-        course.AssignAsset(vId);
+        var asset = VideoCourseAsset.Create(vId, TenantId, ResourceArn.ForVideo(TenantId, vId), "Qubit Basics", course.Id).Value;
+        asset.MarkAvailable();
 
-        var resource = new VideoCurriculumResource(Guid.NewGuid(), 0, vId, vId);
-        section.AddItem(Guid.NewGuid(), TenantId, "Qubits", "Video", course.AllocateNextBitIndex(), new[] { resource });
+        var resource = new VideoCurriculumResource(Guid.NewGuid(), 0, vId, 100);
+        section.AddItem(Guid.NewGuid(), "Qubits", "Video", course.AllocateNextBitIndex(), new[] { resource });
         course.AddPlan("Pro", Guid.NewGuid());
 
         var overviewNoCover = CourseOverview.Create(
@@ -217,7 +156,7 @@ public class CourseAggregateTests
 
         var service = new CoursePublishingService(new CourseReadinessService());
 
-        var result = service.Publish(course, overviewNoCover, canDirectPublish: true);
+        var result = service.Publish(course, overviewNoCover, canDirectPublish: true, assets: new[] { asset });
 
         result.IsError.Should().BeTrue();
         result.FirstError.Code.Should().Be("Course.NotReady");
@@ -232,7 +171,7 @@ public class CourseAggregateTests
 
         var service = new CoursePublishingService(new CourseReadinessService());
 
-        var result = service.Publish(course, overview: null, canDirectPublish: false);
+        var result = service.Publish(course, overview: null, assets: null, canDirectPublish: false);
 
         result.IsError.Should().BeTrue();
         result.FirstError.Code.Should().Be("Course.Status");

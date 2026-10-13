@@ -31,7 +31,9 @@ public sealed class RemovePlanCommandHandler : IRequestHandler<RemovePlanCommand
 
     public async Task<ErrorOr<Success>> Handle(RemovePlanCommand request, CancellationToken cancellationToken)
     {
-        var course = await _courseRepository.GetCourseAsync(request.CourseId, cancellationToken);
+        var course = await _courseRepository.Query(request.CourseId)
+            .WithPlans()
+            .ExecuteAsync(cancellationToken);
         if (course is null) return Error.NotFound("Course.NotFound", "Course not found.");
 
         var result = course.RemovePlan(request.PlanId);

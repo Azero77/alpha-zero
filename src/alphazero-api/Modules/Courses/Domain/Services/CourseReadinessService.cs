@@ -4,7 +4,7 @@ namespace AlphaZero.Modules.Courses.Domain.Services;
 
 public class CourseReadinessService
 {
-    public CourseReadiness Evaluate(Course course, CourseOverview? overview = null)
+    public CourseReadiness Evaluate(Course course, CourseOverview? overview = null, IEnumerable<CourseAsset>? assets = null)
     {
         var hasTitle = !string.IsNullOrWhiteSpace(course.Title);
         var hasSubject = course.SubjectId != Guid.Empty;
@@ -33,10 +33,14 @@ public class CourseReadinessService
             .Distinct()
             .ToList();
 
-        var attachedAssets = course.Assets.Where(a => attachedAssetIds.Contains(a.Id)).ToList();
-        var unreadyAttachedAssets = attachedAssets
-            .Where(a => a.State != CourseAssetState.Available && a.State != CourseAssetState.InUse)
+        var attachedAssets = (assets ?? Enumerable.Empty<CourseAsset>())
+            .Where(a => attachedAssetIds.Contains(a.Id))
             .ToList();
+
+        var unreadyAttachedAssets = attachedAssets
+            .Where(a => a.State != CourseAssetState.Available)
+            .ToList();
+
         var allAttachedAssetsReady = unreadyAttachedAssets.Count == 0;
 
         foreach (var unready in unreadyAttachedAssets)

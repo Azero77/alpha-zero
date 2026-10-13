@@ -29,23 +29,23 @@ public record CurriculumResourceDto(
     public static CurriculumResourceDto From(CurriculumResource resource) => resource switch
     {
         VideoCurriculumResource v => new(
-            v.Id, v.Order, v.ResourceType, v.CourseAssetId,
+            v.Id, v.Order, v.ResourceType.ToString(), v.CourseAssetId,
             VideoId: v.VideoId, DurationSeconds: v.DurationSeconds),
 
         DocumentCurriculumResource d => new(
-            d.Id, d.Order, d.ResourceType, d.CourseAssetId,
+            d.Id, d.Order, d.ResourceType.ToString(), d.CourseAssetId,
             DocumentId: d.DocumentId, DocumentTitle: d.Title, DocumentType: d.DocumentType,
             IsPublic: d.IsPublic, VariantName: d.VariantName, DocUri: d.DocUri),
 
         ArticleCurriculumResource a => new(
-            a.Id, a.Order, a.ResourceType, a.CourseAssetId,
+            a.Id, a.Order, a.ResourceType.ToString(), a.CourseAssetId,
             TextContent: a.TextContent),
 
         AssessmentCurriculumResource q => new(
-            q.Id, q.Order, q.ResourceType, q.CourseAssetId,
+            q.Id, q.Order, q.ResourceType.ToString(), q.CourseAssetId,
             AssessmentId: q.AssessmentId, PassingScore: q.PassingScore),
 
-        _ => new(resource.Id, resource.Order, resource.ResourceType, resource.CourseAssetId)
+        _ => new(resource.Id, resource.Order, resource.ResourceType.ToString(), resource.CourseAssetId)
     };
 }
 
@@ -73,7 +73,7 @@ public record CurriculumItemDto(
             item.Id,
             item.SectionId,
             item.Title,
-            item.MainType,
+            item.MainResourceType.ToString(),
             item.Order,
             item.BitIndex,
             content,
@@ -109,7 +109,7 @@ public static class CurriculumResourceParser
                     ? vId
                     : (courseAssetId ?? Guid.NewGuid());
                 var duration = block.TryGetProperty("durationSeconds", out var dProp) && dProp.TryGetDouble(out var d) ? d : 0;
-                resources.Add(new VideoCurriculumResource(Guid.NewGuid(), order++, courseAssetId ?? videoId, videoId, duration));
+                resources.Add(new VideoCurriculumResource(Guid.NewGuid(), order++, courseAssetId ?? videoId, duration));
             }
             else if (normalizedType is "document")
             {
@@ -136,7 +136,7 @@ public static class CurriculumResourceParser
                     }
                 }
 
-                resources.Add(new DocumentCurriculumResource(Guid.NewGuid(), order++, docId, title, docType, isPublic, variant, courseAssetId));
+                resources.Add(new DocumentCurriculumResource(Guid.NewGuid(), order++, title, courseAssetId ?? docId, docType, isPublic, variant));
             }
             else if (normalizedType is "quiz" or "assessment")
             {
@@ -144,13 +144,12 @@ public static class CurriculumResourceParser
                     ? aId
                     : (courseAssetId ?? Guid.NewGuid());
                 var passingScore = block.TryGetProperty("passingScore", out var pProp) && pProp.TryGetInt32(out var p) ? p : 80;
-                resources.Add(new AssessmentCurriculumResource(Guid.NewGuid(), order++, passingScore, courseAssetId));
+                resources.Add(new AssessmentCurriculumResource(Guid.NewGuid(), order++, passingScore, courseAssetId ?? assessmentId));
             }
             else
             {
                 // Article / text / inline
-                var text = block.TryGetProperty("text", out var txtProp) ? txtProp.GetString() ?? "" : block.GetRawText();
-                resources.Add(new ArticleCurriculumResource(Guid.NewGuid(), order++, text, courseAssetId));
+                resources.Add(new ArticleCurriculumResource(Guid.NewGuid(), order++, block, courseAssetId));
             }
         }
 
@@ -232,7 +231,10 @@ public sealed class CourseSectionItemHandlers :
     public async Task<ErrorOr<CurriculumItemDto>> Handle(
         CreateCourseSectionItemCommand request, CancellationToken cancellationToken)
     {
-        var course = await _courseRepository.GetByIdWithSectionsAndAssetsAsync(request.CourseId, cancellationToken);
+        var course = await _courseRepository.Query(request.CourseId)
+            .WithSection(request.SectionId)
+            .WithItems()
+            .ExecuteAsync(cancellationToken);
         if (course is null)
             return Error.NotFound("Course.NotFound", "Course not found.");
 
@@ -242,32 +244,17 @@ public sealed class CourseSectionItemHandlers :
 
         var resources = CurriculumResourceParser.Parse(request.MainType, request.Content);
 
-        var assignedAssets = new List<Guid>();
-        foreach (var res in resources.Where(r => r.CourseAssetId.HasValue))
-        {
-            var assignResult = course.AssignAsset(res.CourseAssetId!.Value);
-            if (assignResult.IsError)
-            {
-                foreach (var assigned in assignedAssets) course.ReleaseAsset(assigned);
-                return assignResult.Errors;
-            }
-            assignedAssets.Add(res.CourseAssetId!.Value);
-        }
-
         var bitIndex = course.AllocateNextBitIndex();
+        var mainType = CurriculumItem.ParseMainType(request.MainType);
         var itemResult = section.AddItem(
             Guid.NewGuid(),
-            course.TenantId,
             request.Title,
-            request.MainType,
+            mainType,
             bitIndex,
             resources);
 
         if (itemResult.IsError)
-        {
-            foreach (var assigned in assignedAssets) course.ReleaseAsset(assigned);
             return itemResult.Errors;
-        }
 
         _courseRepository.Update(course);
         _logger.LogInformation("Added curriculum item {ItemId} to course {CourseId}, section {SectionId}.",
@@ -279,7 +266,11 @@ public sealed class CourseSectionItemHandlers :
     public async Task<ErrorOr<CurriculumItemDto>> Handle(
         UpdateCourseSectionItemCommand request, CancellationToken cancellationToken)
     {
-        var course = await _courseRepository.GetByIdWithSectionsAndAssetsAsync(request.CourseId, cancellationToken);
+        var course = await _courseRepository.Query(request.CourseId)
+            .WithSection(request.SectionId)
+            .WithItems()
+            .WithResources()
+            .ExecuteAsync(cancellationToken);
         if (course is null)
             return Error.NotFound("Course.NotFound", "Course not found.");
 
@@ -292,31 +283,9 @@ public sealed class CourseSectionItemHandlers :
             return Error.NotFound("CurriculumItem.NotFound", "Item not found in section.");
 
         var newResources = CurriculumResourceParser.Parse(request.MainType, request.Content);
+        var mainType = CurriculumItem.ParseMainType(request.MainType);
 
-        var oldAssetIds = item.Resources.Where(r => r.CourseAssetId.HasValue).Select(r => r.CourseAssetId!.Value).Distinct().ToList();
-        var newAssetIds = newResources.Where(r => r.CourseAssetId.HasValue).Select(r => r.CourseAssetId!.Value).Distinct().ToList();
-
-        var toAddIds = newAssetIds.Except(oldAssetIds).ToList();
-        var toRemoveIds = oldAssetIds.Except(newAssetIds).ToList();
-
-        var assignedAssets = new List<Guid>();
-        foreach (var assetId in toAddIds)
-        {
-            var assignResult = course.AssignAsset(assetId);
-            if (assignResult.IsError)
-            {
-                foreach (var assigned in assignedAssets) course.ReleaseAsset(assigned);
-                return assignResult.Errors;
-            }
-            assignedAssets.Add(assetId);
-        }
-
-        foreach (var assetId in toRemoveIds)
-        {
-            course.ReleaseAsset(assetId);
-        }
-
-        var updateResult = section.UpdateItem(request.ItemId, request.Title, request.MainType, newResources);
+        var updateResult = section.UpdateItem(request.ItemId, request.Title, mainType, newResources);
         if (updateResult.IsError)
             return updateResult.Errors;
 
@@ -330,7 +299,10 @@ public sealed class CourseSectionItemHandlers :
     public async Task<ErrorOr<Success>> Handle(
         DeleteCourseSectionItemCommand request, CancellationToken cancellationToken)
     {
-        var course = await _courseRepository.GetByIdWithSectionsAndAssetsAsync(request.CourseId, cancellationToken);
+        var course = await _courseRepository.Query(request.CourseId)
+            .WithSection(request.SectionId)
+            .WithItems()
+            .ExecuteAsync(cancellationToken);
         if (course is null)
             return Error.NotFound("Course.NotFound", "Course not found.");
 
@@ -341,11 +313,6 @@ public sealed class CourseSectionItemHandlers :
         var item = section.Items.FirstOrDefault(i => i.Id == request.ItemId && !i.IsDeleted);
         if (item is null)
             return Error.NotFound("CurriculumItem.NotFound", "Item not found.");
-
-        foreach (var res in item.Resources.Where(r => r.CourseAssetId.HasValue))
-        {
-            course.ReleaseAsset(res.CourseAssetId!.Value);
-        }
 
         var removeResult = section.RemoveItem(request.ItemId);
         if (removeResult.IsError)

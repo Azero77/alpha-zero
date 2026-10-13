@@ -141,110 +141,85 @@ public class CourseAssetTests
     }
 
     [Fact]
-    public void CourseAsset_Should_StartWithZeroRefCount()
+    public void MarkAvailable_Should_Succeed_WhenPending()
     {
         var id = Guid.NewGuid();
         var arn = ResourceArn.ForVideo(TenantId, id);
         var asset = VideoCourseAsset.Create(id, TenantId, arn, "Video", CourseId).Value;
 
-        asset.RefCount.Should().Be(0);
-    }
-
-    [Fact]
-    public void AssignToItem_Should_IncrementRefCount_AndTransitionAvailableToInUse()
-    {
-        var id = Guid.NewGuid();
-        var arn = ResourceArn.ForVideo(TenantId, id);
-        var asset = VideoCourseAsset.Create(id, TenantId, arn, "Video", CourseId).Value;
-        asset.MarkAvailable();
-
-        var result = asset.AssignToItem();
+        var result = asset.MarkAvailable();
 
         result.IsError.Should().BeFalse();
-        asset.RefCount.Should().Be(1);
-        asset.State.Should().Be(CourseAssetState.InUse);
+        asset.State.Should().Be(CourseAssetState.Available);
     }
 
     [Fact]
-    public void AssignToItem_Should_AllowMultiUse_WhenAlreadyInUse()
+    public void MarkAvailable_Should_Fail_WhenNotPending()
     {
         var id = Guid.NewGuid();
         var arn = ResourceArn.ForVideo(TenantId, id);
         var asset = VideoCourseAsset.Create(id, TenantId, arn, "Video", CourseId).Value;
         asset.MarkAvailable();
 
-        asset.AssignToItem();
-        var secondAssign = asset.AssignToItem();
-
-        secondAssign.IsError.Should().BeFalse();
-        asset.RefCount.Should().Be(2);
-        asset.State.Should().Be(CourseAssetState.InUse);
-    }
-
-    [Fact]
-    public void AssignToItem_Should_Fail_WhenAssetIsPendingOrFailedOrArchived()
-    {
-        var id = Guid.NewGuid();
-        var arn = ResourceArn.ForVideo(TenantId, id);
-        var pendingAsset = VideoCourseAsset.Create(id, TenantId, arn, "Video", CourseId).Value;
-
-        var result = pendingAsset.AssignToItem();
+        var result = asset.MarkAvailable();
 
         result.IsError.Should().BeTrue();
         result.FirstError.Code.Should().Be("CourseAsset.State");
     }
 
     [Fact]
-    public void ReleaseFromItem_Should_DecrementRefCount_AndTransitionToAvailable_WhenRefCountReachesZero()
+    public void MarkFailed_Should_Succeed_WhenPending()
     {
         var id = Guid.NewGuid();
         var arn = ResourceArn.ForVideo(TenantId, id);
         var asset = VideoCourseAsset.Create(id, TenantId, arn, "Video", CourseId).Value;
-        asset.MarkAvailable();
 
-        asset.AssignToItem(); // RefCount = 1
-        asset.AssignToItem(); // RefCount = 2
+        var result = asset.MarkFailed();
 
-        var firstRelease = asset.ReleaseFromItem();
-        firstRelease.IsError.Should().BeFalse();
-        asset.RefCount.Should().Be(1);
-        asset.State.Should().Be(CourseAssetState.InUse);
-
-        var secondRelease = asset.ReleaseFromItem();
-        secondRelease.IsError.Should().BeFalse();
-        asset.RefCount.Should().Be(0);
-        asset.State.Should().Be(CourseAssetState.Available);
+        result.IsError.Should().BeFalse();
+        asset.State.Should().Be(CourseAssetState.Failed);
     }
 
     [Fact]
-    public void ReleaseFromItem_Should_Fail_WhenAlreadyReleased_PreventingDoubleRelease()
+    public void MarkFailed_Should_Fail_WhenNotPending()
     {
         var id = Guid.NewGuid();
         var arn = ResourceArn.ForVideo(TenantId, id);
         var asset = VideoCourseAsset.Create(id, TenantId, arn, "Video", CourseId).Value;
         asset.MarkAvailable();
-        asset.AssignToItem();
-        asset.ReleaseFromItem(); // Now RefCount == 0, State == Available
 
-        var releaseResult = asset.ReleaseFromItem();
+        var result = asset.MarkFailed();
 
-        releaseResult.IsError.Should().BeTrue();
-        releaseResult.FirstError.Code.Should().Be("CourseAsset.State");
+        result.IsError.Should().BeTrue();
+        result.FirstError.Code.Should().Be("CourseAsset.State");
     }
 
     [Fact]
-    public void Archive_Should_Fail_WhenRefCountIsGreaterThanZero()
+    public void Archive_Should_Succeed_WhenNotAlreadyArchived()
     {
         var id = Guid.NewGuid();
         var arn = ResourceArn.ForVideo(TenantId, id);
         var asset = VideoCourseAsset.Create(id, TenantId, arn, "Video", CourseId).Value;
         asset.MarkAvailable();
-        asset.AssignToItem();
 
-        var archiveResult = asset.Archive();
+        var result = asset.Archive();
 
-        archiveResult.IsError.Should().BeTrue();
-        archiveResult.FirstError.Code.Should().Be("CourseAsset.State");
+        result.IsError.Should().BeFalse();
+        asset.State.Should().Be(CourseAssetState.Archived);
+    }
+
+    [Fact]
+    public void Archive_Should_Fail_WhenAlreadyArchived()
+    {
+        var id = Guid.NewGuid();
+        var arn = ResourceArn.ForVideo(TenantId, id);
+        var asset = VideoCourseAsset.Create(id, TenantId, arn, "Video", CourseId).Value;
+        asset.Archive();
+
+        var result = asset.Archive();
+
+        result.IsError.Should().BeTrue();
+        result.FirstError.Code.Should().Be("CourseAsset.State");
     }
 }
 

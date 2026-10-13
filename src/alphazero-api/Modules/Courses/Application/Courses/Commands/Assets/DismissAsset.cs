@@ -1,3 +1,4 @@
+using AlphaZero.Modules.Courses.Application.Repositories;
 using AlphaZero.Modules.Courses.Domain.Aggregates.Courses;
 using AlphaZero.Shared.Application;
 using AlphaZero.Shared.Infrastructure.Repositores;
@@ -12,9 +13,15 @@ public sealed class DismissAssetCommandHandler
     : IRequestHandler<DismissAssetCommand, ErrorOr<Success>>
 {
     private readonly IRepository<CourseAsset> _assetRepository;
+    private readonly ICourseRepository _courseRepository;
 
-    public DismissAssetCommandHandler(IRepository<CourseAsset> assetRepository)
-        => _assetRepository = assetRepository;
+    public DismissAssetCommandHandler(
+        IRepository<CourseAsset> assetRepository,
+        ICourseRepository courseRepository)
+    {
+        _assetRepository = assetRepository;
+        _courseRepository = courseRepository;
+    }
 
     public async Task<ErrorOr<Success>> Handle(
         DismissAssetCommand request, CancellationToken ct)
@@ -23,6 +30,9 @@ public sealed class DismissAssetCommandHandler
         if (asset is null) return Error.NotFound("CourseAsset.NotFound");
         if (asset.CourseId != request.CourseId)
             return Error.Forbidden("CourseAsset.WrongCourse", "Asset does not belong to this course.");
+
+        if (await _courseRepository.IsAssetInUseAsync(request.AssetId, ct))
+            return Error.Conflict("CourseAsset.InUse", "Cannot dismiss an asset currently in use by curriculum items.");
 
         var result = asset.Archive();
         if (result.IsError) return result.Errors;

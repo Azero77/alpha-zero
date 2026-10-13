@@ -51,6 +51,7 @@ public static class DependencyInjection
         moduleServices.AddScoped<ICurriculumItemRepository, CurriculumItemRepository>();
         moduleServices.AddScoped<IAssessmentService, AssessmentService>();
         moduleServices.AddScoped<IUnitOfWork, UnitOfWork<AppDbContext>>();
+        moduleServices.AddTransient<ICourseQueryBuilder, CourseQueryBuilder>();
 
         // Domain Services
         moduleServices.AddScoped<AlphaZero.Modules.Courses.Domain.Services.CourseReadinessService>();

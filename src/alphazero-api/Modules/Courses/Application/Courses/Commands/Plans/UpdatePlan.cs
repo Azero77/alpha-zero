@@ -33,7 +33,9 @@ public sealed class UpdatePlanCommandHandler : IRequestHandler<UpdatePlanCommand
 
     public async Task<ErrorOr<Success>> Handle(UpdatePlanCommand request, CancellationToken cancellationToken)
     {
-        var course = await _courseRepository.GetCourseAsync(request.CourseId, cancellationToken);
+        var course = await _courseRepository.Query(request.CourseId)
+            .WithPlans()
+            .ExecuteAsync(cancellationToken);
         if (course is null) return Error.NotFound("Course.NotFound", "Course not found.");
 
         var result = course.UpdatePlan(request.PlanId, request.Name, request.PrincipalId);

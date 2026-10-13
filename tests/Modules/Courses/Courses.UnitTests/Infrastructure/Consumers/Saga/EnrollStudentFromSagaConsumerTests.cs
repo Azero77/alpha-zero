@@ -4,10 +4,10 @@ using AlphaZero.Modules.Courses.Domain.Aggregates.Courses;
 using AlphaZero.Modules.Courses.Infrastructure.Consumers.Saga;
 using AlphaZero.Modules.Courses.IntegrationEvents;
 using AlphaZero.Shared.Domain;
-using ErrorOr;
 using MassTransit;
 using Microsoft.Extensions.Logging;
 using Moq;
+using Xunit;
 
 namespace AlphaZero.Modules.Courses.UnitTests.Infrastructure.Consumers.Saga;
 
@@ -25,11 +25,19 @@ public class EnrollStudentFromSagaConsumerTests
         _courseRepositoryMock = new Mock<ICourseRepository>();
         _loggerMock = new Mock<ILogger<EnrollStudentFromSagaConsumer>>();
         _contextMock = new Mock<ConsumeContext<EnrollStudentFromSagaCommand>>();
-        
+
         _consumer = new EnrollStudentFromSagaConsumer(
             _coursesModuleMock.Object, 
             _courseRepositoryMock.Object, 
             _loggerMock.Object);
+    }
+
+    private void SetupQuery(Course? course)
+    {
+        var builderMock = new Mock<ICourseQueryBuilder>();
+        builderMock.Setup(b => b.WithPlans(It.IsAny<bool>())).Returns(builderMock.Object);
+        builderMock.Setup(b => b.ExecuteAsync(It.IsAny<CancellationToken>())).ReturnsAsync(course);
+        _courseRepositoryMock.Setup(x => x.Query(It.IsAny<Guid>())).Returns(builderMock.Object);
     }
 
     [Fact]
@@ -38,8 +46,7 @@ public class EnrollStudentFromSagaConsumerTests
         // Arrange
         var command = new EnrollStudentFromSagaCommand(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), "Standard", ResourceArn.ForCourse(Guid.NewGuid(), Guid.NewGuid()));
         _contextMock.Setup(x => x.Message).Returns(command);
-        _courseRepositoryMock.Setup(x => x.GetCourseAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((Course?)null);
+        SetupQuery(null);
 
         // Act
         await _consumer.Consume(_contextMock.Object);
@@ -59,8 +66,7 @@ public class EnrollStudentFromSagaConsumerTests
         var course = Course.Create(courseId, Guid.NewGuid(), "Title", null, Guid.NewGuid()).Value;
         course.AddPlan("Standard", Guid.NewGuid()); // Add different plan
 
-        _courseRepositoryMock.Setup(x => x.GetCourseAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(course);
+        SetupQuery(course);
 
         // Act
         await _consumer.Consume(_contextMock.Object);
@@ -81,8 +87,7 @@ public class EnrollStudentFromSagaConsumerTests
         var course = Course.Create(courseId, Guid.NewGuid(), "Title", null, Guid.NewGuid()).Value;
         course.AddPlan("Standard", principalId);
 
-        _courseRepositoryMock.Setup(x => x.GetCourseAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(course);
+        SetupQuery(course);
             
         _coursesModuleMock.Setup(x => x.Send(It.IsAny<EnrollInCourseCommand>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(Guid.NewGuid());

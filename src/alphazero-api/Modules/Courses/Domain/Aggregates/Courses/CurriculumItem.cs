@@ -11,11 +11,18 @@ public class CurriculumItem : Entity, ISoftDeletable
     public int Order { get; internal set; } // UI Display Order
     public int BitIndex { get; private set; } // Immutable Bitmask Pointer
     public ResourceType MainResourceType { get; private set; } // "Video", "Document", "Article", "Quiz"
+    public string MainType => MainResourceType.ToString();
     public bool IsDeleted { get; private set; }
     public DateTime? OnDeleted { get; private set; } = null;
 
     private readonly List<CurriculumResource> _resources = new();
     public IReadOnlyCollection<CurriculumResource> Resources => _resources.AsReadOnly();
+
+    public static readonly string[] ValidMainTypes = Enum.GetNames<ResourceType>();
+    public static bool IsValidMainType(string type) =>
+        Enum.TryParse<ResourceType>(type, true, out _);
+    public static ResourceType ParseMainType(string type) =>
+        Enum.Parse<ResourceType>(type, true);
 
     private CurriculumItem()
     {
@@ -42,6 +49,18 @@ public class CurriculumItem : Entity, ISoftDeletable
         }
     }
 
+    public CurriculumItem(
+        Guid id,
+        Guid sectionId,
+        string title,
+        int order,
+        int bitIndex,
+        string mainType,
+        IEnumerable<CurriculumResource>? resources = null)
+        : this(id, sectionId, title, order, bitIndex, ParseMainType(mainType), resources)
+    {
+    }
+
     public static ErrorOr<CurriculumItem> Create(
         Guid id,
         Guid sectionId,
@@ -55,6 +74,20 @@ public class CurriculumItem : Entity, ISoftDeletable
             return Error.Validation("CurriculumItem.Title", "Title is required.");
 
         return new CurriculumItem(id, sectionId, title, order, bitIndex, mainType, resources);
+    }
+
+    public static ErrorOr<CurriculumItem> Create(
+        Guid id,
+        Guid sectionId,
+        string title,
+        int order,
+        int bitIndex,
+        string mainType,
+        IEnumerable<CurriculumResource>? resources = null)
+    {
+        if (!IsValidMainType(mainType))
+            return Error.Validation("CurriculumItem.MainType", $"Invalid main resource type '{mainType}'.");
+        return Create(id, sectionId, title, order, bitIndex, ParseMainType(mainType), resources);
     }
 
     public ErrorOr<Success> Update(string title, ResourceType mainType, IEnumerable<CurriculumResource>? resources = null)
@@ -71,6 +104,13 @@ public class CurriculumItem : Entity, ISoftDeletable
         }
 
         return Result.Success;
+    }
+
+    public ErrorOr<Success> Update(string title, string mainType, IEnumerable<CurriculumResource>? resources = null)
+    {
+        if (!IsValidMainType(mainType))
+            return Error.Validation("CurriculumItem.MainType", $"Invalid main resource type '{mainType}'.");
+        return Update(title, ParseMainType(mainType), resources);
     }
 
     public void AddResource(CurriculumResource resource)

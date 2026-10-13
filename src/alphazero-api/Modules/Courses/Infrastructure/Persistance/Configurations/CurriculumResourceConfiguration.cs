@@ -14,11 +14,14 @@ public class CurriculumResourceConfiguration : IEntityTypeConfiguration<Curricul
         builder.Property(r => r.Id)
             .ValueGeneratedNever();
 
+        builder.Property(r => r.ResourceType)
+            .HasConversion<string>();
+
         builder.HasDiscriminator(r => r.ResourceType)
-            .HasValue<VideoCurriculumResource>("Video")
-            .HasValue<DocumentCurriculumResource>("Document")
-            .HasValue<ArticleCurriculumResource>("Article")
-            .HasValue<AssessmentCurriculumResource>("Quiz");
+            .HasValue<VideoCurriculumResource>(ResourceType.Video)
+            .HasValue<DocumentCurriculumResource>(ResourceType.Document)
+            .HasValue<ArticleCurriculumResource>(ResourceType.Article)
+            .HasValue<AssessmentCurriculumResource>(ResourceType.Assessment);
 
         builder.Property(r => r.Order)
             .IsRequired();
@@ -26,10 +29,10 @@ public class CurriculumResourceConfiguration : IEntityTypeConfiguration<Curricul
         builder.Property(r => r.CourseAssetId)
             .IsRequired(false);
 
-        builder.HasOne(r => r.Asset)
+        builder.HasOne<CourseAsset>()
             .WithMany()
             .HasForeignKey(r => r.CourseAssetId)
-            .OnDelete(DeleteBehavior.SetNull);
+            .OnDelete(DeleteBehavior.Restrict);
 
         builder.HasIndex(r => r.CourseAssetId);
         builder.HasIndex(r => r.CurriculumItemId);
@@ -40,7 +43,7 @@ public class VideoCurriculumResourceConfiguration : IEntityTypeConfiguration<Vid
 {
     public void Configure(EntityTypeBuilder<VideoCurriculumResource> builder)
     {
-        builder.Property(v => v.VideoId);
+        builder.Ignore(v => v.VideoId);
         builder.Property(v => v.DurationSeconds);
     }
 }
@@ -49,7 +52,8 @@ public class DocumentCurriculumResourceConfiguration : IEntityTypeConfiguration<
 {
     public void Configure(EntityTypeBuilder<DocumentCurriculumResource> builder)
     {
-        builder.Property(d => d.DocumentId);
+        builder.Ignore(d => d.DocumentId);
+        builder.Ignore(d => d.DocUri);
         builder.Property(d => d.Title).HasMaxLength(256);
         builder.Property(d => d.DocumentType).HasMaxLength(50);
         builder.Property(d => d.IsPublic);
@@ -61,7 +65,8 @@ public class ArticleCurriculumResourceConfiguration : IEntityTypeConfiguration<A
 {
     public void Configure(EntityTypeBuilder<ArticleCurriculumResource> builder)
     {
-        builder.Property(a => a.TextContent);
+        builder.Ignore(a => a.TextContent);
+        builder.Property(a => a.Content);
     }
 }
 
@@ -69,7 +74,7 @@ public class QuizCurriculumResourceConfiguration : IEntityTypeConfiguration<Asse
 {
     public void Configure(EntityTypeBuilder<AssessmentCurriculumResource> builder)
     {
-        builder.Property(q => q.AssessmentId);
+        builder.Ignore(q => q.AssessmentId);
         builder.Property(q => q.PassingScore);
     }
 }

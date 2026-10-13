@@ -45,7 +45,10 @@ public sealed class EnrollInCourseCommandHandler : IRequestHandler<EnrollInCours
         if (tenantId is null) return Error.Unauthorized("Tenant.NotFound", "Tenant not found.");
 
         // Verify course exists
-        var course = await _courseRepository.GetByIdWithSectionsAsync(request.CourseId, cancellationToken);
+        var course = await _courseRepository.Query(request.CourseId)
+            .WithSections()
+            .WithItems()
+            .ExecuteAsync(cancellationToken);
         if (course is null) return Error.NotFound("Course.NotFound", "Course not found.");
 
         // Check if already enrolled

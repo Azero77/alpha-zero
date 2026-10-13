@@ -13,7 +13,7 @@ public class BitmaskStabilityTests
     private static CurriculumItem AddItem(Course course, CourseSection section, string title, string type)
     {
         var bitIndex = course.AllocateNextBitIndex();
-        return section.AddItem(Guid.NewGuid(), TenantId, title, type, bitIndex).Value;
+        return section.AddItem(Guid.NewGuid(), title, type, bitIndex).Value;
     }
 
     [Fact]
@@ -24,21 +24,9 @@ public class BitmaskStabilityTests
         course.AddSection("Section 1");
         var section = course.Sections.First();
 
-        var v1Id = Guid.NewGuid();
-        course.AddVideoAsset(v1Id, ResourceArn.ForVideo(TenantId, v1Id), "Video 1");
-        course.MarkAssetAvailable(v1Id);
-
-        var a1Id = Guid.NewGuid();
-        course.AddAssessmentAsset(a1Id, ResourceArn.ForAssessment(TenantId, a1Id), "Quiz 1", 5, AssessmentType.Practice);
-        course.MarkAssetAvailable(a1Id);
-
-        var v2Id = Guid.NewGuid();
-        course.AddVideoAsset(v2Id, ResourceArn.ForVideo(TenantId, v2Id), "Video 2");
-        course.MarkAssetAvailable(v2Id);
-
         // Act
         AddItem(course, section, "Lesson 1", "Video");
-        AddItem(course, section, "Assessment 1", "Quiz");
+        AddItem(course, section, "Assessment 1", "Assessment");
         AddItem(course, section, "Lesson 2", "Video");
 
         // Assert
@@ -56,14 +44,6 @@ public class BitmaskStabilityTests
         var course = Course.Create(Guid.NewGuid(), TenantId, "Architecture 101", null, SubjectId).Value;
         course.AddSection("Section 1");
         var section = course.Sections.First();
-
-        var v1Id = Guid.NewGuid();
-        course.AddVideoAsset(v1Id, ResourceArn.ForVideo(TenantId, v1Id), "Video 1");
-        course.MarkAssetAvailable(v1Id);
-
-        var v2Id = Guid.NewGuid();
-        course.AddVideoAsset(v2Id, ResourceArn.ForVideo(TenantId, v2Id), "Video 2");
-        course.MarkAssetAvailable(v2Id);
 
         var l1 = AddItem(course, section, "Lesson 1", "Video");
         var l2 = AddItem(course, section, "Lesson 2", "Video");
@@ -90,9 +70,6 @@ public class BitmaskStabilityTests
         course.AddSection("S1");
         var s1 = course.Sections.First();
 
-        var v1Id = Guid.NewGuid();
-        course.AddVideoAsset(v1Id, ResourceArn.ForVideo(TenantId, v1Id), "Video 1");
-        course.MarkAssetAvailable(v1Id);
         var l1 = AddItem(course, s1, "L1", "Video");
         
         l1.BitIndex.Should().Be(0);
@@ -101,9 +78,6 @@ public class BitmaskStabilityTests
         course.AddSection("S2");
         var s2 = course.Sections.Last();
 
-        var v2Id = Guid.NewGuid();
-        course.AddVideoAsset(v2Id, ResourceArn.ForVideo(TenantId, v2Id), "Video 2");
-        course.MarkAssetAvailable(v2Id);
         var l2 = AddItem(course, s2, "L2", "Video");
 
         // Assert

@@ -1,6 +1,7 @@
 using AlphaZero.Modules.Courses.Application.Repositories;
 using AlphaZero.Modules.Courses.Domain.Aggregates.Courses;
 using AlphaZero.Shared.Application;
+using AlphaZero.Shared.Infrastructure.Repositores;
 using ErrorOr;
 using MediatR;
 using System.Text.Json;
@@ -19,14 +20,33 @@ public sealed class AssignAssetToCurriculumCommandHandler
     : IRequestHandler<AssignAssetToCurriculumCommand, ErrorOr<Guid>>
 {
     private readonly ICourseRepository _courseRepository;
+    private readonly IRepository<CourseAsset> _assetRepository;
 
-    public AssignAssetToCurriculumCommandHandler(ICourseRepository courseRepository)
-        => _courseRepository = courseRepository;
+    public AssignAssetToCurriculumCommandHandler(
+        ICourseRepository courseRepository,
+        IRepository<CourseAsset> assetRepository)
+    {
+        _courseRepository = courseRepository;
+        _assetRepository = assetRepository;
+    }
 
     public async Task<ErrorOr<Guid>> Handle(
         AssignAssetToCurriculumCommand request, CancellationToken ct)
     {
-        var course = await _courseRepository.GetByIdWithSectionsAndAssetsAsync(request.CourseId, ct);
+        var asset = await _assetRepository.GetById(request.AssetId, ct);
+        if (asset is null)
+            return Error.NotFound("CourseAsset.NotFound", "Course asset not found.");
+
+        if (asset.CourseId != request.CourseId)
+            return Error.Forbidden("CourseAsset.WrongCourse", "Asset does not belong to this course.");
+
+        if (asset.State != CourseAssetState.Available)
+            return Error.Conflict("CourseAsset.NotReady", $"Cannot assign asset in state '{asset.State}'. Must be Available.");
+
+        var course = await _courseRepository.Query(request.CourseId)
+            .WithSection(request.SectionId)
+            .WithItems()
+            .ExecuteAsync(ct);
         if (course is null)
             return Error.NotFound("Course.NotFound", "Course not found.");
 
@@ -34,33 +54,32 @@ public sealed class AssignAssetToCurriculumCommandHandler
         if (section is null)
             return Error.NotFound("Course.Section", "Section not found.");
 
-        var assignResult = course.AssignAsset(request.AssetId);
-        if (assignResult.IsError)
-            return assignResult.Errors;
-
-        var asset = assignResult.Value;
         CurriculumResource resource = asset.CourseAssetType switch
         {
-            CourseAssetType.Video => new VideoCurriculumResource(Guid.NewGuid(), 0, asset.Id, asset.Id),
-            CourseAssetType.Document => new DocumentCurriculumResource(Guid.NewGuid(), 0, asset.Id, request.Title, courseAssetId: asset.Id),
-            CourseAssetType.Assessment => new AssessmentCurriculumResource(Guid.NewGuid(), 0, courseAssetId: asset.Id),
-            _ => new ArticleCurriculumResource(Guid.NewGuid(), 0, request.Title, asset.Id)
+            CourseAssetType.Video => new VideoCurriculumResource(Guid.NewGuid(), 0, asset.Id),
+            CourseAssetType.Document => new DocumentCurriculumResource(Guid.NewGuid(), 0, request.Title, asset.Id),
+            CourseAssetType.Assessment => new AssessmentCurriculumResource(Guid.NewGuid(), 0, 70, asset.Id),
+            _ => new ArticleCurriculumResource(Guid.NewGuid(), 0, request.Metadata ?? default, asset.Id)
+        };
+
+        ResourceType mainType = asset.CourseAssetType switch
+        {
+            CourseAssetType.Video => ResourceType.Video,
+            CourseAssetType.Document => ResourceType.Document,
+            CourseAssetType.Assessment => ResourceType.Assessment,
+            _ => ResourceType.Article
         };
 
         var bitIndex = course.AllocateNextBitIndex();
         var itemResult = section.AddItem(
             Guid.NewGuid(),
-            course.TenantId,
             request.Title,
-            asset.CourseAssetType.ToString(),
+            mainType,
             bitIndex,
             new[] { resource });
 
         if (itemResult.IsError)
-        {
-            course.ReleaseAsset(request.AssetId);
             return itemResult.Errors;
-        }
 
         _courseRepository.Update(course);
         return itemResult.Value.Id;

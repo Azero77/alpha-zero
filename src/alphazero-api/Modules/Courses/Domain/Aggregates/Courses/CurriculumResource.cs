@@ -9,7 +9,7 @@ public abstract class CurriculumResource : Entity
     public Guid CurriculumItemId { get; internal set; }
     public int Order { get; internal set; }
     public Guid? CourseAssetId { get; protected set; }
-    protected abstract ResourceType ResourceType { get; }
+    public abstract ResourceType ResourceType { get; }
 
     protected CurriculumResource() { } // EF Core
 
@@ -32,6 +32,7 @@ public abstract class CurriculumResource : Entity
 public class VideoCurriculumResource : CurriculumResource
 {
     public double DurationSeconds { get; private set; }
+    public Guid VideoId => CourseAssetId ?? Guid.Empty;
     
     private VideoCurriculumResource() { } // EF Core
 
@@ -44,7 +45,7 @@ public class VideoCurriculumResource : CurriculumResource
     public bool CanComplete(double watchedSeconds) =>
         DurationSeconds <= 0 || (watchedSeconds / DurationSeconds) >= 0.8;
 
-    protected override ResourceType ResourceType => ResourceType.Video;
+    public override ResourceType ResourceType => ResourceType.Video;
 }
 
 public class DocumentCurriculumResource : CurriculumResource
@@ -58,7 +59,7 @@ public class DocumentCurriculumResource : CurriculumResource
     {
         
     }
-    private DocumentCurriculumResource(
+    public DocumentCurriculumResource(
         Guid id,
         int order,
         string title,
@@ -91,6 +92,8 @@ public class DocumentCurriculumResource : CurriculumResource
 
     public string DocUri => $"doc://{(IsPublic ? "public" : "private")}/{CourseAssetId!}{(string.IsNullOrEmpty(VariantName) ? "" : $"?variantName={VariantName}")}";
 
+    public Guid DocumentId => CourseAssetId ?? Guid.Empty;
+
     public static (bool IsPublic, Guid DocumentId, string? VariantName) ParseDocUri(string uri)
     {
         if (string.IsNullOrWhiteSpace(uri) || !uri.StartsWith("doc://", StringComparison.OrdinalIgnoreCase))
@@ -121,12 +124,13 @@ public class DocumentCurriculumResource : CurriculumResource
         return (isPublic, docId, variant);
     }
 
-    protected override ResourceType ResourceType => ResourceType.Document;
+    public override ResourceType ResourceType => ResourceType.Document;
 }
 
 public class ArticleCurriculumResource : CurriculumResource
 {
     public JsonElement Content { get; private set; }
+    public string TextContent => Content.ValueKind == JsonValueKind.String ? Content.GetString() ?? string.Empty : Content.ToString();
     private ArticleCurriculumResource() { }
 
     public ArticleCurriculumResource(Guid id, int order, JsonElement content, Guid? courseAssetId = null )
@@ -139,12 +143,13 @@ public class ArticleCurriculumResource : CurriculumResource
         Content = content;
     }
 
-    protected override ResourceType ResourceType => ResourceType.Article;
+    public override ResourceType ResourceType => ResourceType.Article;
 }
 
 public class AssessmentCurriculumResource : CurriculumResource
 {
     public int PassingScore { get;  }
+    public Guid AssessmentId => CourseAssetId ?? Guid.Empty;
 
     private AssessmentCurriculumResource() { } 
 
@@ -155,7 +160,7 @@ public class AssessmentCurriculumResource : CurriculumResource
     }
 
     public bool CanComplete(int score) => score >= PassingScore;
-    protected override ResourceType ResourceType => ResourceType.Assessment;
+    public override ResourceType ResourceType => ResourceType.Assessment;
 }
 
 public enum ResourceType

@@ -23,8 +23,18 @@ public class CourseSectionItemHandlersTests
         _handler = new CourseSectionItemHandlers(_courseRepository, _logger);
     }
 
+    private void SetupQuery(Guid courseId, Course? course)
+    {
+        var builder = Substitute.For<ICourseQueryBuilder>();
+        _courseRepository.Query(courseId).Returns(builder);
+        builder.WithSection(Arg.Any<Guid>()).Returns(builder);
+        builder.WithItems(Arg.Any<bool>()).Returns(builder);
+        builder.WithResources(Arg.Any<bool>()).Returns(builder);
+        builder.ExecuteAsync(Arg.Any<CancellationToken>()).Returns(course);
+    }
+
     [Fact]
-    public async Task Create_Should_AddItemAndIncrementAssetRefCount_WhenValid()
+    public async Task Create_Should_AddItem_WhenValid()
     {
         // Arrange
         var tenantId = Guid.NewGuid();
@@ -33,11 +43,8 @@ public class CourseSectionItemHandlersTests
         var sectionId = course.Sections.First().Id;
 
         var assetId = Guid.NewGuid();
-        course.AddVideoAsset(assetId, ResourceArn.ForVideo(tenantId, assetId), "Kinematics 1");
-        course.MarkAssetAvailable(assetId);
 
-        _courseRepository.GetByIdWithSectionsAndAssetsAsync(course.Id, Arg.Any<CancellationToken>())
-            .Returns(course);
+        SetupQuery(course.Id, course);
 
         var content = JsonDocument.Parse($@"[
             {{ ""type"": ""video"", ""courseAssetId"": ""{assetId}"" }}
@@ -54,10 +61,6 @@ public class CourseSectionItemHandlersTests
         result.Value.MainType.Should().Be("Video");
         result.Value.Title.Should().Be("Lesson 1");
 
-        var asset = course.Assets.First(a => a.Id == assetId);
-        asset.RefCount.Should().Be(1);
-        asset.State.Should().Be(CourseAssetState.InUse);
-
         _courseRepository.Received(1).Update(course);
     }
 
@@ -66,11 +69,11 @@ public class CourseSectionItemHandlersTests
     {
         // Arrange
         var courseId = Guid.NewGuid();
-        _courseRepository.GetByIdWithSectionsAndAssetsAsync(courseId, Arg.Any<CancellationToken>())
-            .Returns((Course?)null);
+        var sectionId = Guid.NewGuid();
+        SetupQuery(courseId, null);
 
         var content = JsonDocument.Parse("[]").RootElement;
-        var command = new CreateCourseSectionItemCommand(courseId, Guid.NewGuid(), "Item", "Video", content);
+        var command = new CreateCourseSectionItemCommand(courseId, sectionId, "Item", "Video", content);
 
         // Act
         var result = await _handler.Handle(command, CancellationToken.None);
@@ -86,11 +89,11 @@ public class CourseSectionItemHandlersTests
         // Arrange
         var tenantId = Guid.NewGuid();
         var course = Course.Create(Guid.NewGuid(), tenantId, "Title", "Desc", Guid.NewGuid()).Value;
-        _courseRepository.GetByIdWithSectionsAndAssetsAsync(course.Id, Arg.Any<CancellationToken>())
-            .Returns(course);
+        var missingSectionId = Guid.NewGuid();
+        SetupQuery(course.Id, course);
 
         var content = JsonDocument.Parse("[]").RootElement;
-        var command = new CreateCourseSectionItemCommand(course.Id, Guid.NewGuid(), "Item", "Article", content);
+        var command = new CreateCourseSectionItemCommand(course.Id, missingSectionId, "Item", "Article", content);
 
         // Act
         var result = await _handler.Handle(command, CancellationToken.None);
@@ -101,36 +104,7 @@ public class CourseSectionItemHandlersTests
     }
 
     [Fact]
-    public async Task Create_Should_ReturnConflict_WhenAssetIsPendingTranscoding()
-    {
-        // Arrange
-        var tenantId = Guid.NewGuid();
-        var course = Course.Create(Guid.NewGuid(), tenantId, "Title", "Desc", Guid.NewGuid()).Value;
-        course.AddSection("Section 1");
-        var sectionId = course.Sections.First().Id;
-
-        var assetId = Guid.NewGuid();
-        course.AddVideoAsset(assetId, ResourceArn.ForVideo(tenantId, assetId), "Pending Video"); // State is Pending
-
-        _courseRepository.GetByIdWithSectionsAndAssetsAsync(course.Id, Arg.Any<CancellationToken>())
-            .Returns(course);
-
-        var content = JsonDocument.Parse($@"[
-            {{ ""type"": ""video"", ""courseAssetId"": ""{assetId}"" }}
-        ]").RootElement;
-
-        var command = new CreateCourseSectionItemCommand(course.Id, sectionId, "Lesson 1", "Video", content);
-
-        // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
-
-        // Assert
-        result.IsError.Should().BeTrue();
-        result.FirstError.Code.Should().Be("CourseAsset.State");
-    }
-
-    [Fact]
-    public async Task Update_Should_ReconcileAssetsAndPreserveBitIndex_WhenValid()
+    public async Task Update_Should_UpdateItemAndPreserveBitIndex_WhenValid()
     {
         // Arrange
         var tenantId = Guid.NewGuid();
@@ -141,17 +115,11 @@ public class CourseSectionItemHandlersTests
 
         var asset1Id = Guid.NewGuid();
         var asset2Id = Guid.NewGuid();
-        course.AddVideoAsset(asset1Id, ResourceArn.ForVideo(tenantId, asset1Id), "Video 1");
-        course.AddVideoAsset(asset2Id, ResourceArn.ForVideo(tenantId, asset2Id), "Video 2");
-        course.MarkAssetAvailable(asset1Id);
-        course.MarkAssetAvailable(asset2Id);
 
-        course.AssignAsset(asset1Id);
-        var res1 = new VideoCurriculumResource(Guid.NewGuid(), 0, asset1Id, asset1Id);
-        var item = section.AddItem(Guid.NewGuid(), tenantId, "Lesson 1", "Video", course.AllocateNextBitIndex(), new[] { res1 }).Value;
+        var res1 = new VideoCurriculumResource(Guid.NewGuid(), 0, asset1Id, 100);
+        var item = section.AddItem(Guid.NewGuid(), "Lesson 1", "Video", course.AllocateNextBitIndex(), new[] { res1 }).Value;
 
-        _courseRepository.GetByIdWithSectionsAndAssetsAsync(course.Id, Arg.Any<CancellationToken>())
-            .Returns(course);
+        SetupQuery(course.Id, course);
 
         // Update item to switch from asset1 to asset2
         var updatedContent = JsonDocument.Parse($@"[
@@ -168,19 +136,11 @@ public class CourseSectionItemHandlersTests
         result.Value.BitIndex.Should().Be(0); // BitIndex strictly immutable
         result.Value.Title.Should().Be("Updated Lesson 1");
 
-        var asset1 = course.Assets.First(a => a.Id == asset1Id);
-        asset1.RefCount.Should().Be(0);
-        asset1.State.Should().Be(CourseAssetState.Available);
-
-        var asset2 = course.Assets.First(a => a.Id == asset2Id);
-        asset2.RefCount.Should().Be(1);
-        asset2.State.Should().Be(CourseAssetState.InUse);
-
         _courseRepository.Received(1).Update(course);
     }
 
     [Fact]
-    public async Task Delete_Should_SoftDeleteItemAndReleaseAssets()
+    public async Task Delete_Should_SoftDeleteItem()
     {
         // Arrange
         var tenantId = Guid.NewGuid();
@@ -190,15 +150,10 @@ public class CourseSectionItemHandlersTests
         var sectionId = section.Id;
 
         var assetId = Guid.NewGuid();
-        course.AddVideoAsset(assetId, ResourceArn.ForVideo(tenantId, assetId), "Video 1");
-        course.MarkAssetAvailable(assetId);
-        course.AssignAsset(assetId);
+        var res = new VideoCurriculumResource(Guid.NewGuid(), 0, assetId, 120);
+        var item = section.AddItem(Guid.NewGuid(), "Lesson 1", "Video", course.AllocateNextBitIndex(), new[] { res }).Value;
 
-        var res = new VideoCurriculumResource(Guid.NewGuid(), 0, assetId, assetId);
-        var item = section.AddItem(Guid.NewGuid(), tenantId, "Lesson 1", "Video", course.AllocateNextBitIndex(), new[] { res }).Value;
-
-        _courseRepository.GetByIdWithSectionsAndAssetsAsync(course.Id, Arg.Any<CancellationToken>())
-            .Returns(course);
+        SetupQuery(course.Id, course);
 
         var command = new DeleteCourseSectionItemCommand(course.Id, sectionId, item.Id);
 
@@ -208,10 +163,6 @@ public class CourseSectionItemHandlersTests
         // Assert
         result.IsError.Should().BeFalse();
         item.IsDeleted.Should().BeTrue();
-
-        var asset = course.Assets.First(a => a.Id == assetId);
-        asset.RefCount.Should().Be(0);
-        asset.State.Should().Be(CourseAssetState.Available);
 
         _courseRepository.Received(1).Update(course);
     }

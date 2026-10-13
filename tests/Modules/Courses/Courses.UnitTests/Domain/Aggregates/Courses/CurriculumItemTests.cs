@@ -14,9 +14,9 @@ public class CurriculumItemTests
     [Fact]
     public void AddResource_Should_AddResourceToCollection()
     {
-        var item = new CurriculumItem(Guid.NewGuid(), TenantId, SectionId, "Lesson 1", 0, 0, "Video");
+        var item = new CurriculumItem(Guid.NewGuid(), SectionId, "Lesson 1", 0, 0, "Video");
         var videoId = Guid.NewGuid();
-        var resource = new VideoCurriculumResource(Guid.NewGuid(), 0, videoId, videoId, 120);
+        var resource = new VideoCurriculumResource(Guid.NewGuid(), 0, videoId, 120);
 
         item.AddResource(resource);
 
@@ -28,9 +28,9 @@ public class CurriculumItemTests
     [Fact]
     public void RemoveResource_Should_RemoveResourceAndReorderRemaining()
     {
-        var item = new CurriculumItem(Guid.NewGuid(), TenantId, SectionId, "Lesson 1", 0, 0, "Video");
-        var r1 = new VideoCurriculumResource(Guid.NewGuid(), 0, Guid.NewGuid(), Guid.NewGuid(), 60);
-        var r2 = new ArticleCurriculumResource(Guid.NewGuid(), 1, "Notes");
+        var item = new CurriculumItem(Guid.NewGuid(), SectionId, "Lesson 1", 0, 0, "Video");
+        var r1 = new VideoCurriculumResource(Guid.NewGuid(), 0, Guid.NewGuid(), 60);
+        var r2 = new ArticleCurriculumResource(Guid.NewGuid(), 1, System.Text.Json.JsonSerializer.SerializeToElement("Notes"));
 
         item.AddResource(r1);
         item.AddResource(r2);
@@ -45,12 +45,12 @@ public class CurriculumItemTests
     [Fact]
     public void ReorderResources_Should_ReorderResourcesByAssetOrResourceId()
     {
-        var item = new CurriculumItem(Guid.NewGuid(), TenantId, SectionId, "Lesson 1", 0, 0, "Video");
+        var item = new CurriculumItem(Guid.NewGuid(), SectionId, "Lesson 1", 0, 0, "Video");
 
         var v1Id = Guid.NewGuid();
         var v2Id = Guid.NewGuid();
-        var r1 = new VideoCurriculumResource(Guid.NewGuid(), 0, v1Id, v1Id);
-        var r2 = new VideoCurriculumResource(Guid.NewGuid(), 1, v2Id, v2Id);
+        var r1 = new VideoCurriculumResource(Guid.NewGuid(), 0, v1Id);
+        var r2 = new VideoCurriculumResource(Guid.NewGuid(), 1, v2Id);
 
         item.AddResource(r1);
         item.AddResource(r2);
@@ -70,7 +70,7 @@ public class CurriculumItemTests
     [Fact]
     public void Delete_And_Restore_Should_ManageLifecycle()
     {
-        var item = new CurriculumItem(Guid.NewGuid(), TenantId, SectionId, "Lesson 1", 0, 0, "Video");
+        var item = new CurriculumItem(Guid.NewGuid(), SectionId, "Lesson 1", 0, 0, "Video");
         item.IsDeleted.Should().BeFalse();
 
         var delResult = item.Delete();
@@ -91,11 +91,11 @@ public class CurriculumItemTests
     [InlineData("Video")]
     [InlineData("Document")]
     [InlineData("Article")]
-    [InlineData("Quiz")]
+    [InlineData("Assessment")]
     [InlineData("video")] // Case-insensitive
     public void Create_Should_Succeed_For_ValidMainTypes(string mainType)
     {
-        var result = CurriculumItem.Create(Guid.NewGuid(), TenantId, SectionId, "Lesson 1", 0, 5, mainType);
+        var result = CurriculumItem.Create(Guid.NewGuid(), SectionId, "Lesson 1", 0, 5, mainType);
 
         result.IsError.Should().BeFalse();
         result.Value.BitIndex.Should().Be(5);
@@ -105,7 +105,7 @@ public class CurriculumItemTests
     [Fact]
     public void Create_Should_Fail_When_MainTypeIsInvalid()
     {
-        var result = CurriculumItem.Create(Guid.NewGuid(), TenantId, SectionId, "Lesson 1", 0, 0, "InvalidType");
+        var result = CurriculumItem.Create(Guid.NewGuid(), SectionId, "Lesson 1", 0, 0, "InvalidType");
 
         result.IsError.Should().BeTrue();
         result.FirstError.Code.Should().Be("CurriculumItem.MainType");
@@ -114,7 +114,7 @@ public class CurriculumItemTests
     [Fact]
     public void Create_Should_Fail_When_TitleIsEmpty()
     {
-        var result = CurriculumItem.Create(Guid.NewGuid(), TenantId, SectionId, "  ", 0, 0, "Video");
+        var result = CurriculumItem.Create(Guid.NewGuid(), SectionId, "  ", 0, 0, "Video");
 
         result.IsError.Should().BeTrue();
         result.FirstError.Code.Should().Be("CurriculumItem.Title");
@@ -123,9 +123,9 @@ public class CurriculumItemTests
     [Fact]
     public void Update_Should_UpdateFields_And_ValidateMainType()
     {
-        var item = CurriculumItem.Create(Guid.NewGuid(), TenantId, SectionId, "Lesson 1", 0, 0, "Video").Value;
+        var item = CurriculumItem.Create(Guid.NewGuid(), SectionId, "Lesson 1", 0, 0, "Video").Value;
 
-        var newResource = new DocumentCurriculumResource(Guid.NewGuid(), 0, Guid.NewGuid(), "Cheatsheet");
+        var newResource = new DocumentCurriculumResource(Guid.NewGuid(), 0, "Cheatsheet", Guid.NewGuid());
         var updateResult = item.Update("Updated Lesson", "Document", new[] { newResource });
 
         updateResult.IsError.Should().BeFalse();
@@ -137,7 +137,7 @@ public class CurriculumItemTests
     [Fact]
     public void Update_Should_Fail_When_MainTypeIsInvalid()
     {
-        var item = CurriculumItem.Create(Guid.NewGuid(), TenantId, SectionId, "Lesson 1", 0, 0, "Video").Value;
+        var item = CurriculumItem.Create(Guid.NewGuid(), SectionId, "Lesson 1", 0, 0, "Video").Value;
 
         var result = item.Update("Updated", "RandomType");
 
@@ -148,7 +148,7 @@ public class CurriculumItemTests
     [Fact]
     public void Delete_Should_RetainBitIndex_And_MarkDeleted()
     {
-        var item = CurriculumItem.Create(Guid.NewGuid(), TenantId, SectionId, "Lesson 1", 0, 7, "Video").Value;
+        var item = CurriculumItem.Create(Guid.NewGuid(), SectionId, "Lesson 1", 0, 7, "Video").Value;
 
         item.Delete();
 
@@ -161,7 +161,7 @@ public class CurriculumItemTests
     {
         var docId = Guid.NewGuid();
         var docResource = new DocumentCurriculumResource(
-            Guid.NewGuid(), 0, docId, "Cheat Sheet", "pdf", isPublic: true, variantName: "thumb");
+            Guid.NewGuid(), 0, "Cheat Sheet", docId, "pdf", isPublic: true, variantName: "thumb");
 
         docResource.DocUri.Should().Be($"doc://public/{docId}?variantName=thumb");
 

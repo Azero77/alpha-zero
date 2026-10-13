@@ -1,3 +1,4 @@
+using System.Text.Json;
 using AlphaZero.Modules.Courses.Domain.Aggregates.Courses;
 using FluentAssertions;
 using Xunit;
@@ -11,9 +12,9 @@ public class CurriculumResourceTests
     {
         var id = Guid.NewGuid();
         var assetId = Guid.NewGuid();
-        var videoResource = new VideoCurriculumResource(id, 0, assetId, assetId, durationSeconds: 100);
+        var videoResource = new VideoCurriculumResource(id, 0, assetId, durationSeconds: 100);
 
-        videoResource.ResourceType.Should().Be("Video");
+        videoResource.ResourceType.Should().Be(ResourceType.Video);
         videoResource.VideoId.Should().Be(assetId);
         videoResource.DurationSeconds.Should().Be(100);
 
@@ -28,9 +29,9 @@ public class CurriculumResourceTests
     {
         var docId = Guid.NewGuid();
         var docResource = new DocumentCurriculumResource(
-            Guid.NewGuid(), 0, docId, "Cheat Sheet", "pdf", isPublic: true, variantName: "summary");
+            Guid.NewGuid(), 0, "Cheat Sheet", docId, "pdf", isPublic: true, variantName: "summary");
 
-        docResource.ResourceType.Should().Be("Document");
+        docResource.ResourceType.Should().Be(ResourceType.Document);
         docResource.DocUri.Should().Be($"doc://public/{docId}?variantName=summary");
 
         var parsed = DocumentCurriculumResource.ParseDocUri(docResource.DocUri);
@@ -42,11 +43,13 @@ public class CurriculumResourceTests
     [Fact]
     public void ArticleCurriculumResource_Should_UpdateContent()
     {
-        var resource = new ArticleCurriculumResource(Guid.NewGuid(), 0, "Initial Text");
-        resource.ResourceType.Should().Be("Article");
+        var jsonContent = JsonSerializer.SerializeToElement("Initial Text");
+        var resource = new ArticleCurriculumResource(Guid.NewGuid(), 0, jsonContent);
+        resource.ResourceType.Should().Be(ResourceType.Article);
         resource.TextContent.Should().Be("Initial Text");
 
-        resource.UpdateContent("Updated Text");
+        var updatedContent = JsonSerializer.SerializeToElement("Updated Text");
+        resource.UpdateContent(updatedContent);
         resource.TextContent.Should().Be("Updated Text");
     }
 
@@ -54,9 +57,9 @@ public class CurriculumResourceTests
     public void QuizCurriculumResource_Should_CheckPassingScore()
     {
         var assessmentId = Guid.NewGuid();
-        var resource = new AssessmentCurriculumResource(Guid.NewGuid(), 0, passingScore: 85);
+        var resource = new AssessmentCurriculumResource(Guid.NewGuid(), 0, passingScore: 85, courseAssetId: assessmentId);
 
-        resource.ResourceType.Should().Be("Quiz");
+        resource.ResourceType.Should().Be(ResourceType.Assessment);
         resource.AssessmentId.Should().Be(assessmentId);
         resource.CanComplete(84).Should().BeFalse();
         resource.CanComplete(85).Should().BeTrue();
@@ -66,7 +69,8 @@ public class CurriculumResourceTests
     [Fact]
     public void UpdateOrder_Should_Succeed_WhenOrderIsZeroOrPositive()
     {
-        var resource = new ArticleCurriculumResource(Guid.NewGuid(), 0, "Text");
+        var jsonContent = JsonSerializer.SerializeToElement("Text");
+        var resource = new ArticleCurriculumResource(Guid.NewGuid(), 0, jsonContent);
         var result = resource.UpdateOrder(2);
 
         result.IsError.Should().BeFalse();
@@ -76,7 +80,8 @@ public class CurriculumResourceTests
     [Fact]
     public void UpdateOrder_Should_Fail_WhenOrderIsNegative()
     {
-        var resource = new ArticleCurriculumResource(Guid.NewGuid(), 0, "Text");
+        var jsonContent = JsonSerializer.SerializeToElement("Text");
+        var resource = new ArticleCurriculumResource(Guid.NewGuid(), 0, jsonContent);
         var result = resource.UpdateOrder(-1);
 
         result.IsError.Should().BeTrue();

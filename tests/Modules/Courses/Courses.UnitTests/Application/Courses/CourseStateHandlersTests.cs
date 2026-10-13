@@ -28,12 +28,23 @@ public class CourseStateHandlersTests
         _handler = new CourseStateHandlers(_courseRepository, _courseOverviewRepository, _publishingService, _logger);
     }
 
+    private void SetupQuery(Guid courseId, Course? course)
+    {
+        var builder = Substitute.For<ICourseQueryBuilder>();
+        _courseRepository.Query(courseId).Returns(builder);
+        builder.WithSections().Returns(builder);
+        builder.WithItems(Arg.Any<bool>()).Returns(builder);
+        builder.WithResources(Arg.Any<bool>()).Returns(builder);
+        builder.WithPlans(Arg.Any<bool>()).Returns(builder);
+        builder.ExecuteAsync(Arg.Any<CancellationToken>()).Returns(course);
+    }
+
     [Fact]
     public async Task SubmitForReview_Should_Fail_WhenCourseDoesNotExist()
     {
         // Arrange
         var courseId = Guid.NewGuid();
-        _courseRepository.GetCourseAsync(courseId, Arg.Any<CancellationToken>()).Returns((Course?)null);
+        SetupQuery(courseId, null);
         var command = new SubmitCourseForReviewCommand(courseId);
 
         // Act
@@ -53,7 +64,7 @@ public class CourseStateHandlersTests
         var course = Course.Create(Guid.NewGuid(), tenantId, "Title", "Desc", subjectId).Value;
         // Status is Draft
         
-        _courseRepository.GetCourseAsync(course.Id, Arg.Any<CancellationToken>()).Returns(course);
+        SetupQuery(course.Id, course);
         var command = new ApproveCourseCommand(course.Id);
 
         // Act
@@ -75,14 +86,11 @@ public class CourseStateHandlersTests
         course.AddSection("S1");
         var section = course.Sections.First();
         var v1Id = Guid.NewGuid();
-        course.AddVideoAsset(v1Id, ResourceArn.ForVideo(tenantId, v1Id), "L1");
-        course.MarkAssetAvailable(v1Id);
-        course.AssignAsset(v1Id);
-        var resource = new VideoCurriculumResource(Guid.NewGuid(), 0, v1Id, v1Id);
-        section.AddItem(Guid.NewGuid(), tenantId, "L1", "Video", course.AllocateNextBitIndex(), new[] { resource });
+        var resource = new VideoCurriculumResource(Guid.NewGuid(), 0, v1Id, 120);
+        section.AddItem(Guid.NewGuid(), "L1", "Video", course.AllocateNextBitIndex(), new[] { resource });
         course.SubmitForReview(); // Now UnderReview
 
-        _courseRepository.GetCourseAsync(course.Id, Arg.Any<CancellationToken>()).Returns(course);
+        SetupQuery(course.Id, course);
         var command = new RejectCourseCommand(course.Id, ""); // Empty reason
 
         // Act
@@ -103,14 +111,11 @@ public class CourseStateHandlersTests
         course.AddSection("S1");
         var section = course.Sections.First();
         var v2Id = Guid.NewGuid();
-        course.AddVideoAsset(v2Id, ResourceArn.ForVideo(tenantId, v2Id), "L1");
-        course.MarkAssetAvailable(v2Id);
-        course.AssignAsset(v2Id);
-        var resource = new VideoCurriculumResource(Guid.NewGuid(), 0, v2Id, v2Id);
-        section.AddItem(Guid.NewGuid(), tenantId, "L1", "Video", course.AllocateNextBitIndex(), new[] { resource });
+        var resource = new VideoCurriculumResource(Guid.NewGuid(), 0, v2Id, 120);
+        section.AddItem(Guid.NewGuid(), "L1", "Video", course.AllocateNextBitIndex(), new[] { resource });
         course.SubmitForReview();
 
-        _courseRepository.GetCourseAsync(course.Id, Arg.Any<CancellationToken>()).Returns(course);
+        SetupQuery(course.Id, course);
         var command = new RejectCourseCommand(course.Id, "Incomplete content");
 
         // Act
@@ -129,7 +134,7 @@ public class CourseStateHandlersTests
         var course = Course.Create(Guid.NewGuid(), tenantId, "Title", "Desc", Guid.NewGuid()).Value;
         // Status is Draft
 
-        _courseRepository.GetCourseAsync(course.Id, Arg.Any<CancellationToken>()).Returns(course);
+        SetupQuery(course.Id, course);
         var command = new PublishCourseCommand(course.Id, CanDirectPublish: false);
 
         // Act
@@ -149,7 +154,7 @@ public class CourseStateHandlersTests
         var course = Course.Create(Guid.NewGuid(), tenantId, "Title", "Desc", Guid.NewGuid()).Value;
         // Status is Draft, has no sections or plans
 
-        _courseRepository.GetCourseAsync(course.Id, Arg.Any<CancellationToken>()).Returns(course);
+        SetupQuery(course.Id, course);
         var command = new PublishCourseCommand(course.Id, CanDirectPublish: true);
 
         // Act
@@ -170,7 +175,7 @@ public class CourseStateHandlersTests
         course.AddPlan("Standard", Guid.NewGuid());
         // Status is Draft, has plan, but no sections or cover image
 
-        _courseRepository.GetCourseAsync(course.Id, Arg.Any<CancellationToken>()).Returns(course);
+        SetupQuery(course.Id, course);
         var command = new PublishCourseCommand(course.Id, CanDirectPublish: true);
 
         // Act
@@ -191,12 +196,8 @@ public class CourseStateHandlersTests
         var section = course.Sections.First();
 
         var assetId = Guid.NewGuid();
-        course.AddVideoAsset(assetId, ResourceArn.ForVideo(tenantId, assetId), "Video 1");
-        course.MarkAssetAvailable(assetId);
-        course.AssignAsset(assetId);
-
-        var resource = new VideoCurriculumResource(Guid.NewGuid(), 0, assetId, assetId);
-        section.AddItem(Guid.NewGuid(), tenantId, "Item 1", "Video", course.AllocateNextBitIndex(), new[] { resource });
+        var resource = new VideoCurriculumResource(Guid.NewGuid(), 0, assetId, 120);
+        section.AddItem(Guid.NewGuid(), "Item 1", "Video", course.AllocateNextBitIndex(), new[] { resource });
         course.AddPlan("Standard", Guid.NewGuid());
 
         var overview = CourseOverview.Create(
@@ -208,7 +209,7 @@ public class CourseStateHandlersTests
             null,
             Guid.NewGuid()); // has cover image
 
-        _courseRepository.GetCourseAsync(course.Id, Arg.Any<CancellationToken>()).Returns(course);
+        SetupQuery(course.Id, course);
         _courseOverviewRepository.GetFirst(
             Arg.Any<System.Linq.Expressions.Expression<Func<CourseOverview, bool>>>(),
             Arg.Any<CancellationToken>())

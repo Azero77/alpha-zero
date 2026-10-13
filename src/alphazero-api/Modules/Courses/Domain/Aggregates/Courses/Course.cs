@@ -20,12 +20,6 @@ public class Course : TenantOwnedAggregate, ISoftDeletable
     public IReadOnlyCollection<CoursePlan> Plans => _plans.AsReadOnly();
     private readonly List<CoursePlan> _plans = new();
 
-    private readonly List<CourseAsset> _assets = new();
-    public IReadOnlyCollection<CourseAsset> Assets => _assets.AsReadOnly();
-
-    public IEnumerable<CourseAsset> PoolAssets => _assets.Where(a => a.State == CourseAssetState.Available);
-    public IEnumerable<CourseAsset> PendingAssets => _assets.Where(a => a.State == CourseAssetState.Pending);
-
     public bool IsDeleted { get; private set; }
     public DateTime? OnDeleted { get; private set; }
 
@@ -47,6 +41,8 @@ public class Course : TenantOwnedAggregate, ISoftDeletable
         course.AddDomainEvent(new CourseCreatedDomainEvent(id, tenantId));
         return course;
     }
+
+    public ErrorOr<Success> AddSection(string title) => AddSection(Guid.NewGuid(), title);
 
     public ErrorOr<Success> AddSection(Guid id,string title)
     {
@@ -96,101 +92,6 @@ public class Course : TenantOwnedAggregate, ISoftDeletable
         return Result.Success;
     }
 
-    // ─── 1. Asset Creation ───
-
-    public ErrorOr<VideoCourseAsset> AddVideoAsset(Guid videoId, ResourceArn videoArn, string title)
-    {
-        // Idempotency
-        if (_assets.Any(a => a.Id == videoId))
-            return (VideoCourseAsset)_assets.First(a => a.Id == videoId);
-
-        var result = VideoCourseAsset.Create(videoId, TenantId, videoArn, title, Id);
-        if (result.IsError) return result.Errors;
-
-        _assets.Add(result.Value);
-        return result.Value;
-    }
-
-    public ErrorOr<DocumentCourseAsset> AddDocumentAsset(
-        Guid docId, ResourceArn docArn, string title, string fileName, long size, string contentType)
-    {
-        if (_assets.Any(a => a.Id == docId))
-            return (DocumentCourseAsset)_assets.First(a => a.Id == docId);
-
-        var result = DocumentCourseAsset.Create(docId, TenantId, docArn, title, Id, fileName, size, contentType);
-        if (result.IsError) return result.Errors;
-
-        _assets.Add(result.Value);
-        return result.Value;
-    }
-
-    public ErrorOr<AssessmentCourseAsset> AddAssessmentAsset(
-        Guid assessmentId, ResourceArn assessmentArn, string title, int questionsNumber, AssessmentType type)
-    {
-        if (_assets.Any(a => a.Id == assessmentId))
-            return (AssessmentCourseAsset)_assets.First(a => a.Id == assessmentId);
-
-        var result = AssessmentCourseAsset.Create(assessmentId, TenantId, assessmentArn, title, Id, questionsNumber, type);
-        if (result.IsError) return result.Errors;
-
-        _assets.Add(result.Value);
-        return result.Value;
-    }
-
-    // ─── 2. Asset State Transitions & Pool Operations ───
-
-    public ErrorOr<Success> MarkAssetAvailable(Guid assetId, TimeSpan? duration = null, string? relativeUrl = null, string? thumbnailUrl = null)
-    {
-        var asset = _assets.FirstOrDefault(a => a.Id == assetId);
-        if (asset is null)
-            return Error.NotFound("CourseAsset.NotFound", "Asset not found in this course.");
-
-        if (asset is VideoCourseAsset video && (duration.HasValue || relativeUrl is not null))
-            video.UpdateStreamingInfo(duration ?? TimeSpan.Zero, relativeUrl, thumbnailUrl);
-
-        return asset.MarkAvailable();
-    }
-
-    public ErrorOr<Success> MarkAssetFailed(Guid assetId)
-    {
-        var asset = _assets.FirstOrDefault(a => a.Id == assetId);
-        if (asset is null)
-            return Error.NotFound("CourseAsset.NotFound", "Asset not found in this course.");
-
-        return asset.MarkFailed();
-    }
-
-    public ErrorOr<CourseAsset> AssignAsset(Guid assetId)
-    {
-        var asset = _assets.FirstOrDefault(a => a.Id == assetId);
-        if (asset is null)
-            return Error.NotFound("CourseAsset.NotFound", $"Asset '{assetId}' not found in course pool.");
-
-        var assignResult = asset.AssignToItem();
-        if (assignResult.IsError)
-            return assignResult.Errors;
-
-        return asset;
-    }
-
-    public ErrorOr<Success> ReleaseAsset(Guid assetId)
-    {
-        var asset = _assets.FirstOrDefault(a => a.Id == assetId);
-        if (asset is null)
-            return Error.NotFound("CourseAsset.NotFound", $"Asset '{assetId}' not found in course pool.");
-
-        return asset.ReleaseFromItem();
-    }
-
-    public ErrorOr<Success> DismissAsset(Guid assetId)
-    {
-        var asset = _assets.FirstOrDefault(a => a.Id == assetId);
-        if (asset is null)
-            return Error.NotFound("CourseAsset.NotFound");
-
-        return asset.Archive();
-    }
-
     public ErrorOr<Success> ReorderItems(Guid sectionId, List<Guid> itemIds)
     {
         var section = _sections.FirstOrDefault(s => s.Id == sectionId);
@@ -216,9 +117,9 @@ public class Course : TenantOwnedAggregate, ISoftDeletable
         SubjectId = subjectId;
     }
 
-    public CourseReadiness EvaluateReadiness(CourseOverview? overview = null)
+    public CourseReadiness EvaluateReadiness(CourseOverview? overview = null, IEnumerable<CourseAsset>? assets = null)
     {
-        return new CourseReadinessService().Evaluate(this, overview);
+        return new CourseReadinessService().Evaluate(this, overview, assets);
     }
 
     public ErrorOr<Success> SubmitForReview()

@@ -43,12 +43,7 @@ public class CourseTests : DomainTest
         // Arrange
         var course = Course.Create(Guid.NewGuid(), TenantId, "Title", null, SubjectId).Value;
         course.AddSection("Section 1");
-        var videoId = Guid.NewGuid();
-        course.AddVideoAsset(videoId, ResourceArn.ForVideo(TenantId, videoId), "Video 1");
-        course.MarkAssetAvailable(videoId);
-        course.AssignAsset(videoId);
-        var res = new VideoCurriculumResource(Guid.NewGuid(), 0, videoId, videoId);
-        course.Sections.First().AddItem(Guid.NewGuid(), TenantId, "Lesson 1", "Video", course.AllocateNextBitIndex(), new[] { res });
+        course.Sections.First().AddItem(Guid.NewGuid(), "Lesson 1", "Video", course.AllocateNextBitIndex());
         course.SubmitForReview();
         course.Approve();
 
@@ -83,12 +78,7 @@ public class CourseTests : DomainTest
         var course = Course.Create(Guid.NewGuid(), TenantId, "Title", null, SubjectId).Value;
         course.AddSection("S1");
         course.AddSection("S2");
-        var videoId = Guid.NewGuid();
-        course.AddVideoAsset(videoId, ResourceArn.ForVideo(TenantId, videoId), "Video 1");
-        course.MarkAssetAvailable(videoId);
-        course.AssignAsset(videoId);
-        var res = new VideoCurriculumResource(Guid.NewGuid(), 0, videoId, videoId);
-        course.Sections.First().AddItem(Guid.NewGuid(), TenantId, "L1", "Video", course.AllocateNextBitIndex(), new[] { res });
+        course.Sections.First().AddItem(Guid.NewGuid(), "L1", "Video", course.AllocateNextBitIndex());
         course.AddPlan("Standard", Guid.NewGuid());
         course.SubmitForReview();
         course.Approve();

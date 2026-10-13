@@ -18,9 +18,13 @@ public class CurriculumItemConfiguration : IEntityTypeConfiguration<CurriculumIt
             .IsRequired()
             .HasMaxLength(256);
 
-        builder.Property(i => i.MainType)
+        builder.Property(i => i.MainResourceType)
+            .HasConversion<string>()
+            .HasColumnName("MainType")
             .IsRequired()
             .HasMaxLength(50);
+
+        builder.Ignore(i => i.MainType);
 
         builder.Property(i => i.BitIndex)
             .IsRequired();

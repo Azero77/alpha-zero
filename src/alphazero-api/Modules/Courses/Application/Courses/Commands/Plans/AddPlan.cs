@@ -32,7 +32,9 @@ public sealed class AddPlanCommandHandler : IRequestHandler<AddPlanCommand, Erro
 
     public async Task<ErrorOr<Guid>> Handle(AddPlanCommand request, CancellationToken cancellationToken)
     {
-        var course = await _courseRepository.GetCourseAsync(request.CourseId, cancellationToken);
+        var course = await _courseRepository.Query(request.CourseId)
+            .WithPlans()
+            .ExecuteAsync(cancellationToken);
         if (course is null) return Error.NotFound("Course.NotFound", "Course not found.");
 
         var planResult = course.AddPlan(request.Name, request.PrincipalId);

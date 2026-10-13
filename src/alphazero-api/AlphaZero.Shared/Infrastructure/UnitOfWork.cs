@@ -20,28 +20,27 @@ public class UnitOfWork<TContext> : IUnitOfWork
 
     public async Task<int> SaveChangesAsync(CancellationToken cancellationToken)
     {
-        Console.WriteLine("XXXXXXXXX UnitOfWork.SaveChangesAsync CALLED");
-        // 3. Harvest domain events from EF-tracked entities (existing path)
-        var efDomainEvents = _context.ChangeTracker
-            .Entries<AggregateRoot>()
-            .SelectMany(e => e.Entity.PopDomainEvents())
-            .ToList();
-
-        var trackedDataModelsEvents = _trackedEntities.SelectMany(e => e.PopDomainEvents()).ToList();
-        var domainEvents = trackedDataModelsEvents.Concat(efDomainEvents).ToList();
-        _trackedEntities.Clear();
-
-        if (domainEvents is not null
-            &&
-            domainEvents.Any())
+        while (true)
         {
+            var efDomainEvents = _context.ChangeTracker
+                .Entries<AggregateRoot>()
+                .SelectMany(e => e.Entity.PopDomainEvents())
+                .ToList();
+
+            var trackedDataModelsEvents = _trackedEntities.SelectMany(e => e.PopDomainEvents()).ToList();
+            var domainEvents = trackedDataModelsEvents.Concat(efDomainEvents).ToList();
+            _trackedEntities.Clear();
+
+            if (!domainEvents.Any())
+                break;
+
             foreach (var domainEvent in domainEvents)
             {
-                await _publisher.Publish(domainEvent,cancellationToken);
+                await _publisher.Publish(domainEvent, cancellationToken);
             }
         }
-        //here we are saving after the domain events run, we see that domain changes and domain events changes are all one part of a transaction
-        //and everything exceeds the bounded context should be raised by the application layer and handled by an outbox and then a background service to publish the integration event
+
+        // Domain changes and domain events changes are all part of one transaction
         return await _context.SaveChangesAsync(cancellationToken);
     }
 
