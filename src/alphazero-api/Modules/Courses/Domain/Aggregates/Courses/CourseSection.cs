@@ -15,6 +15,8 @@ public class CourseSection : Entity, ISoftDeletable
 
     public DateTime? OnDeleted { get; private set; } = null;
 
+    private CourseSection() : base(default) { }
+
     private CourseSection(Guid id, string title, int order, Guid courseId, List<CurriculumItem>? items) : base(id)
     {
         Title = title;

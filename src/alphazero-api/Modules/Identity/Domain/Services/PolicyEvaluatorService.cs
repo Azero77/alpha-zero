@@ -44,7 +44,7 @@ public class PolicyEvaluationEngine(ConditionEvaluatorService conditionEvaluator
 
         foreach (var statement in statements)
         {
-            var matchResult = await AuthorizationHelper.IsStatementMatch(statement, context.RequiredPermission, targetArn, conditionEvaluator, context);
+            var matchResult = await AuthorizationHelper.IsStatementMatch(statement, context.RequiredPermission ?? string.Empty, targetArn, conditionEvaluator, context);
             
             if (matchResult.IsError)
             {

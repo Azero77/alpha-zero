@@ -9,7 +9,7 @@ public abstract class CurriculumResource : Entity
     public Guid CurriculumItemId { get; internal set; }
     public int Order { get; internal set; }
     public Guid? CourseAssetId { get; protected set; }
-    public abstract ResourceType ResourceType { get; }
+    public virtual ResourceType ResourceType { get; protected set; }
 
     protected CurriculumResource() { } // EF Core
 
@@ -45,7 +45,7 @@ public class VideoCurriculumResource : CurriculumResource
     public bool CanComplete(double watchedSeconds) =>
         DurationSeconds <= 0 || (watchedSeconds / DurationSeconds) >= 0.8;
 
-    public override ResourceType ResourceType => ResourceType.Video;
+    public override ResourceType ResourceType { get; protected set; } = ResourceType.Video;
 }
 
 public class DocumentCurriculumResource : CurriculumResource
@@ -124,7 +124,7 @@ public class DocumentCurriculumResource : CurriculumResource
         return (isPublic, docId, variant);
     }
 
-    public override ResourceType ResourceType => ResourceType.Document;
+    public override ResourceType ResourceType { get; protected set; } = ResourceType.Document;
 }
 
 public class ArticleCurriculumResource : CurriculumResource
@@ -143,7 +143,7 @@ public class ArticleCurriculumResource : CurriculumResource
         Content = content;
     }
 
-    public override ResourceType ResourceType => ResourceType.Article;
+    public override ResourceType ResourceType { get; protected set; } = ResourceType.Article;
 }
 
 public class AssessmentCurriculumResource : CurriculumResource
@@ -160,7 +160,7 @@ public class AssessmentCurriculumResource : CurriculumResource
     }
 
     public bool CanComplete(int score) => score >= PassingScore;
-    public override ResourceType ResourceType => ResourceType.Assessment;
+    public override ResourceType ResourceType { get; protected set; } = ResourceType.Assessment;
 }
 
 public enum ResourceType

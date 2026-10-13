@@ -1,4 +1,4 @@
-﻿using AlphaZero.Shared.Domain;
+using AlphaZero.Shared.Domain;
 using ErrorOr;
 using MassTransit.Middleware;
 
@@ -8,6 +8,8 @@ namespace AlphaZero.Shared.Authorization
     {
         AuthorizationContext? CurrentAuthorizationContext { get; }
 
-        Task<ErrorOr<AuthorizationContext>> Create(string requiredPermission,ResourceArn arn, AuthenticationMethod authenticationMethod, string id, CancellationToken token = default);
+        Task<ErrorOr<AuthorizationContext>> Create(string requiredPermission, ResourceArn arn, AuthenticationMethod authenticationMethod, string id, CancellationToken token = default);
+
+        Task<ErrorOr<AuthorizationContext?>> GetOrCreateCurrentContextAsync(string? requiredPermission = null, ResourceArn? arn = null, CancellationToken token = default);
     }
 }

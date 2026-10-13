@@ -65,21 +65,14 @@ public class IAMPreprocessor : IGlobalPreProcessor
 {
     public async Task PreProcessAsync(IPreProcessorContext context, CancellationToken ct)
     {
-        var authorizationContextFactory = context.HttpContext.RequestServices.GetRequiredService<IAuthorizationContextFactory>();
-        var evaluator = context.HttpContext.RequestServices.GetRequiredService<IPolicyEvaluatorService>();
-        var tenantProvider = context.HttpContext.RequestServices.GetRequiredService<ITenantProvider>();
-
         var globalRequirement = context.HttpContext.GetEndpoint()?.Metadata.GetMetadata<GlobalAccessControlRequirement>();
         var tenantScopedRequirement = context.HttpContext.GetEndpoint()?.Metadata.GetMetadata<AccessControlWithTenantRequirement>();
         
         if (globalRequirement is null && tenantScopedRequirement is null) return;
 
-        var id = context.HttpContext.User.Claims.FirstOrDefault(c => c.Type == "sub" || c.Type == ClaimTypes.NameIdentifier)?.Value;
-        var auth_scheme = context.HttpContext.User.Claims.FirstOrDefault(c => c.Type == "auth_method")?.Value ?? "Principal";
-        if (string.IsNullOrEmpty(id) || !Guid.TryParse(id, out var principalId))
-        {
-            throw new BadHttpRequestException("Forbidden", StatusCodes.Status403Forbidden);
-        }
+        var authorizationContextFactory = context.HttpContext.RequestServices.GetRequiredService<IAuthorizationContextFactory>();
+        var evaluator = context.HttpContext.RequestServices.GetRequiredService<IPolicyEvaluatorService>();
+        var tenantProvider = context.HttpContext.RequestServices.GetRequiredService<ITenantProvider>();
 
         ResourceArn resourceArn;
         if (globalRequirement != null)
@@ -97,18 +90,20 @@ public class IAMPreprocessor : IGlobalPreProcessor
         }
         string? permission = globalRequirement?.Action ?? tenantScopedRequirement?.Action;
 
-        if(permission is null)
+        if (permission is null)
         {
             throw new BadHttpRequestException("Forbidden", StatusCodes.Status403Forbidden);
         }
-        var authContext = await authorizationContextFactory.Create(permission, resourceArn, Enum.Parse<AuthenticationMethod>(auth_scheme, true), id, ct);
 
-        if (authContext.IsError)
+        var authContextResult = await authorizationContextFactory.GetOrCreateCurrentContextAsync(permission, resourceArn, ct);
+
+        if (authContextResult.IsError || authContextResult.Value is null)
         {
             await context.HttpContext.Response.SendForbiddenAsync(ct);
             return;
         }
-        var result = await evaluator.Authorize(authContext.Value);
+
+        var result = await evaluator.Authorize(authContextResult.Value);
 
         if (result.IsError)
         {

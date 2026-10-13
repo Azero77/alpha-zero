@@ -34,6 +34,7 @@ public static class DependencyInjection
                 h.MigrationsHistoryTable("__CoursesMigrationHistory", AppDbContext.Schema);
             });
             opts.AddInterceptors(sp.GetRequiredService<SoftDeleteInterceptor>());
+            opts.ConfigureWarnings(w => w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
         });
 
         services.AddScoped<IArnResolver, CourseArnResolver>();
@@ -73,11 +74,13 @@ public static class DependencyInjection
         moduleServices.AddScoped<AlphaZero.Modules.Courses.Application.Queries.ICourseAnalyticsQueryService, AlphaZero.Modules.Courses.Infrastructure.Queries.CourseAnalyticsQueryService>();
 
         moduleServices.AddValidatorsFromAssembly(typeof(ICoursesApplicationMarker).Assembly);
+        moduleServices.AddPreRequestHandlersFromAssembly(typeof(ICoursesApplicationMarker).Assembly);
 
         moduleServices.AddMediatR(opts =>
         {
             opts.RegisterServicesFromAssembly(typeof(ICoursesApplicationMarker).Assembly);
             opts.AddOpenBehavior(typeof(ValidationBehavior<,>));
+            opts.AddOpenBehavior(typeof(PreRequestBehavior<,>));
             opts.AddOpenBehavior(typeof(UnitOfWorkDecoratorCommandHandler<,>));
         });
     }
