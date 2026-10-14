@@ -28,11 +28,14 @@ namespace AlphaZero.Modules.Identity.Infrastructure.Services
 
             var httpContext = accessor?.HttpContext;
             var user = httpContext?.User;
-            var endpointMetadata = GetEndpointMetadata();
+            var endpoint = httpContext?.GetEndpoint();
+            var globalRequirement = endpoint?.Metadata.GetMetadata<GlobalAccessControlRequirement>();
+            var tenantScopedRequirement = endpoint?.Metadata.GetMetadata<AccessControlWithTenantRequirement>();
+            bool hasAccessControlRequirement = globalRequirement is not null || tenantScopedRequirement is not null;
 
             if (user == null || user.Identity?.IsAuthenticated != true)
             {
-                if (endpointMetadata is not null)
+                if (hasAccessControlRequirement)
                 {
                     return Error.Forbidden("Auth.Unauthenticated", "User identity or authentication is required for this resource.");
                 }
@@ -45,12 +48,10 @@ namespace AlphaZero.Modules.Identity.Infrastructure.Services
             var authSchemeStr = user.Claims.FirstOrDefault(c => c.Type == "auth_method")?.Value ?? "Principal";
             var tenantId = tenantProvider.GetTenant();
 
-            if (string.IsNullOrEmpty(idStr) || !Enum.TryParse<AuthenticationMethod>(authSchemeStr, true, out var authMethod))
+            if (string.IsNullOrEmpty(idStr) || !Guid.TryParse(idStr, out var userId) || !Enum.TryParse<AuthenticationMethod>(authSchemeStr, true, out var authMethod))
             {
                 return Error.Forbidden("Auth.InvalidClaims", "User identity or authentication method is invalid.");
             }
-
-            var userId = Guid.Parse(idStr);
 
             AuthorizationContext result = authMethod switch
             {
@@ -66,13 +67,20 @@ namespace AlphaZero.Modules.Identity.Infrastructure.Services
                 }
             };
 
-            if (endpointMetadata is not null)
+            var endpointMetadataResult = GetEndpointMetadata(httpContext!, globalRequirement, tenantScopedRequirement, tenantId);
+            if (endpointMetadataResult.IsError)
             {
+                return endpointMetadataResult.Errors;
+            }
+
+            if (endpointMetadataResult.Value is not null)
+            {
+                var metadata = endpointMetadataResult.Value.Value;
                 result = result with
                 {
-                    RequiredPermission = endpointMetadata.Value.RequiredPermission,
-                    ResourcePath = endpointMetadata.Value.arn.ResourcePath,
-                    ResourceType = endpointMetadata.Value.arn.Service,
+                    RequiredPermission = metadata.RequiredPermission,
+                    ResourcePath = metadata.arn.ResourcePath,
+                    ResourceType = metadata.arn.Service,
                 };
             }
 
@@ -83,6 +91,7 @@ namespace AlphaZero.Modules.Identity.Infrastructure.Services
         private PrincipalUserAuthorizationContext CreatePrincipalAuthContext(ClaimsPrincipal user, Guid id, Guid? tenantId)
         {
             var principalDto = user.ToPrincipalDTO();
+            var mainDeviceId = user.Claims.FirstOrDefault(c => c.Type == CustomClaimTypes.MainDeviceId)?.Value;
 
             return new PrincipalUserAuthorizationContext
             {
@@ -97,6 +106,7 @@ namespace AlphaZero.Modules.Identity.Infrastructure.Services
                 AuthenticationMethod = AuthenticationMethod.Principal.ToString(),
                 TenantId = tenantId ?? principalDto?.TenantId,
                 DeviceId = deviceProvider.GetDeviceId(),
+                UserMainDeviceId = mainDeviceId,
                 IpAddress = accessor?.HttpContext?.Connection.RemoteIpAddress?.ToString()
             };
         }
@@ -124,30 +134,30 @@ namespace AlphaZero.Modules.Identity.Infrastructure.Services
             };
         }
 
-        private (string RequiredPermission, ResourceArn arn)? GetEndpointMetadata()
+        private ErrorOr<(string RequiredPermission, ResourceArn arn)?> GetEndpointMetadata(
+            HttpContext httpContext,
+            GlobalAccessControlRequirement? globalRequirement,
+            AccessControlWithTenantRequirement? tenantScopedRequirement,
+            Guid? currentTenant)
         {
-            var httpContext = accessor?.HttpContext;
-            if (httpContext is null) return null;
-            var globalRequirement = httpContext.GetEndpoint()?.Metadata.GetMetadata<GlobalAccessControlRequirement>();
-            var tenantScopedRequirement = httpContext.GetEndpoint()?.Metadata.GetMetadata<AccessControlWithTenantRequirement>();
-        
-            if (globalRequirement is null && tenantScopedRequirement is null) return null;
+            if (globalRequirement is null && tenantScopedRequirement is null) 
+                return (ValueTuple<string, ResourceArn>?)null;
 
             ResourceArn arn;
             if (globalRequirement != null)
             {
-                arn = globalRequirement.resourceArnFactory(httpContext.Request!);
+                arn = globalRequirement.resourceArnFactory(httpContext.Request);
             }
-            else //tenant Requirement
+            else // tenant Requirement
             {
-                var currentTenant = tenantProvider.GetTenant();
-                if (currentTenant == null)
-                    return null;
-                arn = tenantScopedRequirement!.resourceArnFactory(httpContext.Request!, currentTenant.Value);
+                if (currentTenant == null || currentTenant == Guid.Empty)
+                    return Error.Forbidden("Auth.TenantMissing", "Tenant identity is required for this resource.");
+
+                arn = tenantScopedRequirement!.resourceArnFactory(httpContext.Request, currentTenant.Value);
             }
             string? permission = globalRequirement?.Action ?? tenantScopedRequirement?.Action;
 
-            if (permission is null) return null;
+            if (permission is null) return (ValueTuple<string, ResourceArn>?)null;
             return (permission, arn);
         }
     }

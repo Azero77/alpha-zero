@@ -60,9 +60,12 @@ public class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
             services.AddHttpContextAccessor();
             services.AddScoped<ITenantProvider, TestTenantProvider>();
 
-            // Bypass IAM evaluation for integration tests
-            services.RemoveAll<AlphaZero.Shared.Authorization.IPolicyEvaluatorService>();
-            services.AddScoped<AlphaZero.Shared.Authorization.IPolicyEvaluatorService, BypassPolicyEvaluatorService>();
+            // Bypass IAM evaluation for integration tests when Testing:BypassIAM is set
+            if (Environment.GetEnvironmentVariable("Testing:BypassIAM") == "true")
+            {
+                services.RemoveAll<AlphaZero.Shared.Authorization.IPolicyEvaluatorService>();
+                services.AddScoped<AlphaZero.Shared.Authorization.IPolicyEvaluatorService, BypassPolicyEvaluatorService>();
+            }
 
             // Mock AWSResources so MassTransit SQS consumers can instantiate
             services.AddSingleton(new Aspire.Shared.AWSResources 
