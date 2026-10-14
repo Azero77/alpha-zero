@@ -11,13 +11,13 @@ public class GetCourseOverviewPreRequestHandler : IPreRequestHandler<GetCourseOv
 {
     private readonly ICourseOverviewRepository _courseOverviewRepository;
     private readonly IPolicyEvaluatorService _policyEvaluatorService;
-    private readonly IAuthorizationContextFactory _authorizationContextFactory;
+    private readonly IAuthorizationContextProvider _authorizationContextFactory;
     private readonly ITenantProvider _tenantProvider;
 
     public GetCourseOverviewPreRequestHandler(
         ICourseOverviewRepository courseOverviewRepository,
         IPolicyEvaluatorService policyEvaluatorService,
-        IAuthorizationContextFactory authorizationContextFactory,
+        IAuthorizationContextProvider authorizationContextFactory,
         ITenantProvider tenantProvider)
     {
         _courseOverviewRepository = courseOverviewRepository;

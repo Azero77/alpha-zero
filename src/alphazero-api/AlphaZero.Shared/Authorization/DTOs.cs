@@ -65,37 +65,11 @@ public class IAMPreprocessor : IGlobalPreProcessor
 {
     public async Task PreProcessAsync(IPreProcessorContext context, CancellationToken ct)
     {
-        var globalRequirement = context.HttpContext.GetEndpoint()?.Metadata.GetMetadata<GlobalAccessControlRequirement>();
-        var tenantScopedRequirement = context.HttpContext.GetEndpoint()?.Metadata.GetMetadata<AccessControlWithTenantRequirement>();
-        
-        if (globalRequirement is null && tenantScopedRequirement is null) return;
-
-        var authorizationContextFactory = context.HttpContext.RequestServices.GetRequiredService<IAuthorizationContextFactory>();
+        var authorizationContextFactory = context.HttpContext.RequestServices.GetRequiredService<IAuthorizationContextProvider>();
         var evaluator = context.HttpContext.RequestServices.GetRequiredService<IPolicyEvaluatorService>();
         var tenantProvider = context.HttpContext.RequestServices.GetRequiredService<ITenantProvider>();
 
-        ResourceArn resourceArn;
-        if (globalRequirement != null)
-        {
-            resourceArn = globalRequirement.resourceArnFactory(context.Request!);
-        }
-        else
-        {
-            var currentTenant = tenantProvider.GetTenant();
-            if (currentTenant == null)
-            {
-                throw new BadHttpRequestException("Forbidden", StatusCodes.Status403Forbidden);
-            }
-            resourceArn = tenantScopedRequirement!.resourceArnFactory(context.Request!, currentTenant.Value);
-        }
-        string? permission = globalRequirement?.Action ?? tenantScopedRequirement?.Action;
-
-        if (permission is null)
-        {
-            throw new BadHttpRequestException("Forbidden", StatusCodes.Status403Forbidden);
-        }
-
-        var authContextResult = await authorizationContextFactory.GetOrCreateCurrentContextAsync(permission, resourceArn, ct);
+        var authContextResult = authorizationContextFactory.Get(ct);
 
         if (authContextResult.IsError || authContextResult.Value is null)
         {

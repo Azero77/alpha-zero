@@ -14,7 +14,7 @@ public class GetCourseOverviewPreRequestHandlerTests
 {
     private readonly ICourseOverviewRepository _overviewRepository;
     private readonly IPolicyEvaluatorService _policyEvaluator;
-    private readonly IAuthorizationContextFactory _authFactory;
+    private readonly IAuthorizationContextProvider _authFactory;
     private readonly ITenantProvider _tenantProvider;
     private readonly GetCourseOverviewPreRequestHandler _handler;
 
@@ -25,7 +25,7 @@ public class GetCourseOverviewPreRequestHandlerTests
     {
         _overviewRepository = Substitute.For<ICourseOverviewRepository>();
         _policyEvaluator = Substitute.For<IPolicyEvaluatorService>();
-        _authFactory = Substitute.For<IAuthorizationContextFactory>();
+        _authFactory = Substitute.For<IAuthorizationContextProvider>();
         _tenantProvider = Substitute.For<ITenantProvider>();
         _tenantProvider.GetTenant().Returns(_tenantId);
 

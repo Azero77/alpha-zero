@@ -16,7 +16,7 @@ public class PreRequestBehaviorTests
     public async Task Handle_WhenNoPreRequestHandlers_CallsNext()
     {
         // Arrange
-        var factory = Substitute.For<IAuthorizationContextFactory>();
+        var factory = Substitute.For<IAuthorizationContextProvider>();
         var handlers = Enumerable.Empty<IPreRequestHandler<TestRequest>>();
         var behavior = new PreRequestBehavior<TestRequest, ErrorOr<string>>(handlers, factory);
         var request = new TestRequest();
@@ -36,7 +36,7 @@ public class PreRequestBehaviorTests
     public async Task Handle_WhenPreRequestHandlerReturnsSuccess_CallsNext()
     {
         // Arrange
-        var factory = Substitute.For<IAuthorizationContextFactory>();
+        var factory = Substitute.For<IAuthorizationContextProvider>();
         var authContext = new AuthorizationContext
         {
             Id = Guid.NewGuid(),
@@ -66,7 +66,7 @@ public class PreRequestBehaviorTests
     public async Task Handle_WhenPreRequestHandlerReturnsError_ShortCircuitsWithoutCallingNext()
     {
         // Arrange
-        var factory = Substitute.For<IAuthorizationContextFactory>();
+        var factory = Substitute.For<IAuthorizationContextProvider>();
         var preHandler = Substitute.For<IPreRequestHandler<TestRequest>>();
         preHandler.PreHandle(Arg.Any<TestRequest>(), Arg.Any<AuthorizationContext?>(), Arg.Any<CancellationToken>())
             .Returns(Error.Forbidden("Access.Denied", "Forbidden"));

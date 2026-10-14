@@ -11,11 +11,11 @@ public class PreRequestBehavior<TRequest, TResponse> : IPipelineBehavior<TReques
     where TResponse : IErrorOr
 {
     private readonly IEnumerable<IPreRequestHandler<TRequest>> _preRequestHandlers;
-    private readonly IAuthorizationContextFactory _authorizationContextFactory;
+    private readonly IAuthorizationContextProvider _authorizationContextFactory;
 
     public PreRequestBehavior(
         IEnumerable<IPreRequestHandler<TRequest>> preRequestHandlers,
-        IAuthorizationContextFactory authorizationContextFactory)
+        IAuthorizationContextProvider authorizationContextFactory)
     {
         _preRequestHandlers = preRequestHandlers;
         _authorizationContextFactory = authorizationContextFactory;
@@ -23,6 +23,7 @@ public class PreRequestBehavior<TRequest, TResponse> : IPipelineBehavior<TReques
 
     public async Task<TResponse> Handle(TRequest request, RequestHandlerDelegate<TResponse> next, CancellationToken cancellationToken)
     {
+        
         if (!_preRequestHandlers.Any())
         {
             return await next();

@@ -58,7 +58,7 @@ public static class DependencyInjection
         services.AddScoped<IDeviceProvider, Auth.DeviceProvider>();
         services.AddScoped<IPasswordHasher, Auth.PasswordHasher>();
         services.AddScoped<ICurrentTenantUserRepository, Auth.CurrentTenantUserRepository>();
-        services.AddScoped<IAuthorizationContextFactory,AuthorizationContextFactory>();
+        services.AddScoped<IAuthorizationContextProvider,AuthorizationContextFactory>();
         services.AddScoped<IDeviceSignatureVerifier,  DeviceSignatureVerifier>();
         services.AddScoped<IPublicKeyProvider, PublicKeyProvider>();
         services.AddSingleton<PrincipalLoginService>();

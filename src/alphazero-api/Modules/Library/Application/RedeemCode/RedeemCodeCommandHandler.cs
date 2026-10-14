@@ -16,7 +16,7 @@ public class RedeemCodeCommandHandler : IRequestHandler<RedeemCodeCommand, Error
     private readonly ITenantProvider _tenantProvider;
     private readonly ICurrentTenantUserRepository _currentUserRepository;
     private readonly IPasswordHasher _passwordHasher;
-    private readonly IAuthorizationContextFactory authorizationContextFactory;
+    private readonly IAuthorizationContextProvider authorizationContextFactory;
 
     public RedeemCodeCommandHandler(
         IAccessCodeRepository repository,
@@ -25,7 +25,7 @@ public class RedeemCodeCommandHandler : IRequestHandler<RedeemCodeCommand, Error
         ITenantProvider tenantProvider,
         ICurrentTenantUserRepository currentUserRepository,
         IPasswordHasher passwordHasher,
-        IAuthorizationContextFactory authorizationContextFactory)
+        IAuthorizationContextProvider authorizationContextFactory)
     {
         _repository = repository;
         _auditLogRepository = auditLogRepository;

@@ -19,6 +19,8 @@ public class HttpTenantProvider : ITenantProvider
     private const string TenantClaim = "tid";
     private const string TenantIdHeader = "X-TenantId";
 
+    private Guid? CachingTenantId = null;
+
     public HttpTenantProvider(IHttpContextAccessor httpContextAccessor)
     {
         _httpContextAccessor = httpContextAccessor;
@@ -26,6 +28,8 @@ public class HttpTenantProvider : ITenantProvider
 
     public Guid? GetTenant()
     {
+        if (CachingTenantId is not null)
+            return CachingTenantId;
         Claim? claim = _httpContextAccessor?.HttpContext?.User?.FindFirst(TenantClaim);
         if (claim is null || !Guid.TryParse(claim.Value,out Guid tenantIdFromClaim))
             return null;
@@ -36,10 +40,14 @@ public class HttpTenantProvider : ITenantProvider
         //we care about the tenantID from the header, which is the one that matters for the resource being accessed
         //if the resource was global , then we read from the claim as usual , and the Tenant Provider would only call the specific resources for this
         if (tenantIdFromClaim == Guid.Empty && tenantIdFromHeader != Guid.Empty)
+        {
+            CachingTenantId = tenantIdFromHeader;
             return tenantIdFromHeader;
+        }
 
         if (tenantIdFromClaim != tenantIdFromHeader)
             return null;
+        CachingTenantId = tenantIdFromClaim;
         return tenantIdFromClaim;
     }
 

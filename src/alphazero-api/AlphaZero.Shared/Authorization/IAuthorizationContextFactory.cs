@@ -4,12 +4,8 @@ using MassTransit.Middleware;
 
 namespace AlphaZero.Shared.Authorization
 {
-    public interface IAuthorizationContextFactory
+    public interface IAuthorizationContextProvider
     {
-        AuthorizationContext? CurrentAuthorizationContext { get; }
-
-        Task<ErrorOr<AuthorizationContext>> Create(string requiredPermission, ResourceArn arn, AuthenticationMethod authenticationMethod, string id, CancellationToken token = default);
-
-        Task<ErrorOr<AuthorizationContext?>> GetOrCreateCurrentContextAsync(string? requiredPermission = null, ResourceArn? arn = null, CancellationToken token = default);
+        ErrorOr<AuthorizationContext?> Get(CancellationToken token = default);
     }
 }
