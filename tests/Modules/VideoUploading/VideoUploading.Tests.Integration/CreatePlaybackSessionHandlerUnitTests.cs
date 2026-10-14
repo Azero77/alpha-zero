@@ -175,6 +175,7 @@ public class CreatePlaybackSessionHandlerUnitTests
         var thumbnail = ThumbnailInfo.Empty;
         // Transition video to Published
         var video = Video.Create(Guid.NewGuid(), tenantId, "Test Title", "Desc",  metadata, clock.UtcNow).Value;
+        video.UpdateSpecifications(new VideoSpecifications(TimeSpan.FromMinutes(10), new Resolution(1920, 1080)));
         video.MarkAsPublished(clock.UtcNow);
         _videoRepo.VideoToReturn = video;
 
@@ -191,7 +192,7 @@ public class CreatePlaybackSessionHandlerUnitTests
         var result = await handler.Handle(command, CancellationToken.None);
 
         // Assert
-        result.IsError.Should().BeFalse();
+        result.IsError.Should().BeFalse(result.IsError ? $"{result.FirstError.Code}: {result.FirstError.Description}" : "");
         var session = result.Value;
         session.VideoId.Should().Be(video.Id);
         session.SessionId.Should().NotBeEmpty();

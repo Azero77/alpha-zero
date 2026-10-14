@@ -14,14 +14,16 @@ public class CurriculumResourceConfiguration : IEntityTypeConfiguration<Curricul
         builder.Property(r => r.Id)
             .ValueGeneratedNever();
 
-        builder.Property(r => r.ResourceType)
-            .HasConversion<string>();
+        builder.Ignore(r => r.ResourceType);
 
-        builder.HasDiscriminator(r => r.ResourceType)
-            .HasValue<VideoCurriculumResource>(ResourceType.Video)
-            .HasValue<DocumentCurriculumResource>(ResourceType.Document)
-            .HasValue<ArticleCurriculumResource>(ResourceType.Article)
-            .HasValue<AssessmentCurriculumResource>(ResourceType.Assessment);
+        builder.Property<string>("Discriminator")
+            .HasColumnName("ResourceType");
+
+        builder.HasDiscriminator<string>("Discriminator")
+            .HasValue<VideoCurriculumResource>(nameof(ResourceType.Video))
+            .HasValue<DocumentCurriculumResource>(nameof(ResourceType.Document))
+            .HasValue<ArticleCurriculumResource>(nameof(ResourceType.Article))
+            .HasValue<AssessmentCurriculumResource>(nameof(ResourceType.Assessment));
 
         builder.Property(r => r.Order)
             .IsRequired();

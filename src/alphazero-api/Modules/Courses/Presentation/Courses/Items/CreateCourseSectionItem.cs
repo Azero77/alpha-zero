@@ -68,7 +68,7 @@ public class CreateCourseSectionItemEndpoint : Endpoint<CreateCourseSectionItemR
 
         await Send.CreatedAtAsync(
             $"/courses/{req.CourseId}/sections/{req.SectionId}/items/{result.Value.Id}",
-            result.Value,
+            responseBody: result.Value,
             cancellation: ct);
     }
 }

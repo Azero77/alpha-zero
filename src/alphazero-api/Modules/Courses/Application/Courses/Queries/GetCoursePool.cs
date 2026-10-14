@@ -1,3 +1,4 @@
+using AlphaZero.Modules.Courses.Application.Repositories;
 using AlphaZero.Modules.Courses.Domain.Aggregates.Courses;
 using AlphaZero.Shared.Application;
 using AlphaZero.Shared.Infrastructure.Repositores;
@@ -6,7 +7,7 @@ using MediatR;
 
 namespace AlphaZero.Modules.Courses.Application.Courses.Queries;
 
-public record GetCoursePoolQuery(Guid CourseId) : IQuery<List<CourseAssetDto>>;
+public record GetCoursePoolQuery(Guid CourseId, bool IncludeAssigned = false) : IQuery<List<CourseAssetDto>>;
 
 public record CourseAssetDto(
     Guid Id,
@@ -25,9 +26,15 @@ public sealed class GetCoursePoolQueryHandler
     : IRequestHandler<GetCoursePoolQuery, ErrorOr<List<CourseAssetDto>>>
 {
     private readonly IRepository<CourseAsset> _assetRepository;
+    private readonly ICourseRepository _courseRepository;
 
-    public GetCoursePoolQueryHandler(IRepository<CourseAsset> assetRepository)
-        => _assetRepository = assetRepository;
+    public GetCoursePoolQueryHandler(
+        IRepository<CourseAsset> assetRepository,
+        ICourseRepository courseRepository)
+    {
+        _assetRepository = assetRepository;
+        _courseRepository = courseRepository;
+    }
 
     public async Task<ErrorOr<List<CourseAssetDto>>> Handle(
         GetCoursePoolQuery request, CancellationToken ct)
@@ -35,6 +42,19 @@ public sealed class GetCoursePoolQueryHandler
         var assets = await _assetRepository.Get(
             a => a.CourseId == request.CourseId && a.State == CourseAssetState.Available, 
             ct);
+
+        if (!request.IncludeAssigned)
+        {
+            var unassignedAssets = new List<CourseAsset>();
+            foreach (var asset in assets)
+            {
+                if (!await _courseRepository.IsAssetInUseAsync(asset.Id, ct))
+                {
+                    unassignedAssets.Add(asset);
+                }
+            }
+            assets = unassignedAssets;
+        }
 
         var poolAssets = assets
             .OrderBy(a => a.UploadedUtcAt)

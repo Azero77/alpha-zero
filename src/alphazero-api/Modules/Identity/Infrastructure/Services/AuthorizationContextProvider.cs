@@ -143,17 +143,21 @@ namespace AlphaZero.Modules.Identity.Infrastructure.Services
             if (globalRequirement is null && tenantScopedRequirement is null) 
                 return (ValueTuple<string, ResourceArn>?)null;
 
+            var requestObj = (httpContext.Items.TryGetValue("__FastEndpoints_Request__", out var fastReq) && fastReq is not null)
+                ? fastReq
+                : (object)httpContext.Request;
+
             ResourceArn arn;
             if (globalRequirement != null)
             {
-                arn = globalRequirement.resourceArnFactory(httpContext.Request);
+                arn = globalRequirement.resourceArnFactory(requestObj);
             }
             else // tenant Requirement
             {
                 if (currentTenant == null || currentTenant == Guid.Empty)
                     return Error.Forbidden("Auth.TenantMissing", "Tenant identity is required for this resource.");
 
-                arn = tenantScopedRequirement!.resourceArnFactory(httpContext.Request, currentTenant.Value);
+                arn = tenantScopedRequirement!.resourceArnFactory(requestObj, currentTenant.Value);
             }
             string? permission = globalRequirement?.Action ?? tenantScopedRequirement?.Action;
 

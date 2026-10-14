@@ -77,6 +77,9 @@ public class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
                 DocumentProcessingCompletedQueue = new Aspire.Shared.SQSQueueSettings { QueueUrl = "https://sqs.mock/mock-queue-doc-completed" },
                 DocumentProcessingFailedQueue = new Aspire.Shared.SQSQueueSettings { QueueUrl = "https://sqs.mock/mock-queue-doc-failed" }
             });
+
+            // Ensure IPublishEndpoint publishes to in-memory IBus rather than external SQS bus in tests
+            services.AddScoped<MassTransit.IPublishEndpoint>(sp => sp.GetRequiredService<MassTransit.IBus>());
         });
     }
 
@@ -90,7 +93,28 @@ public class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
 public class TestTenantProvider : ITenantProvider
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
-    public Guid? CurrentTenantId { get; set; }
+    private static readonly AsyncLocal<Guid?> _asyncLocalTenantId = new();
+    private static Guid? _fallbackTenantId;
+
+    public static Guid? StaticTenantId
+    {
+        get => _asyncLocalTenantId.Value ?? _fallbackTenantId;
+        set
+        {
+            _asyncLocalTenantId.Value = value;
+            _fallbackTenantId = value;
+        }
+    }
+
+    public Guid? CurrentTenantId
+    {
+        get => _asyncLocalTenantId.Value ?? _fallbackTenantId;
+        set
+        {
+            _asyncLocalTenantId.Value = value;
+            _fallbackTenantId = value;
+        }
+    }
 
     public TestTenantProvider(IHttpContextAccessor httpContextAccessor)
     {
@@ -108,7 +132,7 @@ public class TestTenantProvider : ITenantProvider
             }
         }
 
-        return CurrentTenantId;
+        return CurrentTenantId ?? StaticTenantId;
     }
 }
 

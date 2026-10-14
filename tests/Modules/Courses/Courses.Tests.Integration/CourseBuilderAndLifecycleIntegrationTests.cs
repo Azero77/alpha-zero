@@ -130,7 +130,6 @@ public class CourseBuilderAndLifecycleIntegrationTests : BaseIntegrationTest
 
         var item1Response = await Client.PostAsJsonAsync($"/courses/{courseId}/sections/{sectionId}/items", createItem1Request);
         item1Response.StatusCode.Should().Be(HttpStatusCode.Created);
-
         var item1Dto = await item1Response.Content.ReadFromJsonAsync<CurriculumItemDto>();
         item1Dto.Should().NotBeNull();
         item1Dto!.BitIndex.Should().Be(0);
@@ -256,11 +255,19 @@ public class CourseBuilderAndLifecycleIntegrationTests : BaseIntegrationTest
         });
         var courseId = (await createCourseResponse.Content.ReadFromJsonAsync<CreateCourseResponse>())!.Id;
 
-        // 1. Direct publish from Draft without required sections/plans/cover -> MUST fail with 422
+        // 1. Direct publish from Draft without required sections/cover -> MUST fail with 422
+        // Add active pricing plan first so validation passes and readiness checks are evaluated
+        await Client.PostAsJsonAsync($"/courses/{courseId}/plans", new AddPlanRequest
+        {
+            CourseId = courseId,
+            Name = "Full Access",
+            PrincipalId = Guid.NewGuid()
+        });
+
         var earlyPublishResp = await Client.PatchAsJsonAsync($"/courses/{courseId}/publish", new { });
         earlyPublishResp.StatusCode.Should().Be((HttpStatusCode)422);
 
-        // 2. Satisfy all readiness criteria
+        // 2. Satisfy remaining readiness criteria
         // Add section
         await Client.PostAsJsonAsync($"/courses/{courseId}/sections", new AddSectionRequest { Title = "Unit 1" });
         var courseResponse = await Client.GetFromJsonAsync<CourseResponse>($"/courses/{courseId}");
@@ -275,14 +282,6 @@ public class CourseBuilderAndLifecycleIntegrationTests : BaseIntegrationTest
             Title = "Gauss's Law",
             MainType = "Article",
             Content = itemContent
-        });
-
-        // Add active pricing plan
-        await Client.PostAsJsonAsync($"/courses/{courseId}/plans", new AddPlanRequest
-        {
-            CourseId = courseId,
-            Name = "Full Access",
-            PrincipalId = Guid.NewGuid()
         });
 
         // Set cover image on overview

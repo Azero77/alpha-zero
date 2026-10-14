@@ -96,6 +96,6 @@ public class UpsertCourseOverviewEndpoint : Endpoint<UpsertCourseOverviewRequest
             return;
         }
 
-        await Send.OkAsync(ct);
+        await Send.ResultAsync(Microsoft.AspNetCore.Http.TypedResults.Ok());
     }
 }

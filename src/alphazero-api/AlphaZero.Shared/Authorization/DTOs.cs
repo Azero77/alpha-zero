@@ -65,6 +65,11 @@ public class IAMPreprocessor : IGlobalPreProcessor
 {
     public async Task PreProcessAsync(IPreProcessorContext context, CancellationToken ct)
     {
+        if (context.Request is not null)
+        {
+            context.HttpContext.Items["__FastEndpoints_Request__"] = context.Request;
+        }
+
         var authProvider = context.HttpContext.RequestServices.GetRequiredService<IAuthorizationContextProvider>();
         var evaluator = context.HttpContext.RequestServices.GetRequiredService<IPolicyEvaluatorService>();
 

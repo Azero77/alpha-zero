@@ -64,6 +64,9 @@ namespace AlphaZero.Modules.VideoUploading.Infrastructure.Migrations
                     b.HasIndex("IsDeleted")
                         .HasFilter("\"IsDeleted\" = FALSE");
 
+                    b.HasIndex("TenantId")
+                        .HasFilter("\"IsDeleted\" = FALSE");
+
                     b.ToTable("Videos", "video_uploading");
                 });
 

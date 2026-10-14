@@ -126,6 +126,9 @@ namespace AlphaZero.Modules.Documents.Infrastructure.Migrations
                     b.HasIndex("IsDeleted")
                         .HasFilter("\"IsDeleted\" = FALSE");
 
+                    b.HasIndex("TenantId")
+                        .HasFilter("\"IsDeleted\" = FALSE");
+
                     b.HasIndex("TenantId", "IsDeleted");
 
                     b.ToTable("Documents", "documents");

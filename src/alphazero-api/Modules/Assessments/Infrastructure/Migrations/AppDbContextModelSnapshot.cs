@@ -67,6 +67,9 @@ namespace AlphaZero.Modules.Assessments.Infrastructure.Migrations
                     b.HasIndex("IsDeleted")
                         .HasFilter("\"IsDeleted\" = FALSE");
 
+                    b.HasIndex("TenantId")
+                        .HasFilter("\"IsDeleted\" = FALSE");
+
                     b.ToTable("Assessments", "Assessments");
                 });
 
@@ -94,6 +97,8 @@ namespace AlphaZero.Modules.Assessments.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("AssessmentId");
+
+                    b.HasIndex("TenantId");
 
                     b.ToTable("AssessmentVersion", "Assessments");
                 });
@@ -133,6 +138,8 @@ namespace AlphaZero.Modules.Assessments.Infrastructure.Migrations
                         .HasColumnType("numeric");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("TenantId");
 
                     b.HasIndex("StudentId", "AssessmentId");
 

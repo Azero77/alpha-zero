@@ -24,6 +24,26 @@ namespace AlphaZero.Modules.Identity.Infrastructure.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("AlphaZero.Modules.Identity.Domain.Models.Principals.Policies.InlinePolicy", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId");
+
+                    b.ToTable("InlinePolicy", "Identity");
+                });
+
             modelBuilder.Entity("AlphaZero.Modules.Identity.Domain.Models.Principals.Policies.ManagedPolicy", b =>
                 {
                     b.Property<Guid>("Id")
@@ -74,6 +94,8 @@ namespace AlphaZero.Modules.Identity.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("TenantId");
+
                     b.HasIndex("IdentityId", "TenantId")
                         .IsUnique();
 
@@ -106,6 +128,8 @@ namespace AlphaZero.Modules.Identity.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("PrincipalId");
+
+                    b.HasIndex("TenantId");
 
                     b.HasIndex("TenantUserId", "PrincipalId", "Resource")
                         .IsUnique();

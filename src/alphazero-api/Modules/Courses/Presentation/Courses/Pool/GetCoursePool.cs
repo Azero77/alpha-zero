@@ -10,6 +10,8 @@ namespace AlphaZero.Modules.Courses.Presentation.Courses.Pool;
 public record GetCoursePoolRequest
 {
     public Guid CourseId { get; init; }
+    public bool IncludeAssigned { get; init; } = false;
+    public bool IncludeInUse { get; init; } = false;
 }
 
 public class GetCoursePoolSummary : Summary<GetCoursePoolEndpoint>
@@ -43,7 +45,7 @@ public class GetCoursePoolEndpoint : Endpoint<GetCoursePoolRequest, List<CourseA
 
     public override async Task HandleAsync(GetCoursePoolRequest req, CancellationToken ct)
     {
-        var query = new GetCoursePoolQuery(req.CourseId);
+        var query = new GetCoursePoolQuery(req.CourseId, req.IncludeAssigned || req.IncludeInUse);
         var result = await _module.Send(query, ct);
 
         if (result.IsError)
