@@ -1,5 +1,4 @@
-using AlphaZero.Modules.Courses.Application.Repositories;
-using AlphaZero.Modules.Courses.Domain.Aggregates.Subject;
+using AlphaZero.Modules.Courses.Application.Queries;
 using ErrorOr;
 using MediatR;
 
@@ -11,21 +10,21 @@ public record GetSubjectQuery(Guid SubjectId) : IRequest<ErrorOr<SubjectDto>>;
 
 public sealed class GetSubjectQueryHandler : IRequestHandler<GetSubjectQuery, ErrorOr<SubjectDto>>
 {
-    private readonly ISubjectRepository _subjectRepository;
+    private readonly ISubjectQueryService _subjectQueryService;
 
-    public GetSubjectQueryHandler(ISubjectRepository subjectRepository)
+    public GetSubjectQueryHandler(ISubjectQueryService subjectQueryService)
     {
-        _subjectRepository = subjectRepository;
+        _subjectQueryService = subjectQueryService;
     }
 
     public async Task<ErrorOr<SubjectDto>> Handle(GetSubjectQuery request, CancellationToken cancellationToken)
     {
-        var subject = await _subjectRepository.GetFirst(s => s.Id == request.SubjectId, cancellationToken);
+        var subject = await _subjectQueryService.GetSubjectByIdAsync(request.SubjectId, cancellationToken);
         if (subject is null)
         {
             return Error.NotFound("Subject.NotFound", $"Subject with ID {request.SubjectId} was not found.");
         }
 
-        return new SubjectDto(subject.Id, subject.Name, subject.Description);
+        return subject;
     }
 }

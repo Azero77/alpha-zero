@@ -1,7 +1,5 @@
-using AlphaZero.Modules.Courses.Application.Repositories;
-using AlphaZero.Modules.Courses.Domain.Aggregates.Courses;
+using AlphaZero.Modules.Courses.Application.Queries;
 using AlphaZero.Shared.Application;
-using AlphaZero.Shared.Infrastructure.Repositores;
 using ErrorOr;
 using MediatR;
 
@@ -25,74 +23,21 @@ public record CourseAssetDto(
 public sealed class GetCoursePoolQueryHandler 
     : IRequestHandler<GetCoursePoolQuery, ErrorOr<List<CourseAssetDto>>>
 {
-    private readonly IRepository<CourseAsset> _assetRepository;
-    private readonly ICourseRepository _courseRepository;
+    private readonly ICourseQueryService _courseQueryService;
 
-    public GetCoursePoolQueryHandler(
-        IRepository<CourseAsset> assetRepository,
-        ICourseRepository courseRepository)
+    public GetCoursePoolQueryHandler(ICourseQueryService courseQueryService)
     {
-        _assetRepository = assetRepository;
-        _courseRepository = courseRepository;
+        _courseQueryService = courseQueryService;
     }
 
     public async Task<ErrorOr<List<CourseAssetDto>>> Handle(
         GetCoursePoolQuery request, CancellationToken ct)
     {
-        var assets = await _assetRepository.Get(
-            a => a.CourseId == request.CourseId && a.State == CourseAssetState.Available, 
+        var poolAssets = await _courseQueryService.GetCoursePoolAsync(
+            request.CourseId, 
+            request.IncludeAssigned, 
             ct);
 
-        if (!request.IncludeAssigned)
-        {
-            var unassignedAssets = new List<CourseAsset>();
-            foreach (var asset in assets)
-            {
-                if (!await _courseRepository.IsAssetInUseAsync(asset.Id, ct))
-                {
-                    unassignedAssets.Add(asset);
-                }
-            }
-            assets = unassignedAssets;
-        }
-
-        var poolAssets = assets
-            .OrderBy(a => a.UploadedUtcAt)
-            .Select(Map)
-            .ToList();
-
         return poolAssets;
-    }
-
-    private static CourseAssetDto Map(CourseAsset asset)
-    {
-        var dto = new CourseAssetDto(
-            asset.Id,
-            asset.Title,
-            asset.CourseAssetType.ToString(),
-            asset.State.ToString(),
-            asset.ResourceArn.Value,
-            asset.UploadedUtcAt);
-
-        return asset switch
-        {
-            VideoCourseAsset video => dto with
-            {
-                Duration = video.Duration,
-                ThumbnailUrl = video.ThumbnailUrl
-            },
-
-            DocumentCourseAsset document => dto with
-            {
-                FileName = document.FileName
-            },
-
-            AssessmentCourseAsset assessment => dto with
-            {
-                QuestionsNumber = assessment.QuestionsNumber
-            },
-
-            _ => throw new ArgumentOutOfRangeException(nameof(asset))
-        };
     }
 }

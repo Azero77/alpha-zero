@@ -17,6 +17,7 @@ public class CourseQueryBuilder : ICourseQueryBuilder
     private bool _includePlans;
     private bool _isSplitQuery;
     private bool _ignoreQueryFilters;
+    private bool _asNoTracking;
 
     public CourseQueryBuilder(AppDbContext context)
     {
@@ -71,6 +72,12 @@ public class CourseQueryBuilder : ICourseQueryBuilder
         return this;
     }
 
+    public ICourseQueryBuilder AsNoTracking()
+    {
+        _asNoTracking = true;
+        return this;
+    }
+
     public async Task<Course?> ExecuteAsync(CancellationToken cancellationToken = default)
     {
         return await BuildQuery().FirstOrDefaultAsync(cancellationToken);
@@ -91,6 +98,9 @@ public class CourseQueryBuilder : ICourseQueryBuilder
     {
         // Tracked query by default for aggregate mutations
         var query = _context.Courses.AsQueryable();
+
+        if (_asNoTracking)
+            query = query.AsNoTracking();
 
         if (_isSplitQuery)
             query = query.AsSplitQuery();

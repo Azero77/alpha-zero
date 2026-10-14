@@ -12,6 +12,7 @@ public interface ICourseQueryBuilder
     ICourseQueryBuilder WithPlans(bool include = true);
     ICourseQueryBuilder AsSplitQuery();
     ICourseQueryBuilder IgnoreQueryFilters();
+    ICourseQueryBuilder AsNoTracking();
 
     Task<Course?> ExecuteAsync(CancellationToken cancellationToken = default);
     Task<bool> ExistsAsync(CancellationToken cancellationToken = default);

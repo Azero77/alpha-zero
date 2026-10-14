@@ -99,4 +99,20 @@ public class EnrollmentQueryService : IEnrollmentQueryService
                 e.TenantId))
             .ToListAsync(cancellationToken);
     }
+
+    public async Task<EnrollmentDto?> GetEnrollmentByIdAsync(Guid enrollmentId, CancellationToken cancellationToken = default)
+    {
+        return await _context.Set<Enrollement>()
+            .AsNoTracking()
+            .Where(e => e.Id == enrollmentId)
+            .Select(e => new EnrollmentDto(
+                e.Id,
+                e.StudentId,
+                e.CourseId,
+                e.Status.ToString(),
+                e.Progress.CompletionPercentage,
+                e.EnrolledOn,
+                e.TenantId))
+            .FirstOrDefaultAsync(cancellationToken);
+    }
 }

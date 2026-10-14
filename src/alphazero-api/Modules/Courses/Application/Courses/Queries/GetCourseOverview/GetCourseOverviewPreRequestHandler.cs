@@ -1,4 +1,4 @@
-using AlphaZero.Modules.Courses.Application.Repositories;
+using AlphaZero.Modules.Courses.Application.Queries;
 using AlphaZero.Shared.Application;
 using AlphaZero.Shared.Authorization;
 using AlphaZero.Shared.Domain;
@@ -9,16 +9,16 @@ namespace AlphaZero.Modules.Courses.Application.Courses.Queries.GetCourseOvervie
 
 public class GetCourseOverviewPreRequestHandler : IPreRequestHandler<GetCourseOverviewQuery>
 {
-    private readonly ICourseOverviewRepository _courseOverviewRepository;
+    private readonly ICourseQueryService _courseQueryService;
     private readonly IPolicyEvaluatorService _policyEvaluatorService;
     private readonly ITenantProvider _tenantProvider;
 
     public GetCourseOverviewPreRequestHandler(
-        ICourseOverviewRepository courseOverviewRepository,
+        ICourseQueryService courseQueryService,
         IPolicyEvaluatorService policyEvaluatorService,
         ITenantProvider tenantProvider)
     {
-        _courseOverviewRepository = courseOverviewRepository;
+        _courseQueryService = courseQueryService;
         _policyEvaluatorService = policyEvaluatorService;
         _tenantProvider = tenantProvider;
     }
@@ -28,7 +28,7 @@ public class GetCourseOverviewPreRequestHandler : IPreRequestHandler<GetCourseOv
         AuthorizationContext? context,
         CancellationToken cancellationToken)
     {
-        var overview = await _courseOverviewRepository.GetByCourseIdAsync(request.CourseId, cancellationToken);
+        var overview = await _courseQueryService.GetCourseOverviewAsync(request.CourseId, cancellationToken);
         if (overview is null)
         {
             return Error.NotFound("CourseOverview.NotFound", "Course overview not found.");

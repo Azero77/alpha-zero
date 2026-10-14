@@ -37,4 +37,13 @@ public class SubjectQueryService : ISubjectQueryService
 
         return new PagedResult<SubjectDto>(items, totalCount, page, perPage);
     }
+
+    public async Task<SubjectDto?> GetSubjectByIdAsync(Guid subjectId, CancellationToken cancellationToken = default)
+    {
+        return await _context.Set<Subject>()
+            .AsNoTracking()
+            .Where(s => s.Id == subjectId)
+            .Select(s => new SubjectDto(s.Id, s.Name, s.Description))
+            .FirstOrDefaultAsync(cancellationToken);
+    }
 }

@@ -1,4 +1,6 @@
+using AlphaZero.Modules.Courses.Application.Courses.Queries;
 using AlphaZero.Modules.Courses.Application.Courses.Queries.GetCourse;
+using AlphaZero.Modules.Courses.Application.Courses.Queries.GetCourseOverview;
 using AlphaZero.Modules.Courses.Application.Courses.Queries.ListCourses;
 using AlphaZero.Modules.Courses.Application.Queries;
 using AlphaZero.Modules.Courses.Domain.Aggregates.Courses;
@@ -167,5 +169,79 @@ public class CourseQueryService : ICourseQueryService
                 new CurriculumReadinessChecks(hasSections, hasItems, allAttachedAssetsReady),
                 new CommercialReadinessChecks(hasActivePricingPlan)),
             blockingReasons);
+    }
+
+    public async Task<CourseOverviewDto?> GetCourseOverviewAsync(Guid courseId, CancellationToken cancellationToken = default)
+    {
+        var query = from course in _context.Courses.AsNoTracking()
+                    join courseOverview in _context.CourseOverviews.AsNoTracking()
+                        on course.Id equals courseOverview.CourseId
+                    where course.Id == courseId
+                    select new CourseOverviewDto(
+                        courseOverview.Id,
+                        course.Id,
+                        course.Status.ToString(),
+                        courseOverview.DescriptionContent.Value,
+                        courseOverview.TargetAudienceContent == null ? null : courseOverview.TargetAudienceContent.Value,
+                        courseOverview.LearningObjectivesContent == null ? null : courseOverview.LearningObjectivesContent.Value,
+                        courseOverview.CoverImageDocumentId,
+                        courseOverview.ETag);
+
+        return await query.FirstOrDefaultAsync(cancellationToken);
+    }
+
+    public async Task<List<CourseAssetDto>> GetCoursePoolAsync(
+        Guid courseId, 
+        bool includeAssigned = false, 
+        CancellationToken cancellationToken = default)
+    {
+        var query = _context.CourseAssets
+            .AsNoTracking()
+            .Where(a => a.CourseId == courseId && a.State == CourseAssetState.Available);
+
+        if (!includeAssigned)
+        {
+            var assignedAssetIds = _context.CurriculumResources
+                .AsNoTracking()
+                .Where(r => r.CourseAssetId != null)
+                .Select(r => r.CourseAssetId!.Value);
+
+            query = query.Where(a => !assignedAssetIds.Contains(a.Id));
+        }
+
+        var assets = await query
+            .OrderBy(a => a.UploadedUtcAt)
+            .ToListAsync(cancellationToken);
+
+        return assets.Select(MapCourseAssetToDto).ToList();
+    }
+
+    private static CourseAssetDto MapCourseAssetToDto(CourseAsset asset)
+    {
+        var dto = new CourseAssetDto(
+            asset.Id,
+            asset.Title,
+            asset.CourseAssetType.ToString(),
+            asset.State.ToString(),
+            asset.ResourceArn.Value,
+            asset.UploadedUtcAt);
+
+        return asset switch
+        {
+            VideoCourseAsset video => dto with
+            {
+                Duration = video.Duration,
+                ThumbnailUrl = video.ThumbnailUrl
+            },
+            DocumentCourseAsset doc => dto with
+            {
+                FileName = doc.FileName
+            },
+            AssessmentCourseAsset assessment => dto with
+            {
+                QuestionsNumber = assessment.QuestionsNumber
+            },
+            _ => dto
+        };
     }
 }

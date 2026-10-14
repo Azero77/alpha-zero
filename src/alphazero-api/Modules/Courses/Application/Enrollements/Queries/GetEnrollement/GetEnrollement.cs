@@ -1,5 +1,4 @@
-using AlphaZero.Modules.Courses.Application.Repositories;
-using AlphaZero.Modules.Courses.Domain.Aggregates.Enrollements;
+using AlphaZero.Modules.Courses.Application.Queries;
 using ErrorOr;
 using MediatR;
 
@@ -18,25 +17,18 @@ public record GetEnrollementQuery(Guid EnrollmentId) : IRequest<ErrorOr<Enrollme
 
 public sealed class GetEnrollementQueryHandler : IRequestHandler<GetEnrollementQuery, ErrorOr<EnrollmentDto>>
 {
-    private readonly IEnrollementRepository _enrollementRepository;
+    private readonly IEnrollmentQueryService _enrollmentQueryService;
 
-    public GetEnrollementQueryHandler(IEnrollementRepository enrollementRepository)
+    public GetEnrollementQueryHandler(IEnrollmentQueryService enrollmentQueryService)
     {
-        _enrollementRepository = enrollementRepository;
+        _enrollmentQueryService = enrollmentQueryService;
     }
 
     public async Task<ErrorOr<EnrollmentDto>> Handle(GetEnrollementQuery request, CancellationToken cancellationToken)
     {
-        var enrollment = await _enrollementRepository.GetByIdAsync(request.EnrollmentId, cancellationToken);
+        var enrollment = await _enrollmentQueryService.GetEnrollmentByIdAsync(request.EnrollmentId, cancellationToken);
         if (enrollment is null) return Error.NotFound("Enrollment.NotFound", "Enrollment not found.");
 
-        return new EnrollmentDto(
-            enrollment.Id,
-            enrollment.StudentId,
-            enrollment.CourseId,
-            enrollment.Status.ToString(),
-            enrollment.Progress.CompletionPercentage,
-            enrollment.EnrolledOn,
-            enrollment.TenantId);
+        return enrollment;
     }
 }

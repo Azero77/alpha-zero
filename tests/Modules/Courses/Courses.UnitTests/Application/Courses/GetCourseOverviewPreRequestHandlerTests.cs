@@ -1,5 +1,5 @@
 using AlphaZero.Modules.Courses.Application.Courses.Queries.GetCourseOverview;
-using AlphaZero.Modules.Courses.Application.Repositories;
+using AlphaZero.Modules.Courses.Application.Queries;
 using AlphaZero.Shared.Authorization;
 using AlphaZero.Shared.Domain;
 using AlphaZero.Shared.Infrastructure.Tenats;
@@ -12,7 +12,7 @@ namespace AlphaZero.Modules.Courses.UnitTests.Application.Courses;
 
 public class GetCourseOverviewPreRequestHandlerTests
 {
-    private readonly ICourseOverviewRepository _overviewRepository;
+    private readonly ICourseQueryService _courseQueryService;
     private readonly IPolicyEvaluatorService _policyEvaluator;
     private readonly ITenantProvider _tenantProvider;
     private readonly GetCourseOverviewPreRequestHandler _handler;
@@ -22,13 +22,13 @@ public class GetCourseOverviewPreRequestHandlerTests
 
     public GetCourseOverviewPreRequestHandlerTests()
     {
-        _overviewRepository = Substitute.For<ICourseOverviewRepository>();
+        _courseQueryService = Substitute.For<ICourseQueryService>();
         _policyEvaluator = Substitute.For<IPolicyEvaluatorService>();
         _tenantProvider = Substitute.For<ITenantProvider>();
         _tenantProvider.GetTenant().Returns(_tenantId);
 
         _handler = new GetCourseOverviewPreRequestHandler(
-            _overviewRepository,
+            _courseQueryService,
             _policyEvaluator,
             _tenantProvider);
     }
@@ -40,7 +40,7 @@ public class GetCourseOverviewPreRequestHandlerTests
     public async Task PreHandle_WhenOverviewNotFound_ReturnsNotFound()
     {
         // Arrange
-        _overviewRepository.GetByCourseIdAsync(_courseId, Arg.Any<CancellationToken>())
+        _courseQueryService.GetCourseOverviewAsync(_courseId, Arg.Any<CancellationToken>())
             .Returns((CourseOverviewDto?)null);
 
         // Act
@@ -56,7 +56,7 @@ public class GetCourseOverviewPreRequestHandlerTests
     {
         // Arrange
         var dto = CreateDto("Published");
-        _overviewRepository.GetByCourseIdAsync(_courseId, Arg.Any<CancellationToken>())
+        _courseQueryService.GetCourseOverviewAsync(_courseId, Arg.Any<CancellationToken>())
             .Returns(dto);
 
         // Act
@@ -72,7 +72,7 @@ public class GetCourseOverviewPreRequestHandlerTests
     {
         // Arrange
         var dto = CreateDto("Draft");
-        _overviewRepository.GetByCourseIdAsync(_courseId, Arg.Any<CancellationToken>())
+        _courseQueryService.GetCourseOverviewAsync(_courseId, Arg.Any<CancellationToken>())
             .Returns(dto);
 
         // Act
@@ -88,7 +88,7 @@ public class GetCourseOverviewPreRequestHandlerTests
     {
         // Arrange
         var dto = CreateDto("Draft");
-        _overviewRepository.GetByCourseIdAsync(_courseId, Arg.Any<CancellationToken>())
+        _courseQueryService.GetCourseOverviewAsync(_courseId, Arg.Any<CancellationToken>())
             .Returns(dto);
 
         var context = new AuthorizationContext
@@ -114,7 +114,7 @@ public class GetCourseOverviewPreRequestHandlerTests
     {
         // Arrange
         var dto = CreateDto("Draft");
-        _overviewRepository.GetByCourseIdAsync(_courseId, Arg.Any<CancellationToken>())
+        _courseQueryService.GetCourseOverviewAsync(_courseId, Arg.Any<CancellationToken>())
             .Returns(dto);
 
         var context = new AuthorizationContext
