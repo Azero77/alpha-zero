@@ -45,7 +45,7 @@ public class GetCourseOverviewPreRequestHandler : IPreRequestHandler<GetCourseOv
             return Error.NotFound("CourseOverview.NotFound", "Course overview not found.");
         }
 
-        var tenantId = _tenantProvider.GetTenant() ?? context.TenantId;
+        var tenantId = context.TenantId;
         if (tenantId is null || tenantId == Guid.Empty)
         {
             return Error.NotFound("CourseOverview.NotFound", "Course overview not found.");

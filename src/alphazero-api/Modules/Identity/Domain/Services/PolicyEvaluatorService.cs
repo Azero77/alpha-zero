@@ -11,7 +11,7 @@ using ErrorOr;
 namespace AlphaZero.Modules.Identity.Domain.Services;
 
 public class PolicyEvaluatorService : IPolicyEvaluatorService
-{
+{ 
     private readonly IEnumerable<IAuthorizationStrategy> _strategies;
 
     public PolicyEvaluatorService(IEnumerable<IAuthorizationStrategy> strategies)

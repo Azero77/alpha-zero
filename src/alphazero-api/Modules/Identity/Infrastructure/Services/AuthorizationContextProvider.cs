@@ -52,7 +52,7 @@ namespace AlphaZero.Modules.Identity.Infrastructure.Services
             {
                 return Error.Forbidden("Auth.InvalidClaims", "User identity or authentication method is invalid.");
             }
-
+ 
             AuthorizationContext result = authMethod switch
             {
                 AuthenticationMethod.TenantUser => CreateTenantUserAuthContext(user, userId, tenantId),
@@ -97,13 +97,13 @@ namespace AlphaZero.Modules.Identity.Infrastructure.Services
             {
                 Id = id,
                 PrincipalId = id,
-                Username = principalDto?.Username ?? user.Claims.FirstOrDefault(c => c.Type == CustomClaimTypes.Username)?.Value ?? string.Empty,
-                Name = principalDto?.Name ?? user.Claims.FirstOrDefault(c => c.Type == CustomClaimTypes.Name)?.Value ?? string.Empty,
-                PrincipalType = principalDto?.PrincipalType ?? user.Claims.FirstOrDefault(c => c.Type == CustomClaimTypes.PrincipalType)?.Value ?? "User",
+                Username = principalDto?.Username ?? string.Empty,
+                Name = principalDto?.Name ?? string.Empty,
+                PrincipalType = principalDto?.PrincipalType ?? "User",
                 IsManaged = principalDto?.IsManaged ?? false,
                 IsGlobal = principalDto?.IsGlobal ?? false,
-                PrincipalScope = principalDto?.PrincipalScope ?? user.Claims.FirstOrDefault(c => c.Type == CustomClaimTypes.PrincipalScope)?.Value,
-                AuthenticationMethod = AuthenticationMethod.Principal.ToString(),
+                PrincipalScope = principalDto?.PrincipalScope,
+                AuthenticationMethod = nameof(AuthenticationMethod.Principal),
                 TenantId = tenantId ?? principalDto?.TenantId,
                 DeviceId = deviceProvider.GetDeviceId(),
                 UserMainDeviceId = mainDeviceId,
@@ -120,9 +120,9 @@ namespace AlphaZero.Modules.Identity.Infrastructure.Services
             return new TenantUserAuthorizationContext
             {
                 Id = id,
-                IdentityId = tenantUserDto?.IdentityId ?? user.Claims.FirstOrDefault(c => c.Type == CustomClaimTypes.IdentityId)?.Value ?? id.ToString(),
-                Name = tenantUserDto?.Name ?? user.Claims.FirstOrDefault(c => c.Type == CustomClaimTypes.Name)?.Value ?? string.Empty,
-                AuthenticationMethod = AuthenticationMethod.TenantUser.ToString(),
+                IdentityId = tenantUserDto?.IdentityId!,
+                Name = tenantUserDto?.Name ?? string.Empty,
+                AuthenticationMethod = nameof(AuthenticationMethod.TenantUser),
                 TenantId = tenantId ?? tenantUserDto?.TenantId,
                 DeviceId = deviceProvider.GetDeviceId(),
                 UserMainDeviceId = mainDeviceId,
