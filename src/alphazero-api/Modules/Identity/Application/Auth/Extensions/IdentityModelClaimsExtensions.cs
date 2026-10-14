@@ -84,13 +84,9 @@ public static class IdentityModelClaimsExtensions
             principal.PrincipalScope?.ToString());
     }
 
-    public static PrincipalDTO? CreatePrincipalFromClaims(this ClaimsPrincipal user)
-    {
-        
-    }
+    public static PrincipalDTO? CreatePrincipalFromClaims(this ClaimsPrincipal user) =>
+        user.ToPrincipalDTO();
 
-    public static TenantUserDTO CreateTenantUserFromClaims(this ClaimsPrincipal user)
-    {
-        
-    }
+    public static TenantUserDTO? CreateTenantUserFromClaims(this ClaimsPrincipal user) =>
+        user.ToTenantUserDTO();
 }

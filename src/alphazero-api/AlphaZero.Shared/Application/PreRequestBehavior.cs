@@ -11,14 +11,14 @@ public class PreRequestBehavior<TRequest, TResponse> : IPipelineBehavior<TReques
     where TResponse : IErrorOr
 {
     private readonly IEnumerable<IPreRequestHandler<TRequest>> _preRequestHandlers;
-    private readonly IAuthorizationContextProvider _authorizationContextFactory;
+    private readonly IAuthorizationContextProvider _authorizationContextProvider;
 
     public PreRequestBehavior(
         IEnumerable<IPreRequestHandler<TRequest>> preRequestHandlers,
-        IAuthorizationContextProvider authorizationContextFactory)
+        IAuthorizationContextProvider authorizationContextProvider)
     {
         _preRequestHandlers = preRequestHandlers;
-        _authorizationContextFactory = authorizationContextFactory;
+        _authorizationContextProvider = authorizationContextProvider;
     }
 
     public async Task<TResponse> Handle(TRequest request, RequestHandlerDelegate<TResponse> next, CancellationToken cancellationToken)
@@ -29,19 +29,12 @@ public class PreRequestBehavior<TRequest, TResponse> : IPipelineBehavior<TReques
             return await next();
         }
 
-        var authContext = _authorizationContextFactory.CurrentAuthorizationContext;
-        if (authContext == null)
-        {
-            var contextResult = await _authorizationContextFactory.GetOrCreateCurrentContextAsync(token: cancellationToken);
-            if (!contextResult.IsError)
-            {
-                authContext = contextResult.Value;
-            }
-        }
-
+        var authContext = _authorizationContextProvider.Get(cancellationToken);
+        if (authContext.IsError)
+            return (dynamic)authContext.Errors;
         foreach (var handler in _preRequestHandlers)
         {
-            var result = await handler.PreHandle(request, authContext, cancellationToken);
+            var result = await handler.PreHandle(request, authContext.Value, cancellationToken);
             if (result.IsError)
             {
                 return (dynamic)result.Errors;

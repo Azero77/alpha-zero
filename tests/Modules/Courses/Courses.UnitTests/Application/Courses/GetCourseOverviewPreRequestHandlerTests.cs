@@ -14,7 +14,6 @@ public class GetCourseOverviewPreRequestHandlerTests
 {
     private readonly ICourseOverviewRepository _overviewRepository;
     private readonly IPolicyEvaluatorService _policyEvaluator;
-    private readonly IAuthorizationContextProvider _authFactory;
     private readonly ITenantProvider _tenantProvider;
     private readonly GetCourseOverviewPreRequestHandler _handler;
 
@@ -25,14 +24,12 @@ public class GetCourseOverviewPreRequestHandlerTests
     {
         _overviewRepository = Substitute.For<ICourseOverviewRepository>();
         _policyEvaluator = Substitute.For<IPolicyEvaluatorService>();
-        _authFactory = Substitute.For<IAuthorizationContextProvider>();
         _tenantProvider = Substitute.For<ITenantProvider>();
         _tenantProvider.GetTenant().Returns(_tenantId);
 
         _handler = new GetCourseOverviewPreRequestHandler(
             _overviewRepository,
             _policyEvaluator,
-            _authFactory,
             _tenantProvider);
     }
 
@@ -101,11 +98,7 @@ public class GetCourseOverviewPreRequestHandlerTests
             AuthenticationMethod = "TenantUser"
         };
 
-        var targetContext = context with { RequiredPermission = "courses.overview:Manage" };
-        _authFactory.GetOrCreateCurrentContextAsync("courses.overview:Manage", Arg.Any<ResourceArn>(), Arg.Any<CancellationToken>())
-            .Returns(targetContext);
-
-        _policyEvaluator.Authorize(targetContext)
+        _policyEvaluator.Authorize(Arg.Any<AuthorizationContext>())
             .Returns(Error.Forbidden("Access.Denied", "Forbidden"));
 
         // Act
@@ -131,11 +124,7 @@ public class GetCourseOverviewPreRequestHandlerTests
             AuthenticationMethod = "Principal"
         };
 
-        var targetContext = context with { RequiredPermission = "courses.overview:Manage" };
-        _authFactory.GetOrCreateCurrentContextAsync("courses.overview:Manage", Arg.Any<ResourceArn>(), Arg.Any<CancellationToken>())
-            .Returns(targetContext);
-
-        _policyEvaluator.Authorize(targetContext)
+        _policyEvaluator.Authorize(Arg.Any<AuthorizationContext>())
             .Returns(Result.Success);
 
         // Act

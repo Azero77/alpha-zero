@@ -64,12 +64,6 @@ public class RedeemCodeCommandHandlerTests
             DeviceId = "fingerprint",
             RequiredPermission=""
         });
-        _authorizationContextFactory.Create("",targetArn,AuthenticationMethod.Principal, UserId.ToString()).Returns(new AuthorizationContext()
-        {
-            AuthenticationMethod = AuthenticationMethod.Principal.ToString(),
-            IpAddress = "127.0.0.1",
-            DeviceId = "fingerprint"
-        });
 
         var strategy = Substitute.For<IRedemptionStrategy>();
         _strategyFactory.GetStrategy("strategy").Returns(strategy);

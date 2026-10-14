@@ -16,7 +16,7 @@ public class RedeemCodeCommandHandler : IRequestHandler<RedeemCodeCommand, Error
     private readonly ITenantProvider _tenantProvider;
     private readonly ICurrentTenantUserRepository _currentUserRepository;
     private readonly IPasswordHasher _passwordHasher;
-    private readonly IAuthorizationContextProvider authorizationContextFactory;
+    private readonly IAuthorizationContextProvider _authorizationContextProvider;
 
     public RedeemCodeCommandHandler(
         IAccessCodeRepository repository,
@@ -25,7 +25,7 @@ public class RedeemCodeCommandHandler : IRequestHandler<RedeemCodeCommand, Error
         ITenantProvider tenantProvider,
         ICurrentTenantUserRepository currentUserRepository,
         IPasswordHasher passwordHasher,
-        IAuthorizationContextProvider authorizationContextFactory)
+        IAuthorizationContextProvider authorizationContextProvider)
     {
         _repository = repository;
         _auditLogRepository = auditLogRepository;
@@ -33,7 +33,7 @@ public class RedeemCodeCommandHandler : IRequestHandler<RedeemCodeCommand, Error
         _tenantProvider = tenantProvider;
         _currentUserRepository = currentUserRepository;
         _passwordHasher = passwordHasher;
-        this.authorizationContextFactory = authorizationContextFactory;
+        _authorizationContextProvider = authorizationContextProvider;
     }
 
     public async Task<ErrorOr<Success>> Handle(RedeemCodeCommand request, CancellationToken cancellationToken)
@@ -79,8 +79,8 @@ public class RedeemCodeCommandHandler : IRequestHandler<RedeemCodeCommand, Error
         var strategy = _strategyFactory.GetStrategy(accessCode.StrategyId);
         await strategy.ExecuteAsync(currentUser.UserId, accessCode.Id,accessCode.TargetResourceArn, accessCode.Metadata.RootElement);
 
-        var deviceFingerprint = request.DeviceFingerprint ??  authorizationContextFactory?.CurrentAuthorizationContext?.DeviceId;
-        var ipAddress = request.IpAddress ??  authorizationContextFactory?.CurrentAuthorizationContext?.IpAddress;
+        var deviceFingerprint = request.DeviceFingerprint ?? _authorizationContextProvider?.CurrentAuthorizationContext?.DeviceId;
+        var ipAddress = request.IpAddress ?? _authorizationContextProvider?.CurrentAuthorizationContext?.IpAddress;
 
         // 7. Record Audit Log
         var auditLog = RedemptionAuditLog.Record(

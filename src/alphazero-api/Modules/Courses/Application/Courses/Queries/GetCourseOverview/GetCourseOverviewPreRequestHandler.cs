@@ -11,18 +11,15 @@ public class GetCourseOverviewPreRequestHandler : IPreRequestHandler<GetCourseOv
 {
     private readonly ICourseOverviewRepository _courseOverviewRepository;
     private readonly IPolicyEvaluatorService _policyEvaluatorService;
-    private readonly IAuthorizationContextProvider _authorizationContextFactory;
     private readonly ITenantProvider _tenantProvider;
 
     public GetCourseOverviewPreRequestHandler(
         ICourseOverviewRepository courseOverviewRepository,
         IPolicyEvaluatorService policyEvaluatorService,
-        IAuthorizationContextProvider authorizationContextFactory,
         ITenantProvider tenantProvider)
     {
         _courseOverviewRepository = courseOverviewRepository;
         _policyEvaluatorService = policyEvaluatorService;
-        _authorizationContextFactory = authorizationContextFactory;
         _tenantProvider = tenantProvider;
     }
 
@@ -55,14 +52,9 @@ public class GetCourseOverviewPreRequestHandler : IPreRequestHandler<GetCourseOv
         }
 
         var arn = ResourceArn.ForCourse(tenantId.Value, request.CourseId);
+        var targetContext = context.ForResource("courses.overview:Manage", arn);
 
-        var targetContextResult = await _authorizationContextFactory.GetOrCreateCurrentContextAsync("courses.overview:Manage", arn, cancellationToken);
-        if (targetContextResult.IsError || targetContextResult.Value is null)
-        {
-            return Error.NotFound("CourseOverview.NotFound", "Course overview not found.");
-        }
-
-        var authResult = await _policyEvaluatorService.Authorize(targetContextResult.Value);
+        var authResult = await _policyEvaluatorService.Authorize(targetContext);
         if (authResult.IsError)
         {
             return Error.NotFound("CourseOverview.NotFound", "Course overview not found.");

@@ -34,7 +34,6 @@ public static class DependencyInjection
                 h.MigrationsHistoryTable("__CoursesMigrationHistory", AppDbContext.Schema);
             });
             opts.AddInterceptors(sp.GetRequiredService<SoftDeleteInterceptor>());
-            opts.ConfigureWarnings(w => w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
         });
 
         services.AddScoped<IArnResolver, CourseArnResolver>();

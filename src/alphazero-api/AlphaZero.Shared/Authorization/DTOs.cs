@@ -65,19 +65,24 @@ public class IAMPreprocessor : IGlobalPreProcessor
 {
     public async Task PreProcessAsync(IPreProcessorContext context, CancellationToken ct)
     {
-        var authorizationContextFactory = context.HttpContext.RequestServices.GetRequiredService<IAuthorizationContextProvider>();
+        var authProvider = context.HttpContext.RequestServices.GetRequiredService<IAuthorizationContextProvider>();
         var evaluator = context.HttpContext.RequestServices.GetRequiredService<IPolicyEvaluatorService>();
-        var tenantProvider = context.HttpContext.RequestServices.GetRequiredService<ITenantProvider>();
 
-        var authContextResult = authorizationContextFactory.Get(ct);
+        var authResult = authProvider.Get(ct);
 
-        if (authContextResult.IsError || authContextResult.Value is null)
+        if (authResult.IsError)
         {
             await context.HttpContext.Response.SendForbiddenAsync(ct);
             return;
         }
 
-        var result = await evaluator.Authorize(authContextResult.Value);
+        var authContext = authResult.Value;
+        if (authContext is null || string.IsNullOrEmpty(authContext.RequiredPermission))
+        {
+            return;
+        }
+
+        var result = await evaluator.Authorize(authContext);
 
         if (result.IsError)
         {
