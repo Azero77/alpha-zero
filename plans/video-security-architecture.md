@@ -10,25 +10,26 @@ The architecture protects educational video assets against automated ripping (`y
 
 ## 2. Core Architectural Decisions
 
-1. **Resource-Level Authorization in Video Module (Decoupled from Courses):**
-   - Playback session creation belongs to the **Video Module** (`Modules/VideoUploading`), not the Courses module.
-   - Video is an autonomous domain asset that can be streamed in any context (course curriculum, library asset, preview teaser, or standalone webinar).
-   - If a video is accessed within a course lesson, the client passes optional course context (`courseId`, `itemId`). The Video Module queries the Courses module via internal MassTransit request/response (`VerifyCoursePlaybackAccessRequest`) to verify active enrollment and drip completion.
-   
+1. **Capability-Based Playback Ticketing (Zero IAM Dependency in Video/Key Delivery):**
+   - Playback session creation and key delivery belong to the **Video Module** (`Modules/VideoUploading`), but are decoupled from centralized IAM `AccessControl("video:Stream")`.
+   - The Courses module validates student business entitlement (active enrollment, curriculum item binding, and device lock) and issues a short-lived (60–120s) cryptographically signed `PlaybackTicket`.
+   - The Video Module accepts this `PlaybackTicket` to initialize the playback session (issuing CDN edge cookies) and **strictly authorizes key delivery via the ticket without IAM permission checks**.
+   - This eliminates cross-module database joins, avoids IAM sub-resource scope friction, and cleanly aligns with future multi-DRM gateways (e.g. EzDRM token exchange).
+
 2. **Decoupled Conditional Device Security (Policy-Driven Asymmetric Proof):**
    - Generic device fingerprints (`X-Device-Fingerprint`) are completely removed from the video streaming data plane.
-   - Device verification occurs exclusively during the initial business authorization phase **if and only if** an assigned access policy contains an `Operator.IsMainDevice` condition.
+   - Device verification occurs exclusively during the initial business authorization phase in the Courses module before a `PlaybackTicket` is issued.
    - Device proof uses AlphaZero's existing asymmetric cryptography (RSA-SHA256 signature over a server timestamp challenge verified against the student's registered public key in `Modules/Identity/Domain/Services/DeviceSignatureVerifiier.cs`).
-   - Once authorized, downstream video streaming infrastructure (CDN tokens, playlist rewrites, key tickets, media segments) is completely agnostic to whether device proof was required.
+   - Once the `PlaybackTicket` is issued, downstream video streaming infrastructure (CDN tokens, playlist rewrites, key tickets, media segments) is completely agnostic to whether device proof was required.
 
 3. **First-Class PlaybackSession in Video Module:**
    - Introduces an authoritative `PlaybackSession` owned by the Video Module that bridges domain authorization with edge streaming capability.
    - The session generates a scoped, cryptographically signed capability for edge CDN access and media playlist resolution.
 
-4. **Stateless, Cryptographically Signed Key Tickets (Replacing Redis GETDEL):**
-   - Key delivery tickets are short-lived (60–120s), scoped HMAC-SHA256 tokens minted by the BFF/Backend.
-   - Replaces the fragile single-use Redis `GETDEL` pattern. In unstable regional networks, network retransmissions, player buffer resets, or multi-rendition key requests previously burned tickets prematurely, causing catastrophic `410 Gone` playback halts.
-   - Keys remain protected because tickets are bound to active playback sessions, valid for a brief window, and redeemable only through authenticated channels.
+4. **Ticket-Authorized Key Delivery (No IAM in Key Endpoint):**
+   - Decryption key retrieval (`GET /api/video/keys/{videoId}`) removes IAM `AccessControl` and is authorized strictly via the cryptographically signed `PlaybackTicket` (or session capability).
+   - The key endpoint verifies the HMAC-SHA256 signature, tenant ID, video ID, and expiration timestamp in `< 0.05ms`.
+   - Replaces the fragile single-use Redis `GETDEL` pattern and eliminates IAM permission mismatches for students who hold course-level enrollments but lack standalone video IAM roles.
 
 5. **Shaka Packager Packaging & ClearKey/AES-128 Parity:**
    - Transcoding is performed by parallel FFmpeg workers (packaged as an ahead-of-time compiled container running in AWS ECS Fargate via Step Functions) or AWS MediaConvert.
@@ -123,18 +124,20 @@ Playback authorization answers:
 POST /api/videos/{videoId}/playback-session
 ```
 
-**Request Body (Optional Context):**
+**Request Body:**
 ```json
 {
+  "ticket": "eyTa-PLAYBACK-TICKET-HMAC-TOKEN",
   "courseId": "optional-guid",
   "itemId": "optional-guid"
 }
 ```
 
 **Why this fits AlphaZero Modular Architecture best:**
-1. **Module Autonomy & Single Responsibility:** Video streaming, manifest rewriting, key delivery, and CDN edge cookies belong entirely to the **Video Module** (`Modules/VideoUploading`). The Courses module is relieved of streaming/infrastructure concerns.
-2. **Context-Aware Flexibility:** If `courseId` and `itemId` are provided, the Video Module queries the Courses module via internal MassTransit Request/Response (`VerifyCoursePlaybackAccessRequest`) to ensure the student is actively enrolled and has unlocked the prerequisite bitmask. If omitted, it allows standalone video playback (e.g. promotional videos, library assets).
-3. **IAM ARN Alignment:** The endpoint evaluates `AccessControl("video:Stream", (req, tenantId) => req.CourseId.HasValue ? ResourceArn.ForCourseVideo(tenantId, req.VideoId, req.CourseId.Value) : ResourceArn.ForVideo(tenantId, req.VideoId))`.
+1. **Module Autonomy & Capability Decoupling:** Video streaming, manifest rewriting, key delivery, and CDN edge cookies belong entirely to the **Video Module** (`Modules/VideoUploading`). The Courses module handles business entitlement (enrollment & curriculum binding) and issues the signed `PlaybackTicket`.
+2. **Zero IAM Permission Friction for Video Delivery:** Instead of requiring students to have complex IAM permissions on individual video ARNs (`az:video:...`), the Video Module validates the `PlaybackTicket` (HMAC-SHA256 verified in `< 0.05ms`).
+3. **Seamless Future DRM Evolution:** When upgrading from ClearKey to multi-DRM (EzDRM), the `PlaybackTicket` acts as the exchange token for the DRM license acquisition JWT without altering the Courses module.
+4. **Teacher/Admin Direct Preview Fallback:** If `ticket` is omitted, the endpoint falls back to evaluating standard admin/teacher IAM `AccessControl("video:Stream", ...)` for direct previews.
 
 ---
 
@@ -147,50 +150,33 @@ sequenceDiagram
     autonumber
     actor Student as Student Browser
     participant BFF as Next.js BFF (apps/app)
+    participant CoursesMod as .NET Courses Module
     participant VideoMod as .NET Video Module (VideoUploading)
     participant Identity as .NET Identity Module
-    participant CoursesMod as .NET Courses Module
 
     Student->>BFF: 1. Click "Play Video Resource"<br/>POST /api/player/{videoId}/session { courseId, itemId }
     Note over Student, BFF: Sends az-session cookie (+ optional X-Signature if challenged)
-    BFF->>VideoMod: 2. POST /api/videos/{vId}/playback-session { courseId, itemId }
-    Note over VideoMod, Identity: FastEndpoints AccessControl("video:Stream")
-    
-    %% Step 1: Optional Course Context Check
-    opt If courseId and itemId provided
-        VideoMod->>CoursesMod: 3. VerifyCoursePlaybackAccess(studentId, courseId, itemId)
-        CoursesMod->>CoursesMod: 4. Check Enrollment.Status == Active & Bitmask Drip
-        alt Enrollment Inactive or Item Locked
-            CoursesMod-->>VideoMod: 5a. Error.Forbidden("Course.AccessDenied")
-            VideoMod-->>BFF: 5b. 403 Forbidden
-            BFF-->>Student: 5c. 403 Forbidden ("Complete prerequisite lessons first")
-        else Access Allowed
-            CoursesMod-->>VideoMod: 5d. Success
-        end
-    end
 
-    %% Step 2: Identity Policy Evaluation
-    VideoMod->>Identity: 6. Evaluate Policies (az:video:... or az:coursevideo:...)
-    Identity->>Identity: 7. Check Policy Statements & Conditions
-    
-    alt Policy contains Operator.IsMainDevice
-        Identity->>Identity: 8. Verify RSA-SHA256 signature against UserDevice.PublicKey
-        alt Signature Missing or Invalid
-            Identity-->>VideoMod: 9a. Error.Forbidden("Condition.IsMainDeviceFailed")
-            VideoMod-->>BFF: 9b. 403 Forbidden (Requires Main Device Proof)
-            BFF-->>Student: 9c. Challenge: Please sign request with main device key
-        end
+    %% Step 1: Course Entitlement & Ticket Issuance
+    BFF->>CoursesMod: 2. POST /courses/{courseId}/items/{itemId}/playback-ticket
+    Note over CoursesMod: Check Enrollment.Status == Active<br/>Check Video belongs to CurriculumItem
+    alt Conditional Main Device Proof Required
+        CoursesMod->>Identity: 3. Verify RSA-SHA256 signature against UserDevice.PublicKey
+        Identity-->>CoursesMod: Device Verified
     end
-    
-    Identity-->>VideoMod: 10. Authorization Success
-    
+    CoursesMod-->>BFF: 4. 200 OK: { ticket: "PLAYBACK-TICKET-TOKEN", videoId, expiresInSeconds: 60 }
+
+    %% Step 2: Exchange Ticket for Playback Session
+    BFF->>VideoMod: 5. POST /api/videos/{vId}/playback-session { ticket }
+    Note over VideoMod: 6. Verify Ticket HMAC, Expiry, VideoId & TenantId<br/>(No IAM AccessControl check for ticket holders!)
+
     %% Step 3: Resolve Streaming Coordinates & Mint Capability
-    Note over VideoMod: 11. Read Video.OutputFolder ("streaming/{tenantId}/{videoId}/") directly from DB
-    VideoMod->>VideoMod: 12. Mint PlaybackSession + Cloudflare CDN Cookie Token (cf_video_token)
-    VideoMod-->>BFF: 13. Return PlaybackSessionDto (SessionId, VideoId, MasterPlaylistPath, CdnCookie)
-    
-    Note over BFF: 14. Set HttpOnly Edge Cookie (cf_video_token)<br/>Domain: (dynamic/localhost safe), Path: /streaming/{tenantId}/{videoId}/
-    BFF-->>Student: 15. 200 OK: { sessionId, playerManifestUrl: "/api/player/{vId}/master.m3u8" }
+    Note over VideoMod: 7. Read Video.OutputFolder ("streaming/{tenantId}/{videoId}/") directly from DB
+    VideoMod->>VideoMod: 8. Mint PlaybackSession + Cloudflare CDN Cookie Token (cf_video_token)
+    VideoMod-->>BFF: 9. Return PlaybackSessionDto (SessionId, VideoId, MasterPlaylistPath, CdnCookie, WatermarkContext)
+
+    Note over BFF: 10. Set HttpOnly Edge Cookie (cf_video_token)<br/>Domain: (dynamic/localhost safe), Path: /streaming/{tenantId}/{videoId}/
+    BFF-->>Student: 11. 200 OK: { sessionId, playerManifestUrl: "/api/player/{vId}/master.m3u8" }
 ```
 
 ---
@@ -663,8 +649,14 @@ sequenceDiagram
         BFF-->>Player: 403 Forbidden / 410 Expired Ticket
     end
 
-    BFF->>API: 2. GET /api/video/keys/{videoId}<br/>Headers: X-Internal-Service-Key, X-User-Id, X-Tenant-Id
-    Note over API: FastEndpoints: AccessControl("video:Stream")<br/>Validate service authorization
+    BFF->>API: 2. GET /api/video/keys/{videoId}?ticket={ticket}
+    Note over API: FastEndpoints: No IAM AccessControl<br/>Validate ticket with IPlaybackTicketSigner<br/>Ensure ticket.VideoId == videoId & !IsExpired
+    
+    alt Ticket Verification Failed
+        API-->>BFF: 403 Forbidden ("Ticket.InvalidOrExpired")
+        BFF-->>Player: 403 Forbidden
+    end
+
     API->>DB: 3. Query VideoSecret by VideoId
     DB-->>API: 4. Return 16-byte raw AES Key
     API-->>BFF: 5. 200 OK: 16 bytes (application/octet-stream)
@@ -893,6 +885,7 @@ namespace AlphaZero.Modules.VideoUploading.Presentation.Features;
 public record CreatePlaybackSessionRequest
 {
     public Guid VideoId { get; init; }
+    public string? Ticket { get; init; }
     public Guid? CourseId { get; init; }
     public Guid? ItemId { get; init; }
 }
@@ -909,16 +902,13 @@ public class CreatePlaybackSessionEndpoint : Endpoint<CreatePlaybackSessionReque
     public override void Configure()
     {
         Post("api/videos/{VideoId:guid}/playback-session");
-        this.AccessControl("video:Stream", (req, tenantId) =>
-            req.CourseId.HasValue
-                ? ResourceArn.ForCourseVideo(tenantId, req.VideoId, req.CourseId.Value)
-                : ResourceArn.ForVideo(tenantId, req.VideoId));
+        // No AccessControl required for ticket holders - authorization verified via signed ticket
         Description(d => d.WithTags("Video Streaming"));
     }
 
     public override async Task HandleAsync(CreatePlaybackSessionRequest req, CancellationToken ct)
     {
-        var command = new CreatePlaybackSessionCommand(req.VideoId, req.CourseId, req.ItemId);
+        var command = new CreatePlaybackSessionQuery(req.VideoId, req.Ticket, req.CourseId, req.ItemId);
         var result = await _module.Send(command, ct);
 
         if (result.IsError)
@@ -934,22 +924,32 @@ public class CreatePlaybackSessionEndpoint : Endpoint<CreatePlaybackSessionReque
 
 #### [NEW] `src/alphazero-api/Modules/VideoUploading/Application/Videos/Commands/CreatePlaybackSession/CreatePlaybackSession.cs`
 MediatR Command Handler in `Modules/VideoUploading`:
-1. Validates that `Video` exists and has `VideoStatus.Ready`.
-2. Direct access to `Video.OutputFolder` from DB (zero inter-module DB join).
-3. If `CourseId.HasValue`:
-   - Sends internal MassTransit Request `VerifyCoursePlaybackAccessRequest(CourseId.Value, ItemId, VideoId, UserId)` to Courses Module.
-   - If response `IsAllowed == false`: returns `Error.Forbidden("Course.AccessDenied", response.Reason)`.
-4. Mints Cloudflare edge capability cookie using `ICloudflareCookieSigner` scoped to `/streaming/{tenantId}/{videoId}/`.
-5. Resolves user metadata for dynamic watermarking (Name, Masked Phone, User ID).
-6. Returns `PlaybackSessionDto` containing session GUID, video ID, CDN path, cookie payload, and watermark identity metadata.
+1. Validates that `Video` exists and has `VideoStatus.Published`.
+2. Validates authorization:
+   - If `Ticket` is provided: verifies ticket using `IPlaybackTicketSigner` (validates HMAC signature, expiration, and ensures `ticket.VideoId == request.VideoId` and `ticket.TenantId == tenantId`).
+   - If `Ticket` is omitted: falls back to checking administrative IAM policy for teachers/admins.
+3. Mints Cloudflare edge capability cookie using `ICloudflareCookieSigner` scoped to `/streaming/{tenantId}/{videoId}/`.
+4. Resolves user metadata for dynamic watermarking (Name, Masked Phone, User ID).
+5. Returns `PlaybackSessionDto` containing session GUID, video ID, CDN path, cookie payload, and watermark identity metadata.
 
-#### [NEW] `src/alphazero-api/Modules/Courses/Application/Courses/Consumers/VerifyCoursePlaybackAccessConsumer.cs`
-MassTransit in-memory consumer in `Modules/Courses`:
-1. Receives `VerifyCoursePlaybackAccessRequest(CourseId, ItemId, VideoId, UserId)`.
-2. Validates student enrollment in `CourseId`.
-3. Validates bitmask completion prerequisites for `ItemId`.
-4. Validates that `CurriculumItem` contains a resource referencing `VideoId`.
-5. Responds with `VerifyCoursePlaybackAccessResponse(IsAllowed, Reason)`.
+#### [EDIT] `src/alphazero-api/Modules/VideoUploading/Presentation/Features/GetVideoKey.cs`
+Decryption Key Endpoint:
+1. **Removes IAM `AccessControl("video:Stream", ...)`** completely.
+2. Accepts `[FromQuery] string ticket` (or `X-Playback-Ticket` header).
+3. Verifies ticket using `IPlaybackTicketSigner`:
+   - Validates HMAC-SHA256 signature.
+   - Validates expiration (`ticket.ExpiresAt > UtcNow`).
+   - Validates that `ticket.VideoId == req.VideoId`.
+4. If ticket is invalid or expired: returns `403 Forbidden ("Ticket.InvalidOrExpired")`.
+5. If valid: retrieves 16-byte raw AES decryption key from `IVideoEncryptionService` and streams it as `application/octet-stream`.
+
+#### [NEW] `src/alphazero-api/Modules/Courses/Presentation/Courses/Items/IssuePlaybackTicket.cs`
+Courses module endpoint `POST /courses/{CourseId}/sections/{SectionId}/items/{ItemId}/playback-ticket`:
+1. Evaluates `AccessControl("courses:View", ...)` on course ARN.
+2. Checks that student has an active enrollment in `CourseId`.
+3. Verifies that the item contains a `VideoCurriculumResource` with `VideoId`.
+4. Checks optional conditional main device proof if required by policy.
+5. Issues short-lived (60–120s) HMAC-signed `PlaybackTicket` containing `{ tenantId, userId, courseId, itemId, videoId, expiresAt }`.
 
 #### [EDIT] `src/alphazero-api/Modules/Courses/Infrastructure/Queries/CourseQueryService.cs`
 Exposes `Guid AssetId` in `ResourceDto` so frontend player components know the exact `videoId` required for `/api/videos/{videoId}/playback-session`.
