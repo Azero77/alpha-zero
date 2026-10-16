@@ -2,6 +2,13 @@ using AlphaZero.Modules.Courses.Domain.Aggregates.Courses;
 
 namespace AlphaZero.Modules.Courses.Domain.Services;
 
+/// <summary>
+/// Aggregate-based readiness evaluation. This is the single readiness source of truth for the
+/// publish path (<see cref="CoursePublishingService"/>, driven by <see cref="CoursePublishingService.Publish"/>).
+/// The <c>GetCourseReadiness</c> endpoint does NOT use this method: it re-implements readiness as a
+/// server-translated SQL projection in <c>CourseQueryService.GetCourseReadinessAsync</c> because the
+/// endpoint must not load aggregates. Keep that projection in sync with these checks/reasons.
+/// </summary>
 public class CourseReadinessService
 {
     public CourseReadiness Evaluate(Course course, CourseOverview? overview = null, IEnumerable<CourseAsset>? assets = null)

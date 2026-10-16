@@ -77,6 +77,12 @@ public class CourseQueryService : ICourseQueryService
         return new PagedResult<CourseSummaryDto>(items, totalCount, page, perPage);
     }
 
+    /// <summary>
+    /// Server-translated SQL projection of <c>CourseReadinessService.Evaluate</c> (Domain/Services),
+    /// which is the readiness source of truth for the publish path. This projection exists so the
+    /// readiness endpoint does not have to load the aggregate graph. Keep the checks and blocking
+    /// reasons here in sync with <c>CourseReadinessService</c>.
+    /// </summary>
     public async Task<CourseReadiness?> GetCourseReadinessAsync(Guid courseId, CancellationToken cancellationToken = default)
     {
         var courseData = await _context.Set<Course>()

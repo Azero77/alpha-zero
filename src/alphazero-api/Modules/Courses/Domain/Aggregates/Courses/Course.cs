@@ -1,5 +1,4 @@
 using AlphaZero.Modules.Courses.Domain.Events;
-using AlphaZero.Modules.Courses.Domain.Services;
 using AlphaZero.Shared.Domain;
 using AlphaZero.Shared.Infrastructure.Tenats;
 using ErrorOr;
@@ -115,11 +114,6 @@ public class Course : TenantOwnedAggregate, ISoftDeletable
         Title = title;
         Description = description;
         SubjectId = subjectId;
-    }
-
-    public CourseReadiness EvaluateReadiness(CourseOverview? overview = null, IEnumerable<CourseAsset>? assets = null)
-    {
-        return new CourseReadinessService().Evaluate(this, overview, assets);
     }
 
     public ErrorOr<Success> SubmitForReview()
