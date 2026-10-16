@@ -32,11 +32,10 @@ public abstract class CurriculumResource : Entity
 public class VideoCurriculumResource : CurriculumResource
 {
     public double DurationSeconds { get; private set; }
-    public Guid VideoId => CourseAssetId ?? Guid.Empty;
-    
+
     private VideoCurriculumResource() { } // EF Core
 
-    public VideoCurriculumResource(Guid id, int order, Guid courseAssetId, double durationSeconds = 0, CourseAsset? asset = null)
+    public VideoCurriculumResource(Guid id, int order, Guid courseAssetId, double durationSeconds = 0)
         : base(id, order, courseAssetId)
     {
         DurationSeconds = durationSeconds;
@@ -91,8 +90,6 @@ public class DocumentCurriculumResource : CurriculumResource
     } 
 
     public string DocUri => $"doc://{(IsPublic ? "public" : "private")}/{CourseAssetId!}{(string.IsNullOrEmpty(VariantName) ? "" : $"?variantName={VariantName}")}";
-
-    public Guid DocumentId => CourseAssetId ?? Guid.Empty;
 
     public static (bool IsPublic, Guid DocumentId, string? VariantName) ParseDocUri(string uri)
     {
@@ -149,7 +146,6 @@ public class ArticleCurriculumResource : CurriculumResource
 public class AssessmentCurriculumResource : CurriculumResource
 {
     public int PassingScore { get;  }
-    public Guid AssessmentId => CourseAssetId ?? Guid.Empty;
 
     private AssessmentCurriculumResource() { } 
 

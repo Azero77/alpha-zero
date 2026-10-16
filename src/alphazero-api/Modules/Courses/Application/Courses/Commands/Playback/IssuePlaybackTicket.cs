@@ -14,7 +14,7 @@ namespace AlphaZero.Modules.Courses.Application.Courses.Commands.Playback;
 
 public record IssuePlaybackTicketCommand(
     Guid CourseId,
-    Guid VideoResourceId) : ICommand<IssuePlaybackTicketResult>;
+    Guid CurriculumResourceId) : ICommand<IssuePlaybackTicketResult>;
 
 public record IssuePlaybackTicketResult(
     string Ticket,
@@ -23,6 +23,8 @@ public record IssuePlaybackTicketResult(
 
 public sealed class IssuePlaybackTicketCommandHandler : IRequestHandler<IssuePlaybackTicketCommand, ErrorOr<IssuePlaybackTicketResult>>
 {
+    private const int TicketTtlSeconds = 120;
+
     private readonly ICourseResourceQueryService _courseResourceQueryService;
     private readonly IPlaybackTicketSigner _ticketSigner;
     private readonly ITenantProvider _tenantProvider;
@@ -47,42 +49,48 @@ public sealed class IssuePlaybackTicketCommandHandler : IRequestHandler<IssuePla
     public async Task<ErrorOr<IssuePlaybackTicketResult>> Handle(
         IssuePlaybackTicketCommand request, CancellationToken cancellationToken)
     {
-        //No need to use Enrollement , because Policy Evaluator just needs a permission to course:view in this course to access the content, 
-        // 1. Verify active enrollment
+        //No need to use Enrollement , because Policy Evaluator just needs a permission to course:view in this course to access the content,
 
         var authContext = _authorizationContextProvider.Get();
 
         if (authContext.IsError || authContext.Value is null) return Error.Forbidden();
         var userId = authContext.Value.Id;
-        // 3. Extract VideoCurriculumResource
-        var courseResource = await _courseResourceQueryService.GetResourceInCourse(request.CourseId, request.VideoResourceId, cancellationToken);
-        
-        if (courseResource is null || courseResource.ResourceType != ResourceType.Video )
-        {
-            return Error.Validation("CurriculumItem.NoVideo", "Curriculum item does not contain a valid video resource.");
-        }
-        //TODO make the request to db get the video by using CourseId 
 
-        // 4. Mint stateless capability ticket
-        var tenantId = _tenantProvider.GetTenant(); // WE ARE SURE THAT THE USER here is authenticated with a tenant
-        if ( tenantId.HasValue || tenantId == Guid.Empty)
-            return Error.Conflict(""); //no global tickets are made
-        const int ticketTtlSeconds = 120;
+        // 1. Fetch resolved details: curriculum placement (Layer 3) -> pool asset (Layer 2) -> external video id (Layer 1)
+        var details = await _courseResourceQueryService.GetResourceDetailsAsync(
+            request.CourseId, request.CurriculumResourceId, cancellationToken);
+
+        if (details is null || details.ResourceType != ResourceType.Video)
+        {
+            return Error.Validation("CurriculumItem.NoVideo", "Curriculum resource does not contain a valid video.");
+        }
+
+        // 2. Validate tenant
+        var tenantId = _tenantProvider.GetTenant();
+        if (!tenantId.HasValue || tenantId == Guid.Empty)
+        {
+            return Error.Conflict("Tenant.Required", "Playback tickets cannot be issued globally."); //no global tickets are made
+        }
+
+        const int ticketTtlSeconds = TicketTtlSeconds;
         var ttl = TimeSpan.FromSeconds(ticketTtlSeconds);
 
+        // 3. Mint capability ticket with the true external VideoId (Layer 1).
+        //    The VideoUploading module verifies payload.VideoId == the actual video id,
+        //    so passing the CourseAssetId (Layer 2) here would get streaming rejected.
         var ticket = _ticketSigner.GenerateTicket(
-            tenantId!.Value,
-            authContext.Value.Id,
+            tenantId.Value,
+            userId,
             request.CourseId,
-            courseResource.ItemId,
-            courseResource.AssetId!.Value,
+            details.CurriculumItemId,
+            details.ExternalResourceId,
             ttl,
             _deviceProvider.GetDeviceId());
 
         _logger?.LogInformation(
             "Issued playback ticket for User {UserId}, Video {VideoId}, Course {CourseId}, Item {ItemId}.",
-            authContext.Value.Id, courseResource.AssetId!.Value, request.CourseId, courseResource.ItemId);
+            userId, details.ExternalResourceId, request.CourseId, details.CurriculumItemId);
 
-        return new IssuePlaybackTicketResult(ticket, courseResource.AssetId!.Value, ticketTtlSeconds);
+        return new IssuePlaybackTicketResult(ticket, details.ExternalResourceId, ticketTtlSeconds);
     }
 }

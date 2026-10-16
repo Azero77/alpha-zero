@@ -147,15 +147,19 @@ public class CurriculumItem : Entity, ISoftDeletable
         }
     }
 
-    public void ReorderResources(List<Guid> orderedAssetOrResourceIds)
+    /// <summary>
+    /// Reorders resources strictly by CurriculumResource.Id (Layer 3).
+    /// Assets never participate in curriculum ordering — the syllabus only knows resource placements.
+    /// </summary>
+    public void ReorderResources(List<Guid> orderedResourceIds)
     {
         var temp = _resources.ToList();
         _resources.Clear();
 
-        for (int i = 0; i < orderedAssetOrResourceIds.Count; i++)
+        for (int i = 0; i < orderedResourceIds.Count; i++)
         {
-            var targetId = orderedAssetOrResourceIds[i];
-            var res = temp.FirstOrDefault(r => r.Id == targetId || r.CourseAssetId == targetId);
+            var targetId = orderedResourceIds[i];
+            var res = temp.FirstOrDefault(r => r.Id == targetId);
             if (res != null)
             {
                 res.UpdateOrder(i);

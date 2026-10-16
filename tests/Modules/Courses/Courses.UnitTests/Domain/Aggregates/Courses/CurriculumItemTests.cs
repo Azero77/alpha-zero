@@ -43,7 +43,7 @@ public class CurriculumItemTests
     }
 
     [Fact]
-    public void ReorderResources_Should_ReorderResourcesByAssetOrResourceId()
+    public void ReorderResources_Should_ReorderResourcesById()
     {
         var item = new CurriculumItem(Guid.NewGuid(), SectionId, "Lesson 1", 0, 0, "Video");
 
@@ -57,12 +57,14 @@ public class CurriculumItemTests
 
         item.Resources.First().CourseAssetId.Should().Be(v1Id);
 
-        // Reorder v2 first
-        item.ReorderResources(new List<Guid> { v2Id, v1Id });
+        // Reorder r2 first — strictly by CurriculumResource.Id, never by asset id
+        item.ReorderResources(new List<Guid> { r2.Id, r1.Id });
 
         var resources = item.Resources.ToList();
+        resources[0].Id.Should().Be(r2.Id);
         resources[0].CourseAssetId.Should().Be(v2Id);
         resources[0].Order.Should().Be(0);
+        resources[1].Id.Should().Be(r1.Id);
         resources[1].CourseAssetId.Should().Be(v1Id);
         resources[1].Order.Should().Be(1);
     }

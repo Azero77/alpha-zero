@@ -29,6 +29,13 @@ public abstract class CourseAsset : TenantOwnedAggregate
     public CourseAssetState State { get; private set; }
     public DateTime UploadedUtcAt { get; private set; }
 
+    /// <summary>
+    /// The primary key of the aggregate in the EXTERNAL bounded context
+    /// (VideoUploading / Documents / Assessments), extracted from the ResourceArn.
+    /// This is the ONLY identity binding to Layer 1; the pool asset's own Id (Layer 2) is independent.
+    /// </summary>
+    public Guid ExternalResourceId => ResourceArn.ExtractResourceId() ?? Guid.Empty;
+
     // ─── State Transitions ───
 
     public ErrorOr<Success> MarkAvailable()
@@ -78,6 +85,9 @@ public class VideoCourseAsset : CourseAsset
     public string? ThumbnailUrl { get; private set; }
     public string? RelativeStreamingUrl { get; private set; }
 
+    /// <summary>Typed accessor for the actual external VideoUploading module video id (Layer 1).</summary>
+    public Guid VideoId => ExternalResourceId;
+
     private VideoCourseAsset() { } // EF Core
 
     private VideoCourseAsset(
@@ -108,6 +118,9 @@ public class DocumentCourseAsset : CourseAsset
     public string FileName { get; private set; } = null!;
     public long Size { get; private set; }
     public string ContentType { get; private set; } = null!;
+
+    /// <summary>Typed accessor for the actual external Documents module document id (Layer 1).</summary>
+    public Guid DocumentId => ExternalResourceId;
 
     private DocumentCourseAsset() { } // EF Core
 
@@ -146,6 +159,9 @@ public class AssessmentCourseAsset : CourseAsset
     public override CourseAssetType CourseAssetType => CourseAssetType.Assessment;
     public int QuestionsNumber { get; private set; }
     public AssessmentType Type { get; private set; }
+
+    /// <summary>Typed accessor for the actual external Assessments module assessment id (Layer 1).</summary>
+    public Guid AssessmentId => ExternalResourceId;
 
     private AssessmentCourseAsset() { } // EF Core
 

@@ -28,13 +28,16 @@ public record CurriculumResourceDto(
 {
     public static CurriculumResourceDto From(CurriculumResource resource) => resource switch
     {
+        // NOTE: the typed id fields below are the POOL ASSET id (CourseAssetId, Layer 2).
+        // The external resource id (Layer 1) lives on CourseAsset.ExternalResourceId and is
+        // resolved at playback ticket time — curriculum resources are NOT videos/documents/assessments.
         VideoCurriculumResource v => new(
             v.Id, v.Order, v.ResourceType.ToString(), v.CourseAssetId,
-            VideoId: v.VideoId, DurationSeconds: v.DurationSeconds),
+            VideoId: v.CourseAssetId, DurationSeconds: v.DurationSeconds),
 
         DocumentCurriculumResource d => new(
             d.Id, d.Order, d.ResourceType.ToString(), d.CourseAssetId,
-            DocumentId: d.DocumentId, DocumentTitle: d.Title, DocumentType: d.DocumentType,
+            DocumentId: d.CourseAssetId, DocumentTitle: d.Title, DocumentType: d.DocumentType,
             IsPublic: d.IsPublic, VariantName: d.VariantName, DocUri: d.DocUri),
 
         ArticleCurriculumResource a => new(
@@ -43,7 +46,7 @@ public record CurriculumResourceDto(
 
         AssessmentCurriculumResource q => new(
             q.Id, q.Order, q.ResourceType.ToString(), q.CourseAssetId,
-            AssessmentId: q.AssessmentId, PassingScore: q.PassingScore),
+            AssessmentId: q.CourseAssetId, PassingScore: q.PassingScore),
 
         _ => new(resource.Id, resource.Order, resource.ResourceType.ToString(), resource.CourseAssetId)
     };
@@ -103,19 +106,21 @@ public static class CurriculumResourceParser
 
             var normalizedType = (type ?? mainType).ToLowerInvariant();
 
+            if (!courseAssetId.HasValue)
+            {
+                // A curriculum resource can only exist as a placement of a CourseAsset pool entry.
+                // External ids (videoId / documentId / assessmentId) are Layer-1 identities and must
+                // NEVER be ingested here — doing so would violate the CourseAssets foreign key.
+                continue;
+            }
+
             if (normalizedType is "video")
             {
-                var videoId = block.TryGetProperty("videoId", out var vProp) && Guid.TryParse(vProp.GetString(), out var vId)
-                    ? vId
-                    : (courseAssetId ?? Guid.NewGuid());
                 var duration = block.TryGetProperty("durationSeconds", out var dProp) && dProp.TryGetDouble(out var d) ? d : 0;
-                resources.Add(new VideoCurriculumResource(Guid.NewGuid(), order++, courseAssetId ?? videoId, duration));
+                resources.Add(new VideoCurriculumResource(Guid.NewGuid(), order++, courseAssetId.Value, duration));
             }
             else if (normalizedType is "document")
             {
-                var docId = block.TryGetProperty("documentId", out var docProp) && Guid.TryParse(docProp.GetString(), out var dId)
-                    ? dId
-                    : (courseAssetId ?? Guid.NewGuid());
                 var title = block.TryGetProperty("title", out var tProp) ? tProp.GetString() ?? "Document" : "Document";
                 var docType = block.TryGetProperty("documentType", out var dtProp) ? dtProp.GetString() ?? "pdf" : "pdf";
                 var isPublic = !block.TryGetProperty("isPublic", out var pubProp) || pubProp.GetBoolean();
@@ -127,7 +132,6 @@ public static class CurriculumResourceParser
                     {
                         var parsed = DocumentCurriculumResource.ParseDocUri(uriProp.GetString()!);
                         isPublic = parsed.IsPublic;
-                        docId = parsed.DocumentId;
                         variant = parsed.VariantName;
                     }
                     catch
@@ -136,15 +140,12 @@ public static class CurriculumResourceParser
                     }
                 }
 
-                resources.Add(new DocumentCurriculumResource(Guid.NewGuid(), order++, title, courseAssetId ?? docId, docType, isPublic, variant));
+                resources.Add(new DocumentCurriculumResource(Guid.NewGuid(), order++, title, courseAssetId.Value, docType, isPublic, variant));
             }
             else if (normalizedType is "quiz" or "assessment")
             {
-                var assessmentId = block.TryGetProperty("assessmentId", out var aProp) && Guid.TryParse(aProp.GetString(), out var aId)
-                    ? aId
-                    : (courseAssetId ?? Guid.NewGuid());
                 var passingScore = block.TryGetProperty("passingScore", out var pProp) && pProp.TryGetInt32(out var p) ? p : 80;
-                resources.Add(new AssessmentCurriculumResource(Guid.NewGuid(), order++, passingScore, courseAssetId ?? assessmentId));
+                resources.Add(new AssessmentCurriculumResource(Guid.NewGuid(), order++, passingScore, courseAssetId.Value));
             }
             else
             {

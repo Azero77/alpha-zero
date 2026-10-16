@@ -35,6 +35,9 @@ public class CourseAssetConfiguration : IEntityTypeConfiguration<CourseAsset>
 
         builder.HasIndex(a => new { a.CourseId, a.State });
         builder.HasIndex(a => a.ResourceArn).IsUnique();
+
+        // Computed identity accessors are not persisted.
+        builder.Ignore(a => a.ExternalResourceId);
     }
 }
 
@@ -42,6 +45,7 @@ public class VideoCourseAssetConfiguration : IEntityTypeConfiguration<VideoCours
 {
     public void Configure(EntityTypeBuilder<VideoCourseAsset> builder)
     {
+        builder.Ignore(v => v.VideoId);
         builder.Property(v => v.Duration);
         builder.Property(v => v.ThumbnailUrl).HasMaxLength(500);
         builder.Property(v => v.RelativeStreamingUrl).HasMaxLength(500);
@@ -52,6 +56,7 @@ public class DocumentCourseAssetConfiguration : IEntityTypeConfiguration<Documen
 {
     public void Configure(EntityTypeBuilder<DocumentCourseAsset> builder)
     {
+        builder.Ignore(d => d.DocumentId);
         builder.Property(d => d.FileName).HasMaxLength(256);
         builder.Property(d => d.Size);
         builder.Property(d => d.ContentType).HasMaxLength(100);
@@ -62,6 +67,7 @@ public class AssessmentCourseAssetConfiguration : IEntityTypeConfiguration<Asses
 {
     public void Configure(EntityTypeBuilder<AssessmentCourseAsset> builder)
     {
+        builder.Ignore(a => a.AssessmentId);
         builder.Property(a => a.QuestionsNumber);
         builder.Property(a => a.Type).HasConversion<string>().HasMaxLength(20);
     }

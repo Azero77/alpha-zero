@@ -45,7 +45,6 @@ public class VideoCurriculumResourceConfiguration : IEntityTypeConfiguration<Vid
 {
     public void Configure(EntityTypeBuilder<VideoCurriculumResource> builder)
     {
-        builder.Ignore(v => v.VideoId);
         builder.Property(v => v.DurationSeconds);
     }
 }
@@ -54,7 +53,6 @@ public class DocumentCurriculumResourceConfiguration : IEntityTypeConfiguration<
 {
     public void Configure(EntityTypeBuilder<DocumentCurriculumResource> builder)
     {
-        builder.Ignore(d => d.DocumentId);
         builder.Ignore(d => d.DocUri);
         builder.Property(d => d.Title).HasMaxLength(256);
         builder.Property(d => d.DocumentType).HasMaxLength(50);
@@ -76,7 +74,6 @@ public class QuizCurriculumResourceConfiguration : IEntityTypeConfiguration<Asse
 {
     public void Configure(EntityTypeBuilder<AssessmentCurriculumResource> builder)
     {
-        builder.Ignore(q => q.AssessmentId);
         builder.Property(q => q.PassingScore);
     }
 }

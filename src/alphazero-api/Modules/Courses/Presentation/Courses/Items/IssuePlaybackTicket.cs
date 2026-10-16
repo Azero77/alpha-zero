@@ -57,8 +57,7 @@ public class IssuePlaybackTicketEndpoint : Endpoint<IssuePlaybackTicketRequest, 
             return;
         }
 
-        var command = new IssuePlaybackTicketCommand(
-            );
+        var command = new IssuePlaybackTicketCommand(req.CourseId, req.ResourceId);
 
         var result = await _module.Send(command, ct);
 

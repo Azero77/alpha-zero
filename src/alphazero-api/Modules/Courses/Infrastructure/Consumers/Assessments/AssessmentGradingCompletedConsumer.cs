@@ -35,7 +35,10 @@ public class AssessmentGradingCompletedConsumer : IConsumer<AssessmentGradingCom
         var enrollementRepository = scope.Resolve<IEnrollementRepository>();
 
         // 1. Find the Course and BitIndex for this Assessment
-        var itemInfo = await courseRepository.GetItemBitIndexByResourceIdAsync(message.AssessmentId);
+        // message.AssessmentId is the EXTERNAL resource id (Layer 1). It must be resolved
+        // through the CourseAsset pool binding (Layer 2), never compared directly against
+        // CurriculumResource.CourseAssetId.
+        var itemInfo = await courseRepository.GetItemBitIndexByExternalResourceIdAsync(message.AssessmentId, context.CancellationToken);
         if (itemInfo == null)
         {
             _logger.LogWarning("Course item for Assessment {AssessmentId} not found. Cannot update progress.", message.AssessmentId);

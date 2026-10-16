@@ -15,7 +15,7 @@ public class CurriculumResourceTests
         var videoResource = new VideoCurriculumResource(id, 0, assetId, durationSeconds: 100);
 
         videoResource.ResourceType.Should().Be(ResourceType.Video);
-        videoResource.VideoId.Should().Be(assetId);
+        videoResource.CourseAssetId.Should().Be(assetId);
         videoResource.DurationSeconds.Should().Be(100);
 
         // 79 seconds < 80%
@@ -60,7 +60,7 @@ public class CurriculumResourceTests
         var resource = new AssessmentCurriculumResource(Guid.NewGuid(), 0, passingScore: 85, courseAssetId: assessmentId);
 
         resource.ResourceType.Should().Be(ResourceType.Assessment);
-        resource.AssessmentId.Should().Be(assessmentId);
+        resource.CourseAssetId.Should().Be(assessmentId);
         resource.CanComplete(84).Should().BeFalse();
         resource.CanComplete(85).Should().BeTrue();
         resource.CanComplete(90).Should().BeTrue();
