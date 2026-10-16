@@ -68,7 +68,7 @@ public class CourseResourceQueryService : ICourseResourceQueryService
                    item.Id,
                    course.Id,
                    asset.Id,
-                   asset.ResourceArn.ExtractResourceId() ?? Guid.Empty,
+                   asset.ResourceArn,
                    resource.ResourceType);
     }
 }

@@ -2,6 +2,7 @@ using AlphaZero.Modules.Courses.Application.Courses.Commands.Playback;
 using AlphaZero.Modules.Courses.Application.Repositories;
 using AlphaZero.Modules.Courses.Domain.Aggregates.Courses;
 using AlphaZero.Shared.Authorization;
+using AlphaZero.Shared.Domain;
 using AlphaZero.Shared.Infrastructure.Tenats;
 using AlphaZero.Shared.Security;
 using ErrorOr;
@@ -67,7 +68,7 @@ public class IssuePlaybackTicketCommandHandlerTests
             _itemId,
             _courseId,
             _courseAssetId,
-            _externalVideoId,
+            ResourceArn.ForVideo(_tenantId, _externalVideoId),
             ResourceType.Video);
 
         _courseResourceQueryService.GetResourceDetailsAsync(_courseId, _curriculumResourceId, Arg.Any<CancellationToken>())
@@ -166,7 +167,8 @@ public class IssuePlaybackTicketCommandHandlerTests
     {
         // Arrange
         var details = new CourseResourceDetailsDto(
-            _curriculumResourceId, _itemId, _courseId, _courseAssetId, Guid.NewGuid(), ResourceType.Document);
+            _curriculumResourceId, _itemId, _courseId, _courseAssetId,
+            ResourceArn.ForDocument(_tenantId, Guid.NewGuid()), ResourceType.Document);
 
         _courseResourceQueryService.GetResourceDetailsAsync(_courseId, _curriculumResourceId, Arg.Any<CancellationToken>())
             .Returns(details);

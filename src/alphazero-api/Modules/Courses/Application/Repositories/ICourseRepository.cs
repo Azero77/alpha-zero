@@ -1,4 +1,5 @@
 using AlphaZero.Modules.Courses.Domain.Aggregates.Courses;
+using AlphaZero.Shared.Domain;
 using AlphaZero.Shared.Infrastructure.Repositores;
 
 namespace AlphaZero.Modules.Courses.Application.Repositories;
@@ -20,8 +21,16 @@ public record CourseResourceDetailsDto(
     Guid CurriculumItemId,
     Guid CourseId,
     Guid CourseAssetId,
-    Guid ExternalResourceId, // Actual VideoId / DocumentId in external modules
-    ResourceType ResourceType);
+    // Member deliberately named after its type (C# "Color/Color" rule). Note: inside this
+    // record, a bare `ResourceArn.` resolves to the property, not the type — use a fully
+    // qualified name for static factories such as Shared.Domain.ResourceArn.ForVideo(...).
+    ResourceArn ResourceArn,
+    ResourceType ResourceType)
+{
+    // Computed on the materialized row (not in the EF query) — keeps the query fully
+    // server-translated while preserving the Layer-1 identity for playback tickets.
+    public Guid ExternalResourceId => ResourceArn.ExtractResourceId() ?? Guid.Empty;
+}
 
 public interface ICourseResourceQueryService
 {
