@@ -19,7 +19,7 @@ public class IssuePlaybackTicketSummary : Summary<IssuePlaybackTicketEndpoint>
 {
     public IssuePlaybackTicketSummary()
     {
-        Summary = "Issues a capability-based playback ticket";
+        Summary = "Issues a short-lived, policy-based playback ticket";
         Description = "Returns a short-lived HMAC-signed playback ticket for a video resource. Access is policy-based: the caller needs the courses:View permission on the course (resource ARN); enrollment is not validated at this endpoint.";
         Response<IssuePlaybackTicketResponse>(200, "Playback ticket successfully issued");
         Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(400, "Curriculum resource does not contain a video");
