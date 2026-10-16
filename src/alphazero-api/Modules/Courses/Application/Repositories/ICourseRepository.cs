@@ -9,9 +9,6 @@ public interface ICourseRepository : IRepository<Course>
     ICourseQueryBuilder Query(Guid courseId);
 
     Task<bool> IsAssetInUseAsync(Guid courseAssetId, CancellationToken cancellationToken = default);
-    Task<(Guid CourseId, int BitIndex)?> GetItemBitIndexByCourseAssetIdAsync(Guid courseAssetId, CancellationToken cancellationToken = default);
-    Task<(Guid CourseId, int BitIndex)?> GetItemBitIndexByExternalResourceIdAsync(Guid externalResourceId, CancellationToken cancellationToken = default);
-    Task<List<Course>> GetCoursesByCourseAssetIdAsync(Guid courseAssetId, CancellationToken cancellationToken = default);
 }
 
 /// <summary>
@@ -31,10 +28,5 @@ public interface ICourseResourceQueryService
     Task<CourseResourceDetailsDto?> GetResourceDetailsAsync(
         Guid courseId,
         Guid curriculumResourceId,
-        CancellationToken cancellationToken = default);
-
-    Task<CourseResourceDetailsDto?> GetResourceDetailsByCourseAssetIdAsync(
-        Guid courseId,
-        Guid courseAssetId,
         CancellationToken cancellationToken = default);
 }

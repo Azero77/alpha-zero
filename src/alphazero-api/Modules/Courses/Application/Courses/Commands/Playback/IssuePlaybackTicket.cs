@@ -60,10 +60,11 @@ public sealed class IssuePlaybackTicketCommandHandler : IRequestHandler<IssuePla
         var details = await _courseResourceQueryService.GetResourceDetailsAsync(
             request.CourseId, request.CurriculumResourceId, cancellationToken);
 
-        if (details is null || details.ResourceType != ResourceType.Video)
-        {
+        if (details is null)
+            return Error.NotFound("CurriculumResource.NotFound", "Curriculum resource not found in course.");
+
+        if (details.ResourceType != ResourceType.Video)
             return Error.Validation("CurriculumItem.NoVideo", "Curriculum resource does not contain a valid video.");
-        }
 
         // 2. Validate tenant
         var tenantId = _tenantProvider.GetTenant();
@@ -72,8 +73,7 @@ public sealed class IssuePlaybackTicketCommandHandler : IRequestHandler<IssuePla
             return Error.Conflict("Tenant.Required", "Playback tickets cannot be issued globally."); //no global tickets are made
         }
 
-        const int ticketTtlSeconds = TicketTtlSeconds;
-        var ttl = TimeSpan.FromSeconds(ticketTtlSeconds);
+        var ttl = TimeSpan.FromSeconds(TicketTtlSeconds);
 
         // 3. Mint capability ticket with the true external VideoId (Layer 1).
         //    The VideoUploading module verifies payload.VideoId == the actual video id,
@@ -91,6 +91,6 @@ public sealed class IssuePlaybackTicketCommandHandler : IRequestHandler<IssuePla
             "Issued playback ticket for User {UserId}, Video {VideoId}, Course {CourseId}, Item {ItemId}.",
             userId, details.ExternalResourceId, request.CourseId, details.CurriculumItemId);
 
-        return new IssuePlaybackTicketResult(ticket, details.ExternalResourceId, ticketTtlSeconds);
+        return new IssuePlaybackTicketResult(ticket, details.ExternalResourceId, TicketTtlSeconds);
     }
 }

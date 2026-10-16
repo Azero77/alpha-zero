@@ -13,31 +13,25 @@ public record CurriculumResourceDto(
     Guid Id,
     int Order,
     string ResourceType,
-    Guid? CourseAssetId,
-    Guid? VideoId = null,
+    Guid? CourseAssetId,          // Layer 2 — the pool asset id (single source of truth)
     double? DurationSeconds = null,
-    Guid? DocumentId = null,
     string? DocumentTitle = null,
     string? DocumentType = null,
     bool? IsPublic = null,
     string? VariantName = null,
     string? DocUri = null,
     string? TextContent = null,
-    Guid? AssessmentId = null,
     int? PassingScore = null)
 {
     public static CurriculumResourceDto From(CurriculumResource resource) => resource switch
     {
-        // NOTE: the typed id fields below are the POOL ASSET id (CourseAssetId, Layer 2).
-        // The external resource id (Layer 1) lives on CourseAsset.ExternalResourceId and is
-        // resolved at playback ticket time — curriculum resources are NOT videos/documents/assessments.
         VideoCurriculumResource v => new(
             v.Id, v.Order, v.ResourceType.ToString(), v.CourseAssetId,
-            VideoId: v.CourseAssetId, DurationSeconds: v.DurationSeconds),
+            DurationSeconds: v.DurationSeconds),
 
         DocumentCurriculumResource d => new(
             d.Id, d.Order, d.ResourceType.ToString(), d.CourseAssetId,
-            DocumentId: d.CourseAssetId, DocumentTitle: d.Title, DocumentType: d.DocumentType,
+            DocumentTitle: d.Title, DocumentType: d.DocumentType,
             IsPublic: d.IsPublic, VariantName: d.VariantName, DocUri: d.DocUri),
 
         ArticleCurriculumResource a => new(
@@ -46,7 +40,7 @@ public record CurriculumResourceDto(
 
         AssessmentCurriculumResource q => new(
             q.Id, q.Order, q.ResourceType.ToString(), q.CourseAssetId,
-            AssessmentId: q.CourseAssetId, PassingScore: q.PassingScore),
+            PassingScore: q.PassingScore),
 
         _ => new(resource.Id, resource.Order, resource.ResourceType.ToString(), resource.CourseAssetId)
     };
@@ -86,11 +80,12 @@ public record CurriculumItemDto(
 
 public static class CurriculumResourceParser
 {
-    public static List<CurriculumResource> Parse(string mainType, JsonElement content)
+    public static (List<CurriculumResource> Resources, List<string> Warnings) Parse(string mainType, JsonElement content)
     {
         var resources = new List<CurriculumResource>();
+        var warnings = new List<string>();
         if (content.ValueKind != JsonValueKind.Array)
-            return resources;
+            return (resources, warnings);
 
         int order = 0;
         foreach (var block in content.EnumerateArray())
@@ -111,6 +106,7 @@ public static class CurriculumResourceParser
                 // A curriculum resource can only exist as a placement of a CourseAsset pool entry.
                 // External ids (videoId / documentId / assessmentId) are Layer-1 identities and must
                 // NEVER be ingested here — doing so would violate the CourseAssets foreign key.
+                warnings.Add($"Skipped {normalizedType} block at index {order}: missing courseAssetId");
                 continue;
             }
 
@@ -154,7 +150,7 @@ public static class CurriculumResourceParser
             }
         }
 
-        return resources;
+        return (resources, warnings);
     }
 }
 
@@ -243,7 +239,8 @@ public sealed class CourseSectionItemHandlers :
         if (section is null)
             return Error.NotFound("Course.Section", "Section not found.");
 
-        var resources = CurriculumResourceParser.Parse(request.MainType, request.Content);
+        var (resources, parseWarnings) = CurriculumResourceParser.Parse(request.MainType, request.Content);
+        LogParseWarnings(parseWarnings, "create");
 
         var bitIndex = course.AllocateNextBitIndex();
         var mainType = CurriculumItem.ParseMainType(request.MainType);
@@ -283,7 +280,8 @@ public sealed class CourseSectionItemHandlers :
         if (item is null)
             return Error.NotFound("CurriculumItem.NotFound", "Item not found in section.");
 
-        var newResources = CurriculumResourceParser.Parse(request.MainType, request.Content);
+        var (newResources, parseWarnings) = CurriculumResourceParser.Parse(request.MainType, request.Content);
+        LogParseWarnings(parseWarnings, "update");
         var mainType = CurriculumItem.ParseMainType(request.MainType);
 
         var updateResult = section.UpdateItem(request.ItemId, request.Title, mainType, newResources);
@@ -324,5 +322,14 @@ public sealed class CourseSectionItemHandlers :
             request.ItemId, request.CourseId);
 
         return Result.Success;
+    }
+
+    private void LogParseWarnings(List<string> warnings, string operation)
+    {
+        foreach (var warning in warnings)
+        {
+            _logger.LogWarning("Curriculum resource parse warning ({Operation}): {Warning}",
+                operation, warning);
+        }
     }
 }

@@ -58,18 +58,10 @@ public class IssuePlaybackTicketCommandHandlerTests
             _courseResourceQueryService);
     }
 
-    private static CourseResourceDetailsDto VideoDetails() => new(
-        Guid.NewGuid(),
-        Guid.NewGuid(),
-        Guid.NewGuid(),
-        Guid.NewGuid(),
-        Guid.NewGuid(),
-        ResourceType.Video);
-
-    [Fact]
-    public async Task Handle_ShouldReturnTicketWithExternalVideoId_WhenResourceIsValidVideo()
+    private CourseResourceDetailsDto SetupValidVideoDetails()
     {
-        // Arrange
+        // Layer 2 (pool asset) and Layer 1 (external video) are two DIFFERENT identities,
+        // so the ticket must carry _externalVideoId, never _courseAssetId.
         var details = new CourseResourceDetailsDto(
             _curriculumResourceId,
             _itemId,
@@ -80,6 +72,15 @@ public class IssuePlaybackTicketCommandHandlerTests
 
         _courseResourceQueryService.GetResourceDetailsAsync(_courseId, _curriculumResourceId, Arg.Any<CancellationToken>())
             .Returns(details);
+
+        return details;
+    }
+
+    [Fact]
+    public async Task Handle_ShouldReturnTicketWithExternalVideoId_WhenResourceIsValidVideo()
+    {
+        // Arrange
+        SetupValidVideoDetails();
 
         _ticketSigner.GenerateTicket(
                 _tenantId, _userId, _courseId, _itemId, _externalVideoId, Arg.Any<TimeSpan?>(), Arg.Any<string?>())
@@ -102,11 +103,7 @@ public class IssuePlaybackTicketCommandHandlerTests
     public async Task Handle_ShouldSignTicketWithTrueExternalVideoId_NotCourseAssetId()
     {
         // Arrange
-        var details = new CourseResourceDetailsDto(
-            _curriculumResourceId, _itemId, _courseId, _courseAssetId, _externalVideoId, ResourceType.Video);
-
-        _courseResourceQueryService.GetResourceDetailsAsync(_courseId, _curriculumResourceId, Arg.Any<CancellationToken>())
-            .Returns(details);
+        SetupValidVideoDetails();
 
         _ticketSigner.GenerateTicket(
                 Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<Guid>(),
@@ -147,7 +144,7 @@ public class IssuePlaybackTicketCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_ShouldReturnValidation_WhenResourceNotFound()
+    public async Task Handle_ShouldReturnNotFound_WhenResourceNotFound()
     {
         // Arrange
         _courseResourceQueryService.GetResourceDetailsAsync(_courseId, _curriculumResourceId, Arg.Any<CancellationToken>())
@@ -160,8 +157,8 @@ public class IssuePlaybackTicketCommandHandlerTests
 
         // Assert
         result.IsError.Should().BeTrue();
-        result.FirstError.Type.Should().Be(ErrorType.Validation);
-        result.FirstError.Code.Should().Be("CurriculumItem.NoVideo");
+        result.FirstError.Type.Should().Be(ErrorType.NotFound);
+        result.FirstError.Code.Should().Be("CurriculumResource.NotFound");
     }
 
     [Fact]
@@ -173,7 +170,6 @@ public class IssuePlaybackTicketCommandHandlerTests
 
         _courseResourceQueryService.GetResourceDetailsAsync(_courseId, _curriculumResourceId, Arg.Any<CancellationToken>())
             .Returns(details);
-
         var command = new IssuePlaybackTicketCommand(_courseId, _curriculumResourceId);
 
         // Act
@@ -189,11 +185,7 @@ public class IssuePlaybackTicketCommandHandlerTests
     public async Task Handle_ShouldReturnConflict_WhenTenantIsMissing()
     {
         // Arrange
-        var details = new CourseResourceDetailsDto(
-            _curriculumResourceId, _itemId, _courseId, _courseAssetId, _externalVideoId, ResourceType.Video);
-
-        _courseResourceQueryService.GetResourceDetailsAsync(_courseId, _curriculumResourceId, Arg.Any<CancellationToken>())
-            .Returns(details);
+        SetupValidVideoDetails();
 
         _tenantProvider.GetTenant().Returns((Guid?)null);
 
@@ -212,11 +204,7 @@ public class IssuePlaybackTicketCommandHandlerTests
     public async Task Handle_ShouldReturnConflict_WhenTenantIsEmpty()
     {
         // Arrange
-        var details = new CourseResourceDetailsDto(
-            _curriculumResourceId, _itemId, _courseId, _courseAssetId, _externalVideoId, ResourceType.Video);
-
-        _courseResourceQueryService.GetResourceDetailsAsync(_courseId, _curriculumResourceId, Arg.Any<CancellationToken>())
-            .Returns(details);
+        SetupValidVideoDetails();
 
         _tenantProvider.GetTenant().Returns(Guid.Empty);
 
