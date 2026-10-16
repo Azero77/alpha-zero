@@ -1,6 +1,7 @@
 using AlphaZero.Modules.VideoUploading.Application.Repositories;
 using AlphaZero.Modules.VideoUploading.Domain.Models;
 using AlphaZero.Shared.Application;
+using AlphaZero.Shared.Authorization;
 using AlphaZero.Shared.Domain;
 using AlphaZero.Shared.Infrastructure.Tenats;
 using AlphaZero.Shared.Security;
@@ -23,8 +24,9 @@ public record EdgeCapabilityDto(
 
 public record WatermarkContextDto(
     string UserId,
-    string UserName,
-    string? UserPhone,
+    string? UserName,
+    string? UserDeviceid,
+    string? userDeviceName,
     string TenantId,
     DateTimeOffset IssuedAt);
 
@@ -37,8 +39,15 @@ public record PlaybackSessionDto(
 
 public record CreatePlaybackSessionQuery(
     Guid VideoId,
+    string? Ticket = null,
     Guid? CourseId = null,
-    Guid? ItemId = null) : IQuery<PlaybackSessionDto>;
+    Guid? ItemId = null) : IQuery<PlaybackSessionDto>
+{
+    public CreatePlaybackSessionQuery(Guid videoId, Guid? courseId, Guid? itemId)
+        : this(videoId, null, courseId, itemId)
+    {
+    }
+}
 
 public class CreatePlaybackSessionQueryValidator : AbstractValidator<CreatePlaybackSessionQuery>
 {
@@ -59,21 +68,34 @@ public class CreatePlaybackSessionQueryHandler : IRequestHandler<CreatePlaybackS
 {
     private readonly IVideoRepository _videoRepository;
     private readonly ICloudflareCookieSigner _cookieSigner;
-    private readonly ICurrentTenantUserRepository _currentUserRepository;
+    private readonly IAuthorizationContextProvider _currentUserRepository;
     private readonly ITenantProvider _tenantProvider;
+    private readonly IPlaybackTicketSigner? _ticketSigner;
     private readonly ILogger<CreatePlaybackSessionQueryHandler> _logger;
 
     public CreatePlaybackSessionQueryHandler(
         IVideoRepository videoRepository,
         ICloudflareCookieSigner cookieSigner,
-        ICurrentTenantUserRepository currentUserRepository,
+        IAuthorizationContextProvider currentUserRepository,
         ITenantProvider tenantProvider,
+        ILogger<CreatePlaybackSessionQueryHandler> logger)
+        : this(videoRepository, cookieSigner, currentUserRepository, tenantProvider, null, logger)
+    {
+    }
+
+    public CreatePlaybackSessionQueryHandler(
+        IVideoRepository videoRepository,
+        ICloudflareCookieSigner cookieSigner,
+        IAuthorizationContextProvider currentUserRepository,
+        ITenantProvider tenantProvider,
+        IPlaybackTicketSigner? ticketSigner,
         ILogger<CreatePlaybackSessionQueryHandler> logger)
     {
         _videoRepository = videoRepository;
         _cookieSigner = cookieSigner;
         _currentUserRepository = currentUserRepository;
         _tenantProvider = tenantProvider;
+        _ticketSigner = ticketSigner;
         _logger = logger;
     }
 
@@ -81,12 +103,27 @@ public class CreatePlaybackSessionQueryHandler : IRequestHandler<CreatePlaybackS
         CreatePlaybackSessionQuery request,
         CancellationToken cancellationToken)
     {
-        // 1. Resolve User Context (Identity IAM already enforces video:Stream access control at endpoint level)
-        var currentUser = await _currentUserRepository.GetCurrentUser();
-        if (currentUser is null)
+        // 1. Resolve User Context (Identity IAM or Capability Ticket)
+        ErrorOr<AuthorizationContext?> currentUser =  _currentUserRepository.Get(cancellationToken);
+        
+
+        if (currentUser.IsError)
+            return currentUser.Errors;
+        if (currentUser.Value is null)
+            return Error.Forbidden();
+        var user = currentUser.Value;
+            
+        string userId = user.Id.ToString();
+        string? userName = null ;
+        string? userDeviceId = null;
+        string? userDeviceName = null;
+        Guid? userTenantId = user.TenantId;
+
+        if (user is TenantUserAuthorizationContext tenantUser)
         {
-            _logger.LogWarning("Playback session rejected: user is unauthenticated.");
-            return Error.Unauthorized("Identity.Unauthorized", "User is not authenticated.");
+            userName = tenantUser.Name;
+            userDeviceId = tenantUser.DeviceId;
+            userDeviceName = tenantUser.DeviceName;
         }
 
         // 2. Verify Video Existence and Readiness in VideoUploading DB
@@ -103,11 +140,11 @@ public class CreatePlaybackSessionQueryHandler : IRequestHandler<CreatePlaybackS
             return Error.Conflict("Video.NotReady", $"Video is not ready for playback (Current status: {video.Status}).");
         }
 
-        // 4. Resolve Tenant and Mint Signed Edge Capability Cookie
-        var tenantId = _tenantProvider.GetTenant() ?? currentUser.TenantId ?? video.TenantId;
+        // 3. Resolve Tenant and Mint Signed Edge Capability Cookie
+        var tenantId = userTenantId ?? video.TenantId;
         var cookie = _cookieSigner.GenerateSignedCookie(tenantId, request.VideoId);
 
-        // 5. Construct BFF Master Manifest Proxy Route
+        // 4. Construct BFF Master Manifest Proxy Route
         var queryParams = new List<string>();
         if (request.CourseId.HasValue)
             queryParams.Add($"courseId={request.CourseId.Value:D}");
@@ -118,7 +155,7 @@ public class CreatePlaybackSessionQueryHandler : IRequestHandler<CreatePlaybackS
             ? $"/api/player/{request.VideoId:D}/master?{string.Join("&", queryParams)}"
             : $"/api/player/{request.VideoId:D}/master";
 
-        // 6. Build DTO Response
+        // 5. Build DTO Response
         var edgeCapability = new EdgeCapabilityDto(
             CookieName: cookie.CookieName,
             CookieValue: cookie.CookieValue,
@@ -130,9 +167,10 @@ public class CreatePlaybackSessionQueryHandler : IRequestHandler<CreatePlaybackS
             SameSite: cookie.SameSite);
 
         var watermarkContext = new WatermarkContextDto(
-            UserId: currentUser.UserId.ToString(),
-            UserName: currentUser.Name,
-            UserPhone: currentUser.DeviceName,
+            UserId: userId,
+            UserName: userName,
+            UserDeviceid: userDeviceId,
+            userDeviceName: userDeviceName,
             TenantId: tenantId.ToString(),
             IssuedAt: DateTimeOffset.UtcNow);
 

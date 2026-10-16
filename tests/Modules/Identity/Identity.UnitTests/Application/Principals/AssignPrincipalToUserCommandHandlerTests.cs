@@ -65,12 +65,17 @@ public class AssignPrincipalToUserCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_Should_ReturnConflict_WhenAssignmentAlreadyExists()
+    public async Task Handle_Should_ReturnExistingAssignmentId_WhenAssignmentAlreadyExists()
     {
         // Arrange
         _tenantProvider.GetTenant().Returns(TenantId);
-        _assignmentRepository.Any(Arg.Any<Expression<Func<TenantUserPrincipalAssignment, bool>>>(), Arg.Any<CancellationToken>())
-            .Returns(true);
+
+        var user = TenantUser.Create(TenantId, "sub", "Ali").Value;
+        var principal = Principal.Create(PrincipalId, "role", "hash", "Role", PrincipalType.Role, null, TenantId).Value;
+        var assignment = TenantUserPrincipalAssignment.Create(TenantId, user, principal, ResourceArn, DateTime.UtcNow).Value;
+
+        _assignmentRepository.GetFirst(Arg.Any<Expression<Func<TenantUserPrincipalAssignment, bool>>>(), Arg.Any<CancellationToken>())
+            .Returns(assignment);
 
         var command = new AssignPrincipalToUserCommand(UserId, PrincipalId, ResourceArn);
 
@@ -78,7 +83,36 @@ public class AssignPrincipalToUserCommandHandlerTests
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        result.IsError.Should().BeTrue();
-        result.FirstError.Code.Should().Be("Assignment.Duplicate");
+        result.IsError.Should().BeFalse();
+        result.Value.Should().Be(assignment.Id);
+        _assignmentRepository.DidNotReceive().Add(Arg.Any<TenantUserPrincipalAssignment>());
+    }
+
+    [Fact]
+    public async Task Handle_Should_FallbackToResourceArnTenantId_WhenTenantProviderReturnsNull()
+    {
+        // Arrange
+        _tenantProvider.GetTenant().Returns((Guid?)null);
+        var customTenantId = Guid.NewGuid();
+        var arnWithTenant = $"az:course:{customTenantId}:course/101";
+
+        _assignmentRepository.GetFirst(Arg.Any<Expression<Func<TenantUserPrincipalAssignment, bool>>>(), Arg.Any<CancellationToken>())
+            .Returns((TenantUserPrincipalAssignment?)null);
+
+        var user = TenantUser.Create(customTenantId, "sub", "Ali").Value;
+        var principal = Principal.Create(PrincipalId, "role", "hash", "Role", PrincipalType.Role, null, customTenantId).Value;
+
+        _userRepository.GetById(UserId).Returns(user);
+        _principalRepository.GetById(PrincipalId).Returns(principal);
+
+        var command = new AssignPrincipalToUserCommand(UserId, PrincipalId, arnWithTenant);
+
+        // Act
+        var result = await _handler.Handle(command, CancellationToken.None);
+
+        // Assert
+        result.IsError.Should().BeFalse();
+        _assignmentRepository.Received(1).Add(Arg.Is<TenantUserPrincipalAssignment>(a => 
+            a.TenantId == customTenantId));
     }
 }

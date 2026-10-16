@@ -33,7 +33,8 @@ public class DomainEventHandler :
         await _moduleBus.Publish(new EnrollementCreatedIntegrationEvent(
             notification.EnrollementId,
             notification.StudentId,
-            notification.CourseId
+            notification.CourseId,
+            notification.TenantId
         ), cancellationToken);
     }
 }

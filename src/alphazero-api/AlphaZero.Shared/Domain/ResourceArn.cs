@@ -81,10 +81,18 @@ public class ResourceArn
 
     public override bool Equals(object? obj) => obj is ResourceArn other && Value == other.Value;
     public override int GetHashCode() => Value.GetHashCode();
-    public bool IsRequestedPathContainedInResource(string requestedPath)
+
+    public bool ContainsSubResource(string requestedPath)
     {
-        return ResourcePath == requestedPath || ResourcePath.StartsWith(requestedPath + "/");
+        if (string.IsNullOrWhiteSpace(requestedPath))
+            return false;
+
+        var normalizedRequested = requestedPath.ToLowerInvariant();
+        return ResourcePath == normalizedRequested || normalizedRequested.StartsWith(ResourcePath + "/");
     }
+
+    public bool IsRequestedPathContainedInResource(string requestedPath) => ContainsSubResource(requestedPath);
+
     // --- Static Factories ---
 
     public static ResourceArn ForTenant(Guid tenantId) => new($"az:tenant:{GlobalTenant}:tenant/{tenantId}");

@@ -10,6 +10,7 @@ namespace AlphaZero.Modules.VideoUploading.Presentation.Features;
 public record CreatePlaybackSessionRequest
 {
     public Guid VideoId { get; init; }
+    public string? Ticket { get; init; }
     public Guid? CourseId { get; init; }
     public Guid? ItemId { get; init; }
 }
@@ -40,17 +41,13 @@ public class CreatePlaybackSessionEndpoint : Endpoint<CreatePlaybackSessionReque
     public override void Configure()
     {
         Post("api/videos/{VideoId:guid}/playback-session");
-        this.AccessControl("video:Stream", (req, tenantId) =>
-            req.CourseId.HasValue
-                ? ResourceArn.ForCourseVideo(tenantId, req.VideoId, req.CourseId.Value)
-                : ResourceArn.ForVideo(tenantId, req.VideoId));
         Description(d => d.WithTags("Video Streaming"));
         Summary(new CreatePlaybackSessionSummary());
     }
 
     public override async Task HandleAsync(CreatePlaybackSessionRequest req, CancellationToken ct)
     {
-        var command = new CreatePlaybackSessionQuery(req.VideoId, req.CourseId, req.ItemId);
+        var command = new CreatePlaybackSessionQuery(req.VideoId, req.Ticket, req.CourseId, req.ItemId);
         var result = await _module.Send(command, ct);
 
         if (result.IsError)

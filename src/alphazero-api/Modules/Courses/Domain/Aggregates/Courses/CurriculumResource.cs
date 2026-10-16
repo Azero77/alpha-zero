@@ -8,7 +8,7 @@ public abstract class CurriculumResource : Entity
 {
     public Guid CurriculumItemId { get; internal set; }
     public int Order { get; internal set; }
-    public Guid? CourseAssetId { get; protected set; }
+    public Guid? CourseAssetId { get; protected set; } 
     public abstract ResourceType ResourceType { get; }
 
     protected CurriculumResource() { } // EF Core

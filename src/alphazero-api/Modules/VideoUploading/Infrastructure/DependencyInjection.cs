@@ -59,9 +59,12 @@ public static class DependencyInjection
         moduleServices.AddFluentValidation(typeof(IVideoUploadingApplicationMarker));
 
         // Application Services
+        moduleServices.AddPreRequestHandlersFromAssembly(typeof(IVideoUploadingApplicationMarker).Assembly);
+
         moduleServices.AddMediatR(opts => { 
             opts.RegisterServicesFromAssembly(typeof(IVideoUploadingApplicationMarker).Assembly);
             opts.AddOpenBehavior(typeof(ValidationBehavior<,>));
+            opts.AddOpenBehavior(typeof(PreRequestBehavior<,>));
             opts.AddOpenBehavior(typeof(UnitOfWorkDecoratorCommandHandler<,>));
         });
 

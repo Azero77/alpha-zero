@@ -1072,15 +1072,15 @@ Floating HTML5 Canvas component rendering drifting identity watermark overlay (N
 
 ## 23. GSTACK REVIEW REPORT
 
-### Review Summary
-- **Skills Executed:** `/plan-eng-review` and `/plan-devex-review`
-- **Target Plan:** `plans/video-security-architecture.md`
-- **Review Date:** 2026-09-20
-- **Architectural Decision (D1):** Approved & Resolved. Video Module owns `POST /api/videos/{videoId}/playback-session`. Courses Module handles inter-module access checks via MassTransit request/response.
-- **P0 Findings Fixed:**
-  - CORS preflight and `withCredentials: true` credentials mode resolved in `video-auth-worker.js`.
-  - Next.js dynamic cookie domain handled safely across local development (`localhost`) and production academies (`.alphazero.academy`).
-- **P1/P2 Findings Fixed:**
-  - `ResourceDto` updated to include `AssetId` for frontend video ID resolution.
-  - Next.js key route forwards user bearer token via `getApi()` preserving IAM policy evaluation.
-- **Review Verdict:** **APPROVED TO SHIP**. Proceed directly with implementation tasks T1 through T7.
+| Review | Trigger | Why | Runs | Status | Findings |
+|--------|---------|-----|------|--------|----------|
+| CEO Review | `/plan-ceo-review` | Scope & strategy | 0 | — | — |
+| Codex Review | `/codex review` | Independent 2nd opinion | 0 | — | — |
+| Eng Review | `/plan-eng-review` | Architecture & tests (required) | 1 | CLEAR (PLAN) | 6 tasks, 0 critical gaps |
+| Design Review | `/plan-design-review` | UI/UX gaps | 0 | — | — |
+| DX Review | `/plan-devex-review` | Developer experience gaps | 0 | — | — |
+
+- **CROSS-MODEL:** Claude outside voice subagent identified 3 critical execution blockers: FastEndpoints global IAM preprocessor bypass, saga compensation poisoning on duplicate enrollment assignment, and cryptographic domain separation between edge CDN and backend tickets. All 3 resolved and integrated into plan using Application-layer MediatR PreRequestBehavior and idempotent assignment handling.
+- **VERDICT:** ENG CLEARED — ready to implement
+
+NO UNRESOLVED DECISIONS

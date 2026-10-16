@@ -121,4 +121,64 @@ public class OfflineVideoKeyTests : BaseIntegrationTest
         // If authorization failed, it would have returned 403 Forbidden.
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
+
+    [Fact]
+    public async Task GetVideoKey_ShouldPassAuthorization_WhenValidPlaybackTicketProvidedInHeader()
+    {
+        // Arrange
+        var tenantId = Guid.NewGuid();
+        var videoId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+        var courseId = Guid.NewGuid();
+        var itemId = Guid.NewGuid();
+
+        var ticketSigner = Resolve<AlphaZero.Shared.Security.IPlaybackTicketSigner>();
+        var ticket = ticketSigner.GenerateTicket(tenantId, userId, courseId, itemId, videoId);
+
+        // Act - Request without IAM credentials, only ticket in header
+        var request = new HttpRequestMessage(HttpMethod.Get, $"/api/video/keys/{videoId}");
+        request.Headers.Add("X-Playback-Ticket", ticket);
+
+        var response = await Client.SendAsync(request);
+
+        // Assert - 404 means authorization succeeded and reached handler (secret not found for dummy video)
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task GetVideoKey_ShouldPassAuthorization_WhenValidPlaybackTicketProvidedInQuery()
+    {
+        // Arrange
+        var tenantId = Guid.NewGuid();
+        var videoId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+        var courseId = Guid.NewGuid();
+        var itemId = Guid.NewGuid();
+
+        var ticketSigner = Resolve<AlphaZero.Shared.Security.IPlaybackTicketSigner>();
+        var ticket = ticketSigner.GenerateTicket(tenantId, userId, courseId, itemId, videoId);
+
+        // Act - Request without IAM credentials, only ticket in query param
+        var request = new HttpRequestMessage(HttpMethod.Get, $"/api/video/keys/{videoId}?ticket={Uri.EscapeDataString(ticket)}");
+
+        var response = await Client.SendAsync(request);
+
+        // Assert - 404 means authorization succeeded and reached handler
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task GetVideoKey_ShouldReturnForbidden_WhenInvalidPlaybackTicketProvided()
+    {
+        // Arrange
+        var videoId = Guid.NewGuid();
+
+        // Act - Request with tampered ticket
+        var request = new HttpRequestMessage(HttpMethod.Get, $"/api/video/keys/{videoId}?ticket=tampered.ticket.payload");
+
+        var response = await Client.SendAsync(request);
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
 }

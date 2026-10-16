@@ -46,9 +46,10 @@ public static class DependencyInjection
         services.AddSingleton<IClock, Clock>();
         services.AddHttpContextAccessor();
 
-        // 5. Cloudflare Edge Security
+        // 5. Cloudflare Edge Security & Playback Ticketing
         services.Configure<AlphaZero.Shared.Security.CloudflareSettings>(configuration.GetSection(AlphaZero.Shared.Security.CloudflareSettings.SectionName));
         services.AddSingleton<AlphaZero.Shared.Security.ICloudflareCookieSigner, AlphaZero.Shared.Infrastructure.Security.CloudflareCookieSigner>();
+        services.AddSingleton<AlphaZero.Shared.Security.IPlaybackTicketSigner, AlphaZero.Shared.Infrastructure.Security.PlaybackTicketSigner>();
 
         services.AddMediatR(cfg =>
         {

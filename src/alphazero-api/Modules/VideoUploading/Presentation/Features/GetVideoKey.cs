@@ -10,6 +10,10 @@ namespace AlphaZero.Modules.VideoUploading.Presentation.Features;
 public record GetVideoKeyRequest
 {
     public Guid VideoId { get; init; }
+    [QueryParam]
+    public string? Ticket { get; init; }
+    [FromHeader("X-Playback-Ticket", isRequired: false)]
+    public string? HeaderTicket { get; init; }
 }
 
 public class GetVideoKeySummary : Summary<GetVideoKeyEndpoint>
@@ -20,7 +24,7 @@ public class GetVideoKeySummary : Summary<GetVideoKeyEndpoint>
         Description = "Returns the binary 16-byte AES decryption key for HLS playback.";
         Response(200, "Decryption key binary stream (application/octet-stream)", "application/octet-stream");
         Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(401, "Unauthorized");
-        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(403, "Forbidden (Missing video:Stream permission)");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(403, "Forbidden (Missing video:Stream permission or invalid ticket)");
         Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(404, "Video secret not found (VideoSecret.NotFound)");
         Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(500, "Invalid key format stored (VideoSecret.InvalidFormat)");
     }
@@ -38,14 +42,14 @@ public class GetVideoKeyEndpoint : Endpoint<GetVideoKeyRequest>
     public override void Configure()
     {
         Get("api/video/keys/{VideoId:guid}");
-        this.AccessControl("video:Stream", (req, tenantId) => ResourceArn.ForVideo(tenantId, req.VideoId));
         Description(d => d.WithTags("Video Streaming"));
         Summary(new GetVideoKeySummary());
     }
 
     public override async Task HandleAsync(GetVideoKeyRequest req, CancellationToken ct)
     {
-        var result = await _module.Send(new GetVideoKeyQuery(req.VideoId), ct);
+        var ticket = !string.IsNullOrWhiteSpace(req.Ticket) ? req.Ticket : req.HeaderTicket;
+        var result = await _module.Send(new GetVideoKeyQuery(req.VideoId, ticket), ct);
 
         if (result.IsError)
         {

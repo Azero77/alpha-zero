@@ -49,4 +49,30 @@ public class CourseRepository : BaseRepository<AppDbContext, Course>, ICourseRep
             .Where(c => c.Sections.Any(s => s.Items.Any(i => i.Resources.Any(r => r.CourseAssetId == resourceId))))
             .ToListAsync(cancellationToken);
     }
+    
+}
+
+public class CourseResourceQueryService : ICourseResourceQueryService
+{
+    private readonly AppDbContext _context;
+
+    public CourseResourceQueryService(AppDbContext context)
+    {
+        _context = context;
+    }
+
+    public async Task<ResourceDTO?> GetResourceInCourse(Guid assetId, Guid courseId, CancellationToken token = default)
+    {
+        var query = from course in _context.Courses
+            join section in _context.CourseSections
+                on course.Id equals section.CourseId
+            join item in _context.CurriculumItems
+                on section.Id equals item.SectionId
+            join resource in _context.CurriculumResources
+                on item.Id equals resource.CurriculumItemId
+            where course.Id == courseId && assetId == resource.CourseAssetId
+            select new ResourceDTO(resource.Id, resource.CurriculumItemId,course.Id, resource.CourseAssetId, resource.ResourceType);
+
+        return await query.FirstOrDefaultAsync(token);
+    }
 }

@@ -5,7 +5,7 @@ using MediatR;
 
 namespace AlphaZero.Modules.VideoUploading.Application.Queries.GetVideoKey;
 
-public record GetVideoKeyQuery(Guid VideoId) : IRequest<ErrorOr<byte[]>>;
+public record GetVideoKeyQuery(Guid VideoId, string? Ticket = null) : IRequest<ErrorOr<byte[]>>;
 
 public sealed class GetVideoKeyQueryHandler(IVideoQueryService videoQueryService) : IRequestHandler<GetVideoKeyQuery, ErrorOr<byte[]>>
 {
