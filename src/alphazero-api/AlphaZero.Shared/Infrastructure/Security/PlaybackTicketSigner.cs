@@ -15,10 +15,7 @@ public class PlaybackTicketSigner : IPlaybackTicketSigner
     public PlaybackTicketSigner(IOptions<CloudflareSettings> options)
     {
         _settings = options.Value ?? new CloudflareSettings();
-        var secret = string.IsNullOrWhiteSpace(_settings.PlaybackTicketSecret)
-            ? "dev-playback-ticket-secret-alphazero-default-change-in-prod-min32!"
-            : _settings.PlaybackTicketSecret;
-        _keyBytes = Encoding.UTF8.GetBytes(secret);
+        _keyBytes = Encoding.UTF8.GetBytes(_settings.PlaybackTicketSecret);
     }
 
     public string GenerateTicket(

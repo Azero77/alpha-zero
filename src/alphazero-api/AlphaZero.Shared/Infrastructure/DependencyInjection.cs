@@ -48,6 +48,15 @@ public static class DependencyInjection
 
         // 5. Cloudflare Edge Security & Playback Ticketing
         services.Configure<AlphaZero.Shared.Security.CloudflareSettings>(configuration.GetSection(AlphaZero.Shared.Security.CloudflareSettings.SectionName));
+        var playbackTicketSecret = configuration.GetSection(AlphaZero.Shared.Security.CloudflareSettings.SectionName)[nameof(AlphaZero.Shared.Security.CloudflareSettings.PlaybackTicketSecret)];
+        if (string.IsNullOrWhiteSpace(playbackTicketSecret) && !environment.IsDevelopment())
+        {
+            // Fail fast: a missing playback-ticket secret must never silently degrade to the dev constant
+            // (forgeable tickets). Development keeps the dev default; production requires an explicit secret.
+            throw new InvalidOperationException(
+                $"Missing required configuration '{AlphaZero.Shared.Security.CloudflareSettings.SectionName}:{nameof(AlphaZero.Shared.Security.CloudflareSettings.PlaybackTicketSecret)}'. " +
+                "Playback tickets cannot be minted securely without an explicit secret in non-development environments.");
+        }
         services.AddSingleton<AlphaZero.Shared.Security.ICloudflareCookieSigner, AlphaZero.Shared.Infrastructure.Security.CloudflareCookieSigner>();
         services.AddSingleton<AlphaZero.Shared.Security.IPlaybackTicketSigner, AlphaZero.Shared.Infrastructure.Security.PlaybackTicketSigner>();
 
