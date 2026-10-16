@@ -20,12 +20,12 @@ public class IssuePlaybackTicketSummary : Summary<IssuePlaybackTicketEndpoint>
     public IssuePlaybackTicketSummary()
     {
         Summary = "Issues a capability-based playback ticket";
-        Description = "Validates student enrollment and returns a short-lived HMAC-signed playback ticket for video streaming.";
+        Description = "Returns a short-lived HMAC-signed playback ticket for a video resource. Access is policy-based: the caller needs the courses:View permission on the course (resource ARN); enrollment is not validated at this endpoint.";
         Response<IssuePlaybackTicketResponse>(200, "Playback ticket successfully issued");
-        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(400, "Curriculum item does not contain a video resource");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(400, "Curriculum resource does not contain a video");
         Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(401, "Unauthorized");
-        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(403, "Forbidden (Missing courses:View permission or not enrolled)");
-        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(404, "Course, section, or item not found");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(403, "Forbidden (Missing courses:View permission on the course)");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(404, "Course or curriculum resource not found");
     }
 }
 
