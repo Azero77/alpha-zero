@@ -60,4 +60,12 @@ public class Enrollment : TenantOwnedAggregate
 
     public void Deactivate() => Status = EnrollmentStatus.Inactive;
     public void Activate() => Status = EnrollmentStatus.Active;
+
+    // Instructor-driven curriculum edits (e.g. a section soft-delete) change the number of
+    // active tracked items; the earned bitmask stays stable and only the active denominator
+    // is refilled, so the completion percentage stays fair (see BitmaskStabilityTests).
+    public void UpdateActiveItems(int activeItems)
+    {
+        Progress = Progress.WithActiveItems(activeItems);
+    }
 }

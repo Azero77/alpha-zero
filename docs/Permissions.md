@@ -12,12 +12,13 @@ This document defines the standard permission strings used across the AlphaZero 
 | :--- | :--- |
 | `courses:Create` | Initialize a new course in Draft status. |
 | `courses:View` | View course structure and content. |
-| `courses:Edit` | Add/Reorder sections, lessons, and quizzes. |
+| `courses:Edit` | Add/Reorder sections, lessons, and quizzes; rename/archive/soft-delete courses and sections; deactivate enrollments. |
 | `courses:Submit` | Submit a course for QA review. |
 | `courses:Approve` | Perform final QA and mark as Approved. |
 | `courses:Reject` | Send course back to worker with feedback. |
 | `courses:Publish` | Make course visible to all students in the tenant. |
 | `courses:Enroll` | Join a course via code or payment. |
+| `enrollments:List` | List a student's enrollments (all statuses) for support/admin tooling. |
   
 ## 🎥 Video Module
 | Permission | Description |
@@ -33,6 +34,7 @@ This document defines the standard permission strings used across the AlphaZero 
 | `subjects:Create` | Create new grade/subject categories. |
 | `subjects:List` | List all subjects in the tenant. |
 | `subjects:View` | View specific subject details. |
+| `subjects:Edit` | Rename and soft-delete subject categories (refused while referenced by a course). |
 
 ## 🛡️ Identity Module
 | Permission | Description |

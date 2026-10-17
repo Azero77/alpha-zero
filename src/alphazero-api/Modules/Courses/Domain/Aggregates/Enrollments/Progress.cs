@@ -54,6 +54,14 @@ public record Progress
         return Bitmask.Get(bitIndex);
     }
 
+    // Supports instructor-driven curriculum edits: the earned completion bits are
+    // stable (see BitmaskStabilityTests); only the active denominator is refilled.
+    public Progress WithActiveItems(int activeItems)
+    {
+        var clamped = Math.Max(0, activeItems);
+        return new Progress(new BitArray(Bitmask), clamped);
+    }
+
     public double CompletionPercentage
     {
         get
