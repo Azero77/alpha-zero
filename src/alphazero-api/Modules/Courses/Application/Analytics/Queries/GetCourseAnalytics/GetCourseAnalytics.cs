@@ -1,10 +1,16 @@
 using AlphaZero.Modules.Courses.Application.Queries;
 using ErrorOr;
+using FluentValidation;
 using MediatR;
 
 namespace AlphaZero.Modules.Courses.Application.Analytics.Queries.GetCourseAnalytics;
 
 public record GetCourseAnalyticsQuery(Guid CourseId) : IRequest<ErrorOr<CourseAnalyticsDto>>;
+
+public class GetCourseAnalyticsQueryValidator : AbstractValidator<GetCourseAnalyticsQuery>
+{
+    public GetCourseAnalyticsQueryValidator() => RuleFor(x => x.CourseId).NotEmpty();
+}
 
 public record CourseAnalyticsDto(
     Guid CourseId,

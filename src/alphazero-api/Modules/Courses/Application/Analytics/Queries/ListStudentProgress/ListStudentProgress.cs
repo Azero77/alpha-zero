@@ -2,11 +2,22 @@ using AlphaZero.Modules.Courses.Application.Enrollements.Queries.GetEnrollement;
 using AlphaZero.Modules.Courses.Application.Queries;
 using AlphaZero.Shared.Queries;
 using ErrorOr;
+using FluentValidation;
 using MediatR;
 
 namespace AlphaZero.Modules.Courses.Application.Analytics.Queries.ListStudentProgress;
 
 public record ListStudentProgressQuery(Guid CourseId, int Page, int PerPage) : IRequest<ErrorOr<PagedResult<EnrollmentDto>>>;
+
+public class ListStudentProgressQueryValidator : AbstractValidator<ListStudentProgressQuery>
+{
+    public ListStudentProgressQueryValidator()
+    {
+        RuleFor(x => x.CourseId).NotEmpty();
+        RuleFor(x => x.Page).ValidPage();
+        RuleFor(x => x.PerPage).ValidPerPage();
+    }
+}
 
 public class ListStudentProgressQueryHandler : IRequestHandler<ListStudentProgressQuery, ErrorOr<PagedResult<EnrollmentDto>>>
 {

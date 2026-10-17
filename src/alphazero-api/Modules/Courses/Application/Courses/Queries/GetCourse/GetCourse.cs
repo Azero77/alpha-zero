@@ -1,5 +1,6 @@
 using AlphaZero.Modules.Courses.Application.Queries;
 using ErrorOr;
+using FluentValidation;
 using MediatR;
 using System.Text.Json;
 
@@ -34,6 +35,11 @@ public record ResourceDto(
     JsonElement Metadata);
 
 public record GetCourseQuery(Guid CourseId) : IRequest<ErrorOr<CourseDto>>;
+
+public class GetCourseQueryValidator : AbstractValidator<GetCourseQuery>
+{
+    public GetCourseQueryValidator() => RuleFor(x => x.CourseId).NotEmpty();
+}
 
 public sealed class GetCourseQueryHandler : IRequestHandler<GetCourseQuery, ErrorOr<CourseDto>>
 {

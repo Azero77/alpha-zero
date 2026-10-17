@@ -2,11 +2,21 @@ using AlphaZero.Modules.Courses.Application.Queries;
 using AlphaZero.Modules.Courses.Application.Subjects.Queries.GetSubject;
 using AlphaZero.Shared.Queries;
 using ErrorOr;
+using FluentValidation;
 using MediatR;
 
 namespace AlphaZero.Modules.Courses.Application.Subjects.Queries.ListSubjects;
 
 public record ListSubjectsQuery(int Page = 1, int PerPage = 10) : IRequest<ErrorOr<PagedResult<SubjectDto>>>;
+
+public class ListSubjectsQueryValidator : AbstractValidator<ListSubjectsQuery>
+{
+    public ListSubjectsQueryValidator()
+    {
+        RuleFor(x => x.Page).ValidPage();
+        RuleFor(x => x.PerPage).ValidPerPage();
+    }
+}
 
 public sealed class ListSubjectsQueryHandler : IRequestHandler<ListSubjectsQuery, ErrorOr<PagedResult<SubjectDto>>>
 {

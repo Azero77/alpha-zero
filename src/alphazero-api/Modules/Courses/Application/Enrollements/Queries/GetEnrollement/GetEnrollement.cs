@@ -1,5 +1,6 @@
 using AlphaZero.Modules.Courses.Application.Queries;
 using ErrorOr;
+using FluentValidation;
 using MediatR;
 
 namespace AlphaZero.Modules.Courses.Application.Enrollements.Queries.GetEnrollement;
@@ -14,6 +15,11 @@ public record EnrollmentDto(
     Guid TenantId);
 
 public record GetEnrollementQuery(Guid EnrollmentId) : IRequest<ErrorOr<EnrollmentDto>>;
+
+public class GetEnrollementQueryValidator : AbstractValidator<GetEnrollementQuery>
+{
+    public GetEnrollementQueryValidator() => RuleFor(x => x.EnrollmentId).NotEmpty();
+}
 
 public sealed class GetEnrollementQueryHandler : IRequestHandler<GetEnrollementQuery, ErrorOr<EnrollmentDto>>
 {

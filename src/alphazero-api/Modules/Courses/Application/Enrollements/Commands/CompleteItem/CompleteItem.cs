@@ -1,12 +1,23 @@
 using AlphaZero.Modules.Courses.Application.Repositories;
 using AlphaZero.Shared.Application;
 using ErrorOr;
+using FluentValidation;
 using MediatR;
 using Microsoft.Extensions.Logging;
 
 namespace AlphaZero.Modules.Courses.Application.Enrollements.Commands.CompleteItem;
 
 public record CompleteItemCommand(Guid EnrollmentId, int BitIndex) : ICommand<Success>;
+
+public class CompleteItemCommandValidator : AbstractValidator<CompleteItemCommand>
+{
+    public CompleteItemCommandValidator()
+    {
+        RuleFor(x => x.EnrollmentId).NotEmpty();
+        RuleFor(x => x.BitIndex).GreaterThanOrEqualTo(0)
+            .WithMessage("BitIndex must be zero or a positive item index.");
+    }
+}
 
 public sealed class CompleteItemCommandHandler : IRequestHandler<CompleteItemCommand, ErrorOr<Success>>
 {

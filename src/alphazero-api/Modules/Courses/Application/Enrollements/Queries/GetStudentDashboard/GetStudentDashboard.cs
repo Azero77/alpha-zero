@@ -1,6 +1,7 @@
 using AlphaZero.Modules.Courses.Application.Queries;
 using AlphaZero.Modules.Courses.Application.Enrollements.Queries.GetEnrollement;
 using ErrorOr;
+using FluentValidation;
 using MediatR;
 using System.Collections.Generic;
 using System.Linq;
@@ -8,6 +9,11 @@ using System.Linq;
 namespace AlphaZero.Modules.Courses.Application.Enrollements.Queries.GetStudentDashboard;
 
 public record GetStudentDashboardQuery(Guid StudentId) : IRequest<ErrorOr<Dictionary<Guid, List<EnrollmentDto>>>>;
+
+public class GetStudentDashboardQueryValidator : AbstractValidator<GetStudentDashboardQuery>
+{
+    public GetStudentDashboardQueryValidator() => RuleFor(x => x.StudentId).NotEmpty();
+}
 
 public sealed class GetStudentDashboardQueryHandler : IRequestHandler<GetStudentDashboardQuery, ErrorOr<Dictionary<Guid, List<EnrollmentDto>>>>
 {

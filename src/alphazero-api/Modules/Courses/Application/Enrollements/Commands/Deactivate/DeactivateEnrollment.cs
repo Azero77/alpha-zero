@@ -2,12 +2,22 @@ using AlphaZero.Modules.Courses.Domain.Aggregates.Enrollements;
 using AlphaZero.Shared.Application;
 using AlphaZero.Shared.Infrastructure.Repositores;
 using ErrorOr;
+using FluentValidation;
 using MediatR;
 using Microsoft.Extensions.Logging;
 
 namespace AlphaZero.Modules.Courses.Application.Enrollements.Commands.Deactivate;
 
 public record DeactivateEnrollmentCommand(Guid UserId, Guid CourseId) : ICommand<Success>;
+
+public class DeactivateEnrollmentCommandValidator : AbstractValidator<DeactivateEnrollmentCommand>
+{
+    public DeactivateEnrollmentCommandValidator()
+    {
+        RuleFor(x => x.UserId).NotEmpty();
+        RuleFor(x => x.CourseId).NotEmpty();
+    }
+}
 
 public sealed class DeactivateEnrollmentCommandHandler(
     IRepository<Enrollement> repository,

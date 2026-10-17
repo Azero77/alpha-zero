@@ -1,4 +1,5 @@
 using ErrorOr;
+using FluentValidation;
 using MediatR;
 using AlphaZero.Modules.Courses.Application.Repositories;
 using AlphaZero.Modules.Courses.Application.Queries;
@@ -16,6 +17,11 @@ public record CourseOverviewDto(
     string ETag);
 
 public record GetCourseOverviewQuery(Guid CourseId) : IRequest<ErrorOr<CourseOverviewDto>>;
+
+public class GetCourseOverviewQueryValidator : AbstractValidator<GetCourseOverviewQuery>
+{
+    public GetCourseOverviewQueryValidator() => RuleFor(x => x.CourseId).NotEmpty();
+}
 
 public class GetCourseOverviewQueryHandler : IRequestHandler<GetCourseOverviewQuery, ErrorOr<CourseOverviewDto>>
 {
