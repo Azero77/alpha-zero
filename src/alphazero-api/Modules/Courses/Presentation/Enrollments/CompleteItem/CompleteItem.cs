@@ -62,21 +62,7 @@ public class CompleteItemEndpoint : Endpoint<CompleteItemRequest>
 }
 
 /// <summary>
-/// ⚠️ TEMPORARY legacy alias (#31): already-deployed frontend builds still call the misspelled
-/// '/courses/enrollements/{id}/complete' route. This alias serves identical behavior while those
-/// clients roll over to the correctly-spelled primary route above. Scheduled for removal next
-/// release cycle — do not add new consumers of the legacy spelling.
+/// ⛔ Route spelling policy (#31): the legacy misspelled '/courses/enrollements/{id}/complete'
+/// route was retired outright — the app is not yet published, so no deployed clients depend
+/// on the old spelling. The correctly-spelled route above is the only surface.
 /// </summary>
-public class CompleteItemLegacyAliasEndpoint : CompleteItemEndpoint
-{
-    public CompleteItemLegacyAliasEndpoint(CoursesModule module) : base(module)
-    {
-    }
-
-    public override void Configure()
-    {
-        Post("/courses/enrollements/{EnrollmentId}/complete");
-        this.AccessControl("enrollments:Complete", (req, tenantId) => ResourceArn.ForEnrollment(tenantId, req.EnrollmentId));
-        Description(d => d.WithTags("Enrollment"));
-    }
-}

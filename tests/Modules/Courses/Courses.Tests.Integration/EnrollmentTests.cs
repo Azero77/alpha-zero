@@ -144,7 +144,7 @@ public class EnrollmentTests : BaseIntegrationTest
     }
 
     [Fact]
-    public async Task CompleteItem_LegacyAliasRoute_Should_ServeSameBehavior_WhileCorrectRouteIsPrimary()
+    public async Task CompleteItem_PrimaryRoute_Should_UseCorrectSpelling_And_LegacyRouteMustNotRoute()
     {
         // Arrange
         var tenantId = Guid.NewGuid();
@@ -155,27 +155,20 @@ public class EnrollmentTests : BaseIntegrationTest
         var enrollResp = await Client.PostAsJsonAsync("/courses/enroll", new EnrollInCourseRequest { StudentId = studentId, CourseId = courseId });
         var enrollmentId = (await enrollResp.Content.ReadFromJsonAsync<EnrollInCourseResponse>())!.EnrollmentId;
 
-        // Act: the legacy misspelled route must keep serving the primary behavior (#31 alias, removal next cycle)
-        var legacyResp = await Client.PostAsJsonAsync($"/courses/enrollements/{enrollmentId}/complete", new { BitIndex = 0 });
+        // Act: the correctly-spelled route is the primary (and only) surface
+        var primaryResp = await Client.PostAsJsonAsync($"/courses/enrollments/{enrollmentId}/complete", new { BitIndex = 0 });
 
-        // Act: the correctly-spelled route is the primary surface
-        var primaryResp = await Client.PostAsJsonAsync($"/courses/enrollments/{enrollmentId}/complete", new { BitIndex = 1 });
+        // Act: the misspelled legacy spelling must not route anywhere (#31: app is unpublished,
+        // so the compat alias was retired — the rename is a hard cutover, not an alias rollout)
+        var legacyRouteResp = await Client.PostAsJsonAsync($"/courses/enrollements/{enrollmentId}/complete", new { BitIndex = 1 });
 
-        // Act: not-found parity — both routes serve the same 404 when the enrollment does not exist
-        var legacyNotFoundResp = await Client.PostAsJsonAsync($"/courses/enrollements/{Guid.NewGuid()}/complete", new { BitIndex = 0 });
-        var primaryNotFoundResp = await Client.PostAsJsonAsync($"/courses/enrollments/{Guid.NewGuid()}/complete", new { BitIndex = 0 });
-
-        // Assert: same status codes (204 NoContent primary behavior)…
-        legacyResp.StatusCode.Should().Be(HttpStatusCode.NoContent);
+        // Assert
         primaryResp.StatusCode.Should().Be(HttpStatusCode.NoContent);
+        legacyRouteResp.StatusCode.Should().Be(HttpStatusCode.NotFound);
 
-        // Assert: …and identical error-path status codes on both routes for a nonexistent enrollment
-        legacyNotFoundResp.StatusCode.Should().NotBe(HttpStatusCode.NoContent);
-        legacyNotFoundResp.StatusCode.Should().Be(primaryNotFoundResp.StatusCode);
-
-        // Assert: the alias serves the real handler, not a stub — legacy completion is persisted, 1 of 2 items = 50%
+        // Assert: the primary route persists real state — 1 of 2 items = 50%
         var enrollment = await Client.GetFromJsonAsync<EnrollmentResponse>($"/courses/enrollments/{enrollmentId}");
-        enrollment!.CompletionPercentage.Should().Be(100.0);
+        enrollment!.CompletionPercentage.Should().Be(50.0);
     }
 
     [Fact]
