@@ -75,11 +75,10 @@ public class StudentEnrollmentsListingTests : BaseIntegrationTest
         var page2 = await Client.GetFromJsonAsync<PagedResult<EnrollmentDto>>($"/courses/enrollments?StudentId={studentId}&Page=2&PerPage=2");
         page2!.Items.Should().HaveCount(1);
 
-        // Page 2 ordering (newest first): the deactivated seeded row lands here — statuses are visible
+        // Statuses are visible in the listing: the deactivated seeded row must appear somewhere across pages
         var combined = page.Items.Concat(page2.Items).ToList();
-        combined.Should().Contain(e => e.Id == activeEnrollmentId);
-        combined.Should().Contain(e => e.Status.ToString().IndexOf("Inactive", StringComparison.OrdinalIgnoreCase) >= 0
-            || e.Id == activeEnrollmentId);
+        combined.Should().Contain(e => e.Id == activeEnrollmentId && e.Status == "Active");
+        combined.Should().Contain(e => e.Status == "Inactive");
     }
 
     [Fact]
