@@ -21,8 +21,9 @@ Issue-specific deltas (§3) override the generic text where they differ.
 You are the implementation owner for exactly one issue in this repo:
 
   ISSUE: ⟨n⟩
-  BRANCH: spec/⟨n⟩-⟨slug⟩        (derived from the issue title; created from current main, or from
-                                  main + any upstream branch if the issue body says it builds on one)
+  BRANCH: spec/⟨n⟩-⟨slug⟩        (derived from the issue title; created from current
+                                  CourseContentManagement — the integration branch — or from that
+                                  branch + any upstream if the issue body names one)
 
 Do all of this in this one conversation, in this order. Do not wait for me to confirm routine steps;
 ask only if the spec itself is ambiguous or contradicts the code you find.
@@ -75,7 +76,9 @@ ask only if the spec itself is ambiguous or contradicts the code you find.
      accidental module-wide renames outside what the issue sanctions).
 
 7. SHIP:
-   - git push to the branch, open a PR closing the issue:
+   - git push to the branch, open a PR **targeting `CourseContentManagement` — never `main`**,
+     closing the issue (main stays frozen until the whole spec chain lands; a maintainer will
+     make one release PR from `CourseContentManagement` to `main` at the end):
      body: "Closes #⟨n⟩" first line; then a one-line summary, then test-evidence bullet list
      (tests added, acceptance from issue's Testing Decisions each individually addressable).
    - Do NOT merge unless the repo convention here (docs/agents) allows it; if the merge isn't
@@ -150,8 +153,9 @@ otherwise follow §2.2's slice/test-first sequence manually.
 
 - Launch in any order that the native dependencies permit — GitHub's `blocked_by` count (shown
   earlier) is the live gate: an agent's issue must show `blocked_by: 0` to start.
-- One conversation per issue, one branch per issue; merge normalizes to `main` (or per the repo's
-  episodic-flow integration branch, per `docs/agents/issue-tracker.md` conventions).
+- One conversation per issue, one branch per issue; every issue's PR targets
+  **`CourseContentManagement`** (the integration branch). `main` is frozen for the duration of
+  the chain; when the last issue merges, one release PR takes `CourseContentManagement` → `main`.
 - Merge order = dependency order: #30 → #31 → {#29, #35, then #32 (+#34)} → #33.
 - If a spec's acceptance needs an upstream one (#33 evictions of #29's new mutations, for example),
   verify the blocker's merge landed before opening the downstream; that is what the edge prevents.
