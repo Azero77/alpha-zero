@@ -306,6 +306,12 @@ namespace AlphaZero.Modules.Courses.Infrastructure.Migrations
                     b.Property<DateTime>("EnrolledOn")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<Guid?>("LastStatusChangedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("LastStatusChangedOn")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasColumnType("text");

@@ -24,7 +24,7 @@ public sealed class DeactivateEnrollmentCommandHandler(
             return Error.NotFound("Enrollment.NotFound", "Enrollment not found for this user and course.");
         }
 
-        var result = enrollment.Deactivate(ActorOf(authorizationContextProvider));
+        var result = enrollment.Deactivate(EnrollmentTransitionActor.Resolve(authorizationContextProvider));
         if (result.IsError) return result.Errors;
 
         repository.Update(enrollment);
@@ -35,21 +35,4 @@ public sealed class DeactivateEnrollmentCommandHandler(
         return Result.Success;
     }
 
-    /// <summary>
-    /// Transitions record who fired them (issue #34 story #10). Admin/support actor comes from the
-    /// authorization context; the automation (saga) path carries no principal and stays null.
-    /// </summary>
-    internal static Guid? ActorOf(IAuthorizationContextProvider provider)
-    {
-        try
-        {
-            var contextResult = provider.Get();
-            return contextResult.IsError ? null : contextResult.Value?.Id;
-        }
-        catch
-        {
-            // contexts outside a request (bus consumers) have no actor
-            return null;
-        }
-    }
 }
