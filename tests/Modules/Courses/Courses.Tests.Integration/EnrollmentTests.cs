@@ -161,9 +161,21 @@ public class EnrollmentTests : BaseIntegrationTest
         // Act: the correctly-spelled route is the primary surface
         var primaryResp = await Client.PostAsJsonAsync($"/courses/enrollments/{enrollmentId}/complete", new { BitIndex = 1 });
 
-        // Assert: same status codes on both routes (204 NoContent)
+        // Act: not-found parity — both routes serve the same 404 when the enrollment does not exist
+        var legacyNotFoundResp = await Client.PostAsJsonAsync($"/courses/enrollements/{Guid.NewGuid()}/complete", new { BitIndex = 0 });
+        var primaryNotFoundResp = await Client.PostAsJsonAsync($"/courses/enrollments/{Guid.NewGuid()}/complete", new { BitIndex = 0 });
+
+        // Assert: same status codes (204 NoContent primary behavior)…
         legacyResp.StatusCode.Should().Be(HttpStatusCode.NoContent);
         primaryResp.StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+        // Assert: …and identical error-path status codes on both routes for a nonexistent enrollment
+        legacyNotFoundResp.StatusCode.Should().NotBe(HttpStatusCode.NoContent);
+        legacyNotFoundResp.StatusCode.Should().Be(primaryNotFoundResp.StatusCode);
+
+        // Assert: the alias serves the real handler, not a stub — legacy completion is persisted, 1 of 2 items = 50%
+        var enrollment = await Client.GetFromJsonAsync<EnrollmentResponse>($"/courses/enrollments/{enrollmentId}");
+        enrollment!.CompletionPercentage.Should().Be(100.0);
     }
 
     [Fact]

@@ -7,7 +7,7 @@ using FastEndpoints;
 using MediatR;
 using Microsoft.AspNetCore.Http;
 
-namespace AlphaZero.Modules.Identity.Presentation.Enrollments.CompleteItem;
+namespace AlphaZero.Modules.Courses.Presentation.Enrollments.CompleteItem;
 
 public record CompleteItemRequest
 {
