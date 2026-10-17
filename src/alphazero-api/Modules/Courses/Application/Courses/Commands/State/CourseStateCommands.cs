@@ -3,6 +3,7 @@ using AlphaZero.Modules.Courses.Domain.Aggregates.Courses;
 using AlphaZero.Modules.Courses.Domain.Services;
 using AlphaZero.Shared.Application;
 using ErrorOr;
+using FluentValidation;
 using MediatR;
 using Microsoft.Extensions.Logging;
 
@@ -14,6 +15,36 @@ public record ApproveCourseCommand(Guid CourseId) : ICommand<Success>;
 public record RejectCourseCommand(Guid CourseId, string Reason) : ICommand<Success>;
 public record PublishCourseCommand(Guid CourseId, bool CanDirectPublish = false) : ICommand<Success>;
 public record ArchiveCourseCommand(Guid CourseId) : ICommand<Success>;
+
+// Validators
+public class SubmitCourseForReviewCommandValidator : AbstractValidator<SubmitCourseForReviewCommand>
+{
+    public SubmitCourseForReviewCommandValidator() => RuleFor(x => x.CourseId).NotEmpty();
+}
+
+public class ApproveCourseCommandValidator : AbstractValidator<ApproveCourseCommand>
+{
+    public ApproveCourseCommandValidator() => RuleFor(x => x.CourseId).NotEmpty();
+}
+
+public class RejectCourseCommandValidator : AbstractValidator<RejectCourseCommand>
+{
+    public RejectCourseCommandValidator()
+    {
+        RuleFor(x => x.CourseId).NotEmpty();
+        RuleFor(x => x.Reason).NotEmpty();
+    }
+}
+
+public class PublishCourseCommandValidator : AbstractValidator<PublishCourseCommand>
+{
+    public PublishCourseCommandValidator() => RuleFor(x => x.CourseId).NotEmpty();
+}
+
+public class ArchiveCourseCommandValidator : AbstractValidator<ArchiveCourseCommand>
+{
+    public ArchiveCourseCommandValidator() => RuleFor(x => x.CourseId).NotEmpty();
+}
 
 // Handlers
 public sealed class CourseStateHandlers : 

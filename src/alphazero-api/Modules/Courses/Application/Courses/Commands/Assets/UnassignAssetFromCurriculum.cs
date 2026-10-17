@@ -1,6 +1,7 @@
 using AlphaZero.Modules.Courses.Application.Repositories;
 using AlphaZero.Shared.Application;
 using ErrorOr;
+using FluentValidation;
 using MediatR;
 
 namespace AlphaZero.Modules.Courses.Application.Courses.Commands.Assets;
@@ -9,6 +10,15 @@ public record UnassignAssetFromCurriculumCommand(
     Guid CourseId,
     Guid ItemId
 ) : ICommand<Success>;
+
+public class UnassignAssetFromCurriculumCommandValidator : AbstractValidator<UnassignAssetFromCurriculumCommand>
+{
+    public UnassignAssetFromCurriculumCommandValidator()
+    {
+        RuleFor(x => x.CourseId).NotEmpty();
+        RuleFor(x => x.ItemId).NotEmpty();
+    }
+}
 
 public sealed class UnassignAssetFromCurriculumCommandHandler 
     : IRequestHandler<UnassignAssetFromCurriculumCommand, ErrorOr<Success>>

@@ -2,6 +2,7 @@ using AlphaZero.Modules.Courses.Domain.Aggregates.Courses;
 using AlphaZero.Shared.Application;
 using AlphaZero.Shared.Infrastructure.Repositores;
 using ErrorOr;
+using FluentValidation;
 using MediatR;
 using System.Text.Json;
 
@@ -11,6 +12,11 @@ public record MarkCourseAssetAvailableCommand(
     Guid AssetId,
     JsonElement? Payload = null
 ) : ICommand<Success>;
+
+public class MarkCourseAssetAvailableCommandValidator : AbstractValidator<MarkCourseAssetAvailableCommand>
+{
+    public MarkCourseAssetAvailableCommandValidator() => RuleFor(x => x.AssetId).NotEmpty();
+}
 
 public sealed class MarkCourseAssetAvailableCommandHandler 
     : IRequestHandler<MarkCourseAssetAvailableCommand, ErrorOr<Success>>

@@ -2,12 +2,22 @@ using AlphaZero.Modules.Courses.Domain.Aggregates.Courses;
 using AlphaZero.Shared.Application;
 using AlphaZero.Shared.Infrastructure.Repositores;
 using ErrorOr;
+using FluentValidation;
 using MediatR;
 using Microsoft.Extensions.Logging;
 
 namespace AlphaZero.Modules.Courses.Application.Courses.Commands.Assets;
 
 public record MarkCourseAssetFailedCommand(Guid AssetId, string Reason) : ICommand<Success>;
+
+public class MarkCourseAssetFailedCommandValidator : AbstractValidator<MarkCourseAssetFailedCommand>
+{
+    public MarkCourseAssetFailedCommandValidator()
+    {
+        RuleFor(x => x.AssetId).NotEmpty();
+        RuleFor(x => x.Reason).NotEmpty();
+    }
+}
 
 public sealed class MarkCourseAssetFailedCommandHandler 
     : IRequestHandler<MarkCourseAssetFailedCommand, ErrorOr<Success>>

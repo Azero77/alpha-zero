@@ -3,11 +3,21 @@ using AlphaZero.Modules.Courses.Domain.Aggregates.Courses;
 using AlphaZero.Shared.Application;
 using AlphaZero.Shared.Infrastructure.Repositores;
 using ErrorOr;
+using FluentValidation;
 using MediatR;
 
 namespace AlphaZero.Modules.Courses.Application.Courses.Commands.Assets;
 
 public record DismissAssetCommand(Guid CourseId, Guid AssetId) : ICommand<Success>;
+
+public class DismissAssetCommandValidator : AbstractValidator<DismissAssetCommand>
+{
+    public DismissAssetCommandValidator()
+    {
+        RuleFor(x => x.CourseId).NotEmpty();
+        RuleFor(x => x.AssetId).NotEmpty();
+    }
+}
 
 public sealed class DismissAssetCommandHandler 
     : IRequestHandler<DismissAssetCommand, ErrorOr<Success>>
