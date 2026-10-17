@@ -1,5 +1,5 @@
 using AlphaZero.Modules.Courses.Domain.Aggregates.Courses;
-using AlphaZero.Modules.Courses.Domain.Aggregates.Enrollements;
+using AlphaZero.Modules.Courses.Domain.Aggregates.Enrollments;
 using AlphaZero.Modules.Courses.Domain.Aggregates.Subject;
 using AlphaZero.Modules.Courses.Infrastructure.Sagas.CourseRedemption;
 using AlphaZero.Modules.Courses.Infrastructure.Sagas.CourseRevocation;
@@ -21,7 +21,7 @@ public class AppDbContext : DbContext,ITenantDbContext
     }
     public DbSet<Course> Courses => Set<Course>();
     public DbSet<Subject> Subjects => Set<Subject>();
-    public DbSet<Enrollement> Enrollements => Set<Enrollement>();
+    public DbSet<Enrollment> Enrollments => Set<Enrollment>();
     public DbSet<CourseSection> CourseSections => Set<CourseSection>();
     public DbSet<CoursePlan> CoursePlans => Set<CoursePlan>();
     public DbSet<CourseAsset> CourseAssets => Set<CourseAsset>();

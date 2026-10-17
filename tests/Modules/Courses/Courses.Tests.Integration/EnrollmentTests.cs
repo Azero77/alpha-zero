@@ -6,8 +6,8 @@ using AlphaZero.Modules.Courses.Presentation.Courses.Create;
 using AlphaZero.Modules.Courses.Presentation.Courses.Get;
 using AlphaZero.Modules.Courses.Presentation.Courses.Plans.AddPlan;
 using AlphaZero.Modules.Courses.Presentation.Courses.Pool;
-using AlphaZero.Modules.Courses.Presentation.Enrollements.Enroll;
-using AlphaZero.Modules.Courses.Presentation.Enrollements.Get;
+using AlphaZero.Modules.Courses.Presentation.Enrollments.Enroll;
+using AlphaZero.Modules.Courses.Presentation.Enrollments.Get;
 using AlphaZero.Modules.Courses.Presentation.Subjects.Create;
 using AlphaZero.Shared.Domain;
 using Courses.Tests.Integration.Abstractions;
@@ -97,7 +97,7 @@ public class EnrollmentTests : BaseIntegrationTest
         response.StatusCode.Should().Be(HttpStatusCode.Created);
         var enrollmentId = (await response.Content.ReadFromJsonAsync<EnrollInCourseResponse>())!.EnrollmentId;
 
-        var enrollment = await Client.GetFromJsonAsync<EnrollementResponse>($"/courses/enrollments/{enrollmentId}");
+        var enrollment = await Client.GetFromJsonAsync<EnrollmentResponse>($"/courses/enrollments/{enrollmentId}");
         enrollment.Should().NotBeNull();
         enrollment!.StudentId.Should().Be(studentId);
         enrollment.CourseId.Should().Be(courseId);
@@ -117,11 +117,11 @@ public class EnrollmentTests : BaseIntegrationTest
         var enrollmentId = (await enrollResp.Content.ReadFromJsonAsync<EnrollInCourseResponse>())!.EnrollmentId;
 
         // Act: Complete first item (BitIndex 0)
-        var completeResp = await Client.PostAsJsonAsync($"/courses/enrollements/{enrollmentId}/complete", new { BitIndex = 0 });
+        var completeResp = await Client.PostAsJsonAsync($"/courses/enrollments/{enrollmentId}/complete", new { BitIndex = 0 });
         completeResp.StatusCode.Should().Be(HttpStatusCode.NoContent);
 
         // Assert: 1 of 2 items complete = 50%
-        var enrollment = await Client.GetFromJsonAsync<EnrollementResponse>($"/courses/enrollments/{enrollmentId}");
+        var enrollment = await Client.GetFromJsonAsync<EnrollmentResponse>($"/courses/enrollments/{enrollmentId}");
         enrollment!.CompletionPercentage.Should().Be(50.0);
     }
 
@@ -144,6 +144,34 @@ public class EnrollmentTests : BaseIntegrationTest
     }
 
     [Fact]
+    public async Task CompleteItem_PrimaryRoute_Should_UseCorrectSpelling_And_LegacyRouteMustNotRoute()
+    {
+        // Arrange
+        var tenantId = Guid.NewGuid();
+        var courseId = await CreatePublishedCourse(tenantId);
+        var studentId = Guid.NewGuid();
+        SetTenant(tenantId);
+
+        var enrollResp = await Client.PostAsJsonAsync("/courses/enroll", new EnrollInCourseRequest { StudentId = studentId, CourseId = courseId });
+        var enrollmentId = (await enrollResp.Content.ReadFromJsonAsync<EnrollInCourseResponse>())!.EnrollmentId;
+
+        // Act: the correctly-spelled route is the primary (and only) surface
+        var primaryResp = await Client.PostAsJsonAsync($"/courses/enrollments/{enrollmentId}/complete", new { BitIndex = 0 });
+
+        // Act: the misspelled legacy spelling must not route anywhere (#31: app is unpublished,
+        // so the compat alias was retired — the rename is a hard cutover, not an alias rollout)
+        var legacyRouteResp = await Client.PostAsJsonAsync($"/courses/enrollements/{enrollmentId}/complete", new { BitIndex = 1 });
+
+        // Assert
+        primaryResp.StatusCode.Should().Be(HttpStatusCode.NoContent);
+        legacyRouteResp.StatusCode.Should().Be(HttpStatusCode.NotFound);
+
+        // Assert: the primary route persists real state — 1 of 2 items = 50%
+        var enrollment = await Client.GetFromJsonAsync<EnrollmentResponse>($"/courses/enrollments/{enrollmentId}");
+        enrollment!.CompletionPercentage.Should().Be(50.0);
+    }
+
+    [Fact]
     public async Task CompleteItem_Should_Fail_WhenIndexIsOutOfRange()
     {
         // Arrange
@@ -156,7 +184,7 @@ public class EnrollmentTests : BaseIntegrationTest
         var enrollmentId = (await enrollResp.Content.ReadFromJsonAsync<EnrollInCourseResponse>())!.EnrollmentId;
 
         // Act: Try to complete bit index 5 (only 0 and 1 exist)
-        var completeResp = await Client.PostAsJsonAsync($"/courses/enrollements/{enrollmentId}/complete", new { BitIndex = 5 });
+        var completeResp = await Client.PostAsJsonAsync($"/courses/enrollments/{enrollmentId}/complete", new { BitIndex = 5 });
 
         // Assert
         completeResp.StatusCode.Should().Be(HttpStatusCode.BadRequest);

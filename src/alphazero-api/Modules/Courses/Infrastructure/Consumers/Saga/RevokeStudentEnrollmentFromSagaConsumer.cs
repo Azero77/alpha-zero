@@ -1,4 +1,4 @@
-using AlphaZero.Modules.Courses.Application.Enrollements.Commands.Deactivate;
+using AlphaZero.Modules.Courses.Application.Enrollments.Commands.Deactivate;
 using AlphaZero.Modules.Courses.IntegrationEvents;
 using MassTransit;
 using Microsoft.Extensions.Logging;

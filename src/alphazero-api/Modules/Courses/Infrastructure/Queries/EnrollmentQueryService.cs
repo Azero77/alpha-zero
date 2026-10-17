@@ -1,6 +1,6 @@
-using AlphaZero.Modules.Courses.Application.Enrollements.Queries.GetEnrollement;
+using AlphaZero.Modules.Courses.Application.Enrollments.Queries.GetEnrollment;
 using AlphaZero.Modules.Courses.Application.Queries;
-using AlphaZero.Modules.Courses.Domain.Aggregates.Enrollements;
+using AlphaZero.Modules.Courses.Domain.Aggregates.Enrollments;
 using AlphaZero.Modules.Courses.Infrastructure.Persistance;
 using AlphaZero.Shared.Queries;
 using Microsoft.EntityFrameworkCore;
@@ -19,9 +19,9 @@ public class EnrollmentQueryService : IEnrollmentQueryService
 
     public async Task<PagedResult<EnrollmentDto>> GetStudentEnrollmentsAsync(Guid studentId, int page, int perPage, CancellationToken cancellationToken = default)
     {
-        var query = _context.Set<Enrollement>()
+        var query = _context.Set<Enrollment>()
             .AsNoTracking()
-            .Where(e => e.StudentId == studentId && e.Status == EnrollementStatus.Active);
+            .Where(e => e.StudentId == studentId && e.Status == EnrollmentStatus.Active);
 
         var totalCount = await query.CountAsync(cancellationToken);
 
@@ -44,7 +44,7 @@ public class EnrollmentQueryService : IEnrollmentQueryService
 
     public async Task<List<EnrollmentDto>> GetStudentEnrollmentsForTenantAsync(Guid studentId, Guid tenantId, CancellationToken cancellationToken = default)
     {
-        return await _context.Set<Enrollement>()
+        return await _context.Set<Enrollment>()
             .AsNoTracking()
             .Where(e => e.StudentId == studentId && e.TenantId == tenantId)
             .Select(e => new EnrollmentDto(
@@ -59,7 +59,7 @@ public class EnrollmentQueryService : IEnrollmentQueryService
 
     public async Task<PagedResult<EnrollmentDto>> GetCourseEnrollmentsAsync(Guid courseId, int page, int perPage, CancellationToken cancellationToken = default)
     {
-        var query = _context.Set<Enrollement>()
+        var query = _context.Set<Enrollment>()
             .AsNoTracking()
             .Where(e => e.CourseId == courseId);
 
@@ -84,10 +84,10 @@ public class EnrollmentQueryService : IEnrollmentQueryService
 
     public async Task<List<EnrollmentDto>> GetStudentEnrollmentsAcrossTenantsAsync(Guid studentId, CancellationToken cancellationToken = default)
     {
-        return await _context.Set<Enrollement>()
+        return await _context.Set<Enrollment>()
             .IgnoreQueryFilters()
             .AsNoTracking()
-            .Where(e => e.StudentId == studentId && e.Status == EnrollementStatus.Active)
+            .Where(e => e.StudentId == studentId && e.Status == EnrollmentStatus.Active)
             .OrderByDescending(e => e.EnrolledOn)
             .Select(e => new EnrollmentDto(
                 e.Id,
@@ -102,7 +102,7 @@ public class EnrollmentQueryService : IEnrollmentQueryService
 
     public async Task<EnrollmentDto?> GetEnrollmentByIdAsync(Guid enrollmentId, CancellationToken cancellationToken = default)
     {
-        return await _context.Set<Enrollement>()
+        return await _context.Set<Enrollment>()
             .AsNoTracking()
             .Where(e => e.Id == enrollmentId)
             .Select(e => new EnrollmentDto(

@@ -1,4 +1,4 @@
-using AlphaZero.Modules.Courses.Application.Enrollements.Queries.GetEnrollement;
+using AlphaZero.Modules.Courses.Application.Enrollments.Queries.GetEnrollment;
 using AlphaZero.Modules.Courses.Application.Queries;
 using AlphaZero.Shared.Queries;
 using ErrorOr;
