@@ -67,7 +67,9 @@ public static class DependencyInjection
         moduleServices.AddScoped<ICourseMetadataSyncCommandHandler, AssessmentCourseMetadataSyncCommandHandler>();
 
         moduleServices.AddScoped<AlphaZero.Modules.Courses.Application.Queries.ICourseQueryService, AlphaZero.Modules.Courses.Infrastructure.Queries.CourseQueryService>();
+        moduleServices.Decorate<AlphaZero.Modules.Courses.Application.Queries.ICourseQueryService, AlphaZero.Modules.Courses.Infrastructure.Caching.CachedCourseQueryService>();
         moduleServices.AddScoped<AlphaZero.Modules.Courses.Application.Queries.ISubjectQueryService, AlphaZero.Modules.Courses.Infrastructure.Queries.SubjectQueryService>();
+        moduleServices.Decorate<AlphaZero.Modules.Courses.Application.Queries.ISubjectQueryService, AlphaZero.Modules.Courses.Infrastructure.Caching.CachedSubjectQueryService>();
         moduleServices.AddScoped<AlphaZero.Modules.Courses.Application.Queries.IEnrollmentQueryService, AlphaZero.Modules.Courses.Infrastructure.Queries.EnrollmentQueryService>();
         moduleServices.AddScoped<AlphaZero.Modules.Courses.Application.Queries.ICourseAnalyticsQueryService, AlphaZero.Modules.Courses.Infrastructure.Queries.CourseAnalyticsQueryService>();
 
@@ -77,6 +79,9 @@ public static class DependencyInjection
         moduleServices.AddMediatR(opts =>
         {
             opts.RegisterServicesFromAssembly(typeof(ICoursesApplicationMarker).Assembly);
+            // Cache eviction must be the OUTERMOST behavior (first AddOpenBehavior) so
+            // invalidation runs after the UnitOfWork commit (MediatR: first registered = outermost).
+            opts.AddOpenBehavior(typeof(AlphaZero.Modules.Courses.Infrastructure.Caching.CourseCacheEvictionBehavior<,>));
             opts.AddOpenBehavior(typeof(ValidationBehavior<,>));
             opts.AddOpenBehavior(typeof(PreRequestBehavior<,>));
             opts.AddOpenBehavior(typeof(UnitOfWorkDecoratorCommandHandler<,>));
