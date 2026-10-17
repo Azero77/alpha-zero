@@ -13,6 +13,12 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Xunit;
 
+// The class fixture below runs a second WebApplicationFactory (IAM-enforcing host). Both fixtures
+// share process-global connection-string environment variables at startup, so this assembly must
+// not run test collections in parallel — otherwise the two hosts can migrate the same database
+// twice (relation-already-exists races observed under parallelization).
+[assembly: Xunit.CollectionBehavior(DisableTestParallelization = true)]
+
 namespace Courses.Tests.Integration.Security;
 
 /// <summary>
