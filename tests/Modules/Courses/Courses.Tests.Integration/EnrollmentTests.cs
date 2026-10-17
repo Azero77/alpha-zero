@@ -144,6 +144,29 @@ public class EnrollmentTests : BaseIntegrationTest
     }
 
     [Fact]
+    public async Task CompleteItem_LegacyAliasRoute_Should_ServeSameBehavior_WhileCorrectRouteIsPrimary()
+    {
+        // Arrange
+        var tenantId = Guid.NewGuid();
+        var courseId = await CreatePublishedCourse(tenantId);
+        var studentId = Guid.NewGuid();
+        SetTenant(tenantId);
+
+        var enrollResp = await Client.PostAsJsonAsync("/courses/enroll", new EnrollInCourseRequest { StudentId = studentId, CourseId = courseId });
+        var enrollmentId = (await enrollResp.Content.ReadFromJsonAsync<EnrollInCourseResponse>())!.EnrollmentId;
+
+        // Act: the legacy misspelled route must keep serving the primary behavior (#31 alias, removal next cycle)
+        var legacyResp = await Client.PostAsJsonAsync($"/courses/enrollements/{enrollmentId}/complete", new { BitIndex = 0 });
+
+        // Act: the correctly-spelled route is the primary surface
+        var primaryResp = await Client.PostAsJsonAsync($"/courses/enrollments/{enrollmentId}/complete", new { BitIndex = 1 });
+
+        // Assert: same status codes on both routes (204 NoContent)
+        legacyResp.StatusCode.Should().Be(HttpStatusCode.NoContent);
+        primaryResp.StatusCode.Should().Be(HttpStatusCode.NoContent);
+    }
+
+    [Fact]
     public async Task CompleteItem_Should_Fail_WhenIndexIsOutOfRange()
     {
         // Arrange
