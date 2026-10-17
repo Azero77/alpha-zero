@@ -1,9 +1,11 @@
 using AlphaZero.Modules.Courses.Application.Courses.Queries;
 using AlphaZero.Modules.Courses.Application.Courses.Queries.GetCourse;
 using AlphaZero.Modules.Courses.Application.Courses.Queries.GetCourseOverview;
+using AlphaZero.Modules.Courses.Application.Courses.Queries.ListCourseCatalog;
 using AlphaZero.Modules.Courses.Application.Courses.Queries.ListCourses;
 using AlphaZero.Modules.Courses.Application.Queries;
 using AlphaZero.Modules.Courses.Domain.Aggregates.Courses;
+using AlphaZero.Modules.Courses.Domain.Aggregates.Subject;
 using AlphaZero.Modules.Courses.Infrastructure.Persistance;
 using AlphaZero.Shared.Queries;
 using Microsoft.EntityFrameworkCore;
@@ -75,6 +77,71 @@ public class CourseQueryService : ICourseQueryService
             .ToListAsync(cancellationToken);
 
         return new PagedResult<CourseSummaryDto>(items, totalCount, page, perPage);
+    }
+
+    /// <summary>
+    /// Student catalog (#32). Permission-light and content-safe: the Published status is a
+    /// hard server-side constraint (students and anonymous prospects only ever see published
+    /// courses; there is no status parameter on this surface). Tenant scope and soft-delete
+    /// exclusion come free from the module's global query filters.
+    /// </summary>
+    public async Task<PagedResult<CourseCatalogItemDto>> ListCourseCatalogAsync(
+        string? search, Guid? subjectId, string? sort, int page, int perPage, CancellationToken cancellationToken = default)
+    {
+        var query = _context.Set<Course>().AsNoTracking()
+            .Where(c => c.Status == CourseStatus.Published);
+
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var keyword = search.Trim();
+            query = query.Where(c =>
+                EF.Functions.ILike(c.Title, $"%{keyword}%") ||
+                (c.Description != null && EF.Functions.ILike(c.Description, $"%{keyword}%")));
+        }
+
+        if (subjectId.HasValue)
+        {
+            query = query.Where(c => c.SubjectId == subjectId.Value);
+        }
+
+        var sortKey = string.IsNullOrWhiteSpace(sort) ? CatalogSortKeys.Newest : sort.Trim().ToLowerInvariant();
+        var ordered = sortKey switch
+        {
+            CatalogSortKeys.Title => query.OrderBy(c => c.Title).ThenBy(c => c.Id),
+            _ => query.OrderByDescending(c => _context.Set<CourseOverview>()
+                        .Where(o => o.CourseId == c.Id)
+                        .Select(o => o.CreatedAtUtc)
+                        .FirstOrDefault())
+                    .ThenBy(c => c.Id)
+        };
+
+        var totalCount = await ordered.CountAsync(cancellationToken);
+
+        var items = await ordered
+            .Skip((page - 1) * perPage)
+            .Take(perPage)
+            .Select(c => new CourseCatalogItemDto(
+                c.Id,
+                c.Title,
+                c.Description,
+                c.Status.ToString(),
+                c.SubjectId,
+                _context.Set<Subject>().Where(s => s.Id == c.SubjectId).Select(s => s.Name).FirstOrDefault() ?? string.Empty,
+                _context.Set<CourseOverview>().Where(o => o.CourseId == c.Id).Select(o => o.CoverImageDocumentId).FirstOrDefault(),
+                c.Sections.Count,
+                c.Sections.SelectMany(s => s.Items).Count(),
+                c.Sections.SelectMany(s => s.Items)
+                    .SelectMany(i => i.Resources)
+                    .SelectMany(r => _context.Set<VideoCourseAsset>()
+                        .Where(a => a.Id == r.CourseAssetId)
+                        .Select(a => a.Duration.TotalSeconds))
+                    .Sum(),
+                c.Plans.Select(p => new CourseCatalogPlanSummaryDto(p.Id, p.Name)).ToList(),
+                _context.Set<CourseOverview>().Where(o => o.CourseId == c.Id).Select(o => o.CreatedAtUtc).FirstOrDefault(),
+                _context.Set<CourseOverview>().Where(o => o.CourseId == c.Id).Select(o => o.UpdatedAtUtc).FirstOrDefault()))
+            .ToListAsync(cancellationToken);
+
+        return new PagedResult<CourseCatalogItemDto>(items, totalCount, page, perPage);
     }
 
     /// <summary>
