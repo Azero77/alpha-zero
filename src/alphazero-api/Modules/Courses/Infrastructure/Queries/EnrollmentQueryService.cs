@@ -19,9 +19,12 @@ public class EnrollmentQueryService : IEnrollmentQueryService
 
     public async Task<PagedResult<EnrollmentDto>> GetStudentEnrollmentsAsync(Guid studentId, int page, int perPage, CancellationToken cancellationToken = default)
     {
+        // All statuses on purpose: this is the support listing (status is an output field; a
+        // deactivated enrollment must be visible to support agents). Tenant scoping comes from
+        // the global query filter.
         var query = _context.Set<Enrollment>()
             .AsNoTracking()
-            .Where(e => e.StudentId == studentId && e.Status == EnrollmentStatus.Active);
+            .Where(e => e.StudentId == studentId);
 
         var totalCount = await query.CountAsync(cancellationToken);
 
