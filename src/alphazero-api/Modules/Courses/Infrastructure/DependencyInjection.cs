@@ -79,6 +79,9 @@ public static class DependencyInjection
         moduleServices.AddMediatR(opts =>
         {
             opts.RegisterServicesFromAssembly(typeof(ICoursesApplicationMarker).Assembly);
+            // Cache eviction must be the OUTERMOST behavior (first AddOpenBehavior) so
+            // invalidation runs after the UnitOfWork commit (MediatR: first registered = outermost).
+            opts.AddOpenBehavior(typeof(AlphaZero.Modules.Courses.Infrastructure.Caching.CourseCacheEvictionBehavior<,>));
             opts.AddOpenBehavior(typeof(ValidationBehavior<,>));
             opts.AddOpenBehavior(typeof(PreRequestBehavior<,>));
             opts.AddOpenBehavior(typeof(UnitOfWorkDecoratorCommandHandler<,>));
