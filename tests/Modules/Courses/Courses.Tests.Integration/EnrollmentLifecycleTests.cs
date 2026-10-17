@@ -6,6 +6,7 @@ using AlphaZero.Modules.Courses.Presentation.Courses.Create;
 using AlphaZero.Modules.Courses.Presentation.Courses.Get;
 using AlphaZero.Modules.Courses.Presentation.Courses.Plans.AddPlan;
 using AlphaZero.Modules.Courses.Presentation.Courses.Pool;
+using AlphaZero.Modules.Courses.Presentation.Enrollments.Dashboard;
 using AlphaZero.Modules.Courses.Presentation.Enrollments.Enroll;
 using AlphaZero.Modules.Courses.Presentation.Enrollments.Get;
 using AlphaZero.Modules.Courses.Presentation.Subjects.Create;
@@ -182,6 +183,28 @@ public class EnrollmentLifecycleTests : BaseIntegrationTest
         SetTenant(tenantA);
         var enrollment = await Client.GetFromJsonAsync<EnrollmentResponse>($"/courses/enrollments/{enrollmentIdOfA}");
         enrollment!.Status.Should().Be("Active");
+    }
+
+    [Fact]
+    public async Task ArchivedCourse_Should_KeepEnrollmentVisibleOnStudentDashboard()
+    {
+        // Arrange: in-progress enrollment, then the course gets archived (retired, not deleted)
+        var tenantId = Guid.NewGuid();
+        SetTenant(tenantId);
+        var courseId = await CreatePublishedCourse(tenantId);
+        var studentId = Guid.NewGuid();
+        await EnrollStudent(studentId, courseId);
+
+        // Act
+        var archiveResp = await Client.PatchAsJsonAsync($"/courses/{courseId}/archive", new { });
+        archiveResp.StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+        // Assert: the student's in-progress work stays on the dashboard
+        var dashboardResp = await Client.GetAsync($"/courses/dashboard/{studentId}");
+        dashboardResp.StatusCode.Should().Be(HttpStatusCode.OK);
+        var dashboard = await dashboardResp.Content.ReadFromJsonAsync<DashboardResponse>();
+        dashboard!.Academies.Should().ContainKey(tenantId);
+        dashboard.Academies[tenantId].Should().ContainSingle(e => e.CourseId == courseId);
     }
 
     [Fact]
