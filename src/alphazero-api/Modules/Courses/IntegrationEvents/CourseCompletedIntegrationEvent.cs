@@ -11,5 +11,5 @@ public record CourseCompletedIntegrationEvent(
     Guid EnrollmentId,
     Guid CourseId,
     Guid StudentId,
-    Guid TenantId = default,
-    DateTime CompletedOnUtc = default);
+    Guid TenantId,
+    DateTime CompletedOnUtc);

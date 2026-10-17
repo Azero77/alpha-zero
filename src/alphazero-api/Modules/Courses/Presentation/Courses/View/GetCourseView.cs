@@ -6,10 +6,7 @@ using Microsoft.AspNetCore.Http;
 
 namespace AlphaZero.Modules.Courses.Presentation.Courses.View;
 
-public class GetCourseViewRequest
-{
-    public Guid Id { get; set; } // bound from route /courses/{Id}/view
-}
+public record GetCourseViewRequest { public Guid Id { get; init; } } // bound from route /courses/{Id}/view
 
 public record CourseViewPlanResponse(Guid Id, string Name);
 

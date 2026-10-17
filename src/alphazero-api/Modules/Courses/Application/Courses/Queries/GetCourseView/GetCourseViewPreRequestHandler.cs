@@ -35,7 +35,7 @@ public class GetCourseViewPreRequestHandler : IPreRequestHandler<GetCourseViewQu
         var status = await _courseQueryService.GetCourseStatusAsync(request.CourseId, cancellationToken);
         if (status is null)
         {
-            return Error.NotFound("Course.NotFound", "Course not found.");
+            return NotFoundMasked;
         }
 
         if (status == "Published")
@@ -47,13 +47,13 @@ public class GetCourseViewPreRequestHandler : IPreRequestHandler<GetCourseViewQu
         // anonymous and unauthorized callers
         if (context is null)
         {
-            return Error.NotFound("Course.NotFound", "Course not found.");
+            return NotFoundMasked;
         }
 
         var tenantId = context.TenantId;
         if (tenantId is null || tenantId == Guid.Empty)
         {
-            return Error.NotFound("Course.NotFound", "Course not found.");
+            return NotFoundMasked;
         }
 
         var arn = ResourceArn.ForCourse(tenantId.Value, request.CourseId);
@@ -62,9 +62,11 @@ public class GetCourseViewPreRequestHandler : IPreRequestHandler<GetCourseViewQu
         var authResult = await _policyEvaluatorService.Authorize(targetContext);
         if (authResult.IsError)
         {
-            return Error.NotFound("Course.NotFound", "Course not found.");
+            return NotFoundMasked;
         }
 
         return Result.Success;
     }
+
+    private static Error NotFoundMasked => Error.NotFound("Course.NotFound", "Course not found.");
 }

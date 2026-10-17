@@ -85,6 +85,9 @@ public class CourseQueryService : ICourseQueryService
     /// hard server-side constraint (students and anonymous prospects only ever see published
     /// courses; there is no status parameter on this surface). Tenant scope and soft-delete
     /// exclusion come free from the module's global query filters.
+    /// Enrollment summary/duration enrichment below mirrors <see cref="GetCourseSummaryForViewAsync"/>
+    /// — the correlated subqueries (subject name, overview cover/timestamps, video-duration
+    /// sum) are EF-translated inline and shared only as a documented keep-in-sync contract.
     /// </summary>
     public async Task<PagedResult<CourseCatalogItemDto>> ListCourseCatalogAsync(
         string? search, Guid? subjectId, string? sort, int page, int perPage, CancellationToken cancellationToken = default)
@@ -119,6 +122,7 @@ public class CourseQueryService : ICourseQueryService
         var totalCount = await ordered.CountAsync(cancellationToken);
 
         var items = await ordered
+            .AsSplitQuery()
             .Skip((page - 1) * perPage)
             .Take(perPage)
             .Select(c => new CourseCatalogItemDto(
