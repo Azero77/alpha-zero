@@ -67,7 +67,9 @@ public static class DependencyInjection
         moduleServices.AddScoped<ICourseMetadataSyncCommandHandler, AssessmentCourseMetadataSyncCommandHandler>();
 
         moduleServices.AddScoped<AlphaZero.Modules.Courses.Application.Queries.ICourseQueryService, AlphaZero.Modules.Courses.Infrastructure.Queries.CourseQueryService>();
+        moduleServices.Decorate<AlphaZero.Modules.Courses.Application.Queries.ICourseQueryService, AlphaZero.Modules.Courses.Infrastructure.Caching.CachedCourseQueryService>();
         moduleServices.AddScoped<AlphaZero.Modules.Courses.Application.Queries.ISubjectQueryService, AlphaZero.Modules.Courses.Infrastructure.Queries.SubjectQueryService>();
+        moduleServices.Decorate<AlphaZero.Modules.Courses.Application.Queries.ISubjectQueryService, AlphaZero.Modules.Courses.Infrastructure.Caching.CachedSubjectQueryService>();
         moduleServices.AddScoped<AlphaZero.Modules.Courses.Application.Queries.IEnrollmentQueryService, AlphaZero.Modules.Courses.Infrastructure.Queries.EnrollmentQueryService>();
         moduleServices.AddScoped<AlphaZero.Modules.Courses.Application.Queries.ICourseAnalyticsQueryService, AlphaZero.Modules.Courses.Infrastructure.Queries.CourseAnalyticsQueryService>();
 
