@@ -1,7 +1,6 @@
 using AlphaZero.Modules.Courses.Application.Enrollments.Queries.GetEnrollment;
 using AlphaZero.Modules.Courses.Application.Enrollments.Queries.GetStudentEnrollments;
 using AlphaZero.Shared.Authorization;
-using ErrorOr;
 using AlphaZero.Shared.Domain;
 using AlphaZero.Shared.Presentation.Extensions;
 using AlphaZero.Shared.Queries;
@@ -52,13 +51,8 @@ public class ListStudentEnrollmentsEndpoint : Endpoint<ListStudentEnrollmentsReq
 
     public override async Task HandleAsync(ListStudentEnrollmentsRequest req, CancellationToken ct)
     {
-        if (req.StudentId is null || req.StudentId == Guid.Empty)
-        {
-            await this.SendErrorResponseAsync([Error.Validation("Enrollment.StudentId", "StudentId is required.")], ct);
-            return;
-        }
-
-        var query = new GetStudentEnrollmentsQuery(req.StudentId.Value, req.Page, req.PerPage);
+        var query = new GetStudentEnrollmentsQuery(
+            req.StudentId ?? Guid.Empty, req.Page, req.PerPage);
         var result = await _module.Send(query, ct);
 
         if (result.IsError)

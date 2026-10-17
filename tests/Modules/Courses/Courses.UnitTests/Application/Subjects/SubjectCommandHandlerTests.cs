@@ -35,7 +35,7 @@ public class SubjectCommandHandlerTests
     {
         // Arrange
         var subject = SubjectAggregate.Create(Guid.NewGuid(), TenantId, "Old", null).Value;
-        _subjectRepository.GetFirst(Arg.Any<System.Linq.Expressions.Expression<Func<SubjectAggregate, bool>>>(), Arg.Any<CancellationToken>())
+        _subjectRepository.GetByIdAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
             .Returns(subject);
         var command = new UpdateSubjectCommand(subject.Id, "New", "updated");
 
@@ -53,7 +53,7 @@ public class SubjectCommandHandlerTests
     public async Task Update_Should_ReturnNotFound_WhenSubjectDoesNotExist()
     {
         // Arrange
-        _subjectRepository.GetFirst(Arg.Any<System.Linq.Expressions.Expression<Func<SubjectAggregate, bool>>>(), Arg.Any<CancellationToken>())
+        _subjectRepository.GetByIdAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
             .Returns((SubjectAggregate?)null);
 
         // Act
@@ -68,7 +68,7 @@ public class SubjectCommandHandlerTests
     {
         // Arrange
         var subject = SubjectAggregate.Create(Guid.NewGuid(), TenantId, "Math", null).Value;
-        _subjectRepository.GetFirst(Arg.Any<System.Linq.Expressions.Expression<Func<SubjectAggregate, bool>>>(), Arg.Any<CancellationToken>())
+        _subjectRepository.GetByIdAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
             .Returns(subject);
         _courseRepository.Any(Arg.Any<System.Linq.Expressions.Expression<Func<Course, bool>>>(), Arg.Any<CancellationToken>())
             .Returns(true);
@@ -88,7 +88,7 @@ public class SubjectCommandHandlerTests
     {
         // Arrange
         var subject = SubjectAggregate.Create(Guid.NewGuid(), TenantId, "Math", null).Value;
-        _subjectRepository.GetFirst(Arg.Any<System.Linq.Expressions.Expression<Func<SubjectAggregate, bool>>>(), Arg.Any<CancellationToken>())
+        _subjectRepository.GetByIdAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
             .Returns(subject);
         _courseRepository.Any(Arg.Any<System.Linq.Expressions.Expression<Func<Course, bool>>>(), Arg.Any<CancellationToken>())
             .Returns(false);
@@ -107,7 +107,7 @@ public class SubjectCommandHandlerTests
     public async Task Delete_Should_ReturnNotFound_WhenSubjectDoesNotExist()
     {
         // Arrange
-        _subjectRepository.GetFirst(Arg.Any<System.Linq.Expressions.Expression<Func<SubjectAggregate, bool>>>(), Arg.Any<CancellationToken>())
+        _subjectRepository.GetByIdAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
             .Returns((SubjectAggregate?)null);
 
         // Act

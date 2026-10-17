@@ -1,6 +1,7 @@
 using AlphaZero.Modules.Courses.Application.Repositories;
 using AlphaZero.Modules.Courses.Domain.Aggregates.Subject;
 using AlphaZero.Shared.Application;
+using Microsoft.EntityFrameworkCore;
 using ErrorOr;
 using FluentValidation;
 using MediatR;
@@ -25,7 +26,8 @@ public sealed class UpdateSubjectCommandHandler(
 {
     public async Task<ErrorOr<Success>> Handle(UpdateSubjectCommand request, CancellationToken cancellationToken)
     {
-        var subject = await subjectRepository.GetFirst(s => s.Id == request.SubjectId, cancellationToken);
+        // Tracked load: this handler mutates the loaded aggregate.
+        var subject = await subjectRepository.GetByIdAsync(request.SubjectId, cancellationToken);
         if (subject is null) return Error.NotFound("Subject.NotFound", "Subject not found.");
 
         var result = subject.Update(request.Name, request.Description);

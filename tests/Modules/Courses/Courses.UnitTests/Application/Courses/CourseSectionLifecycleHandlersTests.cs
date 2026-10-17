@@ -7,6 +7,7 @@ using AlphaZero.Shared.Infrastructure.Repositores;
 using ErrorOr;
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
+using NSubstitute;
 using EnrollmentAggregate = AlphaZero.Modules.Courses.Domain.Aggregates.Enrollments.Enrollment;
 using NSubstitute;
 using Xunit;
@@ -127,8 +128,8 @@ public class CourseSectionLifecycleHandlersTests
         var enrollment = Enrollment.Create(
             Guid.NewGuid(), TenantId, Guid.NewGuid(), course.Id,
             course.TotalTrackedItems, course.ActiveTrackedItems).Value;
-        _enrollmentRepository.Get(Arg.Any<System.Linq.Expressions.Expression<Func<EnrollmentAggregate, bool>>>(), Arg.Any<CancellationToken>())
-            .Returns(new[] { enrollment });
+        _enrollmentRepository.GetCourseEnrollmentsAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
+            .Returns(new List<EnrollmentAggregate> { enrollment });
 
         // Act: delete the section holding 2 of the 3 items
         var result = await _handler.Handle(new DeleteCourseSectionCommand(course.Id, sectionId), CancellationToken.None);
@@ -155,8 +156,8 @@ public class CourseSectionLifecycleHandlersTests
         enrollment.CompleteItem(2);
         var bitsBefore = new[] { enrollment.Progress.IsComplete(2) };
 
-        _enrollmentRepository.Get(Arg.Any<System.Linq.Expressions.Expression<Func<EnrollmentAggregate, bool>>>(), Arg.Any<CancellationToken>())
-            .Returns(new[] { enrollment });
+        _enrollmentRepository.GetCourseEnrollmentsAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
+            .Returns(new List<EnrollmentAggregate> { enrollment });
 
         // Act
         await _handler.Handle(new DeleteCourseSectionCommand(course.Id, sectionId), CancellationToken.None);

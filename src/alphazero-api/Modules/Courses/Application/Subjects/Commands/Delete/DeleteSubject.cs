@@ -1,5 +1,6 @@
 using AlphaZero.Modules.Courses.Application.Repositories;
 using AlphaZero.Shared.Application;
+using Microsoft.EntityFrameworkCore;
 using ErrorOr;
 using FluentValidation;
 using MediatR;
@@ -24,7 +25,8 @@ public sealed class DeleteSubjectCommandHandler(
 {
     public async Task<ErrorOr<Success>> Handle(DeleteSubjectCommand request, CancellationToken cancellationToken)
     {
-        var subject = await subjectRepository.GetFirst(s => s.Id == request.SubjectId, cancellationToken);
+        // Tracked load: this handler mutates the loaded aggregate.
+        var subject = await subjectRepository.GetByIdAsync(request.SubjectId, cancellationToken);
         if (subject is null) return Error.NotFound("Subject.NotFound", "Subject not found.");
 
         // A live course (global query filter already excludes soft-deleted ones, tenant filter

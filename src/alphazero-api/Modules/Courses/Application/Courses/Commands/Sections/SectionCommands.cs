@@ -76,7 +76,7 @@ public sealed class CourseSectionHandlers(
         // section deletion (BitmaskStabilityTests guarantee this); only the active
         // denominator changes, so every enrollment's percentage recalculates against
         // the remaining active items instead of staying locked below 100%.
-        var enrollments = await enrollmentRepository.Get(e => e.CourseId == request.CourseId, cancellationToken);
+        var enrollments = await enrollmentRepository.GetCourseEnrollmentsAsync(request.CourseId, cancellationToken);
         foreach (var enrollment in enrollments)
         {
             enrollment.UpdateActiveItems(course.ActiveTrackedItems);
