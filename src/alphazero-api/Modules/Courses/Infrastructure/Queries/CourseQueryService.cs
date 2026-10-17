@@ -1,6 +1,7 @@
 using AlphaZero.Modules.Courses.Application.Courses.Queries;
 using AlphaZero.Modules.Courses.Application.Courses.Queries.GetCourse;
 using AlphaZero.Modules.Courses.Application.Courses.Queries.GetCourseOverview;
+using AlphaZero.Modules.Courses.Application.Courses.Queries.GetCourseView;
 using AlphaZero.Modules.Courses.Application.Courses.Queries.ListCourseCatalog;
 using AlphaZero.Modules.Courses.Application.Courses.Queries.ListCourses;
 using AlphaZero.Modules.Courses.Application.Queries;
@@ -142,6 +143,67 @@ public class CourseQueryService : ICourseQueryService
             .ToListAsync(cancellationToken);
 
         return new PagedResult<CourseCatalogItemDto>(items, totalCount, page, perPage);
+    }
+
+    public async Task<string?> GetCourseStatusAsync(Guid courseId, CancellationToken cancellationToken = default)
+    {
+        return await _context.Set<Course>()
+            .AsNoTracking()
+            .Where(c => c.Id == courseId)
+            .Select(c => c.Status.ToString())
+            .FirstOrDefaultAsync(cancellationToken);
+    }
+
+    /// <summary>
+    /// Student course-detail shape (#32): summary fields (subject NAME join, cover image,
+    /// timestamps sourced from the overview row, counts, total video duration, plan summary)
+    /// plus the curriculum tree with real resource identity — placement id, course-asset id,
+    /// and the TRUE resource ARN sourced from the pool asset. The legacy always-empty
+    /// metadata bucket is deliberately absent from this shape.
+    /// </summary>
+    public async Task<CourseSummaryViewDto?> GetCourseSummaryForViewAsync(Guid courseId, CancellationToken cancellationToken = default)
+    {
+        return await _context.Set<Course>()
+            .AsNoTracking()
+            .AsSplitQuery()
+            .Where(c => c.Id == courseId)
+            .Select(course => new CourseSummaryViewDto(
+                course.Id,
+                course.Title,
+                course.Description,
+                course.Status.ToString(),
+                course.SubjectId,
+                _context.Set<Subject>().Where(s => s.Id == course.SubjectId).Select(s => s.Name).FirstOrDefault() ?? string.Empty,
+                _context.Set<CourseOverview>().Where(o => o.CourseId == course.Id).Select(o => o.CoverImageDocumentId).FirstOrDefault(),
+                _context.Set<CourseOverview>().Where(o => o.CourseId == course.Id).Select(o => o.CreatedAtUtc).FirstOrDefault(),
+                _context.Set<CourseOverview>().Where(o => o.CourseId == course.Id).Select(o => o.UpdatedAtUtc).FirstOrDefault(),
+                course.Sections.Count,
+                course.Sections.SelectMany(s => s.Items).Count(),
+                course.Sections.SelectMany(s => s.Items)
+                    .SelectMany(i => i.Resources)
+                    .SelectMany(r => _context.Set<VideoCourseAsset>()
+                        .Where(a => a.Id == r.CourseAssetId)
+                        .Select(a => a.Duration.TotalSeconds))
+                    .Sum(),
+                course.Plans.Select(p => new CourseViewPlanDto(p.Id, p.Name)).ToList(),
+                course.Sections.OrderBy(s => s.Order).Select(s => new CourseViewSectionDto(
+                    s.Id,
+                    s.Title,
+                    s.Order,
+                    s.Items.OrderBy(i => i.Order).Select(i => new CourseViewItemDto(
+                        i.Id,
+                        i.Title,
+                        i.MainResourceType.ToString(),
+                        i.Order,
+                        i.BitIndex,
+                        i.Resources.OrderBy(r => r.Order).Select(r => new CourseViewResourceDto(
+                            r.Id,
+                            r.CourseAssetId == null ? null : r.CourseAssetId.Value.ToString(),
+                            _context.Set<CourseAsset>().Where(a => a.Id == r.CourseAssetId).Select(a => a.ResourceArn.Value).FirstOrDefault(),
+                            r.ResourceType.ToString(),
+                            r.Order,
+                            _context.Set<VideoCourseAsset>().Where(a => a.Id == r.CourseAssetId).Select(a => (double?)a.Duration.TotalSeconds).FirstOrDefault() ?? 0d)).ToList())).ToList())).ToList()))
+            .FirstOrDefaultAsync(cancellationToken);
     }
 
     /// <summary>
