@@ -6,7 +6,7 @@ using Microsoft.Extensions.Logging;
 namespace AlphaZero.Modules.Courses.Infrastructure.Consumers.Analytics;
 
 public class CourseAnalyticsUpdaterConsumer :
-    IConsumer<EnrollementCreatedIntegrationEvent>,
+    IConsumer<EnrollmentCreatedIntegrationEvent>,
     IConsumer<ItemCompletedIntegrationEvent>
 {
     private readonly ICourseAnalyticsRepository _repository;
@@ -20,7 +20,7 @@ public class CourseAnalyticsUpdaterConsumer :
         _logger = logger;
     }
 
-    public async Task Consume(ConsumeContext<EnrollementCreatedIntegrationEvent> context)
+    public async Task Consume(ConsumeContext<EnrollmentCreatedIntegrationEvent> context)
     {
         var msg = context.Message;
         _logger.LogInformation("Updating analytics for new enrollment in Course {CourseId}", msg.CourseId);

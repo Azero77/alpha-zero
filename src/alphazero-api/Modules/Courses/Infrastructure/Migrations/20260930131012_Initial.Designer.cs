@@ -219,7 +219,7 @@ namespace AlphaZero.Modules.Courses.Infrastructure.Migrations
                     b.ToTable("CurriculumItems", "Courses");
                 });
 
-            modelBuilder.Entity("AlphaZero.Modules.Courses.Domain.Aggregates.Enrollements.Enrollement", b =>
+            modelBuilder.Entity("AlphaZero.Modules.Courses.Domain.Aggregates.Enrollments.Enrollment", b =>
                 {
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
@@ -681,11 +681,11 @@ namespace AlphaZero.Modules.Courses.Infrastructure.Migrations
                     b.Navigation("Resources");
                 });
 
-            modelBuilder.Entity("AlphaZero.Modules.Courses.Domain.Aggregates.Enrollements.Enrollement", b =>
+            modelBuilder.Entity("AlphaZero.Modules.Courses.Domain.Aggregates.Enrollments.Enrollment", b =>
                 {
-                    b.OwnsOne("AlphaZero.Modules.Courses.Domain.Aggregates.Enrollements.Progress", "Progress", b1 =>
+                    b.OwnsOne("AlphaZero.Modules.Courses.Domain.Aggregates.Enrollments.Progress", "Progress", b1 =>
                         {
-                            b1.Property<Guid>("EnrollementId")
+                            b1.Property<Guid>("EnrollmentId")
                                 .HasColumnType("uuid");
 
                             b1.Property<int>("ActiveItems")
@@ -701,12 +701,12 @@ namespace AlphaZero.Modules.Courses.Infrastructure.Migrations
                                 .HasColumnType("integer")
                                 .HasColumnName("ProgressTotalItems");
 
-                            b1.HasKey("EnrollementId");
+                            b1.HasKey("EnrollmentId");
 
                             b1.ToTable("Enrollements", "Courses");
 
                             b1.WithOwner()
-                                .HasForeignKey("EnrollementId");
+                                .HasForeignKey("EnrollmentId");
                         });
 
                     b.Navigation("Progress")

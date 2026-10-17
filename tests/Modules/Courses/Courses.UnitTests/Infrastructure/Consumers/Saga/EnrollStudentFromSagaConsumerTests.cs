@@ -1,4 +1,4 @@
-using AlphaZero.Modules.Courses.Application.Enrollements.Commands.Enroll;
+using AlphaZero.Modules.Courses.Application.Enrollments.Commands.Enroll;
 using AlphaZero.Modules.Courses.Application.Repositories;
 using AlphaZero.Modules.Courses.Domain.Aggregates.Courses;
 using AlphaZero.Modules.Courses.Infrastructure.Consumers.Saga;

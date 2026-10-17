@@ -6,8 +6,8 @@ using AlphaZero.Modules.Courses.Presentation.Courses.Create;
 using AlphaZero.Modules.Courses.Presentation.Courses.Get;
 using AlphaZero.Modules.Courses.Presentation.Courses.Plans.AddPlan;
 using AlphaZero.Modules.Courses.Presentation.Courses.Pool;
-using AlphaZero.Modules.Courses.Presentation.Enrollements.Enroll;
-using AlphaZero.Modules.Courses.Presentation.Enrollements.Get;
+using AlphaZero.Modules.Courses.Presentation.Enrollments.Enroll;
+using AlphaZero.Modules.Courses.Presentation.Enrollments.Get;
 using AlphaZero.Modules.Courses.Presentation.Subjects.Create;
 using AlphaZero.Shared.Domain;
 using Courses.Tests.Integration.Abstractions;
@@ -97,7 +97,7 @@ public class EnrollmentTests : BaseIntegrationTest
         response.StatusCode.Should().Be(HttpStatusCode.Created);
         var enrollmentId = (await response.Content.ReadFromJsonAsync<EnrollInCourseResponse>())!.EnrollmentId;
 
-        var enrollment = await Client.GetFromJsonAsync<EnrollementResponse>($"/courses/enrollments/{enrollmentId}");
+        var enrollment = await Client.GetFromJsonAsync<EnrollmentResponse>($"/courses/enrollments/{enrollmentId}");
         enrollment.Should().NotBeNull();
         enrollment!.StudentId.Should().Be(studentId);
         enrollment.CourseId.Should().Be(courseId);
@@ -117,11 +117,11 @@ public class EnrollmentTests : BaseIntegrationTest
         var enrollmentId = (await enrollResp.Content.ReadFromJsonAsync<EnrollInCourseResponse>())!.EnrollmentId;
 
         // Act: Complete first item (BitIndex 0)
-        var completeResp = await Client.PostAsJsonAsync($"/courses/enrollements/{enrollmentId}/complete", new { BitIndex = 0 });
+        var completeResp = await Client.PostAsJsonAsync($"/courses/enrollments/{enrollmentId}/complete", new { BitIndex = 0 });
         completeResp.StatusCode.Should().Be(HttpStatusCode.NoContent);
 
         // Assert: 1 of 2 items complete = 50%
-        var enrollment = await Client.GetFromJsonAsync<EnrollementResponse>($"/courses/enrollments/{enrollmentId}");
+        var enrollment = await Client.GetFromJsonAsync<EnrollmentResponse>($"/courses/enrollments/{enrollmentId}");
         enrollment!.CompletionPercentage.Should().Be(50.0);
     }
 
@@ -156,7 +156,7 @@ public class EnrollmentTests : BaseIntegrationTest
         var enrollmentId = (await enrollResp.Content.ReadFromJsonAsync<EnrollInCourseResponse>())!.EnrollmentId;
 
         // Act: Try to complete bit index 5 (only 0 and 1 exist)
-        var completeResp = await Client.PostAsJsonAsync($"/courses/enrollements/{enrollmentId}/complete", new { BitIndex = 5 });
+        var completeResp = await Client.PostAsJsonAsync($"/courses/enrollments/{enrollmentId}/complete", new { BitIndex = 5 });
 
         // Assert
         completeResp.StatusCode.Should().Be(HttpStatusCode.BadRequest);

@@ -46,7 +46,7 @@ public static class DependencyInjection
         moduleServices.AddScoped<ICourseOverviewRepository, CourseOverviewRepository>();
         moduleServices.AddScoped<IRepository<CourseAsset>, BaseRepository<AppDbContext, CourseAsset>>();
         moduleServices.AddScoped<ISubjectRepository, SubjectRepository>();
-        moduleServices.AddScoped<IEnrollementRepository, EnrollementRepository>();
+        moduleServices.AddScoped<IEnrollmentRepository, EnrollmentRepository>();
         moduleServices.AddScoped<ICourseAnalyticsRepository, CourseAnalyticsRepository>();
         moduleServices.AddScoped<IAssessmentService, AssessmentService>();
         moduleServices.AddScoped<IUnitOfWork, UnitOfWork<AppDbContext>>();
