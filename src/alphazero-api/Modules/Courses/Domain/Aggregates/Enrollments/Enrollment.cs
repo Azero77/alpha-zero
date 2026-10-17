@@ -12,6 +12,14 @@ public class Enrollment : TenantOwnedAggregate
     public Progress Progress { get; private set; } = null!;
     public DateTime EnrolledOn { get; private set; }
 
+    /// <summary>
+    /// Set exactly once when a completion attempt flips the course to
+    /// "all active items complete" (#32). Persists the completion transition so
+    /// re-completions and progress recomputations after a section deletion never re-raise
+    /// the completion event, even across process lifetimes.
+    /// </summary>
+    public DateTime? CompletedOn { get; private set; }
+
     private Enrollment()
     {
         // EF
@@ -53,6 +61,16 @@ public class Enrollment : TenantOwnedAggregate
         if (oldPercentage != Progress.CompletionPercentage)
         {
             AddDomainEvent(new ItemCompletedDomainEvent(Id, CourseId, bitIndex, oldPercentage, Progress.CompletionPercentage));
+        }
+
+        // Completion milestone (#32): raised exactly when a completion attempt flips the
+        // course to "all active items complete" (Progress.IsAllComplete). The persisted
+        // CompletedOn flag makes the transition idempotent — a second raise is impossible,
+        // no matter how the bitmask is recomputed or re-driven afterwards.
+        if (Progress.IsAllComplete && CompletedOn is null)
+        {
+            CompletedOn = DateTime.UtcNow;
+            AddDomainEvent(new CourseCompletedDomainEvent(Id, CourseId, StudentId, TenantId, CompletedOn.Value));
         }
 
         return Result.Success;
