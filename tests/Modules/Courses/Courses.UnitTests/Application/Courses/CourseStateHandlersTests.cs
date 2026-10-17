@@ -226,3 +226,60 @@ public class CourseStateHandlersTests
         _courseRepository.Received(1).Update(course);
     }
 }
+
+public static class ArchiveCourseHandlerTests
+{
+    [Fact]
+    public static async Task Archive_Should_MarkCourseArchived_AndPersist()
+    {
+        // Arrange
+        var courseRepository = Substitute.For<ICourseRepository>();
+        var course = Course.Create(Guid.NewGuid(), Guid.NewGuid(), "Title", null, Guid.NewGuid()).Value;
+        var builder = Substitute.For<ICourseQueryBuilder>();
+        courseRepository.Query(course.Id).Returns(builder);
+        builder.WithSections().Returns(builder);
+        builder.WithItems(Arg.Any<bool>()).Returns(builder);
+        builder.WithResources(Arg.Any<bool>()).Returns(builder);
+        builder.WithPlans(Arg.Any<bool>()).Returns(builder);
+        builder.ExecuteAsync(Arg.Any<CancellationToken>()).Returns(course);
+        var handler = new CourseStateHandlers(
+            courseRepository,
+            Substitute.For<ICourseOverviewRepository>(),
+            new CoursePublishingService(new CourseReadinessService()),
+            Substitute.For<ILogger<CourseStateHandlers>>());
+
+        // Act
+        var result = await handler.Handle(new ArchiveCourseCommand(course.Id), CancellationToken.None);
+
+        // Assert
+        result.IsError.Should().BeFalse();
+        course.Status.Should().Be(CourseStatus.Archived);
+        courseRepository.Received(1).Update(course);
+    }
+
+    [Fact]
+    public static async Task Archive_Should_Fail_WhenCourseDoesNotExist()
+    {
+        // Arrange
+        var courseRepository = Substitute.For<ICourseRepository>();
+        var builder = Substitute.For<ICourseQueryBuilder>();
+        courseRepository.Query(Arg.Any<Guid>()).Returns(builder);
+        builder.WithSections().Returns(builder);
+        builder.WithItems(Arg.Any<bool>()).Returns(builder);
+        builder.WithResources(Arg.Any<bool>()).Returns(builder);
+        builder.WithPlans(Arg.Any<bool>()).Returns(builder);
+        builder.ExecuteAsync(Arg.Any<CancellationToken>()).Returns((Course?)null);
+        var handler = new CourseStateHandlers(
+            courseRepository,
+            Substitute.For<ICourseOverviewRepository>(),
+            new CoursePublishingService(new CourseReadinessService()),
+            Substitute.For<ILogger<CourseStateHandlers>>());
+
+        // Act
+        var result = await handler.Handle(new ArchiveCourseCommand(Guid.NewGuid()), CancellationToken.None);
+
+        // Assert
+        result.IsError.Should().BeTrue();
+        result.FirstError.Type.Should().Be(ErrorType.NotFound);
+    }
+}
