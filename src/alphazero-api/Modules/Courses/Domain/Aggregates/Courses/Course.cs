@@ -175,4 +175,41 @@ public class Course : TenantOwnedAggregate, ISoftDeletable
         }
         return Result.Success;
     }
+
+    public ErrorOr<Success> UpdateSectionTitle(Guid sectionId, string title)
+    {
+        var section = _sections.FirstOrDefault(s => s.Id == sectionId && !s.IsDeleted);
+        if (section == null) return Error.NotFound("Course.Section", "Section not found.");
+        section.Update(title, section.Order);
+        return Result.Success;
+    }
+
+    public ErrorOr<Success> DeleteSection(Guid sectionId)
+    {
+        var section = _sections.FirstOrDefault(s => s.Id == sectionId && !s.IsDeleted);
+        if (section == null) return Error.NotFound("Course.Section", "Section not found.");
+        var result = section.Delete();
+        if (result.IsError) return result.Errors;
+        return Result.Success;
+    }
+
+    public ErrorOr<Success> Delete()
+    {
+        if (IsDeleted)
+            return Error.Conflict("Course.IsDeleted", "Course is already deleted.");
+
+        IsDeleted = true;
+        OnDeleted = DateTime.UtcNow;
+        return Result.Success;
+    }
+
+    public ErrorOr<Success> Restore()
+    {
+        if (!IsDeleted)
+            return Error.Failure("Course.IsDeleted", "Course is not deleted.");
+
+        IsDeleted = false;
+        OnDeleted = null;
+        return Result.Success;
+    }
 }
