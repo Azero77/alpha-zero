@@ -95,9 +95,23 @@ public class Course : TenantOwnedAggregate, ISoftDeletable
     {
         var section = _sections.FirstOrDefault(s => s.Id == sectionId);
         if (section == null) return Error.NotFound("Course.Section", "Section not found.");
+
+        // The reordered set must be a bijective mapping over the section's live items:
+        // unknown ids, and silent partial reorders, would corrupt Order consistency.
+        var liveItems = section.Items.Where(i => !i.IsDeleted).ToList();
+        if (itemIds.Any(id => liveItems.All(i => i.Id != id)))
+            return Error.NotFound(
+                "Course.Reorder.ItemIds",
+                "The reordered item set contains ids that do not belong to this section.");
+
+        if (liveItems.Any(i => !itemIds.Contains(i.Id)))
+            return Error.Validation(
+                "Course.Reorder.ItemIds",
+                "The reordered item set must contain every live item of the section exactly once.");
+
         for (int i = 0; i < itemIds.Count; i++)
         {
-            var item = section.Items.FirstOrDefault(x => x.Id == itemIds[i]);
+            var item = liveItems.FirstOrDefault(x => x.Id == itemIds[i]);
             item?.UpdateOrder(i);
         }
         return Result.Success;
@@ -165,9 +179,21 @@ public class Course : TenantOwnedAggregate, ISoftDeletable
         if (Status == CourseStatus.Published)
             return Error.Conflict("Course.Status", "Cannot reorder sections once published as it may confuse existing students.");
 
+        // Same bijective-mapping contract as ReorderItems over the course's live sections.
+        var liveSections = _sections.Where(s => !s.IsDeleted).ToList();
+        if (sectionIds.Any(id => liveSections.All(s => s.Id != id)))
+            return Error.NotFound(
+                "Course.Reorder.SectionIds",
+                "The reordered section set contains ids that do not belong to this course.");
+
+        if (liveSections.Any(s => !sectionIds.Contains(s.Id)))
+            return Error.Validation(
+                "Course.Reorder.SectionIds",
+                "The reordered section set must contain every live section of the course exactly once.");
+
         for (int i = 0; i < sectionIds.Count; i++)
         {
-            var section = _sections.FirstOrDefault(s => s.Id == sectionIds[i]);
+            var section = liveSections.FirstOrDefault(s => s.Id == sectionIds[i]);
             if (section != null)
             {
                 section.Update(section.Title, i);
