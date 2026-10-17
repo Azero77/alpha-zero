@@ -1,6 +1,7 @@
 using AlphaZero.Modules.Courses.Application.Enrollments.Queries.GetEnrollment;
 using AlphaZero.Modules.Courses.Application.Queries;
 using AlphaZero.Modules.Courses.Domain.Aggregates.Enrollments;
+using AlphaZero.Modules.Courses.Application.Courses.Queries.GetCourseView;
 using AlphaZero.Modules.Courses.Infrastructure.Persistance;
 using AlphaZero.Shared.Queries;
 using Microsoft.EntityFrameworkCore;
@@ -114,5 +115,40 @@ public class EnrollmentQueryService : IEnrollmentQueryService
                 e.EnrolledOn,
                 e.TenantId))
             .FirstOrDefaultAsync(cancellationToken);
+    }
+
+    /// <summary>
+    /// The view endpoint's single enrollment lookup (#32): scoped to the CALLER's own
+    /// (student × course), active only. Returns the completed bit indexes (computed
+    /// client-side from the varbit bitmask) so the view can overlay them on the
+    /// curriculum tree.
+    /// </summary>
+    public async Task<EnrollmentCourseViewDto?> GetActiveEnrollmentForCourseAsync(Guid studentId, Guid courseId, CancellationToken cancellationToken = default)
+    {
+        var enrollment = await _context.Set<Enrollment>()
+            .AsNoTracking()
+            .Where(e => e.StudentId == studentId && e.CourseId == courseId && e.Status == EnrollmentStatus.Active)
+            .OrderByDescending(e => e.EnrolledOn)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (enrollment is null)
+        {
+            return null;
+        }
+
+        var completedBitIndexes = new List<int>();
+        for (var bitIndex = 0; bitIndex < enrollment.Progress.Bitmask.Length; bitIndex++)
+        {
+            if (enrollment.Progress.Bitmask[bitIndex])
+            {
+                completedBitIndexes.Add(bitIndex);
+            }
+        }
+
+        return new EnrollmentCourseViewDto(
+            enrollment.Id,
+            enrollment.Status.ToString(),
+            enrollment.Progress.CompletionPercentage,
+            completedBitIndexes);
     }
 }

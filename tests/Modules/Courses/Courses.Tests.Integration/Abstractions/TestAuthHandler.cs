@@ -18,19 +18,22 @@ public class TestAuthHandler : AuthenticationHandler<AuthenticationSchemeOptions
 
     protected override Task<AuthenticateResult> HandleAuthenticateAsync()
     {
+        // Default: random user ids per request. `X-Test-User-Id` pins the caller identity
+        // (sub/NameIdentifier) — the first sub claim wins in AuthorizationContextProvider,
+        // so the pinned claims must REPLACE the defaults, not be appended.
+        var userId = Guid.NewGuid().ToString();
+        if (Context.Request.Headers.TryGetValue("X-Test-User-Id", out var pinnedUserId))
+        {
+            userId = pinnedUserId.ToString();
+        }
+
         var claims = new List<Claim>
         {
-            new Claim(ClaimTypes.NameIdentifier, Guid.NewGuid().ToString()),
-            new Claim("sub", Guid.NewGuid().ToString()),
+            new Claim(ClaimTypes.NameIdentifier, userId),
+            new Claim("sub", userId),
             new Claim("auth_method", "TenantUser"),
             new Claim("sid", Guid.NewGuid().ToString())
         };
-
-        if (Context.Request.Headers.TryGetValue("X-Test-User-Id", out var userId))
-        {
-            claims.Add(new Claim("sub", userId.ToString()));
-            claims.Add(new Claim(ClaimTypes.NameIdentifier, userId.ToString()));
-        }
 
         var identity = new ClaimsIdentity(claims, "TestScheme");
         var principal = new ClaimsPrincipal(identity);
