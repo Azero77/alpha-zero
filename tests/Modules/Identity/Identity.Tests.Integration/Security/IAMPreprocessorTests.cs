@@ -29,7 +29,10 @@ public class SecurityApiFactory : ApiFactory
         base.ConfigureWebHost(builder);
         
         // Force Production to use IAMPreprocessor instead of IAMDevPreprocessor
-        builder.UseEnvironment("Production"); 
+        builder.UseEnvironment("Production");
+        // Production-like environments fail fast at startup without a playback-ticket secret
+        // (shared Cloudflare config validation), so a production-like fixture must carry one.
+        builder.UseSetting("Cloudflare:PlaybackTicketSecret", "iam-test-prod-secret-min-32-chars-long!!!");
         
         builder.ConfigureTestServices(services =>
         {

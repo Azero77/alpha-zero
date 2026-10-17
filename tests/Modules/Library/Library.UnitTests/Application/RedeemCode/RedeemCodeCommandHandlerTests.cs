@@ -18,7 +18,7 @@ public class RedeemCodeCommandHandlerTests
     private readonly ICurrentTenantUserRepository _currentUserRepository;
     private readonly IPasswordHasher _passwordHasher;
     private readonly RedeemCodeCommandHandler _handler;
-    private readonly IAuthorizationContextFactory _authorizationContextFactory;
+    private readonly IAuthorizationContextProvider _authorizationContextFactory;
 
     private static readonly Guid TenantId = Guid.NewGuid();
     private static readonly Guid UserId = Guid.NewGuid();
@@ -31,7 +31,7 @@ public class RedeemCodeCommandHandlerTests
         _tenantProvider = Substitute.For<ITenantProvider>();
         _currentUserRepository = Substitute.For<ICurrentTenantUserRepository>();
         _passwordHasher = Substitute.For<IPasswordHasher>();
-        _authorizationContextFactory = Substitute.For<IAuthorizationContextFactory>();
+        _authorizationContextFactory = Substitute.For<IAuthorizationContextProvider>();
 
         _handler = new RedeemCodeCommandHandler(
             _repository,
@@ -63,12 +63,6 @@ public class RedeemCodeCommandHandlerTests
             IpAddress = "127.0.0.1",
             DeviceId = "fingerprint",
             RequiredPermission=""
-        });
-        _authorizationContextFactory.Create("",targetArn,AuthenticationMethod.Principal, UserId.ToString()).Returns(new AuthorizationContext()
-        {
-            AuthenticationMethod = AuthenticationMethod.Principal.ToString(),
-            IpAddress = "127.0.0.1",
-            DeviceId = "fingerprint"
         });
 
         var strategy = Substitute.For<IRedemptionStrategy>();

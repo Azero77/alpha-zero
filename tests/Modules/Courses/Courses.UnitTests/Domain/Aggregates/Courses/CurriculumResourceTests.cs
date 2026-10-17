@@ -1,40 +1,76 @@
-using AlphaZero.Modules.Courses.Domain.Aggregates.Courses;
-using AlphaZero.Shared.Domain;
-using FluentAssertions;
 using System.Text.Json;
+using AlphaZero.Modules.Courses.Domain.Aggregates.Courses;
+using FluentAssertions;
 using Xunit;
 
 namespace AlphaZero.Modules.Courses.UnitTests.Domain.Aggregates.Courses;
 
 public class CurriculumResourceTests
 {
-    private static readonly Guid TenantId = Guid.NewGuid();
-    private static readonly Guid CourseId = Guid.NewGuid();
-
     [Fact]
-    public void Constructor_Should_SetPropertiesCorrectly()
+    public void VideoCurriculumResource_Should_ComputeCompletion_Correctly()
     {
         var id = Guid.NewGuid();
-        var arn = ResourceArn.ForVideo(TenantId, id);
-        var asset = VideoCourseAsset.Create(id, TenantId, arn, "Test Video", CourseId).Value;
-        var metadata = JsonDocument.Parse("{\"key\":\"value\"}").RootElement;
+        var assetId = Guid.NewGuid();
+        var videoResource = new VideoCurriculumResource(id, 0, assetId, durationSeconds: 100);
 
-        var resource = new CurriculumResource(asset, 0, metadata);
+        videoResource.ResourceType.Should().Be(ResourceType.Video);
+        videoResource.CourseAssetId.Should().Be(assetId);
+        videoResource.DurationSeconds.Should().Be(100);
 
-        resource.CourseAssetId.Should().Be(id);
-        resource.Asset.Should().Be(asset);
-        resource.Order.Should().Be(0);
-        resource.Metadata.GetProperty("key").GetString().Should().Be("value");
+        // 79 seconds < 80%
+        videoResource.CanComplete(79).Should().BeFalse();
+        // 80 seconds >= 80%
+        videoResource.CanComplete(80).Should().BeTrue();
+    }
+
+    [Fact]
+    public void DocumentCurriculumResource_Should_FormatAndParseDocUri()
+    {
+        var docId = Guid.NewGuid();
+        var docResource = new DocumentCurriculumResource(
+            Guid.NewGuid(), 0, "Cheat Sheet", docId, "pdf", isPublic: true, variantName: "summary");
+
+        docResource.ResourceType.Should().Be(ResourceType.Document);
+        docResource.DocUri.Should().Be($"doc://public/{docId}?variantName=summary");
+
+        var parsed = DocumentCurriculumResource.ParseDocUri(docResource.DocUri);
+        parsed.IsPublic.Should().BeTrue();
+        parsed.DocumentId.Should().Be(docId);
+        parsed.VariantName.Should().Be("summary");
+    }
+
+    [Fact]
+    public void ArticleCurriculumResource_Should_UpdateContent()
+    {
+        var jsonContent = JsonSerializer.SerializeToElement("Initial Text");
+        var resource = new ArticleCurriculumResource(Guid.NewGuid(), 0, jsonContent);
+        resource.ResourceType.Should().Be(ResourceType.Article);
+        resource.TextContent.Should().Be("Initial Text");
+
+        var updatedContent = JsonSerializer.SerializeToElement("Updated Text");
+        resource.UpdateContent(updatedContent);
+        resource.TextContent.Should().Be("Updated Text");
+    }
+
+    [Fact]
+    public void QuizCurriculumResource_Should_CheckPassingScore()
+    {
+        var assessmentId = Guid.NewGuid();
+        var resource = new AssessmentCurriculumResource(Guid.NewGuid(), 0, passingScore: 85, courseAssetId: assessmentId);
+
+        resource.ResourceType.Should().Be(ResourceType.Assessment);
+        resource.CourseAssetId.Should().Be(assessmentId);
+        resource.CanComplete(84).Should().BeFalse();
+        resource.CanComplete(85).Should().BeTrue();
+        resource.CanComplete(90).Should().BeTrue();
     }
 
     [Fact]
     public void UpdateOrder_Should_Succeed_WhenOrderIsZeroOrPositive()
     {
-        var id = Guid.NewGuid();
-        var arn = ResourceArn.ForVideo(TenantId, id);
-        var asset = VideoCourseAsset.Create(id, TenantId, arn, "Test Video", CourseId).Value;
-        var resource = new CurriculumResource(asset, 0, JsonDocument.Parse("{}").RootElement);
-
+        var jsonContent = JsonSerializer.SerializeToElement("Text");
+        var resource = new ArticleCurriculumResource(Guid.NewGuid(), 0, jsonContent);
         var result = resource.UpdateOrder(2);
 
         result.IsError.Should().BeFalse();
@@ -44,28 +80,11 @@ public class CurriculumResourceTests
     [Fact]
     public void UpdateOrder_Should_Fail_WhenOrderIsNegative()
     {
-        var id = Guid.NewGuid();
-        var arn = ResourceArn.ForVideo(TenantId, id);
-        var asset = VideoCourseAsset.Create(id, TenantId, arn, "Test Video", CourseId).Value;
-        var resource = new CurriculumResource(asset, 0, JsonDocument.Parse("{}").RootElement);
-
+        var jsonContent = JsonSerializer.SerializeToElement("Text");
+        var resource = new ArticleCurriculumResource(Guid.NewGuid(), 0, jsonContent);
         var result = resource.UpdateOrder(-1);
 
         result.IsError.Should().BeTrue();
-        result.FirstError.Code.Should().Be("Courses.Resources.Order.Validation");
-    }
-
-    [Fact]
-    public void UpdateMetadata_Should_UpdateMetadataProperty()
-    {
-        var id = Guid.NewGuid();
-        var arn = ResourceArn.ForVideo(TenantId, id);
-        var asset = VideoCourseAsset.Create(id, TenantId, arn, "Test Video", CourseId).Value;
-        var resource = new CurriculumResource(asset, 0, JsonDocument.Parse("{}").RootElement);
-
-        var newMetadata = JsonDocument.Parse("{\"updated\":true}").RootElement;
-        resource.UpdateMetadata(newMetadata);
-
-        resource.Metadata.GetProperty("updated").GetBoolean().Should().BeTrue();
+        result.FirstError.Code.Should().Be("CurriculumResource.Order");
     }
 }

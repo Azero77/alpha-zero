@@ -59,6 +59,27 @@ public class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
             services.RemoveAll<ITenantProvider>();
             services.AddHttpContextAccessor();
             services.AddScoped<ITenantProvider, TestTenantProvider>();
+
+            // Bypass IAM evaluation for integration tests when Testing:BypassIAM is set
+            if (Environment.GetEnvironmentVariable("Testing:BypassIAM") == "true")
+            {
+                services.RemoveAll<AlphaZero.Shared.Authorization.IPolicyEvaluatorService>();
+                services.AddScoped<AlphaZero.Shared.Authorization.IPolicyEvaluatorService, BypassPolicyEvaluatorService>();
+            }
+
+            // Mock AWSResources so MassTransit SQS consumers can instantiate
+            services.AddSingleton(new Aspire.Shared.AWSResources 
+            { 
+                VideoProgressQueue = new Aspire.Shared.SQSQueueSettings { QueueUrl = "https://sqs.mock/mock-queue" }, 
+                VideoFailedQueue = new Aspire.Shared.SQSQueueSettings { QueueUrl = "https://sqs.mock/mock-queue-failed" }, 
+                VideoPublishedQueue = new Aspire.Shared.SQSQueueSettings { QueueUrl = "https://sqs.mock/mock-queue-pub" },
+                DocumentUploadedQueue = new Aspire.Shared.SQSQueueSettings { QueueUrl = "https://sqs.mock/mock-queue-doc" },
+                DocumentProcessingCompletedQueue = new Aspire.Shared.SQSQueueSettings { QueueUrl = "https://sqs.mock/mock-queue-doc-completed" },
+                DocumentProcessingFailedQueue = new Aspire.Shared.SQSQueueSettings { QueueUrl = "https://sqs.mock/mock-queue-doc-failed" }
+            });
+
+            // Ensure IPublishEndpoint publishes to in-memory IBus rather than external SQS bus in tests
+            services.AddScoped<MassTransit.IPublishEndpoint>(sp => sp.GetRequiredService<MassTransit.IBus>());
         });
     }
 
@@ -72,7 +93,28 @@ public class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
 public class TestTenantProvider : ITenantProvider
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
-    public Guid? CurrentTenantId { get; set; }
+    private static readonly AsyncLocal<Guid?> _asyncLocalTenantId = new();
+    private static Guid? _fallbackTenantId;
+
+    public static Guid? StaticTenantId
+    {
+        get => _asyncLocalTenantId.Value ?? _fallbackTenantId;
+        set
+        {
+            _asyncLocalTenantId.Value = value;
+            _fallbackTenantId = value;
+        }
+    }
+
+    public Guid? CurrentTenantId
+    {
+        get => _asyncLocalTenantId.Value ?? _fallbackTenantId;
+        set
+        {
+            _asyncLocalTenantId.Value = value;
+            _fallbackTenantId = value;
+        }
+    }
 
     public TestTenantProvider(IHttpContextAccessor httpContextAccessor)
     {
@@ -90,6 +132,12 @@ public class TestTenantProvider : ITenantProvider
             }
         }
 
-        return CurrentTenantId;
+        return CurrentTenantId ?? StaticTenantId;
     }
+}
+
+public class BypassPolicyEvaluatorService : AlphaZero.Shared.Authorization.IPolicyEvaluatorService
+{
+    public Task<ErrorOr.ErrorOr<ErrorOr.Success>> Authorize(AlphaZero.Shared.Authorization.AuthorizationContext context) =>
+        Task.FromResult<ErrorOr.ErrorOr<ErrorOr.Success>>(ErrorOr.Result.Success);
 }

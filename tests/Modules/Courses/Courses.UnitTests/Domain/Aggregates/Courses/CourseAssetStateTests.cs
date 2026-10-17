@@ -18,7 +18,7 @@ public class CourseAssetStateTests
     }
 
     [Fact]
-    public void FullStateCycle_Pending_To_Available_To_InUse_To_Available_To_Archived()
+    public void FullStateCycle_Pending_To_Available_To_Archived()
     {
         var asset = CreateTestAsset();
         asset.State.Should().Be(CourseAssetState.Pending);
@@ -26,16 +26,6 @@ public class CourseAssetStateTests
         // Pending -> Available
         var availResult = asset.MarkAvailable();
         availResult.IsError.Should().BeFalse();
-        asset.State.Should().Be(CourseAssetState.Available);
-
-        // Available -> InUse
-        var inUseResult = asset.MarkInUse();
-        inUseResult.IsError.Should().BeFalse();
-        asset.State.Should().Be(CourseAssetState.InUse);
-
-        // InUse -> ReturnToPool (Available)
-        var returnResult = asset.ReturnToPool();
-        returnResult.IsError.Should().BeFalse();
         asset.State.Should().Be(CourseAssetState.Available);
 
         // Available -> Archived
@@ -56,37 +46,12 @@ public class CourseAssetStateTests
     }
 
     [Fact]
-    public void Archive_Should_Fail_WhenAssetIsInUse()
+    public void Archive_Should_Fail_WhenAlreadyArchived()
     {
         var asset = CreateTestAsset();
-        asset.MarkAvailable();
-        asset.MarkInUse();
+        asset.Archive();
 
         var result = asset.Archive();
-
-        result.IsError.Should().BeTrue();
-        result.FirstError.Code.Should().Be("CourseAsset.State");
-        asset.State.Should().Be(CourseAssetState.InUse);
-    }
-
-    [Fact]
-    public void MarkInUse_Should_Fail_WhenPending()
-    {
-        var asset = CreateTestAsset();
-
-        var result = asset.MarkInUse();
-
-        result.IsError.Should().BeTrue();
-        result.FirstError.Code.Should().Be("CourseAsset.State");
-    }
-
-    [Fact]
-    public void ReturnToPool_Should_Fail_WhenAvailable()
-    {
-        var asset = CreateTestAsset();
-        asset.MarkAvailable();
-
-        var result = asset.ReturnToPool();
 
         result.IsError.Should().BeTrue();
         result.FirstError.Code.Should().Be("CourseAsset.State");

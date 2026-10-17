@@ -42,6 +42,8 @@ public class IdentityModule : AppModule, IIdentityModule
             o.DuplicateDetectionWindow = TimeSpan.FromMinutes(30);
         });
 
-        configuration.AddModuleConsumers<Infrastructure.Persistance.AppDbContext>(typeof(IdentityModule).Assembly);
+        configuration.AddModuleConsumers<Infrastructure.Persistance.AppDbContext>(
+            typeof(IdentityModule).Assembly,
+            typeof(Infrastructure.Persistance.AppDbContext).Assembly);
     }
 }

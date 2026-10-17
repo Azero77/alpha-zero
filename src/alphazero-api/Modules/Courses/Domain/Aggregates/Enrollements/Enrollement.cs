@@ -25,7 +25,7 @@ public class Enrollement : TenantOwnedAggregate
         Progress = Progress.Create(totalTrackedItems, activeTrackedItems ?? totalTrackedItems);
         EnrolledOn = DateTime.UtcNow;
 
-        AddDomainEvent(new EnrollementCreatedDomainEvent(Id, StudentId, CourseId));
+        AddDomainEvent(new EnrollementCreatedDomainEvent(Id, StudentId, CourseId, TenantId));
     }
 
     public static ErrorOr<Enrollement> Create(Guid id, Guid tenantId, Guid studentId, Guid courseId, int totalTrackedItems, int? activeTrackedItems = null)

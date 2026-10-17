@@ -12,57 +12,63 @@ public class CourseRepository : BaseRepository<AppDbContext, Course>, ICourseRep
     {
     }
 
-    public async Task<Course?> GetByIdWithSectionsAsync(Guid id, CancellationToken cancellationToken = default)
+    public ICourseQueryBuilder Query() => new CourseQueryBuilder(_context);
+
+    public ICourseQueryBuilder Query(Guid courseId) => new CourseQueryBuilder(_context).ForCourse(courseId);
+
+    public async Task<bool> IsAssetInUseAsync(Guid courseAssetId, CancellationToken cancellationToken = default)
     {
-        return await _context.Courses
-            .Include(c => c.Sections)
-                .ThenInclude(s => s.Items)
-            .FirstOrDefaultAsync(c => c.Id == id, cancellationToken);
+        return await _context.Set<CurriculumResource>()
+            .AnyAsync(r => r.CourseAssetId == courseAssetId, cancellationToken);
+    }
+}
+
+public class CourseResourceQueryService : ICourseResourceQueryService
+{
+    private readonly AppDbContext _context;
+
+    public CourseResourceQueryService(AppDbContext context)
+    {
+        _context = context;
     }
 
-    public async Task<(Guid CourseId, int BitIndex)?> GetItemBitIndexByResourceIdAsync(Guid resourceId, CancellationToken cancellationToken = default)
+    public async Task<CourseResourceDetailsDto?> GetResourceDetailsAsync(
+        Guid courseId,
+        Guid curriculumResourceId,
+        CancellationToken cancellationToken = default)
     {
-        var itemInfo = await _context.Courses
-            .SelectMany(c => c.Sections)
-            .SelectMany(s => s.Items)
-            .Where(i => i.Resources.Any(r => r.CourseAssetId == resourceId))
-            .Select(i => new { i.SectionId, i.BitIndex })
-            .FirstOrDefaultAsync(cancellationToken);
+        var query = BuildResourceDetailsQuery(
+            courseId,
+            resource => resource.Id == curriculumResourceId);
 
-        if (itemInfo == null) return null;
-
-        var courseId = await _context.Set<CourseSection>()
-            .Where(s => s.Id == itemInfo.SectionId)
-            .Select(s => s.CourseId)
-            .FirstOrDefaultAsync(cancellationToken);
-
-        return (courseId, itemInfo.BitIndex);
+        return await query.FirstOrDefaultAsync(cancellationToken);
     }
 
-    public async Task<List<Course>> GetCoursesByResourceIdAsync(Guid resourceId, CancellationToken cancellationToken = default)
+    private IQueryable<CourseResourceDetailsDto> BuildResourceDetailsQuery(
+        Guid courseId,
+        System.Linq.Expressions.Expression<Func<CurriculumResource, bool>> resourceFilter)
     {
-        return await _context.Courses
-            .Include(c => c.Sections)
-                .ThenInclude(s => s.Items)
-            .Where(c => c.Sections.Any(s => s.Items.Any(i => i.Resources.Any(r => r.CourseAssetId == resourceId))))
-            .ToListAsync(cancellationToken);
-    }
+        // The predicate must stay an expression for EF translation, so it is applied to the
+        // strongly-typed CurriculumResource set first; placements then join by resource id.
+        var matchingResourceIds = _context.Set<CurriculumResource>()
+            .Where(resourceFilter)
+            .Where(r => r.CourseAssetId != null)
+            .Select(r => r.Id);
 
-    public async Task<Course?> GetCourseAsync(Guid courseId, CancellationToken token = default)
-    {
-        return await _context.Courses
-            .Include(c => c.Sections)
-            .ThenInclude(c => c.Items)
-            .ThenInclude(item => item.Resources)
-            .Include(c => c.Plans)
-            .FirstOrDefaultAsync(c => c.Id == courseId, token);
+        return from course in _context.Courses
+               where course.Id == courseId
+               from section in course.Sections
+               from item in section.Items
+               from resource in item.Resources
+               where matchingResourceIds.Contains(resource.Id)
+               join asset in _context.CourseAssets
+                   on resource.CourseAssetId equals asset.Id
+               select new CourseResourceDetailsDto(
+                   resource.Id,
+                   item.Id,
+                   course.Id,
+                   asset.Id,
+                   asset.ResourceArn,
+                   resource.ResourceType);
     }
-
-    public async Task<Course?> GetByIdWithSectionsAndAssetsAsync(Guid courseId, CancellationToken ct = default)
-        => await _context.Courses
-            .Include(c => c.Sections)
-                .ThenInclude(s => s.Items)
-                    .ThenInclude(i => i.Resources)
-            .Include(c => c.Assets)
-            .FirstOrDefaultAsync(c => c.Id == courseId, ct);
 }

@@ -40,8 +40,8 @@ public class CourseOverviewTests : BaseIntegrationTest
             SubjectId = subjectId 
         });
         
-        var result = await response.Content.ReadFromJsonAsync<Guid>();
-        return result;
+        var result = await response.Content.ReadFromJsonAsync<CreateCourseResponse>();
+        return result!.Id;
     }
 
     [Fact]
@@ -62,9 +62,10 @@ public class CourseOverviewTests : BaseIntegrationTest
         
         // Act
         var response = await Client.PutAsJsonAsync($"/courses/{courseId}/overview", request);
+        var body = await response.Content.ReadAsStringAsync();
 
         // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        response.StatusCode.Should().Be(HttpStatusCode.OK, because: body);
 
         // Verify Get
         var getResponse = await Client.GetAsync($"/courses/{courseId}/overview");

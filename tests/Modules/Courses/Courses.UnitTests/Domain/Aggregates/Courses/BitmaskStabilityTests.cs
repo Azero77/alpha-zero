@@ -1,7 +1,6 @@
 using AlphaZero.Modules.Courses.Domain.Aggregates.Courses;
 using AlphaZero.Shared.Domain;
 using FluentAssertions;
-using System.Text.Json;
 using Xunit;
 
 namespace AlphaZero.Modules.Courses.UnitTests.Domain.Aggregates.Courses;
@@ -11,30 +10,24 @@ public class BitmaskStabilityTests
     private static readonly Guid TenantId = Guid.NewGuid();
     private static readonly Guid SubjectId = Guid.NewGuid();
 
+    private static CurriculumItem AddItem(Course course, CourseSection section, string title, string type)
+    {
+        var bitIndex = course.AllocateNextBitIndex();
+        return section.AddItem(Guid.NewGuid(), title, type, bitIndex).Value;
+    }
+
     [Fact]
     public void BitIndex_Should_BeAssignedSequentially_WhenItemsAreAdded()
     {
         // Arrange
         var course = Course.Create(Guid.NewGuid(), TenantId, "Architecture 101", null, SubjectId).Value;
         course.AddSection("Section 1");
-        var sectionId = course.Sections.First().Id;
-
-        var v1Id = Guid.NewGuid();
-        course.AddVideoAsset(v1Id, ResourceArn.ForVideo(TenantId, v1Id), "Video 1");
-        course.MarkAssetAvailable(v1Id);
-
-        var a1Id = Guid.NewGuid();
-        course.AddAssessmentAsset(a1Id, ResourceArn.ForAssessment(TenantId, a1Id), "Quiz 1", 5, AssessmentType.Practice);
-        course.MarkAssetAvailable(a1Id);
-
-        var v2Id = Guid.NewGuid();
-        course.AddVideoAsset(v2Id, ResourceArn.ForVideo(TenantId, v2Id), "Video 2");
-        course.MarkAssetAvailable(v2Id);
+        var section = course.Sections.First();
 
         // Act
-        course.AssignAssetToCurriculum(v1Id, sectionId, "Lesson 1", JsonDocument.Parse("{}").RootElement);
-        course.AssignAssetToCurriculum(a1Id, sectionId, "Assessment 1", JsonDocument.Parse("{}").RootElement);
-        course.AssignAssetToCurriculum(v2Id, sectionId, "Lesson 2", JsonDocument.Parse("{}").RootElement);
+        AddItem(course, section, "Lesson 1", "Video");
+        AddItem(course, section, "Assessment 1", "Assessment");
+        AddItem(course, section, "Lesson 2", "Video");
 
         // Assert
         var items = course.Sections.First().Items.ToList();
@@ -50,26 +43,16 @@ public class BitmaskStabilityTests
         // Arrange
         var course = Course.Create(Guid.NewGuid(), TenantId, "Architecture 101", null, SubjectId).Value;
         course.AddSection("Section 1");
-        var sectionId = course.Sections.First().Id;
+        var section = course.Sections.First();
 
-        var v1Id = Guid.NewGuid();
-        course.AddVideoAsset(v1Id, ResourceArn.ForVideo(TenantId, v1Id), "Video 1");
-        course.MarkAssetAvailable(v1Id);
-
-        var v2Id = Guid.NewGuid();
-        course.AddVideoAsset(v2Id, ResourceArn.ForVideo(TenantId, v2Id), "Video 2");
-        course.MarkAssetAvailable(v2Id);
-
-        course.AssignAssetToCurriculum(v1Id, sectionId, "Lesson 1", JsonDocument.Parse("{}").RootElement);
-        course.AssignAssetToCurriculum(v2Id, sectionId, "Lesson 2", JsonDocument.Parse("{}").RootElement);
+        var l1 = AddItem(course, section, "Lesson 1", "Video");
+        var l2 = AddItem(course, section, "Lesson 2", "Video");
         
-        var l1 = course.Sections.First().Items.First(i => i.Title == "Lesson 1");
-        var l2 = course.Sections.First().Items.First(i => i.Title == "Lesson 2");
         l1.BitIndex.Should().Be(0);
         l2.BitIndex.Should().Be(1);
 
         // Act: Reorder L2 to be first
-        course.ReorderItems(sectionId, new List<Guid> { l2.Id, l1.Id });
+        course.ReorderItems(section.Id, new List<Guid> { l2.Id, l1.Id });
 
         // Assert
         l1.BitIndex.Should().Be(0);
@@ -85,27 +68,20 @@ public class BitmaskStabilityTests
         // Arrange
         var course = Course.Create(Guid.NewGuid(), TenantId, "Architecture 101", null, SubjectId).Value;
         course.AddSection("S1");
-        var s1Id = course.Sections.First().Id;
+        var s1 = course.Sections.First();
 
-        var v1Id = Guid.NewGuid();
-        course.AddVideoAsset(v1Id, ResourceArn.ForVideo(TenantId, v1Id), "Video 1");
-        course.MarkAssetAvailable(v1Id);
-        course.AssignAssetToCurriculum(v1Id, s1Id, "L1", JsonDocument.Parse("{}").RootElement);
+        var l1 = AddItem(course, s1, "L1", "Video");
         
-        var l1 = course.Sections.First().Items.First();
         l1.BitIndex.Should().Be(0);
 
         // Act
         course.AddSection("S2");
-        var s2Id = course.Sections.Last().Id;
+        var s2 = course.Sections.Last();
 
-        var v2Id = Guid.NewGuid();
-        course.AddVideoAsset(v2Id, ResourceArn.ForVideo(TenantId, v2Id), "Video 2");
-        course.MarkAssetAvailable(v2Id);
-        course.AssignAssetToCurriculum(v2Id, s2Id, "L2", JsonDocument.Parse("{}").RootElement);
+        var l2 = AddItem(course, s2, "L2", "Video");
 
         // Assert
         l1.BitIndex.Should().Be(0);
-        course.Sections.Last().Items.First().BitIndex.Should().Be(1);
+        l2.BitIndex.Should().Be(1);
     }
 }

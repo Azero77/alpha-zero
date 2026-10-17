@@ -1,0 +1,137 @@
+using AlphaZero.Modules.Courses.Application.Courses.Queries.GetCourseOverview;
+using AlphaZero.Modules.Courses.Application.Queries;
+using AlphaZero.Shared.Authorization;
+using AlphaZero.Shared.Domain;
+using AlphaZero.Shared.Infrastructure.Tenats;
+using ErrorOr;
+using FluentAssertions;
+using NSubstitute;
+using Xunit;
+
+namespace AlphaZero.Modules.Courses.UnitTests.Application.Courses;
+
+public class GetCourseOverviewPreRequestHandlerTests
+{
+    private readonly ICourseQueryService _courseQueryService;
+    private readonly IPolicyEvaluatorService _policyEvaluator;
+    private readonly ITenantProvider _tenantProvider;
+    private readonly GetCourseOverviewPreRequestHandler _handler;
+
+    private readonly Guid _courseId = Guid.NewGuid();
+    private readonly Guid _tenantId = Guid.NewGuid();
+
+    public GetCourseOverviewPreRequestHandlerTests()
+    {
+        _courseQueryService = Substitute.For<ICourseQueryService>();
+        _policyEvaluator = Substitute.For<IPolicyEvaluatorService>();
+        _tenantProvider = Substitute.For<ITenantProvider>();
+        _tenantProvider.GetTenant().Returns(_tenantId);
+
+        _handler = new GetCourseOverviewPreRequestHandler(
+            _courseQueryService,
+            _policyEvaluator,
+            _tenantProvider);
+    }
+
+    private CourseOverviewDto CreateDto(string status) =>
+        new(Guid.NewGuid(), _courseId, status, "Desc", null, null, null, "\"etag123\"");
+
+    [Fact]
+    public async Task PreHandle_WhenOverviewNotFound_ReturnsNotFound()
+    {
+        // Arrange
+        _courseQueryService.GetCourseOverviewAsync(_courseId, Arg.Any<CancellationToken>())
+            .Returns((CourseOverviewDto?)null);
+
+        // Act
+        var result = await _handler.PreHandle(new GetCourseOverviewQuery(_courseId), null, CancellationToken.None);
+
+        // Assert
+        result.IsError.Should().BeTrue();
+        result.FirstError.Type.Should().Be(ErrorType.NotFound);
+    }
+
+    [Fact]
+    public async Task PreHandle_WhenCourseIsPublished_ReturnsSuccess_EvenWhenAnonymous()
+    {
+        // Arrange
+        var dto = CreateDto("Published");
+        _courseQueryService.GetCourseOverviewAsync(_courseId, Arg.Any<CancellationToken>())
+            .Returns(dto);
+
+        // Act
+        var result = await _handler.PreHandle(new GetCourseOverviewQuery(_courseId), null, CancellationToken.None);
+
+        // Assert
+        result.IsError.Should().BeFalse();
+        result.Value.Should().Be(Result.Success);
+    }
+
+    [Fact]
+    public async Task PreHandle_WhenCourseIsDraft_AndContextIsNull_ReturnsNotFoundToMaskExistence()
+    {
+        // Arrange
+        var dto = CreateDto("Draft");
+        _courseQueryService.GetCourseOverviewAsync(_courseId, Arg.Any<CancellationToken>())
+            .Returns(dto);
+
+        // Act
+        var result = await _handler.PreHandle(new GetCourseOverviewQuery(_courseId), null, CancellationToken.None);
+
+        // Assert
+        result.IsError.Should().BeTrue();
+        result.FirstError.Type.Should().Be(ErrorType.NotFound);
+    }
+
+    [Fact]
+    public async Task PreHandle_WhenCourseIsDraft_AndUserForbidden_ReturnsNotFoundToMaskExistence()
+    {
+        // Arrange
+        var dto = CreateDto("Draft");
+        _courseQueryService.GetCourseOverviewAsync(_courseId, Arg.Any<CancellationToken>())
+            .Returns(dto);
+
+        var context = new AuthorizationContext
+        {
+            Id = Guid.NewGuid(),
+            TenantId = _tenantId,
+            AuthenticationMethod = "TenantUser"
+        };
+
+        _policyEvaluator.Authorize(Arg.Any<AuthorizationContext>())
+            .Returns(Error.Forbidden("Access.Denied", "Forbidden"));
+
+        // Act
+        var result = await _handler.PreHandle(new GetCourseOverviewQuery(_courseId), context, CancellationToken.None);
+
+        // Assert
+        result.IsError.Should().BeTrue();
+        result.FirstError.Type.Should().Be(ErrorType.NotFound);
+    }
+
+    [Fact]
+    public async Task PreHandle_WhenCourseIsDraft_AndUserAuthorized_ReturnsSuccess()
+    {
+        // Arrange
+        var dto = CreateDto("Draft");
+        _courseQueryService.GetCourseOverviewAsync(_courseId, Arg.Any<CancellationToken>())
+            .Returns(dto);
+
+        var context = new AuthorizationContext
+        {
+            Id = Guid.NewGuid(),
+            TenantId = _tenantId,
+            AuthenticationMethod = "Principal"
+        };
+
+        _policyEvaluator.Authorize(Arg.Any<AuthorizationContext>())
+            .Returns(Result.Success);
+
+        // Act
+        var result = await _handler.PreHandle(new GetCourseOverviewQuery(_courseId), context, CancellationToken.None);
+
+        // Assert
+        result.IsError.Should().BeFalse();
+        result.Value.Should().Be(Result.Success);
+    }
+}

@@ -1,6 +1,10 @@
 using System.Security.Claims;
 using System.Text.Encodings.Web;
+using AlphaZero.Modules.Identity.Infrastructure.Persistance;
+using AlphaZero.Shared.Authorization;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -16,7 +20,7 @@ public class TestAuthHandler : AuthenticationHandler<AuthenticationSchemeOptions
     {
     }
 
-    protected override Task<AuthenticateResult> HandleAuthenticateAsync()
+    protected override async Task<AuthenticateResult> HandleAuthenticateAsync()
     {
         var claims = new List<Claim>
         {
@@ -26,10 +30,36 @@ public class TestAuthHandler : AuthenticationHandler<AuthenticationSchemeOptions
             new Claim("name", "Test User")
         };
 
-        if (Context.Request.Headers.TryGetValue("X-Test-User-Id", out var userId))
+        if (Context.Request.Headers.TryGetValue("X-Test-User-Id", out var userId) && Guid.TryParse(userId, out var parsedUserId))
         {
             claims.Add(new Claim("sub", userId.ToString()));
             claims.Add(new Claim(ClaimTypes.NameIdentifier, userId.ToString()));
+
+            var db = Context.RequestServices.GetService<AppDbContext>();
+            if (db != null)
+            {
+                var tenantUser = await db.TenantUsers.Include(u => u.Devices).FirstOrDefaultAsync(u => u.Id == parsedUserId);
+                if (tenantUser != null)
+                {
+                    if (tenantUser.MainDeviceId.HasValue)
+                    {
+                        claims.Add(new Claim(CustomClaimTypes.MainDeviceId, tenantUser.MainDeviceId.Value.ToString()));
+                    }
+
+                    var reqDevId = Context.Request.Headers["X-Device-Id"].ToString();
+                    var matchedDevice = tenantUser.Devices.FirstOrDefault(d => d.Id.ToString() == reqDevId)
+                        ?? tenantUser.Devices.FirstOrDefault(d => d.Id == tenantUser.MainDeviceId)
+                        ?? tenantUser.Devices.FirstOrDefault();
+
+                    if (matchedDevice != null)
+                    {
+                        claims.Add(new Claim(CustomClaimTypes.DeviceId, matchedDevice.Id.ToString()));
+                        claims.Add(new Claim(CustomClaimTypes.DeviceName, matchedDevice.DeviceName));
+                        claims.Add(new Claim(CustomClaimTypes.DevicePlatform, matchedDevice.Platform.ToString()));
+                        claims.Add(new Claim(CustomClaimTypes.DevicePublicKey, matchedDevice.PublicKey));
+                    }
+                }
+            }
         }
         else
         {
@@ -38,10 +68,25 @@ public class TestAuthHandler : AuthenticationHandler<AuthenticationSchemeOptions
             claims.Add(new Claim(ClaimTypes.NameIdentifier, randomId));
         }
 
+        if (Context.Request.Headers.TryGetValue("X-TenantId", out var tenantIdStr))
+        {
+            claims.Add(new Claim(CustomClaimTypes.TenantId, tenantIdStr.ToString()));
+        }
+
+        if (Context.Request.Headers.TryGetValue("X-Device-Id", out var deviceIdStr) && !claims.Any(c => c.Type == CustomClaimTypes.DeviceId))
+        {
+            claims.Add(new Claim(CustomClaimTypes.DeviceId, deviceIdStr.ToString()));
+        }
+
+        if (Context.Request.Headers.TryGetValue("X-Main-Device-Id", out var mainDeviceIdStr) && !claims.Any(c => c.Type == CustomClaimTypes.MainDeviceId))
+        {
+            claims.Add(new Claim(CustomClaimTypes.MainDeviceId, mainDeviceIdStr.ToString()));
+        }
+
         var identity = new ClaimsIdentity(claims, "TestScheme");
         var principal = new ClaimsPrincipal(identity);
         var ticket = new AuthenticationTicket(principal, "TestScheme");
 
-        return Task.FromResult(AuthenticateResult.Success(ticket));
+        return AuthenticateResult.Success(ticket);
     }
 }

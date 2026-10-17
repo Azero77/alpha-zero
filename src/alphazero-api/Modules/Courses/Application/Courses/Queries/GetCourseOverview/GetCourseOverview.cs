@@ -19,18 +19,16 @@ public record GetCourseOverviewQuery(Guid CourseId) : IRequest<ErrorOr<CourseOve
 
 public class GetCourseOverviewQueryHandler : IRequestHandler<GetCourseOverviewQuery, ErrorOr<CourseOverviewDto>>
 {
-    private readonly ICourseOverviewRepository _courseOverviewRepository;
+    private readonly ICourseQueryService _courseQueryService;
 
-    public GetCourseOverviewQueryHandler(
-        ICourseOverviewRepository courseOverviewRepository
-        )
+    public GetCourseOverviewQueryHandler(ICourseQueryService courseQueryService)
     {
-        _courseOverviewRepository = courseOverviewRepository;
+        _courseQueryService = courseQueryService;
     }
 
     public async Task<ErrorOr<CourseOverviewDto>> Handle(GetCourseOverviewQuery request, CancellationToken cancellationToken)
     {
-        var overview = await _courseOverviewRepository.GetByCourseIdAsync(request.CourseId, cancellationToken);
+        var overview = await _courseQueryService.GetCourseOverviewAsync(request.CourseId, cancellationToken);
         if (overview is null)
             return Error.NotFound("CourseOverview.NotFound", "Course overview not found.");
 

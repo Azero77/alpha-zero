@@ -3,7 +3,6 @@ using AlphaZero.Shared.Authorization;
 using AlphaZero.Shared.Domain;
 using AlphaZero.Shared.Presentation.Extensions;
 using FastEndpoints;
-using MediatR;
 using Microsoft.AspNetCore.Http;
 
 namespace AlphaZero.Modules.Courses.Presentation.Courses.State;
@@ -24,7 +23,8 @@ public class PublishCourseSummary : Summary<PublishCourseEndpoint>
         Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(401, "Unauthorized");
         Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(403, "Forbidden (Missing courses:Publish permission)");
         Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(404, "Course not found (Course.NotFound)");
-        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(409, "Conflict (Course.Status - only approved courses can be published)");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(409, "Conflict (Course.Status - only draft or approved courses can be published)");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(422, "Unprocessable Entity (Course.NotReady - readiness checks failed)");
     }
 }
 
@@ -36,6 +36,7 @@ public class PublishCourseEndpoint : Endpoint<PublishCourseRequest>
     {
         _module = module;
     }
+
     public override void Configure()
     {
         Patch("/courses/{CourseId}/publish");
@@ -48,12 +49,16 @@ public class PublishCourseEndpoint : Endpoint<PublishCourseRequest>
 
     public override async Task HandleAsync(PublishCourseRequest req, CancellationToken ct)
     {
-        var command = new PublishCourseCommand(req.CourseId);
+        var command = new PublishCourseCommand(req.CourseId, CanDirectPublish: true);
         var result = await _module.Send(command, ct);
 
         if (result.IsError)
         {
-            await this.SendErrorResponseAsync(result.Errors, ct);
+            var statusCode = result.Errors.Any(e => e.Code == "Course.NotReady")
+                ? StatusCodes.Status422UnprocessableEntity
+                : (int?)null;
+
+            await this.SendErrorResponseAsync(result.Errors, statusCode, ct);
             return;
         }
 

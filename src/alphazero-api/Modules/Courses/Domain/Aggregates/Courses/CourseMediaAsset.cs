@@ -5,7 +5,7 @@ using System.Text.Json;
 
 namespace AlphaZero.Modules.Courses.Domain.Aggregates.Courses;
 
-public abstract class CourseAsset : TenantOwnedEntity
+public abstract class CourseAsset : TenantOwnedAggregate
 {
     // EF Core constructor
     protected CourseAsset() : base(default, default) { }
@@ -29,6 +29,13 @@ public abstract class CourseAsset : TenantOwnedEntity
     public CourseAssetState State { get; private set; }
     public DateTime UploadedUtcAt { get; private set; }
 
+    /// <summary>
+    /// The primary key of the aggregate in the EXTERNAL bounded context
+    /// (VideoUploading / Documents / Assessments), extracted from the ResourceArn.
+    /// This is the ONLY identity binding to Layer 1; the pool asset's own Id (Layer 2) is independent.
+    /// </summary>
+    public Guid ExternalResourceId => ResourceArn.ExtractResourceId() ?? Guid.Empty;
+
     // ─── State Transitions ───
 
     public ErrorOr<Success> MarkAvailable()
@@ -49,29 +56,10 @@ public abstract class CourseAsset : TenantOwnedEntity
         return Result.Success;
     }
 
-    public ErrorOr<Success> MarkInUse()
-    {
-        if (State != CourseAssetState.Available)
-            return Error.Conflict("CourseAsset.State", 
-                $"Cannot mark asset as in-use from state '{State}'. Must be Available.");
-        State = CourseAssetState.InUse;
-        return Result.Success;
-    }
-
-    public ErrorOr<Success> ReturnToPool()
-    {
-        if (State != CourseAssetState.InUse)
-            return Error.Conflict("CourseAsset.State", 
-                $"Cannot return asset to pool from state '{State}'. Must be InUse.");
-        State = CourseAssetState.Available;
-        return Result.Success;
-    }
-
     public ErrorOr<Success> Archive()
     {
-        if (State == CourseAssetState.InUse)
-            return Error.Conflict("CourseAsset.State", 
-                "Cannot archive an asset that is currently in use. Unassign it first.");
+        if (State == CourseAssetState.Archived)
+            return Error.Conflict("CourseAsset.State", "Asset is already archived.");
         State = CourseAssetState.Archived;
         return Result.Success;
     }
@@ -85,7 +73,7 @@ public abstract class CourseAsset : TenantOwnedEntity
 
 // ─── Enums ───
 
-public enum CourseAssetState { Pending, Available, Archived, InUse, Failed }
+public enum CourseAssetState { Pending, Available, Archived, Failed }
 public enum CourseAssetType { Video, Document, Assessment }
 
 // ─── Subtypes ───
@@ -96,6 +84,9 @@ public class VideoCourseAsset : CourseAsset
     public TimeSpan Duration { get; private set; }
     public string? ThumbnailUrl { get; private set; }
     public string? RelativeStreamingUrl { get; private set; }
+
+    /// <summary>Typed accessor for the actual external VideoUploading module video id (Layer 1).</summary>
+    public Guid VideoId => ExternalResourceId;
 
     private VideoCourseAsset() { } // EF Core
 
@@ -127,6 +118,9 @@ public class DocumentCourseAsset : CourseAsset
     public string FileName { get; private set; } = null!;
     public long Size { get; private set; }
     public string ContentType { get; private set; } = null!;
+
+    /// <summary>Typed accessor for the actual external Documents module document id (Layer 1).</summary>
+    public Guid DocumentId => ExternalResourceId;
 
     private DocumentCourseAsset() { } // EF Core
 
@@ -165,6 +159,9 @@ public class AssessmentCourseAsset : CourseAsset
     public override CourseAssetType CourseAssetType => CourseAssetType.Assessment;
     public int QuestionsNumber { get; private set; }
     public AssessmentType Type { get; private set; }
+
+    /// <summary>Typed accessor for the actual external Assessments module assessment id (Layer 1).</summary>
+    public Guid AssessmentId => ExternalResourceId;
 
     private AssessmentCourseAsset() { } // EF Core
 

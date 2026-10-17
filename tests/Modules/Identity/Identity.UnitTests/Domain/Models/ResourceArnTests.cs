@@ -107,4 +107,76 @@ public class ResourceArnTests
         // Act & Assert
         pattern.IsMatch(arn).Should().BeFalse();
     }
+
+    [Fact]
+    public void ContainsSubResource_Should_ReturnTrue_When_ExactPathMatches()
+    {
+        // Arrange
+        var arn = ResourceArn.Create("course", TenantId.ToString(), $"course/{CourseId}").Value;
+
+        // Act & Assert
+        arn.ContainsSubResource($"course/{CourseId}").Should().BeTrue();
+    }
+
+    [Fact]
+    public void ContainsSubResource_Should_ReturnTrue_When_RequestedPathIsChildOfResource()
+    {
+        // Arrange
+        var sectionId = Guid.NewGuid();
+        var arn = ResourceArn.Create("course", TenantId.ToString(), $"course/{CourseId}").Value;
+        var childPath = $"course/{CourseId}/section/{sectionId}";
+
+        // Act & Assert
+        arn.ContainsSubResource(childPath).Should().BeTrue();
+    }
+
+    [Fact]
+    public void ContainsSubResource_Should_ReturnTrue_When_RequestedPathIsDeepChildOfResource()
+    {
+        // Arrange
+        var sectionId = Guid.NewGuid();
+        var itemId = Guid.NewGuid();
+        var videoId = Guid.NewGuid();
+        var arn = ResourceArn.Create("course", TenantId.ToString(), $"course/{CourseId}").Value;
+        var deepChildPath = $"course/{CourseId}/section/{sectionId}/item/{itemId}/video/{videoId}";
+
+        // Act & Assert
+        arn.ContainsSubResource(deepChildPath).Should().BeTrue();
+    }
+
+    [Fact]
+    public void ContainsSubResource_Should_ReturnFalse_When_RequestedPathIsParentOfResource()
+    {
+        // Arrange
+        var sectionId = Guid.NewGuid();
+        var arn = ResourceArn.Create("section", TenantId.ToString(), $"course/{CourseId}/section/{sectionId}").Value;
+        var parentPath = $"course/{CourseId}";
+
+        // Act & Assert
+        arn.ContainsSubResource(parentPath).Should().BeFalse();
+    }
+
+    [Fact]
+    public void ContainsSubResource_Should_ReturnFalse_When_RequestedPathIsPrefixWithoutSlashBoundary()
+    {
+        // Arrange
+        var arn = ResourceArn.Create("course", TenantId.ToString(), $"course/{CourseId}").Value;
+        var prefixPath = $"course/{CourseId}-suffix";
+
+        // Act & Assert
+        arn.ContainsSubResource(prefixPath).Should().BeFalse();
+    }
+
+    [Fact]
+    public void IsRequestedPathContainedInResource_Should_DelegateToContainsSubResource()
+    {
+        // Arrange
+        var sectionId = Guid.NewGuid();
+        var arn = ResourceArn.Create("course", TenantId.ToString(), $"course/{CourseId}").Value;
+        var childPath = $"course/{CourseId}/section/{sectionId}";
+
+        // Act & Assert
+        arn.IsRequestedPathContainedInResource(childPath).Should().BeTrue();
+    }
 }
+

@@ -24,4 +24,15 @@ public class CloudflareSettings
     /// Whether edge capability cookies require the Secure flag. Default: true.
     /// </summary>
     public bool Secure { get; set; } = true;
+
+    /// <summary>
+    /// Dedicated HMAC-SHA256 Secret key for signing internal capability playback tickets.
+    /// Cryptographically isolated from the CDN edge worker VideoHmacSecret.
+    /// </summary>
+    public string PlaybackTicketSecret { get; set; } = "dev-playback-ticket-secret-alphazero-default-change-in-prod-min32!";
+
+    /// <summary>
+    /// Default capability playback ticket validity in seconds. Default: 120s.
+    /// </summary>
+    public int PlaybackTicketTtlSeconds { get; set; } = 120;
 }

@@ -83,7 +83,7 @@ public class JobPreparerUnitTests
         json.Should().Contain("tenant/video/raw.mp4");
         json.Should().Contain("tenant/video/");
         json.Should().Contain("_1080p");
-        json.Should().Contain("ClearKey");
+        json.Should().Contain("\"EncryptionMethod\":1");
         json.Should().Contain("cb541084c99731aef4fff74500c12ead");
     }
 

@@ -57,15 +57,35 @@ public sealed class AssignPrincipalToUserCommandHandler : IRequestHandler<Assign
     public async Task<ErrorOr<Guid>> Handle(AssignPrincipalToUserCommand request, CancellationToken cancellationToken)
     {
         var tenantId = _tenantProvider.GetTenant();
-        if (tenantId is null) return Error.Unauthorized("Tenant.NotFound", "Tenant not found.");
-
-        // Check for existing assignment to prevent unique index violation
-        if (await _assignmentRepository.Any(a => a.TenantUser.Id == request.TenantUserId && 
-                                                 a.Principal.Id == request.PrincipalId && 
-                                                 a.Resource.Value == request.ResourceArn.ToLowerInvariant(), 
-                                           cancellationToken))
+        if (tenantId is null)
         {
-            return Error.Conflict("Assignment.Duplicate", "This principal is already assigned to this user for this resource.");
+            if (ResourceArn.TryParse(request.ResourceArn, out var parsedArn) &&
+                Guid.TryParse(parsedArn.TenantIdString, out var fallbackTenantId))
+            {
+                tenantId = fallbackTenantId;
+            }
+            else
+            {
+                return Error.Unauthorized("Tenant.NotFound", "Tenant not found.");
+            }
+        }
+
+        var normalizedArn = request.ResourceArn.ToLowerInvariant();
+
+        // Check for existing assignment to ensure idempotency and prevent unique index violation
+        var existingAssignment = await _assignmentRepository.GetFirst(
+            a => a.TenantUser.Id == request.TenantUserId && 
+                 a.Principal.Id == request.PrincipalId && 
+                 a.Resource.Value == normalizedArn, 
+            cancellationToken);
+
+        if (existingAssignment is not null)
+        {
+            _logger.LogInformation(
+                "Principal {PrincipalId} was already assigned to User {UserId} for Resource {ResourceArn}. Returning existing assignment ID {AssignmentId}.",
+                request.PrincipalId, request.TenantUserId, request.ResourceArn, existingAssignment.Id);
+
+            return existingAssignment.Id;
         }
 
         var user = await _userRepository.GetById(request.TenantUserId);

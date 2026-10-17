@@ -30,7 +30,9 @@ public class ImagePipelineErrorTests
             "jpg",
             "uploads/corrupted.jpg",
             1024,
-            new FakeClock()
+            null,
+            false,
+            DateTime.UtcNow
         );
         
         var document = documentResult.Value;

@@ -139,4 +139,87 @@ public class CourseAssetTests
         asset.UpdateTitle("");
         asset.Title.Should().Be("New Title");
     }
+
+    [Fact]
+    public void MarkAvailable_Should_Succeed_WhenPending()
+    {
+        var id = Guid.NewGuid();
+        var arn = ResourceArn.ForVideo(TenantId, id);
+        var asset = VideoCourseAsset.Create(id, TenantId, arn, "Video", CourseId).Value;
+
+        var result = asset.MarkAvailable();
+
+        result.IsError.Should().BeFalse();
+        asset.State.Should().Be(CourseAssetState.Available);
+    }
+
+    [Fact]
+    public void MarkAvailable_Should_Fail_WhenNotPending()
+    {
+        var id = Guid.NewGuid();
+        var arn = ResourceArn.ForVideo(TenantId, id);
+        var asset = VideoCourseAsset.Create(id, TenantId, arn, "Video", CourseId).Value;
+        asset.MarkAvailable();
+
+        var result = asset.MarkAvailable();
+
+        result.IsError.Should().BeTrue();
+        result.FirstError.Code.Should().Be("CourseAsset.State");
+    }
+
+    [Fact]
+    public void MarkFailed_Should_Succeed_WhenPending()
+    {
+        var id = Guid.NewGuid();
+        var arn = ResourceArn.ForVideo(TenantId, id);
+        var asset = VideoCourseAsset.Create(id, TenantId, arn, "Video", CourseId).Value;
+
+        var result = asset.MarkFailed();
+
+        result.IsError.Should().BeFalse();
+        asset.State.Should().Be(CourseAssetState.Failed);
+    }
+
+    [Fact]
+    public void MarkFailed_Should_Fail_WhenNotPending()
+    {
+        var id = Guid.NewGuid();
+        var arn = ResourceArn.ForVideo(TenantId, id);
+        var asset = VideoCourseAsset.Create(id, TenantId, arn, "Video", CourseId).Value;
+        asset.MarkAvailable();
+
+        var result = asset.MarkFailed();
+
+        result.IsError.Should().BeTrue();
+        result.FirstError.Code.Should().Be("CourseAsset.State");
+    }
+
+    [Fact]
+    public void Archive_Should_Succeed_WhenNotAlreadyArchived()
+    {
+        var id = Guid.NewGuid();
+        var arn = ResourceArn.ForVideo(TenantId, id);
+        var asset = VideoCourseAsset.Create(id, TenantId, arn, "Video", CourseId).Value;
+        asset.MarkAvailable();
+
+        var result = asset.Archive();
+
+        result.IsError.Should().BeFalse();
+        asset.State.Should().Be(CourseAssetState.Archived);
+    }
+
+    [Fact]
+    public void Archive_Should_Fail_WhenAlreadyArchived()
+    {
+        var id = Guid.NewGuid();
+        var arn = ResourceArn.ForVideo(TenantId, id);
+        var asset = VideoCourseAsset.Create(id, TenantId, arn, "Video", CourseId).Value;
+        asset.Archive();
+
+        var result = asset.Archive();
+
+        result.IsError.Should().BeTrue();
+        result.FirstError.Code.Should().Be("CourseAsset.State");
+    }
 }
+

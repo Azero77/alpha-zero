@@ -1,11 +1,14 @@
 using AlphaZero.Modules.Courses.Application.Courses.Commands.Create;
+using AlphaZero.Modules.Courses.Application.EventHandlers;
 using AlphaZero.Modules.Courses.Application.Repositories;
 using AlphaZero.Modules.Courses.Domain.Aggregates.Courses;
+using AlphaZero.Modules.Courses.Domain.Events;
 using AlphaZero.Shared.Infrastructure.Tenats;
 using ErrorOr;
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
+using Xunit;
 
 namespace AlphaZero.Modules.Courses.UnitTests.Application.Courses;
 
@@ -32,7 +35,7 @@ public class CreateCourseCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_Should_CreateCourse_WhenRequestIsValid()
+    public async Task Handle_Should_CreateCourseAndEmitEvent_WhenRequestIsValid()
     {
         // Arrange
         var tenantId = Guid.NewGuid();
@@ -53,7 +56,29 @@ public class CreateCourseCommandHandlerTests
         _courseRepository.Received(1).Add(Arg.Is<Course>(c => 
             c.Title == "Test Course" && 
             c.TenantId == tenantId && 
-            c.SubjectId == subjectId));
+            c.SubjectId == subjectId &&
+            c.DomainEvents.Any(e => e is CourseCreatedDomainEvent)));
+    }
+
+    [Fact]
+    public async Task CourseCreatedDomainEventHandler_Should_SeedCourseOverview()
+    {
+        // Arrange
+        var overviewRepo = Substitute.For<ICourseOverviewRepository>();
+        var logger = Substitute.For<ILogger<CourseCreatedDomainEventHandler>>();
+        var eventHandler = new CourseCreatedDomainEventHandler(overviewRepo, logger);
+
+        var courseId = Guid.NewGuid();
+        var tenantId = Guid.NewGuid();
+        var notification = new CourseCreatedDomainEvent(courseId, tenantId);
+
+        // Act
+        await eventHandler.Handle(notification, CancellationToken.None);
+
+        // Assert
+        overviewRepo.Received(1).Add(Arg.Is<CourseOverview>(o =>
+            o.CourseId == courseId &&
+            o.TenantId == tenantId));
     }
 
     [Fact]

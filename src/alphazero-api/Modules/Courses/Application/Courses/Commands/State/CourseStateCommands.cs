@@ -1,4 +1,6 @@
 using AlphaZero.Modules.Courses.Application.Repositories;
+using AlphaZero.Modules.Courses.Domain.Aggregates.Courses;
+using AlphaZero.Modules.Courses.Domain.Services;
 using AlphaZero.Shared.Application;
 using ErrorOr;
 using MediatR;
@@ -10,7 +12,7 @@ namespace AlphaZero.Modules.Courses.Application.Courses.Commands.State;
 public record SubmitCourseForReviewCommand(Guid CourseId) : ICommand<Success>;
 public record ApproveCourseCommand(Guid CourseId) : ICommand<Success>;
 public record RejectCourseCommand(Guid CourseId, string Reason) : ICommand<Success>;
-public record PublishCourseCommand(Guid CourseId) : ICommand<Success>;
+public record PublishCourseCommand(Guid CourseId, bool CanDirectPublish = false) : ICommand<Success>;
 public record ArchiveCourseCommand(Guid CourseId) : ICommand<Success>;
 
 // Handlers
@@ -22,17 +24,28 @@ public sealed class CourseStateHandlers :
     IRequestHandler<ArchiveCourseCommand, ErrorOr<Success>>
 {
     private readonly ICourseRepository _courseRepository;
+    private readonly ICourseOverviewRepository _courseOverviewRepository;
+    private readonly CoursePublishingService _publishingService;
     private readonly ILogger<CourseStateHandlers> _logger;
 
-    public CourseStateHandlers(ICourseRepository courseRepository, ILogger<CourseStateHandlers> logger)
+    public CourseStateHandlers(
+        ICourseRepository courseRepository,
+        ICourseOverviewRepository courseOverviewRepository,
+        CoursePublishingService publishingService,
+        ILogger<CourseStateHandlers> logger)
     {
         _courseRepository = courseRepository;
+        _courseOverviewRepository = courseOverviewRepository;
+        _publishingService = publishingService;
         _logger = logger;
     }
 
     public async Task<ErrorOr<Success>> Handle(SubmitCourseForReviewCommand request, CancellationToken cancellationToken)
     {
-        var course = await _courseRepository.GetCourseAsync(request.CourseId, cancellationToken);
+        var course = await _courseRepository.Query(request.CourseId)
+            .WithSections()
+            .WithItems()
+            .ExecuteAsync(cancellationToken);
         if (course is null) return Error.NotFound("Course.NotFound", "Course not found.");
         var result = course.SubmitForReview();
         if (!result.IsError)
@@ -45,7 +58,8 @@ public sealed class CourseStateHandlers :
 
     public async Task<ErrorOr<Success>> Handle(ApproveCourseCommand request, CancellationToken cancellationToken)
     {
-        var course = await _courseRepository.GetCourseAsync(request.CourseId, cancellationToken);
+        var course = await _courseRepository.Query(request.CourseId)
+            .ExecuteAsync(cancellationToken);
         if (course is null) return Error.NotFound("Course.NotFound", "Course not found.");
         var result = course.Approve();
         if (!result.IsError)
@@ -58,7 +72,8 @@ public sealed class CourseStateHandlers :
 
     public async Task<ErrorOr<Success>> Handle(RejectCourseCommand request, CancellationToken cancellationToken)
     {
-        var course = await _courseRepository.GetCourseAsync(request.CourseId, cancellationToken);
+        var course = await _courseRepository.Query(request.CourseId)
+            .ExecuteAsync(cancellationToken);
         if (course is null) return Error.NotFound("Course.NotFound", "Course not found.");
         var result = course.Reject(request.Reason);
         if (!result.IsError)
@@ -71,9 +86,16 @@ public sealed class CourseStateHandlers :
 
     public async Task<ErrorOr<Success>> Handle(PublishCourseCommand request, CancellationToken cancellationToken)
     {
-        var course = await _courseRepository.GetCourseAsync(request.CourseId, cancellationToken);
+        var course = await _courseRepository.Query(request.CourseId)
+            .WithSections()
+            .WithItems()
+            .WithResources()
+            .WithPlans()
+            .ExecuteAsync(cancellationToken);
         if (course is null) return Error.NotFound("Course.NotFound", "Course not found.");
-        var result = course.Publish();
+
+        var overview = await _courseOverviewRepository.GetFirst(o => o.CourseId == request.CourseId, cancellationToken);
+        var result = _publishingService.Publish(course, overview, request.CanDirectPublish);
         if (!result.IsError)
         {
             _courseRepository.Update(course);
@@ -84,7 +106,8 @@ public sealed class CourseStateHandlers :
 
     public async Task<ErrorOr<Success>> Handle(ArchiveCourseCommand request, CancellationToken cancellationToken)
     {
-        var course = await _courseRepository.GetCourseAsync(request.CourseId, cancellationToken);
+        var course = await _courseRepository.Query(request.CourseId)
+            .ExecuteAsync(cancellationToken);
         if (course is null) return Error.NotFound("Course.NotFound", "Course not found.");
         var result = course.Archive();
         if (!result.IsError)

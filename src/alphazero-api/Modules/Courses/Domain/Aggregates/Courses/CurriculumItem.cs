@@ -1,61 +1,165 @@
 using AlphaZero.Shared.Domain;
 using AlphaZero.Shared.Infrastructure.Tenats;
 using ErrorOr;
-using System.Text.Json;
 
 namespace AlphaZero.Modules.Courses.Domain.Aggregates.Courses;
 
-public class CurriculumItem : TenantOwnedEntity, ISoftDeletable
+public class CurriculumItem : Entity, ISoftDeletable
 {
     public string Title { get; private set; }
     public Guid SectionId { get; private set; }
     public int Order { get; internal set; } // UI Display Order
     public int BitIndex { get; private set; } // Immutable Bitmask Pointer
-    public string MainType { get; private set; } // "Video", "Quiz", "Document", "Inline"
+    public ResourceType MainResourceType { get; private set; } // "Video", "Document", "Article", "Quiz"
+    public string MainType => MainResourceType.ToString();
     public bool IsDeleted { get; private set; }
     public DateTime? OnDeleted { get; private set; } = null;
 
     private readonly List<CurriculumResource> _resources = new();
     public IReadOnlyCollection<CurriculumResource> Resources => _resources.AsReadOnly();
 
-    public CurriculumItem(Guid id, Guid tenantId, Guid sectionId, string title, int order, int bitIndex, string mainType)
-        : base(id, tenantId)
+    public static readonly string[] ValidMainTypes = Enum.GetNames<ResourceType>();
+    public static bool IsValidMainType(string type) =>
+        Enum.TryParse<ResourceType>(type, true, out _);
+    public static ResourceType ParseMainType(string type) =>
+        Enum.Parse<ResourceType>(type, true);
+
+    private CurriculumItem()
+    {
+    } // EF Core
+
+    public CurriculumItem(
+        Guid id,
+        Guid sectionId,
+        string title,
+        int order,
+        int bitIndex,
+        ResourceType mainType,
+        IEnumerable<CurriculumResource>? resources = null)
+        : base(id)
     {
         SectionId = sectionId;
         Title = title;
         Order = order;
         BitIndex = bitIndex;
-        MainType = mainType;
+        MainResourceType = mainType;
+        if (resources != null)
+        {
+            SetResources(resources);
+        }
     }
 
-    public ErrorOr<Success> AddResource(CourseAsset asset, JsonElement metadata)
+    public CurriculumItem(
+        Guid id,
+        Guid sectionId,
+        string title,
+        int order,
+        int bitIndex,
+        string mainType,
+        IEnumerable<CurriculumResource>? resources = null)
+        : this(id, sectionId, title, order, bitIndex, ParseMainType(mainType), resources)
     {
-        // BOLA check: validate resource tenant matches item tenant
-        if (asset.TenantId != TenantId)
-            return Error.Validation("CurriculumItem.TenantMismatch", "Asset tenant must match item tenant.");
+    }
 
-        // First resource validates type compatibility with MainType
-        if (_resources.Count == 0)
+    public static ErrorOr<CurriculumItem> Create(
+        Guid id,
+        Guid sectionId,
+        string title,
+        int order,
+        int bitIndex,
+        ResourceType mainType,
+        IEnumerable<CurriculumResource>? resources = null)
+    {
+        if (string.IsNullOrWhiteSpace(title))
+            return Error.Validation("CurriculumItem.Title", "Title is required.");
+
+        return new CurriculumItem(id, sectionId, title, order, bitIndex, mainType, resources);
+    }
+
+    public static ErrorOr<CurriculumItem> Create(
+        Guid id,
+        Guid sectionId,
+        string title,
+        int order,
+        int bitIndex,
+        string mainType,
+        IEnumerable<CurriculumResource>? resources = null)
+    {
+        if (!IsValidMainType(mainType))
+            return Error.Validation("CurriculumItem.MainType", $"Invalid main resource type '{mainType}'.");
+        return Create(id, sectionId, title, order, bitIndex, ParseMainType(mainType), resources);
+    }
+
+    public ErrorOr<Success> Update(string title, ResourceType mainType, IEnumerable<CurriculumResource>? resources = null)
+    {
+        if (string.IsNullOrWhiteSpace(title))
+            return Error.Validation("CurriculumItem.Title", "Title is required.");
+
+        Title = title;
+        MainResourceType = mainType;
+
+        if (resources != null)
         {
-            if (!IsCompatibleType(MainType, asset.CourseAssetType))
-                return Error.Validation("CurriculumItem.TypeMismatch", 
-                    $"Asset type '{asset.CourseAssetType}' does not match item MainType '{MainType}'.");
+            SetResources(resources);
         }
 
-        var order = _resources.Count;
-        var resource = new CurriculumResource(asset, order, metadata);
-        _resources.Add(resource);
         return Result.Success;
     }
 
-    public void ReorderResources(List<Guid> orderedAssetIds)
+    public ErrorOr<Success> Update(string title, string mainType, IEnumerable<CurriculumResource>? resources = null)
+    {
+        if (!IsValidMainType(mainType))
+            return Error.Validation("CurriculumItem.MainType", $"Invalid main resource type '{mainType}'.");
+        return Update(title, ParseMainType(mainType), resources);
+    }
+
+    public void AddResource(CurriculumResource resource)
+    {
+        resource.CurriculumItemId = Id;
+        resource.UpdateOrder(_resources.Count);
+        _resources.Add(resource);
+    }
+
+    public void RemoveResource(Guid resourceId)
+    {
+        var resource = _resources.FirstOrDefault(r => r.Id == resourceId);
+        if (resource != null)
+        {
+            _resources.Remove(resource);
+            for (int i = 0; i < _resources.Count; i++)
+            {
+                _resources[i].UpdateOrder(i);
+            }
+        }
+    }
+
+    public void ClearResources() => _resources.Clear();
+
+    public void SetResources(IEnumerable<CurriculumResource> resources)
+    {
+        _resources.Clear();
+        var index = 0;
+        foreach (var resource in resources)
+        {
+            resource.CurriculumItemId = Id;
+            resource.UpdateOrder(index++);
+            _resources.Add(resource);
+        }
+    }
+
+    /// <summary>
+    /// Reorders resources strictly by CurriculumResource.Id (Layer 3).
+    /// Assets never participate in curriculum ordering — the syllabus only knows resource placements.
+    /// </summary>
+    public void ReorderResources(List<Guid> orderedResourceIds)
     {
         var temp = _resources.ToList();
         _resources.Clear();
 
-        for (int i = 0; i < orderedAssetIds.Count; i++)
+        for (int i = 0; i < orderedResourceIds.Count; i++)
         {
-            var res = temp.FirstOrDefault(r => r.CourseAssetId == orderedAssetIds[i]);
+            var targetId = orderedResourceIds[i];
+            var res = temp.FirstOrDefault(r => r.Id == targetId);
             if (res != null)
             {
                 res.UpdateOrder(i);
@@ -90,16 +194,5 @@ public class CurriculumItem : TenantOwnedEntity, ISoftDeletable
         IsDeleted = false;
         OnDeleted = null;
         return Result.Success;
-    }
-
-    private static bool IsCompatibleType(string mainType, CourseAssetType assetType)
-    {
-        return mainType.ToLowerInvariant() switch
-        {
-            "video" => assetType == CourseAssetType.Video,
-            "quiz" or "assessment" => assetType == CourseAssetType.Assessment,
-            "document" => assetType == CourseAssetType.Document,
-            _ => false
-        };
     }
 }

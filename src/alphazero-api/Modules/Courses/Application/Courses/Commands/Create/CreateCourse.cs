@@ -53,6 +53,7 @@ public sealed class CreateCourseCommandHandler : IRequestHandler<CreateCourseCom
         if (courseResult.IsError) return courseResult.Errors;
 
         _courseRepository.Add(courseResult.Value);
+
         _logger.LogInformation("Course {CourseId} created.", courseId);
 
         return courseId;

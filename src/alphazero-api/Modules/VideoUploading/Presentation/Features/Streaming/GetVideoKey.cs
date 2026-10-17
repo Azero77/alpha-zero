@@ -12,9 +12,17 @@ using Microsoft.AspNetCore.Routing;
 
 namespace AlphaZero.Modules.VideoUploading.Presentation.Features.Streaming;
 
+[Obsolete("Deprecated. Use GET api/video/keys/{VideoId:guid} (AlphaZero.Modules.VideoUploading.Presentation.Features.GetVideoKeyEndpoint) instead.")]
 public static class GetVideoKey
 {
-    public record Request(Guid VideoId);
+    public record Request
+    {
+        public Guid VideoId { get; init; }
+        [QueryParam]
+        public string? Ticket { get; init; }
+        [FromHeader("X-Playback-Ticket", isRequired: false)]
+        public string? HeaderTicket { get; init; }
+    }
 
     public class Endpoint(VideoUploadingModule module) : Endpoint<Request>
     {
@@ -26,7 +34,8 @@ public static class GetVideoKey
 
             Summary(s =>
             {
-                s.Summary = "Gets the ClearKey decryption key for a video";
+                s.Summary = "Gets the ClearKey decryption key for a video [Deprecated]";
+                s.Description = "Deprecated. Use GET api/video/keys/{VideoId:guid} instead.";
             });
 
             Description(d =>
@@ -37,26 +46,25 @@ public static class GetVideoKey
 
                 d.ProducesProblem(StatusCodes.Status404NotFound);
             });
-            this.AccessControl("video:Stream", (req, tenantId) => ResourceArn.ForVideo(tenantId, req.VideoId));
         }
 
         public override async Task HandleAsync(
             Request req,
             CancellationToken ct)
         {
+            var ticket = !string.IsNullOrWhiteSpace(req.Ticket) ? req.Ticket : req.HeaderTicket;
             var result = await module.Send(
-                new GetVideoKeyQuery(req.VideoId));
+                new AlphaZero.Modules.VideoUploading.Application.Queries.GetVideoKey.GetVideoKeyQuery(req.VideoId, ticket), ct);
 
-            await result.Match(
-                async keyBytes =>
-                {
-                    HttpContext.Response.ContentType = "application/octet-stream";
-                    await HttpContext.Response.Body.WriteAsync(keyBytes, ct);
-                },
-                async errors =>
-                {
-                    await this.SendErrorResponseAsync(result.Errors, ct);
-                });
+            if (result.IsError)
+            {
+                await this.SendErrorResponseAsync(result.Errors, ct);
+                return;
+            }
+
+            HttpContext.Response.ContentType = "application/octet-stream";
+            HttpContext.Response.StatusCode = StatusCodes.Status200OK;
+            await HttpContext.Response.Body.WriteAsync(result.Value, ct);
         }
     }
 }

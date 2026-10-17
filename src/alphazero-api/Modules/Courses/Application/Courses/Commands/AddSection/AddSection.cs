@@ -31,10 +31,14 @@ public sealed class AddSectionCommandHandler : IRequestHandler<AddSectionCommand
 
     public async Task<ErrorOr<Success>> Handle(AddSectionCommand request, CancellationToken cancellationToken)
     {
-        var course = await _courseRepository.GetByIdWithSectionsAsync(request.CourseId, cancellationToken);
+        var course = await _courseRepository.Query(request.CourseId)
+            .WithSections()
+            .ExecuteAsync(cancellationToken);
         if (course is null) return Error.NotFound("Course.NotFound", "Course not found.");
 
-        course.AddSection(request.Title);
+        var result = course.AddSection(request.Title);
+        if (result.IsError) return result.Errors;
+
         _logger.LogInformation("Section '{Title}' added to Course {CourseId}.", request.Title, request.CourseId);
 
         return Result.Success;

@@ -36,6 +36,15 @@ public static class ErrorExtension
         List<Error> errors,
         CancellationToken ct = default)
     {
+        await endpoint.SendErrorResponseAsync(errors, statusCodeOverride: null, ct);
+    }
+
+    public static async Task SendErrorResponseAsync(
+        this FastEndpoints.IEndpoint endpoint,
+        List<Error> errors,
+        int? statusCodeOverride,
+        CancellationToken ct = default)
+    {
         if (!errors.Any())
         {
             await endpoint.HttpContext.Response.SendAsync(
@@ -45,7 +54,7 @@ public static class ErrorExtension
             return;
         }
 
-        var statusCode = ResolveStatusCode(errors);
+        var statusCode = statusCodeOverride ?? ResolveStatusCode(errors);
         var body = UnifiedErrorBody.From(errors, statusCode);
 
         await endpoint.HttpContext.Response.SendAsync(body, statusCode, cancellation: ct);

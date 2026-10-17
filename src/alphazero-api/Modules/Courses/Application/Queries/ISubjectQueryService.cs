@@ -6,4 +6,5 @@ namespace AlphaZero.Modules.Courses.Application.Queries;
 public interface ISubjectQueryService
 {
     Task<PagedResult<SubjectDto>> ListSubjectsAsync(int page, int perPage, CancellationToken cancellationToken = default);
+    Task<SubjectDto?> GetSubjectByIdAsync(Guid subjectId, CancellationToken cancellationToken = default);
 }

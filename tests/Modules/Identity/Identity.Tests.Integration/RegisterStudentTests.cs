@@ -22,16 +22,20 @@ public class RegisterStudentTests : BaseIntegrationTest
         var tenantId = Guid.NewGuid();
         SetTenant(tenantId);
 
-        // Seed the StudentAccess policy
-        var studentPolicy = new ManagedPolicy(
-            Guid.Parse("00000000-0000-0000-0000-000000000003"),
-            "StudentAccess",
-            new()
-            {
-                new ManagedPolicyStatement("AllowStudentBase", new() { "courses:View", "video:Stream" }, true)
-            });
-        DbContext.ManagedPolicies.Add(studentPolicy);
-        await DbContext.SaveChangesAsync();
+        // Seed the StudentAccess policy if it doesn't already exist
+        var policyId = Guid.Parse("00000000-0000-0000-0000-000000000003");
+        if (!DbContext.ManagedPolicies.Any(p => p.Id == policyId))
+        {
+            var studentPolicy = new ManagedPolicy(
+                policyId,
+                "StudentAccess",
+                new()
+                {
+                    new ManagedPolicyStatement("AllowStudentBase", new() { "courses:View", "video:Stream" }, true)
+                });
+            DbContext.ManagedPolicies.Add(studentPolicy);
+            await DbContext.SaveChangesAsync();
+        }
 
         var request = new RegisterStudentRequest
         {
@@ -69,15 +73,19 @@ public class RegisterStudentTests : BaseIntegrationTest
         var tenantId = Guid.NewGuid();
         SetTenant(tenantId);
 
-        // Seed the StudentAccess policy
-        var studentPolicy = new ManagedPolicy(
-            Guid.Parse("00000000-0000-0000-0000-000000000003"),
-            "StudentAccess",
-            new()
-            {
-                new ManagedPolicyStatement("AllowStudentBase", new() { "courses:View", "video:Stream" }, true)
-            });
-        DbContext.ManagedPolicies.Add(studentPolicy);
+        // Seed the StudentAccess policy if it doesn't already exist
+        var policyId = Guid.Parse("00000000-0000-0000-0000-000000000003");
+        if (!DbContext.ManagedPolicies.Any(p => p.Id == policyId))
+        {
+            var studentPolicy = new ManagedPolicy(
+                policyId,
+                "StudentAccess",
+                new()
+                {
+                    new ManagedPolicyStatement("AllowStudentBase", new() { "courses:View", "video:Stream" }, true)
+                });
+            DbContext.ManagedPolicies.Add(studentPolicy);
+        }
 
         // Create an existing principal with the same username
         var existingPrincipal = new AlphaZero.Modules.Identity.Infrastructure.Models.PrincipalDataModel

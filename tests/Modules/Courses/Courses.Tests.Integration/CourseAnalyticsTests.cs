@@ -77,19 +77,21 @@ public class CourseAnalyticsTests : BaseIntegrationTest
 
         // Wait a bit for MassTransit in-memory consumer to process the event
         CourseAnalyticsDto? analytics1 = null;
+        HttpResponseMessage? lastResp = null;
         for (int i = 0; i < 20; i++)
         {
             await Task.Delay(200);
-            var analytics1Resp = await Client.GetAsync($"/courses/{courseId}/analytics");
-            if (analytics1Resp.IsSuccessStatusCode)
+            lastResp = await Client.GetAsync($"/courses/{courseId}/analytics");
+            if (lastResp.IsSuccessStatusCode)
             {
-                analytics1 = await analytics1Resp.Content.ReadFromJsonAsync<CourseAnalyticsDto>();
+                analytics1 = await lastResp.Content.ReadFromJsonAsync<CourseAnalyticsDto>();
                 break;
             }
         }
 
         // Assert 1: Analytics should reflect 1 enrollment, 0% avg
-        analytics1.Should().NotBeNull();
+        var lastBody = lastResp != null ? await lastResp.Content.ReadAsStringAsync() : "";
+        analytics1.Should().NotBeNull($"Status: {lastResp?.StatusCode}, Body: {lastBody}");
         analytics1!.TotalEnrollments.Should().Be(1);
         analytics1.AverageCompletionPercentage.Should().Be(0);
 

@@ -2,7 +2,6 @@ using AlphaZero.Modules.Courses.Domain.Events;
 using AlphaZero.Shared.Domain;
 using AlphaZero.Shared.Infrastructure.Tenats;
 using ErrorOr;
-using System.Text.Json;
 
 namespace AlphaZero.Modules.Courses.Domain.Aggregates.Courses;
 
@@ -19,12 +18,6 @@ public class Course : TenantOwnedAggregate, ISoftDeletable
     
     public IReadOnlyCollection<CoursePlan> Plans => _plans.AsReadOnly();
     private readonly List<CoursePlan> _plans = new();
-
-    private readonly List<CourseAsset> _assets = new();
-    public IReadOnlyCollection<CourseAsset> Assets => _assets.AsReadOnly();
-
-    public IEnumerable<CourseAsset> PoolAssets => _assets.Where(a => a.State == CourseAssetState.Available);
-    public IEnumerable<CourseAsset> PendingAssets => _assets.Where(a => a.State == CourseAssetState.Pending);
 
     public bool IsDeleted { get; private set; }
     public DateTime? OnDeleted { get; private set; }
@@ -43,14 +36,23 @@ public class Course : TenantOwnedAggregate, ISoftDeletable
     public static ErrorOr<Course> Create(Guid id, Guid tenantId, string title, string? description, Guid subjectId)
     {
         if (string.IsNullOrWhiteSpace(title)) return Error.Validation("Course.Title", "Title is required.");
-        return new Course(id, tenantId, title, description, subjectId);
+        var course = new Course(id, tenantId, title, description, subjectId);
+        course.AddDomainEvent(new CourseCreatedDomainEvent(id, tenantId));
+        return course;
     }
 
-    public void AddSection(string title)
+    public ErrorOr<Success> AddSection(string title) => AddSection(Guid.NewGuid(), title);
+
+    public ErrorOr<Success> AddSection(Guid id,string title)
     {
-        var section = CourseSection.Create(TenantId, title, _sections.Count, this.Id);
-        _sections.Add(section);
+        var section = CourseSection.Create(id,title, _sections.Count, this.Id, null);
+        if (section.IsError)
+            return section.Errors;
+        _sections.Add(section.Value);
+        return Result.Success;
     }
+
+    public int AllocateNextBitIndex() => NextAvailableBitIndex++;
 
     public ErrorOr<CoursePlan> AddPlan(string name, Guid principalId)
     {
@@ -87,133 +89,6 @@ public class Course : TenantOwnedAggregate, ISoftDeletable
 
         _plans.Remove(plan);
         return Result.Success;
-    }
-
-    // ─── 1. Asset Creation ───
-
-    public ErrorOr<VideoCourseAsset> AddVideoAsset(Guid videoId, ResourceArn videoArn, string title)
-    {
-        // Idempotency
-        if (_assets.Any(a => a.Id == videoId))
-            return (VideoCourseAsset)_assets.First(a => a.Id == videoId);
-
-        var result = VideoCourseAsset.Create(videoId, TenantId, videoArn, title, Id);
-        if (result.IsError) return result.Errors;
-
-        _assets.Add(result.Value);
-        return result.Value;
-    }
-
-    public ErrorOr<DocumentCourseAsset> AddDocumentAsset(
-        Guid docId, ResourceArn docArn, string title, string fileName, long size, string contentType)
-    {
-        if (_assets.Any(a => a.Id == docId))
-            return (DocumentCourseAsset)_assets.First(a => a.Id == docId);
-
-        var result = DocumentCourseAsset.Create(docId, TenantId, docArn, title, Id, fileName, size, contentType);
-        if (result.IsError) return result.Errors;
-
-        _assets.Add(result.Value);
-        return result.Value;
-    }
-
-    public ErrorOr<AssessmentCourseAsset> AddAssessmentAsset(
-        Guid assessmentId, ResourceArn assessmentArn, string title, int questionsNumber, AssessmentType type)
-    {
-        if (_assets.Any(a => a.Id == assessmentId))
-            return (AssessmentCourseAsset)_assets.First(a => a.Id == assessmentId);
-
-        var result = AssessmentCourseAsset.Create(assessmentId, TenantId, assessmentArn, title, Id, questionsNumber, type);
-        if (result.IsError) return result.Errors;
-
-        _assets.Add(result.Value);
-        return result.Value;
-    }
-
-    // ─── 2. Asset State Transitions ───
-
-    public ErrorOr<Success> MarkAssetAvailable(Guid assetId, TimeSpan? duration = null, string? relativeUrl = null, string? thumbnailUrl = null)
-    {
-        var asset = _assets.FirstOrDefault(a => a.Id == assetId);
-        if (asset is null)
-            return Error.NotFound("CourseAsset.NotFound", "Asset not found in this course.");
-
-        if (asset is VideoCourseAsset video && (duration.HasValue || relativeUrl is not null))
-            video.UpdateStreamingInfo(duration ?? TimeSpan.Zero, relativeUrl, thumbnailUrl);
-
-        return asset.MarkAvailable();
-    }
-
-    public ErrorOr<Success> MarkAssetFailed(Guid assetId)
-    {
-        var asset = _assets.FirstOrDefault(a => a.Id == assetId);
-        if (asset is null)
-            return Error.NotFound("CourseAsset.NotFound", "Asset not found in this course.");
-
-        return asset.MarkFailed();
-    }
-
-    // ─── 3. Pool Operations (teacher-facing) ───
-
-    public ErrorOr<CurriculumItem> AssignAssetToCurriculum(Guid assetId, Guid sectionId, string title, JsonElement metadata)
-    {
-        var asset = _assets.FirstOrDefault(a => a.Id == assetId);
-        if (asset is null)
-            return Error.NotFound("CourseAsset.NotFound", "Asset not found in this course.");
-        if (asset.State != CourseAssetState.Available)
-            return Error.Conflict("CourseAsset.NotAvailable",
-                $"Asset is in state '{asset.State}', must be Available to assign.");
-
-        var section = _sections.FirstOrDefault(s => s.Id == sectionId);
-        if (section is null)
-            return Error.NotFound("Course.Section", "Section not found.");
-
-        var mainType = asset.CourseAssetType.ToString();
-        var item = new CurriculumItem(
-            Guid.NewGuid(), TenantId, sectionId, title,
-            section.Items.Count, NextAvailableBitIndex++, mainType);
-
-        var addResult = item.AddResource(asset, metadata);
-        if (addResult.IsError) return addResult.Errors;
-
-        section.AddItem(item);
-
-        var stateResult = asset.MarkInUse();
-        if (stateResult.IsError) return stateResult.Errors;
-
-        return item;
-    }
-
-    public ErrorOr<Success> UnassignFromCurriculum(Guid itemId)
-    {
-        var section = _sections.FirstOrDefault(s => s.Items.Any(i => i.Id == itemId));
-        if (section is null)
-            return Error.NotFound("Section.NotFound", "No section contains this item.");
-
-        var item = section.Items.FirstOrDefault(i => i.Id == itemId);
-        if (item is null)
-            return Error.NotFound("CurriculumItem.NotFound");
-
-        foreach (var resource in item.Resources)
-        {
-            var asset = _assets.FirstOrDefault(a => a.Id == resource.CourseAssetId);
-            if (asset is not null && asset.State == CourseAssetState.InUse)
-            {
-                asset.ReturnToPool();
-            }
-        }
-
-        item.Delete();
-        return Result.Success;
-    }
-
-    public ErrorOr<Success> DismissAsset(Guid assetId)
-    {
-        var asset = _assets.FirstOrDefault(a => a.Id == assetId);
-        if (asset is null)
-            return Error.NotFound("CourseAsset.NotFound");
-
-        return asset.Archive();
     }
 
     public ErrorOr<Success> ReorderItems(Guid sectionId, List<Guid> itemIds)
@@ -269,14 +144,8 @@ public class Course : TenantOwnedAggregate, ISoftDeletable
         return Result.Success;
     }
 
-    public ErrorOr<Success> Publish()
+    internal ErrorOr<Success> Publish()
     {
-        if (Status != CourseStatus.Approved) 
-            return Error.Conflict("Course.Status", "Only approved courses can be published.");
-            
-        if (_plans.Count == 0)
-            return Error.Validation("Course.NoPlans", "Course must have at least one plan before it can be published.");
-        
         Status = CourseStatus.Published;
         AddDomainEvent(new CoursePublishedDomainEvent(Id));
         return Result.Success;

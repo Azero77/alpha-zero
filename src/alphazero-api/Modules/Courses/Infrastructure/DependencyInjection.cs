@@ -42,15 +42,19 @@ public static class DependencyInjection
     public static void AddCoursesPrivateInfrastructure(this IServiceCollection moduleServices, IConfiguration configuration)
     {
         moduleServices.AddScoped<ICourseRepository, CourseRepository>();
+        moduleServices.AddScoped<ICourseResourceQueryService, CourseResourceQueryService>();
         moduleServices.AddScoped<ICourseOverviewRepository, CourseOverviewRepository>();
         moduleServices.AddScoped<IRepository<CourseAsset>, BaseRepository<AppDbContext, CourseAsset>>();
         moduleServices.AddScoped<ISubjectRepository, SubjectRepository>();
         moduleServices.AddScoped<IEnrollementRepository, EnrollementRepository>();
         moduleServices.AddScoped<ICourseAnalyticsRepository, CourseAnalyticsRepository>();
-        moduleServices.AddScoped<ISectionRepository, SectionRepository>();
-        moduleServices.AddScoped<ICurriculumItemRepository, CurriculumItemRepository>();
         moduleServices.AddScoped<IAssessmentService, AssessmentService>();
         moduleServices.AddScoped<IUnitOfWork, UnitOfWork<AppDbContext>>();
+        moduleServices.AddTransient<ICourseQueryBuilder, CourseQueryBuilder>();
+
+        // Domain Services
+        moduleServices.AddScoped<AlphaZero.Modules.Courses.Domain.Services.CourseReadinessService>();
+        moduleServices.AddScoped<AlphaZero.Modules.Courses.Domain.Services.CoursePublishingService>();
 
         // Asset Readiness Strategies
         moduleServices.AddScoped<ICourseAssetReadinessStrategy, VideoAssetReadinessStrategy>();
@@ -68,11 +72,13 @@ public static class DependencyInjection
         moduleServices.AddScoped<AlphaZero.Modules.Courses.Application.Queries.ICourseAnalyticsQueryService, AlphaZero.Modules.Courses.Infrastructure.Queries.CourseAnalyticsQueryService>();
 
         moduleServices.AddValidatorsFromAssembly(typeof(ICoursesApplicationMarker).Assembly);
+        moduleServices.AddPreRequestHandlersFromAssembly(typeof(ICoursesApplicationMarker).Assembly);
 
         moduleServices.AddMediatR(opts =>
         {
             opts.RegisterServicesFromAssembly(typeof(ICoursesApplicationMarker).Assembly);
             opts.AddOpenBehavior(typeof(ValidationBehavior<,>));
+            opts.AddOpenBehavior(typeof(PreRequestBehavior<,>));
             opts.AddOpenBehavior(typeof(UnitOfWorkDecoratorCommandHandler<,>));
         });
     }

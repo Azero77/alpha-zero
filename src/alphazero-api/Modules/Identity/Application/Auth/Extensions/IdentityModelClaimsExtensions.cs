@@ -2,6 +2,7 @@ using AlphaZero.Modules.Identity.Domain.Models;
 using AlphaZero.Modules.Identity.Domain.Models.Principals;
 using AlphaZero.Shared.Authorization;
 using AlphaZero.Shared.Domain;
+using System.Security.Claims;
 
 namespace AlphaZero.Modules.Identity.Application.Auth.Extensions;
 
@@ -82,4 +83,10 @@ public static class IdentityModelClaimsExtensions
             principal.IsGlobal,
             principal.PrincipalScope?.ToString());
     }
+
+    public static PrincipalDTO? CreatePrincipalFromClaims(this ClaimsPrincipal user) =>
+        user.ToPrincipalDTO();
+
+    public static TenantUserDTO? CreateTenantUserFromClaims(this ClaimsPrincipal user) =>
+        user.ToTenantUserDTO();
 }

@@ -19,6 +19,7 @@
     <ProjectReference Include="..\..\..\..\src\alphazero-api\AlphaZero.Shared\AlphaZero.Shared.csproj" />
     <ProjectReference Include="..\..\..\..\src\alphazero-api\Modules\Identity\Domain\Domain.csproj" />
     <ProjectReference Include="..\..\..\..\src\alphazero-api\Modules\Identity\Application\Application.csproj" />
+    <ProjectReference Include="..\..\..\..\src\alphazero-api\Modules\Identity\Infrastructure\Infrastructure.csproj" />
   </ItemGroup>
 
   <ItemGroup>

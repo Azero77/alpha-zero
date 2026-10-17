@@ -4,7 +4,7 @@ using ErrorOr;
 
 namespace AlphaZero.Modules.Courses.Domain.Aggregates.Courses;
 
-public class CourseSection : TenantOwnedEntity, ISoftDeletable
+public class CourseSection : Entity, ISoftDeletable
 {
     public string Title { get; private set; }
     public int Order { get; private set; }
@@ -15,23 +15,102 @@ public class CourseSection : TenantOwnedEntity, ISoftDeletable
 
     public DateTime? OnDeleted { get; private set; } = null;
 
-    private CourseSection(Guid id, Guid tenantId, string title, int order, Guid courseId) : base(id, tenantId)
+    private CourseSection() : base(default) { }
+
+    private CourseSection(Guid id, string title, int order, Guid courseId, List<CurriculumItem>? items) : base(id)
     {
         Title = title;
         Order = order;
         CourseId = courseId;
+        _items = items ?? new();
     }
 
-    internal static CourseSection Create(Guid tenantId, string title, int order,Guid courseId)
+    internal static ErrorOr<CourseSection> Create(Guid id, string title, int order, Guid courseId,
+        List<CurriculumItem>? items = null)
     {
-        return new CourseSection(Guid.NewGuid(), tenantId, title, order, courseId);
+        if (string.IsNullOrEmpty(title))
+            return Error.Validation("","");
+        return new CourseSection(id, title, order, courseId, items);
     }
 
-    internal void AddItem(CurriculumItem item)
+    public void AddItem(CurriculumItem item)
     {
+        item.Order = _items.Count;
         _items.Add(item);
     }
 
+    public ErrorOr<CurriculumItem> AddItem(
+        Guid id,
+        string title,
+        ResourceType mainType,
+        int bitIndex,
+        IEnumerable<CurriculumResource>? resources = null)
+    {
+        var itemResult = CurriculumItem.Create(id, Id, title, _items.Count, bitIndex, mainType, resources);
+        if (itemResult.IsError)
+            return itemResult.Errors;
+
+        _items.Add(itemResult.Value);
+        return itemResult.Value;
+    }
+
+    public ErrorOr<CurriculumItem> AddItem(
+        Guid id,
+        string title,
+        string mainType,
+        int bitIndex,
+        IEnumerable<CurriculumResource>? resources = null)
+    {
+        if (!CurriculumItem.IsValidMainType(mainType))
+            return Error.Validation("CurriculumItem.MainType", $"Invalid main resource type '{mainType}'.");
+        return AddItem(id, title, CurriculumItem.ParseMainType(mainType), bitIndex, resources);
+    }
+
+    public ErrorOr<CurriculumItem> UpdateItem(
+        Guid itemId,
+        string title,
+        ResourceType mainType,
+        IEnumerable<CurriculumResource>? resources = null)
+    {
+        var item = _items.FirstOrDefault(i => i.Id == itemId && !i.IsDeleted);
+        if (item is null)
+            return Error.NotFound("CurriculumItem.NotFound", "Item not found in section.");
+
+        var updateResult = item.Update(title, mainType, resources);
+        if (updateResult.IsError)
+            return updateResult.Errors;
+
+        return item;
+    }
+
+    public ErrorOr<CurriculumItem> UpdateItem(
+        Guid itemId,
+        string title,
+        string mainType,
+        IEnumerable<CurriculumResource>? resources = null)
+    {
+        if (!CurriculumItem.IsValidMainType(mainType))
+            return Error.Validation("CurriculumItem.MainType", $"Invalid main resource type '{mainType}'.");
+        return UpdateItem(itemId, title, CurriculumItem.ParseMainType(mainType), resources);
+    }
+
+    public ErrorOr<CurriculumItem> RemoveItem(Guid itemId)
+    {
+        var item = _items.FirstOrDefault(i => i.Id == itemId && !i.IsDeleted);
+        if (item is null)
+            return Error.NotFound("CurriculumItem.NotFound", "Item not found in section.");
+
+        var delResult = item.Delete();
+        if (delResult.IsError)
+            return delResult.Errors;
+
+        return item;
+    }
+
+    public CurriculumItem? GetItem(Guid itemId)
+    {
+        return _items.FirstOrDefault(i => i.Id == itemId && !i.IsDeleted);
+    }
 
     internal void ReorderInternal()
     {
@@ -47,12 +126,14 @@ public class CourseSection : TenantOwnedEntity, ISoftDeletable
         Title = title;
         Order = order;
     }
+
     internal ErrorOr<Success> Delete()
     {
         if (IsDeleted)
             return Error.Failure("Section.Failure", "Section is already deleted.");
         
         IsDeleted = true;
+        OnDeleted = DateTime.UtcNow;
         return Result.Success;
     }
 
@@ -62,8 +143,7 @@ public class CourseSection : TenantOwnedEntity, ISoftDeletable
             return Error.Failure("Section.Failure", "Section is not deleted.");
 
         IsDeleted = false;
+        OnDeleted = null;
         return Result.Success;
     }
 }
-
-
