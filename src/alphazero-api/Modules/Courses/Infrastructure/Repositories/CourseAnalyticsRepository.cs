@@ -35,4 +35,31 @@ public class CourseAnalyticsRepository : ICourseAnalyticsRepository
             ON CONFLICT (""CourseId"") 
             DO UPDATE SET ""TotalEnrollments"" = ""CourseAnalytics"".""TotalEnrollments"" + 1", cancellationToken);
     }
+
+    /// <summary>
+    /// Excludes an expired enrollment from the running course analytics (issue #34 story #6):
+    /// Active-course averages must distinguish "finished and gone" from "still going". Clamps
+    /// every counter at zero so repeated scans cannot drive them negative.
+    /// </summary>
+    public async Task DecrementExpiredEnrollmentAsync(Guid courseId, double completionPercentage, IReadOnlyCollection<int> completedItemIndexes, CancellationToken cancellationToken = default)
+    {
+        await _context.Database.ExecuteSqlInterpolatedAsync($@"
+            UPDATE ""Courses"".""CourseAnalytics""
+            SET
+                ""TotalEnrollments"" = GREATEST(""TotalEnrollments"" - 1, 0),
+                ""SumOfCompletionPercentages"" = GREATEST(""SumOfCompletionPercentages"" - {completionPercentage}, 0)
+            WHERE ""CourseId"" = {courseId}", cancellationToken);
+
+        foreach (var bitIndex in completedItemIndexes)
+        {
+            await _context.Database.ExecuteSqlInterpolatedAsync($@"
+                UPDATE ""Courses"".""CourseAnalytics""
+                SET ""ItemCompletions"" = jsonb_set(
+                    COALESCE(""ItemCompletions"", '{{}}'::jsonb),
+                    ARRAY[{bitIndex.ToString()}]::text[],
+                    (GREATEST((COALESCE((""ItemCompletions""->>{bitIndex.ToString()})::int, 0) - 1), 0))::text::jsonb
+                )
+                WHERE ""CourseId"" = {courseId}", cancellationToken);
+        }
+    }
 }

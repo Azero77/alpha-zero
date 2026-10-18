@@ -65,6 +65,10 @@ public class EnrollmentExpiryService(
             // event handler) and persists the transition in one step.
             await unitOfWork.SaveChangesAsync(cancellationToken);
 
+            // Story #6: expired students stop counting in active-course analytics (running
+            // counters) while staying in the roster. Failure here must not block the scan —
+            // analytics may self-heal on the next completion event; re-runs clamp at zero.
+            await AdjustAnalyticsForExpiredAsync(context, batch, cancellationToken);
             if (batch.Count < BatchSize)
                 break;
         }
@@ -87,5 +91,36 @@ public class EnrollmentExpiryService(
             .OrderBy(e => e.AccessExpiresOn)
             .Take(BatchSize)
             .ToListAsync(cancellationToken);
+    }
+
+    private async Task AdjustAnalyticsForExpiredAsync(
+        Persistance.AppDbContext context, IReadOnlyList<Enrollment> batch, CancellationToken cancellationToken)
+    {
+        var analyticsRepository = new Repositories.CourseAnalyticsRepository(context);
+
+        foreach (var enrollment in batch)
+        {
+            if (enrollment.Status != EnrollmentStatus.Expired)
+                continue; // skipped by the domain guard this pass
+
+            var completedIndexes = new List<int>();
+            for (var i = 0; i < enrollment.Progress.Bitmask.Length; i++)
+            {
+                if (enrollment.Progress.Bitmask[i])
+                    completedIndexes.Add(i);
+            }
+
+            try
+            {
+                await analyticsRepository.DecrementExpiredEnrollmentAsync(
+                    enrollment.CourseId, enrollment.Progress.CompletionPercentage, completedIndexes, cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex,
+                    "Failed to exclude expired enrollment {EnrollmentId} from course {CourseId} analytics; counters may drift until the next expiry pass.",
+                    enrollment.Id, enrollment.CourseId);
+            }
+        }
     }
 }

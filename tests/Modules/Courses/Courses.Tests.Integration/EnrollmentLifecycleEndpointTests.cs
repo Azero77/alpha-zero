@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using AlphaZero.Modules.Courses.Application.Analytics.Queries.GetCourseAnalytics;
 using AlphaZero.Modules.Courses.Domain.Aggregates.Courses;
 using AlphaZero.Modules.Courses.Domain.Aggregates.Enrollments;
 using AlphaZero.Modules.Courses.Presentation.Courses.AddSection;
@@ -185,6 +186,63 @@ public class EnrollmentLifecycleEndpointTests : BaseIntegrationTest
 
     // ------------------------------------------------------------------
     // Cross-tenant denial — a tenant B operator cannot touch tenant A's enrollment
+    [Fact]
+    public async Task Expiry_Should_ExcludeExpiredEnrollment_FromActiveCourseAnalytics()
+    {
+        // Arrange: full API flow so the running analytics counters carry the enrollment's
+        // contribution (EnrollmentCreated + ItemCompleted integration events → analytics consumer)
+        var tenantId = Guid.NewGuid();
+        var courseId = await CreatePublishedCourse(tenantId);
+        var studentId = Guid.NewGuid();
+        var enrollmentId = await EnrollAndCompleteAnItem(tenantId, courseId, studentId);
+
+        CourseAnalyticsDto? before = null;
+        for (var i = 0; i < 30; i++)
+        {
+            var resp = await Client.GetAsync($"/courses/{courseId}/analytics");
+            before = await resp.Content.ReadFromJsonAsync<CourseAnalyticsDto>();
+            if (before!.TotalEnrollments > 0)
+                break;
+            await Task.Delay(100);
+        }
+        before!.TotalEnrollments.Should().Be(1); // the active enrollment counts (sanity)
+        before.AverageCompletionPercentage.Should().BeGreaterThan(0);
+
+        // stamp the access window as passed (short-TTL test clock: window just passed)
+        await ExecuteDbContextAsync(async db =>
+        {
+            var enrollment = await db.Enrollments.FirstAsync(e => e.Id == enrollmentId);
+            typeof(Enrollment).GetProperty(nameof(Enrollment.AccessExpiresOn)) !.SetValue(
+                enrollment, DateTime.UtcNow.AddSeconds(-5));
+            await db.SaveChangesAsync();
+        });
+
+        var coursesModule = Factory.Services.GetRequiredService<AlphaZero.Modules.Courses.Presentation.CoursesModule>();
+        using var moduleScope = coursesModule.CreateScope();
+        var expiryService = moduleScope.Resolve<AlphaZero.Modules.Courses.Infrastructure.Expiry.IEnrollmentExpiryService>();
+
+        // Act: one expiry scan pass (the hosted worker's tick — non-HTTP trigger)
+        var expiredCount = await expiryService.ExpireDueEnrollmentsAsync(CancellationToken.None);
+
+        // Assert (story #6): expired contribution is removed from the running analytics...
+        expiredCount.Should().BeGreaterThan(0);
+        var excluded = false;
+        for (var i = 0; i < 30 && !excluded; i++)
+        {
+            var resp = await Client.GetAsync($"/courses/{courseId}/analytics");
+            var after = await resp.Content.ReadFromJsonAsync<CourseAnalyticsDto>();
+            excluded = after!.TotalEnrollments == 0 && after.AverageCompletionPercentage == 0;
+            if (!excluded)
+                await Task.Delay(100);
+        }
+        excluded.Should().BeTrue("the expired enrollment must stop counting in active-course analytics");
+
+        // ...but retained in the roster with its earned progress
+        var dto = await Client.GetFromJsonAsync<EnrollmentResponse>($"/courses/enrollments/{enrollmentId}");
+        dto!.Status.Should().Be(EnrollmentStatus.Expired.ToString());
+        dto.CompletionPercentage.Should().BeGreaterThan(0);
+    }
+
     // ------------------------------------------------------------------
 
     private async Task SeedPlanAccessWindowDirectly(Guid tenantId, Guid courseId, int days)

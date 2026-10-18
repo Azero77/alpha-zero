@@ -7,7 +7,6 @@ using MediatR;
 using AlphaZero.Modules.Courses.IntegrationEvents;
 using AlphaZero.Shared.Domain;
 using MassTransit;
-using MediatR;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;

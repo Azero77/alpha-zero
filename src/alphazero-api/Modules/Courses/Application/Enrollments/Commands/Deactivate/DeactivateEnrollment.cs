@@ -24,10 +24,14 @@ public sealed class DeactivateEnrollmentCommandHandler(
             return Error.NotFound("Enrollment.NotFound", "Enrollment not found for this user and course.");
         }
 
+        var previousStatus = enrollment.Status;
         var result = enrollment.Deactivate(EnrollmentTransitionActor.Resolve(authorizationContextProvider));
         if (result.IsError) return result.Errors;
 
-        repository.Update(enrollment);
+        if (enrollment.Status != previousStatus) // idempotent no-op (Inactive) writes nothing
+        {
+            repository.Update(enrollment);
+        }
 
         logger.LogWarning("Enrollment {EnrollmentId} for User {UserId} in Course {CourseId} has been DEACTIVATED.",
             enrollment.Id, request.UserId, request.CourseId);

@@ -56,7 +56,9 @@ public class EnrollmentQueryService : IEnrollmentQueryService
             e.Status.ToString(),
             e.Progress.CompletionPercentage,
             e.EnrolledOn,
-            e.TenantId)).ToListAsync(cancellationToken);
+            e.TenantId,
+            e.LastStatusChangedOn,
+            e.LastStatusChangedBy)).ToListAsync(cancellationToken);
     }
 
     public async Task<PagedResult<EnrollmentDto>> GetCourseEnrollmentsAsync(Guid courseId, int page, int perPage, CancellationToken cancellationToken = default)
