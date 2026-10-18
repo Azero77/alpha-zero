@@ -10,9 +10,12 @@ using AlphaZero.Modules.Courses.Presentation.Enrollments.Enroll;
 using AlphaZero.Modules.Courses.Presentation.Enrollments.Get;
 using AlphaZero.Modules.Courses.Presentation.Subjects.Create;
 using AlphaZero.Shared.Domain;
+using Autofac;
 using Courses.Tests.Integration.Abstractions;
 using FluentAssertions;
+using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
 namespace Courses.Tests.Integration;
@@ -176,6 +179,80 @@ public class EnrollmentLifecycleTests : BaseIntegrationTest
         response.StatusCode.Should().Be(HttpStatusCode.Conflict);
         var body = await response.Content.ReadAsStringAsync();
         body.Should().Contain("Enrollment.InvalidTransition");
+    }
+
+    // ------------------------------------------------------------------
+    // Cross-tenant denial — a tenant B operator cannot touch tenant A's enrollment
+    // ------------------------------------------------------------------
+
+    private async Task SeedPlanAccessWindowDirectly(Guid tenantId, Guid courseId, int days)
+    {
+        SetTenant(tenantId);
+        // plan-owner sets the access window on the plan aggregate (story #5) — the db write goes
+        // through the aggregate so the persisted column/model is exercised too
+        await ExecuteDbContextAsync(async db =>
+        {
+            var course = await db.Courses.Include(c => c.Plans).FirstAsync(c => c.Id == courseId);
+            course.AddPlan("Windowed", Guid.NewGuid(), days).IsError.Should().BeFalse();
+            await db.SaveChangesAsync();
+        });
+    }
+
+    private async Task<(Guid EnrollmentId, Guid StudentId)> SeedDueEnrollment(Guid tenantId, Guid courseId)
+    {
+        SetTenant(tenantId);
+        var studentId = Guid.NewGuid();
+
+        var enrollmentId = Guid.NewGuid();
+        var enrollment = Enrollment.Create(
+            enrollmentId, tenantId, studentId, courseId,
+            totalTrackedItems: 1, activeTrackedItems: 1,
+            accessExpiresOn: DateTime.UtcNow.AddSeconds(-5)).Value; // short-TTL test clock: window just passed
+        enrollment.CompleteItem(0).IsError.Should().BeFalse(); // earned progress must survive expiry
+
+        await ExecuteDbContextAsync(async db =>
+        {
+            db.Enrollments.Add(enrollment);
+            await db.SaveChangesAsync();
+        });
+
+        return (enrollmentId, studentId);
+    }
+
+    [Fact]
+    public async Task Expiry_Should_MarkDueEnrollmentExpired_AndPublishExpiryEvent()
+    {
+        // Arrange: plan-owner sets a 1-day access window on the course plan (story #5)
+        var tenantId = Guid.NewGuid();
+        var courseId = await CreatePublishedCourse(tenantId);
+        await SeedPlanAccessWindowDirectly(tenantId, courseId, days: 1);
+
+        var (enrollmentId, _) = await SeedDueEnrollment(tenantId, courseId);
+
+        RecordingPublishObserver.Clear();
+
+        var bus = Factory.Services.GetRequiredService<MassTransit.IBus>();
+        RecordingPublishObserver.ConnectOnce(bus);
+
+        // Act: one expiry scan pass (the hosted worker's tick — non-HTTP trigger); resolved the
+        // same way the in-host worker resolves it: through the module's own container
+        var coursesModule = Factory.Services.GetRequiredService<AlphaZero.Modules.Courses.Presentation.CoursesModule>();
+        using var moduleScope = coursesModule.CreateScope();
+        var expiryService = moduleScope.Resolve<AlphaZero.Modules.Courses.Infrastructure.Expiry.IEnrollmentExpiryService>();
+        var expiredCount = await expiryService.ExpireDueEnrollmentsAsync(CancellationToken.None);
+
+        // Assert: external behavior — status readable as Expired through the read endpoint (story #6: retained in roster)
+        expiredCount.Should().BeGreaterThan(0);
+        var dto = await Client.GetFromJsonAsync<EnrollmentResponse>($"/courses/enrollments/{enrollmentId}");
+        dto!.Status.Should().Be(EnrollmentStatus.Expired.ToString());
+        dto.CompletionPercentage.Should().BeGreaterThan(0); // not destroyed by expiry
+
+        // and the expiry integration event went out on the module bus (story #7)
+        for (var i = 0; i < 30 && !RecordingPublishObserver.Messages.OfType<AlphaZero.Modules.Courses.IntegrationEvents.EnrollmentExpiredIntegrationEvent>().Any(); i++)
+            await Task.Delay(100);
+
+        RecordingPublishObserver.Messages.OfType<AlphaZero.Modules.Courses.IntegrationEvents.EnrollmentExpiredIntegrationEvent>()
+            .Should().Contain(e => e.EnrollmentId == enrollmentId && e.CourseId == courseId && e.TenantId == tenantId);
     }
 
     // ------------------------------------------------------------------

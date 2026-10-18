@@ -17,6 +17,9 @@ public class EnrollmentConfiguration : IEntityTypeConfiguration<Enrollment>
             .ValueGeneratedNever();
         builder.Property(e => e.Status)
             .HasConversion<string>();
+        builder.Property(e => e.LastStatusChangedOn);
+        builder.Property(e => e.LastStatusChangedBy);
+        builder.Property(e => e.AccessExpiresOn);
         builder.HasIndex(e => new { e.StudentId, e.CourseId }).IsUnique();
 
         builder.OwnsOne(b => b.Progress, p =>

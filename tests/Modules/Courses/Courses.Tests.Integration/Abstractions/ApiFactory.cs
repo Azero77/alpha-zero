@@ -78,7 +78,8 @@ public class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
                 DocumentProcessingFailedQueue = new Aspire.Shared.SQSQueueSettings { QueueUrl = "https://sqs.mock/mock-queue-doc-failed" }
             });
 
-            // Ensure IPublishEndpoint publishes to in-memory IBus rather than external SQS bus in tests
+            // Ensure IPublishEndpoint publishes to in-memory IBus rather than external SQS bus in tests.
+            // RecordingPublishObserver captures module-published payloads for lifecycle-event assertions (#34).
             services.AddScoped<MassTransit.IPublishEndpoint>(sp => sp.GetRequiredService<MassTransit.IBus>());
         });
     }

@@ -11,6 +11,13 @@ namespace AlphaZero.Modules.Courses.Infrastructure.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.AddColumn<DateTime>(
+                name: "AccessExpiresOn",
+                schema: "Courses",
+                table: "Enrollements",
+                type: "timestamp with time zone",
+                nullable: true);
+
             migrationBuilder.AddColumn<Guid>(
                 name: "LastStatusChangedBy",
                 schema: "Courses",
@@ -24,11 +31,23 @@ namespace AlphaZero.Modules.Courses.Infrastructure.Migrations
                 table: "Enrollements",
                 type: "timestamp with time zone",
                 nullable: true);
+
+            migrationBuilder.AddColumn<int>(
+                name: "AccessWindowDays",
+                schema: "Courses",
+                table: "CoursePlans",
+                type: "integer",
+                nullable: true);
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.DropColumn(
+                name: "AccessExpiresOn",
+                schema: "Courses",
+                table: "Enrollements");
+
             migrationBuilder.DropColumn(
                 name: "LastStatusChangedBy",
                 schema: "Courses",
@@ -38,6 +57,11 @@ namespace AlphaZero.Modules.Courses.Infrastructure.Migrations
                 name: "LastStatusChangedOn",
                 schema: "Courses",
                 table: "Enrollements");
+
+            migrationBuilder.DropColumn(
+                name: "AccessWindowDays",
+                schema: "Courses",
+                table: "CoursePlans");
         }
     }
 }

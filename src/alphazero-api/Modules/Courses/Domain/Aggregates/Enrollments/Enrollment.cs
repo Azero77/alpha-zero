@@ -13,6 +13,12 @@ public class Enrollment : TenantOwnedAggregate
     public DateTime EnrolledOn { get; private set; }
 
     /// <summary>
+    /// Optional expiry instant (issue #34 stories #5/#6): staleness edge for enrollments whose
+    /// originating course plan carries an access window. Null = never expires automatically.
+    /// </summary>
+    public DateTime? AccessExpiresOn { get; private set; }
+
+    /// <summary>
     /// Last-transition audit metadata (issue #34 stories #9): who fired the transition and when.
     /// Null for enrollments that have never left Active, and null <see cref="LastStatusChangedBy"/>
     /// for automated (saga / expiry-scan) transitions that have no acting principal.
@@ -25,25 +31,31 @@ public class Enrollment : TenantOwnedAggregate
         // EF
     }
 
-    private Enrollment(Guid id, Guid tenantId, Guid studentId, Guid courseId, int totalTrackedItems, int? activeTrackedItems = null) : base(id, tenantId)
+    private Enrollment(Guid id, Guid tenantId, Guid studentId, Guid courseId, int totalTrackedItems, int? activeTrackedItems = null, DateTime? accessExpiresOn = null) : base(id, tenantId)
     {
         StudentId = studentId;
         CourseId = courseId;
         Status = EnrollmentStatus.Active;
         Progress = Progress.Create(totalTrackedItems, activeTrackedItems ?? totalTrackedItems);
         EnrolledOn = DateTime.UtcNow;
+        AccessExpiresOn = accessExpiresOn;
 
         AddDomainEvent(new EnrollmentCreatedDomainEvent(Id, StudentId, CourseId, TenantId));
     }
 
-    public static ErrorOr<Enrollment> Create(Guid id, Guid tenantId, Guid studentId, Guid courseId, int totalTrackedItems, int? activeTrackedItems = null)
+    /// <summary>
+    /// Creates an Active enrollment. <paramref name="accessExpiresOn"/> is derived from the
+    /// originating course plan's access window by the enrolling flow (issue #34); plain
+    /// self-serve enrollment without a plan passes null (never expires).
+    /// </summary>
+    public static ErrorOr<Enrollment> Create(Guid id, Guid tenantId, Guid studentId, Guid courseId, int totalTrackedItems, int? activeTrackedItems = null, DateTime? accessExpiresOn = null)
     {
         if (studentId == Guid.Empty) return Error.Validation("Enrollment.StudentId", "StudentId is required.");
         if (courseId == Guid.Empty) return Error.Validation("Enrollment.CourseId", "CourseId is required.");
         if (totalTrackedItems < 0) return Error.Validation("Enrollment.Progress", "Total tracked items cannot be negative.");
         if (activeTrackedItems.HasValue && activeTrackedItems.Value < 0) return Error.Validation("Enrollment.Progress", "Active tracked items cannot be negative.");
 
-        return new Enrollment(id, tenantId, studentId, courseId, totalTrackedItems, activeTrackedItems);
+        return new Enrollment(id, tenantId, studentId, courseId, totalTrackedItems, activeTrackedItems, accessExpiresOn);
     }
 
     public ErrorOr<Success> CompleteItem(int bitIndex)

@@ -22,6 +22,8 @@ public class CoursePlanConfiguration : IEntityTypeConfiguration<CoursePlan>
         builder.Property(p => p.PrincipalId)
             .IsRequired();
 
+        builder.Property(p => p.AccessWindowDays);
+
         // Ensure plan names are unique per course
         builder.HasIndex(p => new { p.CourseId, p.Name }).IsUnique();
     }

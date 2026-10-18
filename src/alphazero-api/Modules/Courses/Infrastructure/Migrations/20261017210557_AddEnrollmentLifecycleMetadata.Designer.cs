@@ -14,7 +14,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace AlphaZero.Modules.Courses.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20261017195444_AddEnrollmentLifecycleMetadata")]
+    [Migration("20261017210557_AddEnrollmentLifecycleMetadata")]
     partial class AddEnrollmentLifecycleMetadata
     {
         /// <inheritdoc />
@@ -173,6 +173,9 @@ namespace AlphaZero.Modules.Courses.Infrastructure.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
 
+                    b.Property<int?>("AccessWindowDays")
+                        .HasColumnType("integer");
+
                     b.Property<Guid>("CourseId")
                         .HasColumnType("uuid");
 
@@ -302,6 +305,9 @@ namespace AlphaZero.Modules.Courses.Infrastructure.Migrations
                 {
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("AccessExpiresOn")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<Guid>("CourseId")
                         .HasColumnType("uuid");

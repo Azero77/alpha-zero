@@ -9,7 +9,8 @@ using Microsoft.Extensions.Logging;
 
 namespace AlphaZero.Modules.Courses.Application.Enrollments.Commands.Enroll;
 
-public record EnrollInCourseCommand(Guid StudentId, Guid CourseId) : ICommand<Guid>;
+/// <param name="AccessExpiresOn">Optional expiry instant derived by the enrolling flow (plan access window, issue #34).</param>
+public record EnrollInCourseCommand(Guid StudentId, Guid CourseId, DateTime? AccessExpiresOn = null) : ICommand<Guid>;
 
 public class EnrollInCourseCommandValidator : AbstractValidator<EnrollInCourseCommand>
 {
@@ -56,7 +57,7 @@ public sealed class EnrollInCourseCommandHandler : IRequestHandler<EnrollInCours
         if (existingEnrollment is not null) return Error.Conflict("Enrollment.Exists", "Student is already enrolled in this course.");
 
         var enrollmentId = Guid.NewGuid();
-        var enrollmentResult = Enrollment.Create(enrollmentId, tenantId.Value, request.StudentId, request.CourseId, course.TotalTrackedItems, course.ActiveTrackedItems);
+        var enrollmentResult = Enrollment.Create(enrollmentId, tenantId.Value, request.StudentId, request.CourseId, course.TotalTrackedItems, course.ActiveTrackedItems, request.AccessExpiresOn);
 
         if (enrollmentResult.IsError) return enrollmentResult.Errors;
 

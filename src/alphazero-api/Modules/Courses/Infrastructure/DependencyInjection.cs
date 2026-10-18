@@ -4,6 +4,7 @@ using AlphaZero.Modules.Courses.Application.Repositories;
 using AlphaZero.Modules.Courses.Application.Services;
 using AlphaZero.Modules.Courses.Domain.Aggregates.Courses;
 using AlphaZero.Modules.Courses.Infrastructure.Authorization;
+using AlphaZero.Modules.Courses.Infrastructure.Expiry;
 using AlphaZero.Modules.Courses.Infrastructure.Persistance;
 using AlphaZero.Modules.Courses.Infrastructure.Repositories;
 using AlphaZero.Modules.Courses.Infrastructure.RequestResponseMessaging;
@@ -36,7 +37,11 @@ public static class DependencyInjection
             opts.AddInterceptors(sp.GetRequiredService<SoftDeleteInterceptor>());
         });
 
-        services.AddScoped<IArnResolver, CourseArnResolver>();
+        // Enrollment expiry scan (issue #34): in-process hosted service (non-HTTP trigger). The
+        // scan work lives in the module's own container (IEnrollmentExpiryService registered in
+        // AddCoursesPrivateInfrastructure so its IUnitOfWork is unambiguously the Courses one);
+        // the worker only bridges host lifecycle → module scope per pass.
+        services.AddHostedService<EnrollmentExpiryWorker>();
     }
 
     public static void AddCoursesPrivateInfrastructure(this IServiceCollection moduleServices, IConfiguration configuration)
@@ -70,6 +75,12 @@ public static class DependencyInjection
         moduleServices.AddScoped<AlphaZero.Modules.Courses.Application.Queries.ISubjectQueryService, AlphaZero.Modules.Courses.Infrastructure.Queries.SubjectQueryService>();
         moduleServices.AddScoped<AlphaZero.Modules.Courses.Application.Queries.IEnrollmentQueryService, AlphaZero.Modules.Courses.Infrastructure.Queries.EnrollmentQueryService>();
         moduleServices.AddScoped<AlphaZero.Modules.Courses.Application.Queries.ICourseAnalyticsQueryService, AlphaZero.Modules.Courses.Infrastructure.Queries.CourseAnalyticsQueryService>();
+
+        // Enrollment expiry scan (issue #34): resolved in the module's own container so the
+        // scan's IUnitOfWork is unambiguously the Courses one (the host root's IUnitOfWork
+        // belongs to whichever module registered it globally first). The hosted worker resolves
+        // this service through ICoursesModule.CreateScope().
+        moduleServices.AddScoped<IEnrollmentExpiryService, EnrollmentExpiryService>();
 
         moduleServices.AddValidatorsFromAssembly(typeof(ICoursesApplicationMarker).Assembly);
         moduleServices.AddPreRequestHandlersFromAssembly(typeof(ICoursesApplicationMarker).Assembly);
