@@ -24,9 +24,9 @@ namespace Courses.Tests.Integration;
 /// Enrollment lifecycle endpoints (issue #34): suspend/reactivate roundtrips, idempotency,
 /// invalid-transition domain errors at the HTTP boundary, cross-tenant denial.
 /// </summary>
-public class EnrollmentLifecycleTests : BaseIntegrationTest
+public class EnrollmentLifecycleEndpointTests : BaseIntegrationTest
 {
-    public EnrollmentLifecycleTests(ApiFactory factory) : base(factory)
+    public EnrollmentLifecycleEndpointTests(ApiFactory factory) : base(factory)
     {
     }
 
