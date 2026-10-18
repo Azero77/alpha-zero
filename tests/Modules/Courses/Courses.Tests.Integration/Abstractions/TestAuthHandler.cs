@@ -18,19 +18,20 @@ public class TestAuthHandler : AuthenticationHandler<AuthenticationSchemeOptions
 
     protected override Task<AuthenticateResult> HandleAuthenticateAsync()
     {
+        // X-Test-User-Id pins a stable user identity across calls (token/sub/identity_id);
+        // requests without the header get a random per-request identity.
+        var headerHasUser = Context.Request.Headers.TryGetValue("X-Test-User-Id", out var userId);
+        var effectiveUserId = headerHasUser ? userId.First().ToString() : Guid.NewGuid().ToString();
+
         var claims = new List<Claim>
         {
-            new Claim(ClaimTypes.NameIdentifier, Guid.NewGuid().ToString()),
-            new Claim("sub", Guid.NewGuid().ToString()),
+            new Claim(ClaimTypes.NameIdentifier, effectiveUserId),
+            new Claim("sub", effectiveUserId),
+            new Claim("identity_id", effectiveUserId),
+            new Claim("name", "Test User"),
             new Claim("auth_method", "TenantUser"),
             new Claim("sid", Guid.NewGuid().ToString())
         };
-
-        if (Context.Request.Headers.TryGetValue("X-Test-User-Id", out var userId))
-        {
-            claims.Add(new Claim("sub", userId.ToString()));
-            claims.Add(new Claim(ClaimTypes.NameIdentifier, userId.ToString()));
-        }
 
         var identity = new ClaimsIdentity(claims, "TestScheme");
         var principal = new ClaimsPrincipal(identity);

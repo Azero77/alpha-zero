@@ -100,7 +100,16 @@ public class IAMDevPreprocessor : IGlobalPreProcessor
 {
     public Task PreProcessAsync(IPreProcessorContext context, CancellationToken ct)
     {
-        return Task.CompletedTask; //this is dev for skipping authorization
+        // Dev mode skips authorization evaluation, but the bound request DTO must still be
+        // staged for AuthorizationContextProvider.Get (it reads __FastEndpoints_Request__ to
+        // resolve AccessControl resource ARNs). Skipping this store makes every AccessControl
+        // endpoint fail with an InvalidCastException in Development/test environments.
+        if (context.Request is not null)
+        {
+            context.HttpContext.Items["__FastEndpoints_Request__"] = context.Request;
+        }
+
+        return Task.CompletedTask;
     }
 }
 
