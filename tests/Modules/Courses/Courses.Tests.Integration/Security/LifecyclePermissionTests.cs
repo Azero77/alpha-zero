@@ -27,6 +27,19 @@ public class LifecycleSecurityApiFactory : ApiFactory
 {
     public FakePolicyEvaluatorService Evaluator { get; } = new();
 
+    protected override bool OwnsDatabase => false;
+
+    /// <summary>
+    /// Points this host at the primary factory's shared Postgres container. Must run before the
+    /// first CreateClient() (host build) so the security host migrates the same database.
+    /// </summary>
+    public void UseSharedDatabase(ApiFactory primary)
+    {
+        var connectionString = primary.DbConnectionString;
+        Environment.SetEnvironmentVariable("ConnectionStrings__alphazerodb", connectionString);
+        Environment.SetEnvironmentVariable("DatabaseSettings__ConnectionString", connectionString);
+    }
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         base.ConfigureWebHost(builder);
@@ -53,9 +66,10 @@ public class LifecyclePermissionTests : IClassFixture<LifecycleSecurityApiFactor
     private readonly LifecycleSecurityApiFactory _factory;
     private readonly HttpClient _client;
 
-    public LifecyclePermissionTests(LifecycleSecurityApiFactory factory)
+    public LifecyclePermissionTests(LifecycleSecurityApiFactory factory, ApiFactory primaryFactory)
     {
         _factory = factory;
+        _factory.UseSharedDatabase(primaryFactory);
         _client = factory.CreateClient();
     }
 

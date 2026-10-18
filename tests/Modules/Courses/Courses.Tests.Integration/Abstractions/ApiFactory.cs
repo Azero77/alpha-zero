@@ -21,6 +21,14 @@ public class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
         Environment.SetEnvironmentVariable("Testing:BypassIAM", "true");
     }
 
+    /// <summary>
+    /// Connection string of this factory's test database. Secondary hosts (e.g. the IAM-enforcing
+    /// security factory) reuse it via InitializeSharedDatabaseAsync instead of starting a second
+    /// container — a second container plus the process-global connection env vars caused mid-run
+    /// 57P01 connection terminations across the main factory's tests.
+    /// </summary>
+    public string DbConnectionString => _dbContainer.GetConnectionString();
+
     private readonly PostgreSqlContainer _dbContainer = new PostgreSqlBuilder()
         .WithImage("postgres:16.1-alpine3.19")
         .WithDatabase("alphazero_courses_test")
@@ -30,13 +38,24 @@ public class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
 
     public WireMockServer MockServer { get; private set; } = null!;
 
-    public async Task InitializeAsync()
-    {
-        await _dbContainer.StartAsync();
+    /// <summary>
+    /// Whether this factory owns (starts/stops) a dedicated Postgres container. Secondary factories
+    /// (e.g. the IAM-enforcing security factory) share the primary factory's database instead — a
+    /// second container plus the process-global connection env vars caused mid-run 57P01
+    /// connection terminations across the main factory's tests.
+    /// </summary>
+    protected virtual bool OwnsDatabase => true;
 
-        // Use environment variables to override settings BEFORE builder.Build() is called in Program.cs
-        Environment.SetEnvironmentVariable("ConnectionStrings__alphazerodb", _dbContainer.GetConnectionString());
-        Environment.SetEnvironmentVariable("DatabaseSettings__ConnectionString", _dbContainer.GetConnectionString());
+    public virtual async Task InitializeAsync()
+    {
+        if (OwnsDatabase)
+        {
+            await _dbContainer.StartAsync();
+
+            // Use environment variables to override settings BEFORE builder.Build() is called in Program.cs
+            Environment.SetEnvironmentVariable("ConnectionStrings__alphazerodb", _dbContainer.GetConnectionString());
+            Environment.SetEnvironmentVariable("DatabaseSettings__ConnectionString", _dbContainer.GetConnectionString());
+        }
 
         MockServer = WireMockServer.Start();
     }
@@ -84,9 +103,12 @@ public class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
         });
     }
 
-    public new async Task DisposeAsync()
+    public virtual async Task DisposeAsync()
     {
-        await _dbContainer.StopAsync();
+        if (OwnsDatabase)
+        {
+            await _dbContainer.StopAsync();
+        }
         MockServer.Stop();
     }
 }
