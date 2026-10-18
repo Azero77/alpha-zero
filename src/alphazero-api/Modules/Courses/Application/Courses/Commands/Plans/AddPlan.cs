@@ -7,7 +7,7 @@ using Microsoft.Extensions.Logging;
 
 namespace AlphaZero.Modules.Courses.Application.Courses.Commands.Plans;
 
-public record AddPlanCommand(Guid CourseId, string Name, Guid PrincipalId) : ICommand<Guid>;
+public record AddPlanCommand(Guid CourseId, string Name, Guid PrincipalId, int? AccessWindowDays = null) : ICommand<Guid>;
 
 public class AddPlanCommandValidator : AbstractValidator<AddPlanCommand>
 {
@@ -37,7 +37,7 @@ public sealed class AddPlanCommandHandler : IRequestHandler<AddPlanCommand, Erro
             .ExecuteAsync(cancellationToken);
         if (course is null) return Error.NotFound("Course.NotFound", "Course not found.");
 
-        var planResult = course.AddPlan(request.Name, request.PrincipalId);
+        var planResult = course.AddPlan(request.Name, request.PrincipalId, request.AccessWindowDays);
         if (planResult.IsError) return planResult.Errors;
 
         _courseRepository.Update(course);

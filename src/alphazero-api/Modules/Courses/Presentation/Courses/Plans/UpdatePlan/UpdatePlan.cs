@@ -13,6 +13,9 @@ public record UpdatePlanRequest
     public Guid PlanId { get; init; }
     public string Name { get; init; } = default!;
     public Guid PrincipalId { get; init; }
+
+    /// <summary>Optional access window in days; enrollments via this plan expire automatically after it (issue #34). Omitting/null clears the window (unlimited access).</summary>
+    public int? AccessWindowDays { get; init; }
 }
 
 public class UpdatePlanSummary : Summary<UpdatePlanEndpoint>
@@ -48,7 +51,7 @@ public class UpdatePlanEndpoint : Endpoint<UpdatePlanRequest>
 
     public override async Task HandleAsync(UpdatePlanRequest req, CancellationToken ct)
     {
-        var command = new UpdatePlanCommand(req.CourseId, req.PlanId, req.Name, req.PrincipalId);
+        var command = new UpdatePlanCommand(req.CourseId, req.PlanId, req.Name, req.PrincipalId, req.AccessWindowDays);
         var result = await _module.Send(command, ct);
 
         if (result.IsError)

@@ -1,7 +1,9 @@
+using FluentAssertions;
 using AlphaZero.Modules.Courses.Application.Enrollments.Commands.Enroll;
 using AlphaZero.Modules.Courses.Application.Repositories;
 using AlphaZero.Modules.Courses.Domain.Aggregates.Courses;
 using AlphaZero.Modules.Courses.Infrastructure.Consumers.Saga;
+using MediatR;
 using AlphaZero.Modules.Courses.IntegrationEvents;
 using AlphaZero.Shared.Domain;
 using MassTransit;
@@ -97,5 +99,33 @@ public class EnrollStudentFromSagaConsumerTests
 
         // Assert
         _contextMock.Verify(x => x.Publish(It.Is<StudentEnrolledFromSagaEvent>(e => e.CorrelationId == command.CorrelationId && e.PrincipalId == principalId), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Consume_Should_StampAccessExpiresOn_WhenPlanCarriesAccessWindow()
+    {
+        // Arrange (issue #34): a plan with an access window; enrollment created from it by the
+        // redemption saga must carry the expiry instant
+        var courseId = Guid.NewGuid();
+        var principalId = Guid.NewGuid();
+        var command = new EnrollStudentFromSagaCommand(Guid.NewGuid(), Guid.NewGuid(), courseId, "Standard", ResourceArn.ForCourse(Guid.NewGuid(), courseId));
+        _contextMock.Setup(x => x.Message).Returns(command);
+
+        var course = Course.Create(courseId, Guid.NewGuid(), "Title", null, Guid.NewGuid()).Value;
+        course.AddPlan("Standard", principalId, accessWindowDays: 7).Value.Should().NotBeNull();
+
+        SetupQuery(course);
+
+        _coursesModuleMock
+            .Setup(x => x.Send<global::ErrorOr.ErrorOr<Guid>>(It.IsAny<EnrollInCourseCommand>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Guid.NewGuid());
+
+        // Act
+        await _consumer.Consume(_contextMock.Object);
+
+        // Assert: the forwarded enroll command carries the plan-derived expiry instant
+        _coursesModuleMock.Verify(x => x.Send<global::ErrorOr.ErrorOr<Guid>>(
+            It.Is<EnrollInCourseCommand>(c => c.AccessExpiresOn.HasValue && c.AccessExpiresOn.Value >= DateTime.UtcNow.AddDays(6.9)),
+            It.IsAny<CancellationToken>()), Times.Once);
     }
 }

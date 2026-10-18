@@ -28,7 +28,10 @@ public class EnrollStudentFromSagaConsumer(ICoursesModule coursesModule, ICourse
             return;
         }
 
-        var command = new EnrollInCourseCommand(context.Message.UserId, context.Message.CourseId);
+        var command = new EnrollInCourseCommand(
+            context.Message.UserId,
+            context.Message.CourseId,
+            plan.AccessWindowDays is int windowDays ? DateTime.UtcNow.AddDays(windowDays) : null);
         var result = await coursesModule.Send(command);
 
         if (result.IsError)
