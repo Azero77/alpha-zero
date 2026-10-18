@@ -36,7 +36,9 @@ public class EnrollmentQueryService : IEnrollmentQueryService
                 e.Status.ToString(),
                 e.Progress.CompletionPercentage,
                 e.EnrolledOn,
-                e.TenantId))
+                e.TenantId,
+                e.LastStatusChangedOn,
+                e.LastStatusChangedBy))
             .ToListAsync(cancellationToken);
 
         return new PagedResult<EnrollmentDto>(items, totalCount, page, perPage);
@@ -76,7 +78,9 @@ public class EnrollmentQueryService : IEnrollmentQueryService
                 e.Status.ToString(),
                 e.Progress.CompletionPercentage,
                 e.EnrolledOn,
-                e.TenantId))
+                e.TenantId,
+                e.LastStatusChangedOn,
+                e.LastStatusChangedBy))
             .ToListAsync(cancellationToken);
 
         return new PagedResult<EnrollmentDto>(items, totalCount, page, perPage);
@@ -96,7 +100,9 @@ public class EnrollmentQueryService : IEnrollmentQueryService
                 e.Status.ToString(),
                 e.Progress.CompletionPercentage,
                 e.EnrolledOn,
-                e.TenantId))
+                e.TenantId,
+                e.LastStatusChangedOn,
+                e.LastStatusChangedBy))
             .ToListAsync(cancellationToken);
     }
 
@@ -112,7 +118,9 @@ public class EnrollmentQueryService : IEnrollmentQueryService
                 e.Status.ToString(),
                 e.Progress.CompletionPercentage,
                 e.EnrolledOn,
-                e.TenantId))
+                e.TenantId,
+                e.LastStatusChangedOn,
+                e.LastStatusChangedBy))
             .FirstOrDefaultAsync(cancellationToken);
     }
 }

@@ -148,16 +148,28 @@ namespace AlphaZero.Modules.Identity.Infrastructure.Services
                 : (object)httpContext.Request;
 
             ResourceArn arn;
-            if (globalRequirement != null)
+            try
             {
-                arn = globalRequirement.resourceArnFactory(requestObj);
-            }
-            else // tenant Requirement
-            {
-                if (currentTenant == null || currentTenant == Guid.Empty)
-                    return Error.Forbidden("Auth.TenantMissing", "Tenant identity is required for this resource.");
+                if (globalRequirement != null)
+                {
+                    arn = globalRequirement.resourceArnFactory(requestObj);
+                }
+                else // tenant Requirement
+                {
+                    if (currentTenant == null || currentTenant == Guid.Empty)
+                        return Error.Forbidden("Auth.TenantMissing", "Tenant identity is required for this resource.");
 
-                arn = tenantScopedRequirement!.resourceArnFactory(requestObj, currentTenant.Value);
+                    arn = tenantScopedRequirement!.resourceArnFactory(requestObj, currentTenant.Value);
+                }
+            }
+            catch (InvalidCastException)
+            {
+                // The ARN lambdas cast requestObj to the typed request; the envelope is only
+                // guaranteed when IAM enforcement ran first (IAMPreprocessor stashes the
+                // FastEndpoints request in Items). Under dev/bypass pipelines that skip the
+                // preprocessor the raw HttpRequest arrives — degrade to "no permission
+                // metadata" so callers resolving the actor context still succeed.
+                return (ValueTuple<string, ResourceArn>?)null;
             }
             string? permission = globalRequirement?.Action ?? tenantScopedRequirement?.Action;
 

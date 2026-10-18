@@ -107,6 +107,8 @@ public class EnrollmentLifecycleTests : BaseIntegrationTest
         suspended!.Status.Should().Be(EnrollmentStatus.Suspended.ToString());
         suspended.StudentId.Should().Be(studentId);
         suspended.CompletionPercentage.Should().BeGreaterThan(0); // earned progress survives suspension
+        suspended.LastStatusChangedOn.Should().NotBeNull(); // story #9: last-transition who/when at the read boundary
+        suspended.LastStatusChangedBy.Should().NotBeNull(); // the API actor fired this transition
 
         // Idempotent re-suspend (story #3)
         var reSuspend = await Client.PatchAsJsonAsync($"/courses/enrollments/{enrollmentId}/suspend", new { Reason = "billing dispute" });
