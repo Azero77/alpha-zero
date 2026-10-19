@@ -30,10 +30,12 @@ export const EnrollmentDtoSchema = z.object({
   id: guidSchema,
   courseId: guidSchema,
   studentId: guidSchema,
-  planId: guidSchema,
   status: z.string(),
   enrolledAt: z.string().datetime().optional(),
-  progressMask: z.string().optional(),
+  // Derived from the course's active curriculum — completed AND active items, the active
+  // denominator, and the percentage of the latter the student has completed.
+  completedItemsCount: z.number().int().min(0).optional(),
+  activeItemsCount: z.number().int().min(0).optional(),
   completionPercentage: z.number().min(0).max(100).optional(),
 });
 export type EnrollmentDto = z.infer<typeof EnrollmentDtoSchema>;

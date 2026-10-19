@@ -56,7 +56,7 @@ public sealed class EnrollInCourseCommandHandler : IRequestHandler<EnrollInCours
         if (existingEnrollment is not null) return Error.Conflict("Enrollment.Exists", "Student is already enrolled in this course.");
 
         var enrollmentId = Guid.NewGuid();
-        var enrollmentResult = Enrollment.Create(enrollmentId, tenantId.Value, request.StudentId, request.CourseId, course.TotalTrackedItems, course.ActiveTrackedItems);
+        var enrollmentResult = Enrollment.Create(enrollmentId, tenantId.Value, request.StudentId, request.CourseId);
 
         if (enrollmentResult.IsError) return enrollmentResult.Errors;
 
