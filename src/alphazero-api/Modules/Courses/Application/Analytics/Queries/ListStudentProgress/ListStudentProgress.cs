@@ -19,7 +19,7 @@ public class ListStudentProgressQueryHandler : IRequestHandler<ListStudentProgre
 
     public async Task<ErrorOr<PagedResult<EnrollmentDto>>> Handle(ListStudentProgressQuery request, CancellationToken cancellationToken)
     {
-        var result = await _queryService.GetCourseEnrollmentsAsync(request.CourseId, request.Page, request.PerPage, cancellationToken);
+        var result = await _queryService.ListCourseEnrollmentsAsync(request.CourseId, request.Page, request.PerPage, cancellationToken);
         return result;
     }
 }

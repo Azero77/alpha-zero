@@ -30,23 +30,6 @@ public sealed class GetStudentEnrollmentsQueryHandler : IRequestHandler<GetStude
 
     public async Task<ErrorOr<PagedResult<EnrollmentDto>>> Handle(GetStudentEnrollmentsQuery request, CancellationToken cancellationToken)
     {
-        return await _enrollmentQueryService.GetStudentEnrollmentsAsync(request.StudentId, request.Page, request.PerPage, cancellationToken);
-    }
-}
-
-public record GetStudentEnrollmentsForTenantQuery(Guid StudentId, Guid TenantId, int Page = 1, int PerPage = 10) : IRequest<ErrorOr<List<EnrollmentDto>>>;
-
-public sealed class GetStudentEnrollmentsForTenantQueryHandler : IRequestHandler<GetStudentEnrollmentsForTenantQuery, ErrorOr<List<EnrollmentDto>>>
-{
-    private readonly IEnrollmentQueryService _enrollmentQueryService;
-
-    public GetStudentEnrollmentsForTenantQueryHandler(IEnrollmentQueryService enrollmentQueryService)
-    {
-        _enrollmentQueryService = enrollmentQueryService;
-    }
-
-    public async Task<ErrorOr<List<EnrollmentDto>>> Handle(GetStudentEnrollmentsForTenantQuery request, CancellationToken cancellationToken)
-    {
-        return await _enrollmentQueryService.GetStudentEnrollmentsForTenantAsync(request.StudentId, request.TenantId, cancellationToken);
+        return await _enrollmentQueryService.ListStudentEnrollmentsAsync(request.StudentId, request.Page, request.PerPage, cancellationToken);
     }
 }

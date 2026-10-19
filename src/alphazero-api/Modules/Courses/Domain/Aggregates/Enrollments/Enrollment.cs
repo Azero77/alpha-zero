@@ -50,6 +50,11 @@ public class Enrollment : TenantOwnedAggregate
         if (Status != EnrollmentStatus.Active)
             return Error.Conflict("Enrollment.Status", "Cannot complete items in an inactive enrollment.");
 
+        // Activity validation lives here, not in Progress (progress is just a varbit of completed
+        // positions): only bits that map to an active curriculum item on the course can be completed.
+        if (bitIndex < 0 || bitIndex >= activeItemsBitmask.Length || !activeItemsBitmask[bitIndex])
+            return Error.Validation("Progress.ItemInactive", "Only active curriculum items can be completed.");
+
         double oldPercentage = ProgressCalculation.CompletionPercentage(Progress.Bitmask, activeItemsBitmask);
 
         var result = Progress.MarkAsComplete(bitIndex);

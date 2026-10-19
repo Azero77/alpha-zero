@@ -1,55 +1,80 @@
 using AlphaZero.Modules.Courses.Application.Enrollments.Queries.GetEnrollment;
+using AlphaZero.Modules.Courses.Application.Enrollments.Queries.GetStudentDashboard;
 using AlphaZero.Modules.Courses.Application.Queries;
-using AlphaZero.Modules.Courses.Domain.Aggregates.Courses;
 using AlphaZero.Modules.Courses.Domain.Aggregates.Enrollments;
 using AlphaZero.Modules.Courses.Infrastructure.Persistance;
+using AlphaZero.Shared.Infrastructure.Database;
 using AlphaZero.Shared.Queries;
 using Microsoft.EntityFrameworkCore;
+using System.Collections;
 using System.Linq;
 
 namespace AlphaZero.Modules.Courses.Infrastructure.Queries;
 
+/// <summary>
+/// Read side of enrollments. One query per endpoint, each a single round trip: the enrollment
+/// set stays untouched by any filter bypass (the tenant-driven filter on Enrollments is _the_
+/// tenant boundary and is never relaxed here), while a small correlated subquery fetches only
+/// the course's mask bytes.
+///
+/// The subquery ignores just the named filters it must: SoftDelete so an enrollment whose course
+/// was soft-deleted keeps its exact derived counts (mask bytes have no tenant surface — they
+/// cannot widen what rows exist). For the dashboard, which spans tenants by design, the subquery
+/// additionally bypasses Tenant, preserving real numbers on every row.
+///
+/// Why a subquery and not a join: <c>IgnoreQueryFilters</c> is query-wide across entity types, so
+/// joining enrollments with an unfiltered Courses set would strip the tenant filter off Enrollments
+/// (cross-tenant leak) and the inner join would silently drop enrollments whose course no longer
+/// exists. A correlated subquery over Courses keeps both risks on the course side only.
+/// </summary>
 public class EnrollmentQueryService : IEnrollmentQueryService
 {
     private readonly AppDbContext _context;
+
+    // Named-filter bypass sets hoisted out of the LINQ expression trees (collection expressions
+    // are illegal inside trees; a static array reference translates fine).
+    private static readonly string[] SoftDeleteOnly = [DbContstants.SoftDeleteFilter];
+    private static readonly string[] AcrossTenantsMaskReads = [DbContstants.TenantFilter, DbContstants.SoftDeleteFilter];
 
     public EnrollmentQueryService(AppDbContext context)
     {
         _context = context;
     }
 
-    public async Task<PagedResult<EnrollmentDto>> GetStudentEnrollmentsAsync(Guid studentId, int page, int perPage, CancellationToken cancellationToken = default)
+    public async Task<PagedResult<EnrollmentDto>> ListStudentEnrollmentsAsync(Guid studentId, int page, int perPage, CancellationToken cancellationToken = default)
     {
         // All statuses on purpose: this is the support listing (status is an output field; a
         // deactivated enrollment must be visible to support agents). Tenant scoping comes from
-        // the global query filter.
+        // the enrollment query filter.
         var query = _context.Set<Enrollment>()
             .AsNoTracking()
             .Where(e => e.StudentId == studentId);
 
         var totalCount = await query.CountAsync(cancellationToken);
 
-        var enrollments = await query
+        var rows = await query
             .OrderByDescending(e => e.EnrolledOn)
+            .ThenBy(e => e.Id)
             .Skip((page - 1) * perPage)
             .Take(perPage)
+            .Select(e => new EnrollmentRow(
+                e.Id,
+                e.StudentId,
+                e.CourseId,
+                e.Status,
+                e.EnrolledOn,
+                e.TenantId,
+                e.Progress.Bitmask,
+                _context.Courses.IgnoreQueryFilters(SoftDeleteOnly)
+                    .Where(c => c.Id == e.CourseId)
+                    .Select(c => c.ActiveItemsBitmask)
+                    .FirstOrDefault()))
             .ToListAsync(cancellationToken);
 
-        return new PagedResult<EnrollmentDto>(await MapWithActiveMasksAsync(enrollments, cancellationToken), totalCount, page, perPage);
+        return new PagedResult<EnrollmentDto>(rows.Select(Map).ToList(), totalCount, page, perPage);
     }
 
-    public async Task<List<EnrollmentDto>> GetStudentEnrollmentsForTenantAsync(Guid studentId, Guid tenantId, CancellationToken cancellationToken = default)
-    {
-        var enrollments = await _context.Set<Enrollment>()
-            .AsNoTracking()
-            .Where(e => e.StudentId == studentId && e.TenantId == tenantId)
-            .OrderByDescending(e => e.EnrolledOn)
-            .ToListAsync(cancellationToken);
-
-        return await MapWithActiveMasksAsync(enrollments, cancellationToken);
-    }
-
-    public async Task<PagedResult<EnrollmentDto>> GetCourseEnrollmentsAsync(Guid courseId, int page, int perPage, CancellationToken cancellationToken = default)
+    public async Task<PagedResult<EnrollmentDto>> ListCourseEnrollmentsAsync(Guid courseId, int page, int perPage, CancellationToken cancellationToken = default)
     {
         var query = _context.Set<Enrollment>()
             .AsNoTracking()
@@ -57,106 +82,117 @@ public class EnrollmentQueryService : IEnrollmentQueryService
 
         var totalCount = await query.CountAsync(cancellationToken);
 
-        var enrollments = await query
+        var rows = await query
             .OrderByDescending(e => e.EnrolledOn)
+            .ThenBy(e => e.Id)
             .Skip((page - 1) * perPage)
             .Take(perPage)
+            .Select(e => new EnrollmentRow(
+                e.Id,
+                e.StudentId,
+                e.CourseId,
+                e.Status,
+                e.EnrolledOn,
+                e.TenantId,
+                e.Progress.Bitmask,
+                _context.Courses.IgnoreQueryFilters(SoftDeleteOnly)
+                    .Where(c => c.Id == e.CourseId)
+                    .Select(c => c.ActiveItemsBitmask)
+                    .FirstOrDefault()))
             .ToListAsync(cancellationToken);
 
-        return new PagedResult<EnrollmentDto>(await MapWithActiveMasksAsync(enrollments, cancellationToken), totalCount, page, perPage);
+        return new PagedResult<EnrollmentDto>(rows.Select(Map).ToList(), totalCount, page, perPage);
     }
 
-    public async Task<List<EnrollmentDto>> GetStudentEnrollmentsAcrossTenantsAsync(Guid studentId, CancellationToken cancellationToken = default)
+    public async Task<List<DashboardEnrollmentRow>> ListStudentDashboardEnrollmentsAsync(Guid studentId, CancellationToken cancellationToken = default)
     {
-        var enrollments = await _context.Set<Enrollment>()
+        // The dashboard intentionally spans tenants (the handler groups by TenantId), so the
+        // enrollment set drops its filters exactly as it did before this refactor — and the
+        // course subquery does the same, preserving real derived numbers on every row.
+        var rows = await _context.Set<Enrollment>()
             .IgnoreQueryFilters()
             .AsNoTracking()
             .Where(e => e.StudentId == studentId && e.Status == EnrollmentStatus.Active)
+            .OrderByDescending(e => e.EnrolledOn)
+            .ThenBy(e => e.Id)
+            .Select(e => new EnrollmentRow(
+                e.Id,
+                e.StudentId,
+                e.CourseId,
+                e.Status,
+                e.EnrolledOn,
+                e.TenantId,
+                e.Progress.Bitmask,
+                _context.Courses.IgnoreQueryFilters(AcrossTenantsMaskReads)
+                    .Where(c => c.Id == e.CourseId)
+                    .Select(c => c.ActiveItemsBitmask)
+                    .FirstOrDefault()))
             .ToListAsync(cancellationToken);
 
-        return await MapWithActiveMasksAsync(enrollments, cancellationToken);
+        return rows.Select(MapToDashboardRow).ToList();
     }
 
     public async Task<EnrollmentDto?> GetEnrollmentByIdAsync(Guid enrollmentId, CancellationToken cancellationToken = default)
     {
-        var enrollment = await _context.Set<Enrollment>()
+        var row = await _context.Set<Enrollment>()
             .AsNoTracking()
-            .FirstOrDefaultAsync(e => e.Id == enrollmentId, cancellationToken);
+            .Where(e => e.Id == enrollmentId)
+            .Select(e => new EnrollmentRow(
+                e.Id,
+                e.StudentId,
+                e.CourseId,
+                e.Status,
+                e.EnrolledOn,
+                e.TenantId,
+                e.Progress.Bitmask,
+                _context.Courses.IgnoreQueryFilters(SoftDeleteOnly)
+                    .Where(c => c.Id == e.CourseId)
+                    .Select(c => c.ActiveItemsBitmask)
+                    .FirstOrDefault()))
+            .FirstOrDefaultAsync(cancellationToken);
 
-        if (enrollment is null)
-        {
-            return null;
-        }
-
-        var masks = await LoadActiveMasksAsync([enrollment.CourseId], cancellationToken);
-        var mask = masks.GetValueOrDefault(enrollment.CourseId, new System.Collections.BitArray(0));
-
-        return Map(enrollment, mask);
+        return row is null ? null : Map(row);
     }
 
-    /// <summary>
-    /// The enrollment set must never be joined against <see cref="CoursesForMaskReads"/>:
-    /// <see cref="IQueryable{T}.IgnoreQueryFilters"/> is query-wide in EF Core, so a single call
-    /// would also strip the tenant filter off Enrollments and leak cross-tenant rows, while the
-    /// inner join would silently drop enrollments whose course row no longer exists. Instead the
-    /// course masks for the already-fetched enrollments are loaded in a second, standalone query
-    /// and mapping happens in memory.
-    /// </summary>
-    private async Task<List<EnrollmentDto>> MapWithActiveMasksAsync(List<Enrollment> enrollments, CancellationToken cancellationToken)
+    private static EnrollmentDto Map(EnrollmentRow row)
     {
-        if (enrollments.Count == 0)
-        {
-            return [];
-        }
-
-        var masks = await LoadActiveMasksAsync(enrollments.Select(e => e.CourseId).Distinct().ToList(), cancellationToken);
-
-        return enrollments
-            .Select(enrollment => Map(enrollment, masks.GetValueOrDefault(enrollment.CourseId, new System.Collections.BitArray(0))))
-            .ToList();
-    }
-
-    /// <summary>
-    /// Course projection used only to obtain the ActiveItemsBitmask that progress percentages are
-    /// derived from. It intentionally ignores the global course filters — a soft-deleted (or even
-    /// fully absent) course must not make a historical enrollment disappear from
-    /// support/dashboard listings (the same visibility the module had before counts were derived
-    /// from the course mask). No curriculum data is loaded and no mutation happens, so tenant
-    /// isolation for course WRITES is unaffected (repos + global filters). Because the query
-    /// touches only Courses, ignoring its filters here is safe.
-    /// </summary>
-    private async Task<Dictionary<Guid, System.Collections.BitArray>> LoadActiveMasksAsync(List<Guid> courseIds, CancellationToken cancellationToken)
-    {
-        if (courseIds.Count == 0)
-        {
-            return [];
-        }
-
-        return await CoursesForMaskReads()
-            .Where(c => courseIds.Contains(c.Id))
-            .Select(c => new { c.Id, c.ActiveItemsBitmask })
-            .ToDictionaryAsync(c => c.Id, c => c.ActiveItemsBitmask, cancellationToken);
-    }
-
-    private IQueryable<Course> CoursesForMaskReads() => _context.Courses
-        .AsNoTracking()
-        .IgnoreQueryFilters();
-
-    private static EnrollmentDto Map(Enrollment enrollment, System.Collections.BitArray activeItemsBitmask)
-    {
-        // ProgressCalculation treats missing bits of a shorter enrollment mask as incomplete.
-        var completedActiveItems = ProgressCalculation.CompletedActiveItems(enrollment.Progress.Bitmask, activeItemsBitmask);
-        var activeItems = ProgressCalculation.ActiveItems(activeItemsBitmask);
+        var courseMask = row.ActiveItemsBitmask ?? new BitArray(0);
 
         return new EnrollmentDto(
-            enrollment.Id,
-            enrollment.StudentId,
-            enrollment.CourseId,
-            enrollment.Status.ToString(),
-            completedActiveItems,
-            activeItems,
-            ProgressCalculation.CompletionPercentage(enrollment.Progress.Bitmask, activeItemsBitmask),
-            enrollment.EnrolledOn,
-            enrollment.TenantId);
+            row.Id,
+            row.StudentId,
+            row.CourseId,
+            row.Status.ToString(),
+            ProgressCalculation.CompletedActiveItems(row.ProgressBitmask, courseMask),
+            ProgressCalculation.ActiveItems(courseMask),
+            ProgressCalculation.CompletionPercentage(row.ProgressBitmask, courseMask),
+            row.EnrolledOn,
+            row.TenantId);
     }
+
+    private static DashboardEnrollmentRow MapToDashboardRow(EnrollmentRow row)
+    {
+        var courseMask = row.ActiveItemsBitmask ?? new BitArray(0);
+
+        return new DashboardEnrollmentRow(
+            row.Id,
+            row.CourseId,
+            row.Status.ToString(),
+            ProgressCalculation.CompletedActiveItems(row.ProgressBitmask, courseMask),
+            ProgressCalculation.ActiveItems(courseMask),
+            ProgressCalculation.CompletionPercentage(row.ProgressBitmask, courseMask),
+            row.EnrolledOn,
+            row.TenantId);
+    }
+
+    /// <summary>What a listing row carries: the scalar fields the endpoint shows plus the two varbit masks the derived counts need — no full aggregate row. The course mask is null only when the course row itself is unreadable (never for a live course).</summary>
+    private sealed record EnrollmentRow(
+        Guid Id,
+        Guid StudentId,
+        Guid CourseId,
+        EnrollmentStatus Status,
+        DateTime EnrolledOn,
+        Guid TenantId,
+        BitArray ProgressBitmask,
+        BitArray? ActiveItemsBitmask);
 }

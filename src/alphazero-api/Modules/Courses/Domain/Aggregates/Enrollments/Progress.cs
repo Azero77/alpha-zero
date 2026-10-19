@@ -27,12 +27,11 @@ public record Progress
     public static Progress Create() => new(new BitArray(0, false));
 
     /// <summary>
-    /// Mark a bit in course item bitmask complete per the enrollement, it is not important to make checking activity for a bitmask in course to mark it as completed as bitmask,
-    /// Bitmask 
+    /// Mark a bit complete for the enrollment. Activity validation is intentionally NOT a
+    /// progress concern: <c>Progress</c> is just a varbit of completed positions — whether a
+    /// bit maps to an active curriculum item is checked by <c>Enrollment.CompleteItem</c>
+    /// against the course's ActiveItemsBitmask.
     /// </summary>
-    /// <param name="bitIndex"></param>
-    /// [obselete] <param name="activeItemsBitmask"></param> because bitmask only makrs completed item in the course bit mask, does not care about activity of an item
-    /// <returns></returns>
     public ErrorOr<Progress> MarkAsComplete(int bitIndex)
     {
         // Only bit positions that map to an active curriculum item on the course can be completed.

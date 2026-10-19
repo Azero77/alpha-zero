@@ -26,13 +26,4 @@ public class EnrollmentRepository : BaseRepository<AppDbContext, Enrollment>, IE
             .Where(e => e.StudentId == studentId && e.Status == EnrollmentStatus.Active)
             .ToListAsync(cancellationToken);
     }
-
-    public async Task<List<Enrollment>> GetStudentEnrollmentsForTenantAsync(Guid studentId, Guid tenantId, CancellationToken cancellationToken = default)
-    {
-        return await _context.Enrollments
-        .IgnoreQueryFilters([DbContstants.TenantFilter])
-        .Where(e => e.StudentId == studentId && e.TenantId == tenantId && e.Status == EnrollmentStatus.Active)
-        .ToListAsync(cancellationToken);
-    }
-
 }
