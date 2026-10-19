@@ -17,6 +17,8 @@ public record EnrollmentDto(
     Guid EnrollmentId,
     Guid CourseId,
     string Status,
+    int CompletedItemsCount,
+    int ActiveItemsCount,
     double CompletionPercentage,
     DateTime EnrolledOn);
 
@@ -65,6 +67,8 @@ public class GetStudentDashboardEndpoint : Endpoint<GetStudentDashboardRequest, 
                 e.Id,
                 e.CourseId,
                 e.Status,
+                e.CompletedItemsCount,
+                e.ActiveItemsCount,
                 e.CompletionPercentage,
                 e.EnrolledOn)).ToList());
 

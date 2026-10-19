@@ -1,14 +1,11 @@
 using AlphaZero.Modules.Courses.Application.Courses.Commands.Sections;
 using AlphaZero.Modules.Courses.Application.Repositories;
 using AlphaZero.Modules.Courses.Domain.Aggregates.Courses;
-using AlphaZero.Modules.Courses.Domain.Aggregates.Enrollments;
+using AlphaZero.Modules.Courses.Domain.Events;
 using AlphaZero.Shared.Domain;
-using AlphaZero.Shared.Infrastructure.Repositores;
 using ErrorOr;
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
-using NSubstitute;
-using EnrollmentAggregate = AlphaZero.Modules.Courses.Domain.Aggregates.Enrollments.Enrollment;
 using NSubstitute;
 using Xunit;
 
@@ -20,13 +17,12 @@ public class CourseSectionLifecycleHandlersTests
     private static readonly Guid SubjectId = Guid.NewGuid();
 
     private readonly ICourseRepository _courseRepository = Substitute.For<ICourseRepository>();
-    private readonly IEnrollmentRepository _enrollmentRepository = Substitute.For<IEnrollmentRepository>();
     private readonly ILogger<CourseSectionHandlers> _logger = Substitute.For<ILogger<CourseSectionHandlers>>();
     private readonly CourseSectionHandlers _handler;
 
     public CourseSectionLifecycleHandlersTests()
     {
-        _handler = new CourseSectionHandlers(_courseRepository, _enrollmentRepository, _logger);
+        _handler = new CourseSectionHandlers(_courseRepository, _logger);
     }
 
     private void SetupCourseQuery(Guid courseId, Course? course)
@@ -48,9 +44,14 @@ public class CourseSectionLifecycleHandlersTests
         course.AddSection("S2");
         var s1 = course.Sections.ElementAt(0);
         var s2 = course.Sections.ElementAt(1);
-        s1.AddItem(Guid.NewGuid(), "L1", "Video", course.AllocateNextBitIndex());
-        s1.AddItem(Guid.NewGuid(), "L2", "Video", course.AllocateNextBitIndex());
-        s2.AddItem(Guid.NewGuid(), "L3", "Video", course.AllocateNextBitIndex());
+        course.AddItem(s1.Id, "L1", ResourceType.Video);
+        course.AddItem(s1.Id, "L2", ResourceType.Video);
+        course.AddItem(s2.Id, "L3", ResourceType.Video);
+
+        // Handler-equivalent event translation (no dispatcher in unit tests).
+        foreach (var item in course.Sections.SelectMany(x => x.Items).Where(i => !i.IsDeleted))
+            course.ActivateCurriculumBit(item.BitIndex);
+
         return course;
     }
 
@@ -118,52 +119,27 @@ public class CourseSectionLifecycleHandlersTests
     }
 
     [Fact]
-    public async Task Delete_Should_RefreshEnrollmentsActiveItems_AfterSectionDelete()
+    public async Task Delete_Should_SoftDeleteSectionAndItsItems_WithoutTouchingEnrollments()
     {
         // Arrange
         var course = CreateCourseWithContent();
         var sectionId = course.Sections.ElementAt(0).Id;
         SetupCourseQuery(course.Id, course);
 
-        var enrollment = Enrollment.Create(
-            Guid.NewGuid(), TenantId, Guid.NewGuid(), course.Id,
-            course.TotalTrackedItems, course.ActiveTrackedItems).Value;
-        _enrollmentRepository.GetCourseEnrollmentsAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
-            .Returns(new List<EnrollmentAggregate> { enrollment });
-
         // Act: delete the section holding 2 of the 3 items
         var result = await _handler.Handle(new DeleteCourseSectionCommand(course.Id, sectionId), CancellationToken.None);
 
         // Assert
         result.IsError.Should().BeFalse();
-        course.ActiveTrackedItems.Should().Be(1);
-        enrollment.Progress.ActiveItems.Should().Be(1);
-        _enrollmentRepository.Received(1).Update(enrollment);
+        course.Sections.ElementAt(0).IsDeleted.Should().BeTrue();
+        // The deleted section's items are soft-deleted, the sibling section's are not.
+        course.Sections.ElementAt(0).Items.Should().OnlyContain(i => i.IsDeleted);
+        course.Sections.ElementAt(1).Items.ElementAt(0).IsDeleted.Should().BeFalse();
+
+        // The event payload carries the captured BitIndexes for the mask handler —
+        // but the command itself performs NO enrollment reads or writes at all.
+        course.DomainEvents.OfType<CourseSectionDeletedDomainEvent>().Single()
+            .BitIndexes.Should().BeEquivalentTo(new[] { 0, 1 });
         _courseRepository.Received(1).Update(course);
-    }
-
-    [Fact]
-    public async Task Delete_Should_NotChangeEnrollmentBitmask_WhenRefreshing()
-    {
-        // Arrange: student completed bit index 2 (in the surviving section)
-        var course = CreateCourseWithContent();
-        var sectionId = course.Sections.ElementAt(0).Id;
-        SetupCourseQuery(course.Id, course);
-
-        var enrollment = Enrollment.Create(
-            Guid.NewGuid(), TenantId, Guid.NewGuid(), course.Id,
-            course.TotalTrackedItems, course.ActiveTrackedItems).Value;
-        enrollment.CompleteItem(2);
-        var bitsBefore = new[] { enrollment.Progress.IsComplete(2) };
-
-        _enrollmentRepository.GetCourseEnrollmentsAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
-            .Returns(new List<EnrollmentAggregate> { enrollment });
-
-        // Act
-        await _handler.Handle(new DeleteCourseSectionCommand(course.Id, sectionId), CancellationToken.None);
-
-        // Assert: earned bits survive the instructor edit
-        enrollment.Progress.IsComplete(2).Should().Be(bitsBefore[0]);
-        enrollment.Progress.CompletionPercentage.Should().Be(100.0);
     }
 }

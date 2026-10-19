@@ -19,15 +19,6 @@ public class EnrollmentRepository : BaseRepository<AppDbContext, Enrollment>, IE
             .FirstOrDefaultAsync(e => e.Id == id, cancellationToken);
     }
 
-    public async Task<List<Enrollment>> GetCourseEnrollmentsAsync(Guid courseId, CancellationToken cancellationToken = default)
-    {
-        // Tracked on purpose: the section-delete command mutates each enrollment's
-        // Progress.ActiveItems after loading it.
-        return await _context.Enrollments
-            .Where(e => e.CourseId == courseId)
-            .ToListAsync(cancellationToken);
-    }
-
     public async Task<List<Enrollment>> GetStudentEnrollmentsAcrossTenantsAsync(Guid studentId, CancellationToken cancellationToken = default)
     {
         return await _context.Enrollments

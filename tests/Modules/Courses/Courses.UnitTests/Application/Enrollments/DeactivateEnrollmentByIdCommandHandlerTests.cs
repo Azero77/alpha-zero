@@ -25,7 +25,7 @@ public class DeactivateEnrollmentByIdCommandHandlerTests
 
     private static EnrollmentAggregate CreateEnrollment()
     {
-        return EnrollmentAggregate.Create(Guid.NewGuid(), TenantId, Guid.NewGuid(), Guid.NewGuid(), 3).Value;
+        return EnrollmentAggregate.Create(Guid.NewGuid(), TenantId, Guid.NewGuid(), Guid.NewGuid()).Value;
     }
 
     [Fact]
@@ -80,7 +80,12 @@ public class DeactivateEnrollmentByIdCommandHandlerTests
     {
         // Arrange: a student who had completed an item keeps that earned slot
         var enrollment = CreateEnrollment();
-        enrollment.CompleteItem(1);
+
+        // Course mask: 3 allocated positions, 3 active (bit 1 among them).
+        var courseMask = new System.Collections.BitArray(3, false);
+        for (var i = 0; i < 3; i++) courseMask[i] = true;
+
+        enrollment.CompleteItem(1, courseMask);
         _repository.GetByIdAsync(enrollment.Id, Arg.Any<CancellationToken>()).Returns(enrollment);
 
         // Act
@@ -89,6 +94,6 @@ public class DeactivateEnrollmentByIdCommandHandlerTests
         // Assert
         enrollment.Status.Should().Be(EnrollmentStatus.Inactive);
         enrollment.Progress.IsComplete(1).Should().BeTrue();
-        enrollment.Progress.CompletionPercentage.Should().BeApproximately(33.33, 0.01);
+        ProgressCalculation.CompletionPercentage(enrollment.Progress.Bitmask, courseMask).Should().BeApproximately(33.33, 0.01);
     }
 }

@@ -217,11 +217,14 @@ public class SectionCrudTests : BaseIntegrationTest
         after!.CompletionPercentage.Should().Be(100.0);
         after.Status.Should().Be("Active");
 
-        // Earned completion bits of surviving items are never regressed: the S2 item is still complete in the DB
+        // Earned completion bits of surviving items are never regressed: the S2 item is still
+        // complete in the DB and the student's own mask was never rewritten by the delete
+        // (completion derives from the course mask at calculation time).
         await ExecuteDbContextAsync(async db =>
         {
             var persisted = await db.Enrollments.FirstAsync(e => e.Id == enrollmentId);
-            persisted.Progress.CompletionPercentage.Should().Be(100.0);
+            persisted.Progress.IsComplete(2).Should().BeTrue();
+            persisted.Progress.Bitmask.Length.Should().Be(3); // untouched by the instructor edit
         });
     }
 

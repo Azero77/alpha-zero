@@ -139,7 +139,6 @@ public class EnrollmentLifecycleTests : BaseIntegrationTest
             var persisted = await db.Enrollments.FirstAsync(e => e.Id == enrollmentId);
             persisted.Status.Should().Be(AlphaZero.Modules.Courses.Domain.Aggregates.Enrollments.EnrollmentStatus.Inactive);
             persisted.Progress.IsComplete(0).Should().BeTrue();
-            persisted.Progress.CompletionPercentage.Should().Be(50.0);
         });
     }
 

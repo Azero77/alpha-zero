@@ -1,5 +1,6 @@
 using AlphaZero.Modules.Courses.Domain.Aggregates.Courses;
 using AlphaZero.Modules.Courses.Domain.Aggregates.Enrollments;
+using AlphaZero.Modules.Courses.Domain.Events;
 using AlphaZero.Shared.Domain;
 using ErrorOr;
 using FluentAssertions;
@@ -20,9 +21,14 @@ public class CourseDeleteTests
         s1 = course.Sections.ElementAt(0);
         s2 = course.Sections.ElementAt(1);
 
-        s1.AddItem(Guid.NewGuid(), "L1", "Video", course.AllocateNextBitIndex());
-        s1.AddItem(Guid.NewGuid(), "L2", "Video", course.AllocateNextBitIndex());
-        s2.AddItem(Guid.NewGuid(), "L3", "Video", course.AllocateNextBitIndex());
+        course.AddItem(s1.Id, "L1", ResourceType.Video);
+        course.AddItem(s1.Id, "L2", ResourceType.Video);
+        course.AddItem(s2.Id, "L3", ResourceType.Video);
+
+        // Handler-equivalent event translation (the dispatcher doesn't run in unit tests):
+        // every added item activates its allocated bit position.
+        foreach (var item in course.Sections.SelectMany(x => x.Items).Where(i => !i.IsDeleted))
+            course.ActivateCurriculumBit(item.BitIndex);
 
         return course;
     }
@@ -119,9 +125,14 @@ public class CourseDeleteTests
         // Bit indexes remain stable across deletion
         s2.Items.ElementAt(0).BitIndex.Should().Be(2);
 
-        // Active tracked items recount against remaining active items
+        // The deleted section's items are soft-deleted too (self-describing aggregate)
+        s1.Items.Should().OnlyContain(i => i.IsDeleted);
+        s1.Items.ElementAt(0).BitIndex.Should().Be(0);
+
+        // Allocation state stays intact; the active mask is handler territory — the domain
+        // captured it for the CourseSectionDeletedDomainEvent instead of mutating it here.
         course.TotalTrackedItems.Should().Be(3);
-        course.ActiveTrackedItems.Should().Be(1);
+        course.DomainEvents.OfType<CourseSectionDeletedDomainEvent>().Single().BitIndexes.Should().BeEquivalentTo(new[] { 0, 1 });
     }
 
     [Fact]
@@ -139,25 +150,38 @@ public class CourseDeleteTests
     }
 
     [Fact]
-    public void DeleteSection_Should_RecomputeEnrollmentProgress_WithoutLosingEarnedBits()
+    public void DeleteSection_EventHandlerTranslation_Should_DeactivateContainedBits_WithoutTouchingEnrollments()
     {
         // Arrange: student completed the last section's item (bit index 2)
         var course = CreateCourseWithTwoSections(out var s1, out _);
         var enrollment = Enrollment.Create(
-            Guid.NewGuid(), TenantId, Guid.NewGuid(), course.Id,
-            course.TotalTrackedItems, course.ActiveTrackedItems).Value;
+            Guid.NewGuid(), TenantId, Guid.NewGuid(), course.Id).Value;
 
-        enrollment.CompleteItem(2);
-        enrollment.Progress.CompletionPercentage.Should().BeApproximately(33.33, 0.01, because: "1 of 3 live items complete");
+        var courseMask = course.SnapshotActiveItemsBitmask();
+        enrollment.CompleteItem(2, courseMask);
+        var studentMaskLength = enrollment.Progress.Bitmask.Length;
 
-        // Act: instructor deletes the first section (2 of 3 items inactive)
+        // Act: instructor deletes the first section (bits 0 and 1 deactivated via the event
+        // payload — exactly what CourseActiveItemsDomainEventHandler applies in production)
         course.DeleteSection(s1.Id);
-        enrollment.UpdateActiveItems(course.ActiveTrackedItems);
+        course.DeactivateCurriculumBits(
+            course.DomainEvents.OfType<CourseSectionDeletedDomainEvent>().Single().BitIndexes);
 
-        // Assert: earned completion bit for the still-active item survives instructor edits,
-        // and the percentage remarshals against the remaining active items
+        // Assert: the course mask marks the deleted section positions inactive and keeps the
+        // still-active position; the student's earned completion bits are untouched and the
+        // percentage recomputes against the course's remaining active items.
+        course.ActiveItemsBitmask.Length.Should().Be(3);
+        course.ActiveItemsBitmask[0].Should().BeFalse();
+        course.ActiveItemsBitmask[1].Should().BeFalse();
+        course.ActiveItemsBitmask[2].Should().BeTrue();
+
+        courseMask = course.SnapshotActiveItemsBitmask();
         enrollment.Progress.IsComplete(2).Should().BeTrue();
-        enrollment.Progress.CompletionPercentage.Should().Be(100.0);
-        enrollment.Progress.IsAllComplete.Should().BeTrue();
+        enrollment.Progress.Bitmask.Length.Should().Be(studentMaskLength); // enrollment unchanged
+        ProgressCalculation.CompletionPercentage(enrollment.Progress.Bitmask, courseMask).Should().Be(100.0);
+        ProgressCalculation.IsAllComplete(enrollment.Progress.Bitmask, courseMask).Should().BeTrue();
+
+        // Completing a deactivated position is refused without loading the curriculum
+        enrollment.CompleteItem(0, courseMask).FirstError.Code.Should().Be("Progress.ItemInactive");
     }
 }

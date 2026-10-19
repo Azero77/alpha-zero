@@ -1,3 +1,4 @@
+using System.Collections;
 using AlphaZero.Modules.Courses.Domain.Events;
 using AlphaZero.Shared.Domain;
 using AlphaZero.Shared.Infrastructure.Tenats;
@@ -11,11 +12,22 @@ public class Course : TenantOwnedAggregate, ISoftDeletable
     public string? Description { get; private set; }
     public Guid SubjectId { get; private set; }
     public CourseStatus Status { get; private set; }
-    public int NextAvailableBitIndex { get; private set; } 
+    public int NextAvailableBitIndex { get; private set; }
+
+    /// <summary>
+    /// One bit per allocated curriculum position: set = the item at that BitIndex is currently
+    /// active (not deleted/contained in a deleted section). Cleared positions are deleted items
+    /// or never-allocated slots; the Course owns this state, enrollments never replicate it
+    /// (ProgressCalculation derives counts from this mask + the student mask on calculation).
+    /// Mutations flow exclusively through domain events + CourseActiveItemsDomainEventHandler
+    /// (ActivateCurriculumBit / DeactivateCurriculumBits) so curriculum edits and mask updates
+    /// are committed in the same SaveChanges transaction.
+    /// </summary>
+    public BitArray ActiveItemsBitmask { get; private set; } = new BitArray(0, false);
 
     public IReadOnlyCollection<CourseSection> Sections => _sections.AsReadOnly();
     private readonly List<CourseSection> _sections = new();
-    
+
     public IReadOnlyCollection<CoursePlan> Plans => _plans.AsReadOnly();
     private readonly List<CoursePlan> _plans = new();
 
@@ -49,10 +61,64 @@ public class Course : TenantOwnedAggregate, ISoftDeletable
         if (section.IsError)
             return section.Errors;
         _sections.Add(section.Value);
+        // Sections are containers, not progress-tracked positions: no mask bits are touched here.
+        AddDomainEvent(new CourseSectionAddedDomainEvent(Id, section.Value.Id));
         return Result.Success;
     }
 
     public int AllocateNextBitIndex() => NextAvailableBitIndex++;
+
+    /// <summary>
+    /// Single source of truth for curriculum item creation: allocates the stable BitIndex here
+    /// (monotonic counter — deleted positions are never reused), delegates to the section and
+    /// raises CurriculumItemAddedDomainEvent so the active-items handler activates the new
+    /// position atomically with this modification.
+    /// </summary>
+    public ErrorOr<CurriculumItem> AddItem(
+        Guid sectionId,
+        string title,
+        ResourceType mainType,
+        IEnumerable<CurriculumResource>? resources = null)
+    {
+        var section = _sections.FirstOrDefault(s => s.Id == sectionId && !s.IsDeleted);
+        if (section is null)
+            return Error.NotFound("Course.Section", "Section not found.");
+
+        var bitIndex = AllocateNextBitIndex();
+        var itemResult = section.AddItem(Guid.NewGuid(), title, mainType, bitIndex, resources);
+        if (itemResult.IsError)
+        {
+            // Do not burn an allocation slot for a failed add.
+            NextAvailableBitIndex--;
+            return itemResult.Errors;
+        }
+
+        AddDomainEvent(new CurriculumItemAddedDomainEvent(Id, section.Id, itemResult.Value.Id, bitIndex));
+        return itemResult.Value;
+    }
+
+    /// <summary>
+    /// Soft-deletes a curriculum item. The BitIndex is captured BEFORE removal so the event payload
+    /// is deterministic; other indices are never shifted and the position is never reused.
+    /// </summary>
+    public ErrorOr<Success> RemoveItem(Guid sectionId, Guid itemId)
+    {
+        var section = _sections.FirstOrDefault(s => s.Id == sectionId && !s.IsDeleted);
+        if (section is null)
+            return Error.NotFound("Course.Section", "Section not found.");
+
+        var item = section.GetItem(itemId);
+        if (item is null)
+            return Error.NotFound("CurriculumItem.NotFound", "Item not found in section.");
+
+        var bitIndex = item.BitIndex;
+        var removeResult = section.RemoveItem(itemId);
+        if (removeResult.IsError)
+            return removeResult.Errors;
+
+        AddDomainEvent(new CurriculumItemDeletedDomainEvent(Id, section.Id, itemId, bitIndex));
+        return Result.Success;
+    }
 
     public ErrorOr<CoursePlan> AddPlan(string name, Guid principalId)
     {
@@ -104,10 +170,6 @@ public class Course : TenantOwnedAggregate, ISoftDeletable
     }
 
     public int TotalTrackedItems => NextAvailableBitIndex;
-    public int ActiveTrackedItems => _sections
-        .Where(s => !s.IsDeleted)
-        .SelectMany(s => s.Items)
-        .Count(i => !i.IsDeleted);
 
     public void UpdateInformation(string title, string? description, Guid subjectId)
     {
@@ -188,8 +250,29 @@ public class Course : TenantOwnedAggregate, ISoftDeletable
     {
         var section = _sections.FirstOrDefault(s => s.Id == sectionId && !s.IsDeleted);
         if (section == null) return Error.NotFound("Course.Section", "Section not found.");
+
+        // Capture affected positions BEFORE anything is removed: the handler must be able to
+        // deactivate exactly these bits with data it can trust, not reconstructed state.
+        var activeBitIndexes = section.Items
+            .Where(i => !i.IsDeleted)
+            .Select(i => i.BitIndex)
+            .ToList();
+
         var result = section.Delete();
         if (result.IsError) return result.Errors;
+
+        // Soft-delete the contained items too so the aggregate remains self-describing
+        // (a Handle restore would preserve the deleted item state of this section).
+        foreach (var item in section.Items.Where(i => !i.IsDeleted))
+        {
+            item.Delete();
+        }
+
+        if (activeBitIndexes.Count > 0)
+        {
+            AddDomainEvent(new CourseSectionDeletedDomainEvent(Id, section.Id, activeBitIndexes));
+        }
+
         return Result.Success;
     }
 
@@ -211,5 +294,52 @@ public class Course : TenantOwnedAggregate, ISoftDeletable
         IsDeleted = false;
         OnDeleted = null;
         return Result.Success;
+    }
+
+    // ===================== Active-items mask (event-handler driven) =====================
+    // These members are the ONLY mutation path for ActiveItemsBitmask, other than allocation
+    // on AddItem. They are invoked exclusively by CourseActiveItemsDomainEventHandler as the
+    // in-process translation of the matching domain events, so the curriculum change and the
+    // mask update always commit in the same transaction. They are public because the handler
+    // lives in the Application layer, but every write still passes through the Course model.
+
+    /// <returns>A defensive copy — callers can never mutate the aggregate's mask directly.</returns>
+    public BitArray SnapshotActiveItemsBitmask() => new BitArray(ActiveItemsBitmask);
+
+    public void ActivateCurriculumBit(int bitIndex)
+    {
+        EnsureBitmaskCapacity(bitIndex + 1);
+        ActiveItemsBitmask.Set(bitIndex, true);
+    }
+
+    public void DeactivateCurriculumBits(IReadOnlyList<int> bitIndexes)
+    {
+        foreach (var bitIndex in bitIndexes)
+        {
+            if (bitIndex < 0 || bitIndex >= ActiveItemsBitmask.Length)
+            {
+                // Invariant violation, not data to normalize — failing loudly rolls back the
+                // transaction instead of committing a mask that disagrees with the curriculum.
+                throw new InvalidOperationException($"Cannot deactivate bit index {bitIndex}: outside the allocated range (0-{ActiveItemsBitmask.Length - 1}).");
+            }
+        }
+
+        foreach (var bitIndex in bitIndexes)
+        {
+            ActiveItemsBitmask.Set(bitIndex, false);
+        }
+    }
+
+    /// <summary>
+    /// Grows the mask with inactive (zero) bits up to the needed length (BitArray's Length
+    /// setter pads on grow). Historical gaps between active positions are preserved —
+    /// the mask is never rebuilt, compacted, or truncated.
+    /// </summary>
+    private void EnsureBitmaskCapacity(int length)
+    {
+        if (ActiveItemsBitmask.Length < length)
+        {
+            ActiveItemsBitmask.Length = length;
+        }
     }
 }

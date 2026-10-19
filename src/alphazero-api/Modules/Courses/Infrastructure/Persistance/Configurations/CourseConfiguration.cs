@@ -37,5 +37,16 @@ public class CourseConfiguration : IEntityTypeConfiguration<Course>
 
         builder.Property(c => c.Id)
             .ValueGeneratedNever();
+
+        // Course-level active curriculum state: one bit per allocated bit position (set = the
+        // item at that BitIndex is active). varbit, like the enrollment progress mask — Npgsql
+        // maps System.Collections.BitArray natively to PostgreSQL bit varying.
+        builder.Property(c => c.ActiveItemsBitmask)
+            .HasColumnName("ActiveItemsBitmask")
+            .HasConversion(
+                v => v,
+                v => v)
+            .HasColumnType("varbit")
+            .IsRequired();
     }
 }

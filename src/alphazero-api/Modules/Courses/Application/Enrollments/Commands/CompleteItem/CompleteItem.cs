@@ -11,13 +11,16 @@ public record CompleteItemCommand(Guid EnrollmentId, int BitIndex) : ICommand<Su
 public sealed class CompleteItemCommandHandler : IRequestHandler<CompleteItemCommand, ErrorOr<Success>>
 {
     private readonly IEnrollmentRepository _enrollmentRepository;
+    private readonly ICourseRepository _courseRepository;
     private readonly ILogger<CompleteItemCommandHandler> _logger;
 
     public CompleteItemCommandHandler(
         IEnrollmentRepository enrollmentRepository,
+        ICourseRepository courseRepository,
         ILogger<CompleteItemCommandHandler> logger)
     {
         _enrollmentRepository = enrollmentRepository;
+        _courseRepository = courseRepository;
         _logger = logger;
     }
 
@@ -26,7 +29,14 @@ public sealed class CompleteItemCommandHandler : IRequestHandler<CompleteItemCom
         var enrollment = await _enrollmentRepository.GetByIdAsync(request.EnrollmentId, cancellationToken);
         if (enrollment is null) return Error.NotFound("Enrollment.NotFound", "Enrollment not found.");
 
-        var result = enrollment.CompleteItem(request.BitIndex);
+        // The Course owns the active-state of curriculum positions: its ActiveItemsBitmask is the
+        // validation range (which positions exist), the activity gate (only active items can be
+        // completed) and the denominator of the completion percentage. It is passed as a defensive
+        // copy — the enrollment never keeps a reference to the course's mask.
+        var course = await _courseRepository.GetById(enrollment.CourseId, cancellationToken);
+        if (course is null) return Error.NotFound("Course.NotFound", "Course not found.");
+
+        var result = enrollment.CompleteItem(request.BitIndex, course.SnapshotActiveItemsBitmask());
         if (result.IsError) return result.Errors;
 
         _logger.LogInformation("Item at bit index {BitIndex} completed for Enrollment {EnrollmentId}.", request.BitIndex, request.EnrollmentId);

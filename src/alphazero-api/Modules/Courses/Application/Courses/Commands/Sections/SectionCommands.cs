@@ -32,7 +32,6 @@ public class DeleteCourseSectionCommandValidator : AbstractValidator<DeleteCours
 
 public sealed class CourseSectionHandlers(
     ICourseRepository courseRepository,
-    IEnrollmentRepository enrollmentRepository,
     ILogger<CourseSectionHandlers> logger) :
     IRequestHandler<RenameCourseSectionCommand, ErrorOr<Success>>,
     IRequestHandler<DeleteCourseSectionCommand, ErrorOr<Success>>
@@ -59,8 +58,8 @@ public sealed class CourseSectionHandlers(
     public async Task<ErrorOr<Success>> Handle(
         DeleteCourseSectionCommand request, CancellationToken cancellationToken)
     {
-        // The full section graph (not just the target section) must be loaded: the
-        // post-delete ActiveTrackedItems recount happens over the aggregate's loaded sections.
+        // The full section graph must be loaded: DeleteSection captures the BitIndex of every
+        // contained curriculum item before the section (and its items) are soft-deleted.
         var course = await courseRepository.Query(request.CourseId)
             .WithSections()
             .WithItems()
@@ -72,20 +71,14 @@ public sealed class CourseSectionHandlers(
         if (result.IsError)
             return result.Errors;
 
-        // Progress is a bitmask over item indexes — the earned bits are stable across
-        // section deletion (BitmaskStabilityTests guarantee this); only the active
-        // denominator changes, so every enrollment's percentage recalculates against
-        // the remaining active items instead of staying locked below 100%.
-        var enrollments = await enrollmentRepository.GetCourseEnrollmentsAsync(request.CourseId, cancellationToken);
-        foreach (var enrollment in enrollments)
-        {
-            enrollment.UpdateActiveItems(course.ActiveTrackedItems);
-            enrollmentRepository.Update(enrollment);
-        }
-
+        // CourseSectionDeletedDomainEvent carries the captured BitIndexes; the
+        // CourseActiveItemsDomainEventHandler deactivates exactly those positions on the course
+        // mask in the same SaveChangesAsync transaction. Enrollment masks are NEVER replicated
+        // here: completion percentages derive from the course mask at calculation time, so no
+        // enrollment needs to be touched (no per-enrollment UPDATE storm, see ProgressCalculation).
         courseRepository.Update(course);
-        logger.LogInformation("Soft-deleted section {SectionId} in course {CourseId} (recalculated progress for {EnrollmentCount} enrollments).",
-            request.SectionId, request.CourseId, enrollments.Count);
+        logger.LogInformation("Soft-deleted section {SectionId} in course {CourseId}.",
+            request.SectionId, request.CourseId);
 
         return Result.Success;
     }

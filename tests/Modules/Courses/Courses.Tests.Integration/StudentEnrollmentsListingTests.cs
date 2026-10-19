@@ -20,13 +20,15 @@ public class StudentEnrollmentsListingTests : BaseIntegrationTest
 
     // End-to-end enrollments require published courses; the listing's paging/status assertions are
     // cheaper to build over directly-seeded aggregate rows (same shape the enroll endpoint writes).
-    private async Task SeedEnrollment(Guid tenantId, Guid studentId, Guid courseId, int totalItems = 2, bool deactivate = false)
+    private async Task SeedEnrollment(Guid tenantId, Guid studentId, Guid courseId, bool deactivate = false)
     {
         SetTenant(tenantId);
-        var enrollment = Enrollment.Create(Guid.NewGuid(), tenantId, studentId, courseId, totalItems).Value;
+        var enrollment = Enrollment.Create(Guid.NewGuid(), tenantId, studentId, courseId).Value;
         if (deactivate)
         {
-            enrollment.CompleteItem(0);
+            // Completion requires the course's active mask; this seeded shape mirrors two allocated+active positions.
+            var courseMask = new System.Collections.BitArray(2, true);
+            enrollment.CompleteItem(0, courseMask);
             enrollment.Deactivate();
         }
         DbContext.Enrollments.Add(enrollment);

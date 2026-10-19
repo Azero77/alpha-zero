@@ -8,5 +8,4 @@ public interface IEnrollmentRepository : IRepository<Enrollment>
     Task<Enrollment?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
     Task<List<Enrollment>> GetStudentEnrollmentsAcrossTenantsAsync(Guid studentId, CancellationToken cancellationToken = default);
     Task<List<Enrollment>> GetStudentEnrollmentsForTenantAsync(Guid studentId,Guid tenantId, CancellationToken cancellationToken = default);
-    Task<List<Enrollment>> GetCourseEnrollmentsAsync(Guid courseId, CancellationToken cancellationToken = default);
 }
