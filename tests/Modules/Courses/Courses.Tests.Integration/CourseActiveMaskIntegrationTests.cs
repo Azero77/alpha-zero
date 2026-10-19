@@ -46,9 +46,13 @@ public class CourseActiveMaskIntegrationTests : BaseIntegrationTest
 
     private async Task<ItemResponse> AddItem(Guid courseId, Guid sectionId, string title = "Item")
     {
+        // "inline" article block: self-contained (no pooled asset required), like the payload
+        // the builder integration tests use.
+        var content = System.Text.Json.JsonDocument.Parse(@$"[{{ ""type"": ""inline"", ""tiptap"": {{ ""type"": ""doc"", ""content"": [] }}, ""text"": ""{title}"" }}]").RootElement;
+
         var resp = await Client.PostAsJsonAsync(
             $"/courses/{courseId}/sections/{sectionId}/items",
-            new CreateCourseSectionItemRequest { CourseId = courseId, SectionId = sectionId, Title = title, MainType = "Video", Content = default });
+            new CreateCourseSectionItemRequest { CourseId = courseId, SectionId = sectionId, Title = title, MainType = "Article", Content = content });
         resp.StatusCode.Should().Be(HttpStatusCode.Created);
         return (await resp.Content.ReadFromJsonAsync<ItemResponse>())!;
     }
@@ -84,12 +88,12 @@ public class CourseActiveMaskIntegrationTests : BaseIntegrationTest
 
         // Cross-section allocation is sequential; each item lands on the mask atomically (same commit)
         i1.BitIndex.Should().Be(0);
-        i3.BitIndex.Should().Be(2);
+        i3.BitIndex.Should().Be(1);
 
         await ExecuteDbContextAsync(async db =>
         {
             var course = await db.Set<Course>().AsNoTracking().FirstAsync(c => c.Id == courseId);
-            BitsShouldBe(course.ActiveItemsBitmask, true, false, true);
+            BitsShouldBe(course.ActiveItemsBitmask, true, true);
         });
     }
 
@@ -192,6 +196,8 @@ public class CourseActiveMaskIntegrationTests : BaseIntegrationTest
         var enrollmentId = await Enroll(courseId, Guid.NewGuid());
         (await Client.PostAsJsonAsync($"/courses/enrollments/{enrollmentId}/complete", new { BitIndex = 0 }))
             .StatusCode.Should().Be(HttpStatusCode.NoContent);
+        (await Client.PostAsJsonAsync($"/courses/enrollments/{enrollmentId}/complete", new { BitIndex = 2 }))
+            .StatusCode.Should().Be(HttpStatusCode.NoContent);
 
         // Act
         var deleteResp = await Client.DeleteAsync($"/courses/{courseId}/sections/{s1}");
@@ -204,10 +210,11 @@ public class CourseActiveMaskIntegrationTests : BaseIntegrationTest
             BitsShouldBe(course.ActiveItemsBitmask, false, false, true);
 
             var persistedEnrollment = await db.Set<Enrollment>().AsNoTracking().FirstAsync(e => e.Id == enrollmentId);
-            BitsShouldBe(persistedEnrollment.Progress.Bitmask, true); // untouched
+            BitsShouldBe(persistedEnrollment.Progress.Bitmask, true, false, true); // untouched
         });
 
-        // New denominator = 1 → the surviving completed bit still counts: 100%
+        // New denominator = 1 (bit 2 survived); the completed-then-deactivated bit 0 no longer
+        // counts, the surviving earned bit 2 does: 1 of 1 → 100%.
         var enrollment = await Client.GetFromJsonAsync<EnrollmentResponse>($"/courses/enrollments/{enrollmentId}");
         enrollment!.CompletedItemsCount.Should().Be(1);
         enrollment.ActiveItemsCount.Should().Be(1);

@@ -52,8 +52,12 @@ public class Enrollment : TenantOwnedAggregate
 
         // Activity validation lives here, not in Progress (progress is just a varbit of completed
         // positions): only bits that map to an active curriculum item on the course can be completed.
-        if (bitIndex < 0 || bitIndex >= activeItemsBitmask.Length || !activeItemsBitmask[bitIndex])
-            return Error.Validation("Progress.ItemInactive", "Only active curriculum items can be completed.");
+        // Out-of-range is an invalid request (400); a cleared position is a state conflict (409).
+        if (bitIndex < 0 || bitIndex >= activeItemsBitmask.Length)
+            return Error.Validation("Progress.InvalidIndex", $"Bit index {bitIndex} is out of the course's allocated positions.");
+
+        if (!activeItemsBitmask[bitIndex])
+            return Error.Conflict("Progress.ItemInactive", "Only active curriculum items can be completed.");
 
         double oldPercentage = ProgressCalculation.CompletionPercentage(Progress.Bitmask, activeItemsBitmask);
 
