@@ -38,7 +38,8 @@ public record CourseViewSectionDto(
 /// <summary>
 /// The enrollment overlay: only ever resolved for the CALLER's own enrollment
 /// (scoped to the caller — never a request-supplied student id, #32). Completed items
-/// are item ids overlaid from the enrollment's progress bitmask.
+/// are item ids overlaid from the enrollment's progress bitmask, filtered by the course's
+/// active-items bitmask so deleted curriculum positions never appear completed.
 /// </summary>
 public record CourseViewEnrollmentDto(
     Guid EnrollmentId,
@@ -165,7 +166,7 @@ public sealed class GetCourseViewQueryHandler : IRequestHandler<GetCourseViewQue
             return null; // anonymous prospect: public shape, no overlay
         }
 
-        var enrollment = await _enrollmentQueryService.GetActiveEnrollmentForCourseAsync(
+        var enrollment = await _enrollmentQueryService.GetEnrollmentForCourseAsync(
             callerStudentId, summary.Id, cancellationToken);
         if (enrollment is null)
         {

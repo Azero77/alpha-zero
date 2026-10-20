@@ -17,6 +17,8 @@ public record EnrollmentDto(
     Guid EnrollmentId,
     Guid CourseId,
     string Status,
+    int CompletedItemsCount,
+    int ActiveItemsCount,
     double CompletionPercentage,
     DateTime EnrolledOn);
 
@@ -61,12 +63,14 @@ public class GetStudentDashboardEndpoint : Endpoint<GetStudentDashboardRequest, 
 
         var academies = result.Value.ToDictionary(
             g => g.Key,
-            g => g.Value.Select(e => new EnrollmentDto(
-                e.Id,
-                e.CourseId,
-                e.Status,
-                e.CompletionPercentage,
-                e.EnrolledOn)).ToList());
+            g => g.Value.Select(r => new EnrollmentDto(
+                r.EnrollmentId,
+                r.CourseId,
+                r.Status,
+                r.CompletedItemsCount,
+                r.ActiveItemsCount,
+                r.CompletionPercentage,
+                r.EnrolledOn)).ToList());
 
         await Send.OkAsync(new DashboardResponse(academies), ct);
     }

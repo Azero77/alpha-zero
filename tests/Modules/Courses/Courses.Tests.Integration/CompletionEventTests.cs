@@ -4,6 +4,7 @@ using AlphaZero.Modules.Courses.Presentation.Enrollments.Enroll;
 using AlphaZero.Modules.Courses.Presentation.Subjects.Create;
 using AlphaZero.Shared.Domain;
 using AlphaZero.Modules.Courses.Domain.Aggregates.Courses;
+using AlphaZero.Modules.Courses.Domain.Aggregates.Enrollments;
 using AlphaZero.Modules.Courses.Presentation.Courses.AddSection;
 using AlphaZero.Modules.Courses.Presentation.Courses.Create;
 using AlphaZero.Modules.Courses.Presentation.Courses.Get;
@@ -73,7 +74,8 @@ public class CompletionEventTests : BaseIntegrationTest
         await ExecuteDbContextAsync(async db =>
         {
             var e = await db.Enrollments.AsNoTracking().SingleAsync(x => x.Id == enrollmentId);
-            return (e.CompletedOn, e.Progress.CompletionPercentage);
+            var course = await db.Courses.AsNoTracking().SingleAsync(c => c.Id == e.CourseId);
+            return (e.CompletedOn, ProgressCalculation.CompletionPercentage(e.Progress.Bitmask, course.ActiveItemsBitmask));
         });
 
     [Fact]

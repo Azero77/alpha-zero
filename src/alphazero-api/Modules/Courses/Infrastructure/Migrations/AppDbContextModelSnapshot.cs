@@ -30,6 +30,11 @@ namespace AlphaZero.Modules.Courses.Infrastructure.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
 
+                    b.Property<BitArray>("ActiveItemsBitmask")
+                        .IsRequired()
+                        .HasColumnType("varbit")
+                        .HasColumnName("ActiveItemsBitmask");
+
                     b.Property<string>("Description")
                         .HasMaxLength(2048)
                         .HasColumnType("character varying(2048)");
@@ -800,18 +805,10 @@ namespace AlphaZero.Modules.Courses.Infrastructure.Migrations
                             b1.Property<Guid>("EnrollmentId")
                                 .HasColumnType("uuid");
 
-                            b1.Property<int>("ActiveItems")
-                                .HasColumnType("integer")
-                                .HasColumnName("ProgressActiveItems");
-
                             b1.Property<BitArray>("Bitmask")
                                 .IsRequired()
                                 .HasColumnType("varbit")
                                 .HasColumnName("ProgressBitmask");
-
-                            b1.Property<int>("TotalItems")
-                                .HasColumnType("integer")
-                                .HasColumnName("ProgressTotalItems");
 
                             b1.HasKey("EnrollmentId");
 

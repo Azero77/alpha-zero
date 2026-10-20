@@ -4,7 +4,8 @@ namespace AlphaZero.Modules.Courses.Domain.Events;
 
 /// <summary>
 /// Raised exactly once per enrollment: when a completion attempt flips the course to
-/// "all active items complete" (<c>Progress.IsAllComplete</c>). Re-completions and
+/// "all active items complete" (<c>ProgressCalculation.IsAllComplete</c> over the
+/// course's active-items mask). Re-completions and
 /// progress recomputations after a section deletion never re-raise it — the persisted
 /// <c>CompletedOn</c> flag on the enrollment guards the transition (#32).
 /// </summary>

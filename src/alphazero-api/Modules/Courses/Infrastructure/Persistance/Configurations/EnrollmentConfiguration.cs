@@ -21,16 +21,15 @@ public class EnrollmentConfiguration : IEntityTypeConfiguration<Enrollment>
 
         builder.OwnsOne(b => b.Progress, p =>
         {
+            // Only the student's completion bits are stored. TotalItems/ActiveItems used to be
+            // persisted here; they are derived from the course's ActiveItemsBitmask at
+            // calculation time (ProgressCalculation) — never stored per enrollment.
             p.Property(p => p.Bitmask)
                 .HasColumnName("ProgressBitmask")
                 .HasConversion(
                     v => v,
                     v => v)
                 .HasColumnType("varbit");
-            p.Property(p => p.TotalItems)
-                .HasColumnName("ProgressTotalItems");
-            p.Property(p => p.ActiveItems)
-                .HasColumnName("ProgressActiveItems");
         });
     }
 }

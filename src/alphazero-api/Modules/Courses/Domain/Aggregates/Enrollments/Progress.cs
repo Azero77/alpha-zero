@@ -3,82 +3,55 @@ using ErrorOr;
 
 namespace AlphaZero.Modules.Courses.Domain.Aggregates.Enrollments;
 
+/// <summary>
+/// Student completion state as a bitmask over course bit positions — the Enrollment side of the
+/// (Course.ActiveItemsBitmask, Progress.Bitmask) pair. Only the completed bits are stored:
+/// TotalItems and ActiveItems were persisted here once and are now derived exclusively from the
+/// course's ActiveItemsBitmask (see ProgressCalculation) — never stored per enrollment.
+///
+/// The mask grows lazily: a new enrollment starts with a zero-length mask (missing bits are
+/// incomplete, never completed) and extends by one bit each time an item is completed.
+/// </summary>
 public record Progress
 {
-    // The bitmask as a BitArray to represent completed items
     public BitArray Bitmask { get; private set; }
-    public int TotalItems { get; private set; }
-    public int ActiveItems { get; private set; }
 
-    private Progress() { } // For EF Core or serialization
+    private Progress() { } // For EF Core
 
-    private Progress(int totalItems, int? activeItems = null)
-    {
-        TotalItems = totalItems;
-        ActiveItems = activeItems ?? totalItems;
-        Bitmask = new BitArray(totalItems, false);
-    }
-
-    private Progress(BitArray bitmask, int? activeItems = null)
+    private Progress(BitArray bitmask)
     {
         Bitmask = bitmask;
-        TotalItems = bitmask.Length;
-        ActiveItems = activeItems ?? bitmask.Length;
     }
 
-    public static Progress Create(int totalItems, int? activeItems = null)
-    {
-        return new Progress(totalItems, activeItems);
-    }
+    /// <summary>A brand-new enrollment: zero completed bits (zero-length mask).</summary>
+    public static Progress Create() => new(new BitArray(0, false));
 
-    // Re-creating from DB storage (BitArray is easy to store as byte[] or bit strings)
-    public static Progress FromBitmask(BitArray bitmask, int? activeItems = null)
-    {
-        return new Progress(bitmask, activeItems);
-    }
-
+    /// <summary>
+    /// Mark a bit complete for the enrollment. Activity validation is intentionally NOT a
+    /// progress concern: <c>Progress</c> is just a varbit of completed positions — whether a
+    /// bit maps to an active curriculum item is checked by <c>Enrollment.CompleteItem</c>
+    /// against the course's ActiveItemsBitmask.
+    /// </summary>
     public ErrorOr<Progress> MarkAsComplete(int bitIndex)
     {
-        if (bitIndex < 0 || bitIndex >= TotalItems)
-        {
-            return Error.Validation("Progress.InvalidIndex", $"Bit index {bitIndex} is out of range for this course (0-{TotalItems-1}).");
-        }
-        var newBitMask = new BitArray(Bitmask);
-        newBitMask.Set(bitIndex, true);
-        return new Progress(newBitMask, ActiveItems);
+        // Only bit positions that map to an active curriculum item on the course can be completed.
+        if (bitIndex < 0)
+            return Error.Validation("Progress.InvalidIndex", $"Bit index Cannot be with this value", new Dictionary<string, object>()
+            {
+                ["Value"] = bitIndex
+            });
+        // Shorter masks are grown with zero bits (missing = incomplete); existing bits are copied defensively.
+        var newBitmask = new BitArray(Bitmask);
+        if (bitIndex >= newBitmask.Length)
+            newBitmask.Length = bitIndex + 1;
+
+        newBitmask.Set(bitIndex, true);
+        return new Progress(newBitmask);
     }
 
     public bool IsComplete(int bitIndex)
     {
-        if (bitIndex < 0 || bitIndex >= TotalItems) return false;
-        return Bitmask.Get(bitIndex);
-    }
-
-    public double CompletionPercentage
-    {
-        get
-        {
-            if (ActiveItems <= 0) return 0;
-            int completedCount = 0;
-            for (int i = 0; i < Bitmask.Length; i++)
-            {
-                if (Bitmask[i]) completedCount++;
-            }
-            return Math.Min(100.0, (double)completedCount / ActiveItems * 100);
-        }
-    }
-
-    public bool IsAllComplete
-    {
-        get
-        {
-            if (ActiveItems <= 0) return true;
-            int completedCount = 0;
-            for (int i = 0; i < Bitmask.Length; i++)
-            {
-                if (Bitmask[i]) completedCount++;
-            }
-            return completedCount >= ActiveItems;
-        }
+        if (bitIndex < 0 || bitIndex >= Bitmask.Length) return false;
+        return Bitmask[bitIndex];
     }
 }
