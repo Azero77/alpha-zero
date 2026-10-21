@@ -283,6 +283,43 @@ public class CatalogTests : BaseIntegrationTest
     }
 
     [Fact]
+    public async Task Catalog_Should_AcceptCaseInsensitiveSortKeys()
+    {
+        // #32 L4 (D10): the sort key is validated case-insensitively — "Title" orders by
+        // title instead of 400 (the query service lowercases the key anyway).
+        var tenantId = Guid.NewGuid();
+        var subjectId = await SeedSubject(tenantId);
+        var zetaId = await SeedPublishedCourse(tenantId, "Zeta Course", subjectId);
+        var alphaId = await SeedPublishedCourse(tenantId, "Alpha Course", subjectId);
+
+        SetTenant(tenantId);
+
+        var upperTitle = await Client.GetAsync("/courses/catalog?Sort=Title");
+        upperTitle.StatusCode.Should().Be(HttpStatusCode.OK);
+        var upperCatalog = await upperTitle.Content.ReadFromJsonAsync<PagedResult<CourseCatalogItemDto>>();
+        upperCatalog!.Items.Select(i => i.Id).Should().ContainInOrder(alphaId, zetaId);
+
+        var lowerTitle = await Client.GetAsync("/courses/catalog?Sort=title");
+        lowerTitle.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var defaultSort = await Client.GetAsync("/courses/catalog");
+        defaultSort.StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
+    [Fact]
+    public async Task Catalog_Should_RejectUnknownSortKey()
+    {
+        var tenantId = Guid.NewGuid();
+        var subjectId = await SeedSubject(tenantId);
+        await SeedPublishedCourse(tenantId, "Zeta Course", subjectId);
+
+        SetTenant(tenantId);
+        var response = await Client.GetAsync("/courses/catalog?Sort=bogus");
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
     public async Task Catalog_Should_ExcludeDeletedAndUnpublishedCourses()
     {
         var tenantId = Guid.NewGuid();
