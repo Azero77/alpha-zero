@@ -19,6 +19,14 @@ public class EnrollmentConfiguration : IEntityTypeConfiguration<Enrollment>
             .HasConversion<string>();
         builder.HasIndex(e => new { e.StudentId, e.CourseId }).IsUnique();
 
+        // Optimistic concurrency (#32/D3): the Npgsql xmin system column backs a uint
+        // rowversion token. A concurrent completion's stale save fails with
+        // DbUpdateConcurrencyException; the completion write path retries ONCE against
+        // fresh loads, and the aggregate's CompletedOn guard then suppresses the
+        // duplicate completion milestone. (xmin is a system column — no physical DDL.)
+        builder.Property<uint>("xmin")
+            .IsRowVersion();
+
         builder.OwnsOne(b => b.Progress, p =>
         {
             // Only the student's completion bits are stored. TotalItems/ActiveItems used to be

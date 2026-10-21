@@ -129,4 +129,62 @@ public class CompletionEventTests : BaseIntegrationTest
         completedOn.Should().BeNull();
         percentage.Should().Be(50.0);
     }
+
+    // --- Concurrent completions (#32/D3): the rowversion token + retry-once wave ---
+    // Both call shapes converge deterministically no matter how the requests interleave:
+    // the loser either loads fresh state (no duplicate milestone) or conflicts at
+    // SaveChanges and retries against fresh loads — the persisted CompletedOn is stamped
+    // exactly once either way.
+
+    [Fact]
+    public async Task ConcurrentCompletionOfSameLastItem_Should_StampCompletedOn_ExactlyOnce()
+    {
+        var tenantId = Guid.NewGuid();
+        var studentId = Guid.NewGuid();
+        var (_, enrollmentId) = await SeedEnrolledPublishedCourse(tenantId, studentId);
+        SetTenant(tenantId);
+
+        // First item out of the way — both parallel requests race for the LAST item
+        await Client.PostAsJsonAsync($"/courses/enrollments/{enrollmentId}/complete", new { BitIndex = 0 });
+
+        var taskA = Client.PostAsJsonAsync($"/courses/enrollments/{enrollmentId}/complete", new { BitIndex = 1 });
+        var taskB = Client.PostAsJsonAsync($"/courses/enrollments/{enrollmentId}/complete", new { BitIndex = 1 });
+        var (respA, respB) = (await taskA, await taskB);
+
+        // The loser must NOT surface as an error: it either observes fresh state or retries
+        respA.StatusCode.Should().Be(HttpStatusCode.NoContent);
+        respB.StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+        var (after, percentage) = await LoadEnrollmentState(enrollmentId);
+        after.Should().NotBeNull(because: "the completion transition happened exactly once");
+        percentage.Should().Be(100.0);
+
+        // A re-drive of the same bit never re-stamps it
+        await Client.PostAsJsonAsync($"/courses/enrollments/{enrollmentId}/complete", new { BitIndex = 1 });
+        var (idempotent, _) = await LoadEnrollmentState(enrollmentId);
+        idempotent.Should().Be(after, because: "the completion timestamp is stamped exactly once");
+    }
+
+    [Fact]
+    public async Task ConcurrentCompletionOfDifferentFinalBits_Should_NotLoseABit()
+    {
+        var tenantId = Guid.NewGuid();
+        var studentId = Guid.NewGuid();
+        var (_, enrollmentId) = await SeedEnrolledPublishedCourse(tenantId, studentId);
+        SetTenant(tenantId);
+
+        // Two writers complete the two different final items at the same moment. Without
+        // the rowversion token the last writer's mask overwrote the other bit — the course
+        // silently never completed ("different final bits → no lost bit, event fires", D3).
+        var taskA = Client.PostAsJsonAsync($"/courses/enrollments/{enrollmentId}/complete", new { BitIndex = 0 });
+        var taskB = Client.PostAsJsonAsync($"/courses/enrollments/{enrollmentId}/complete", new { BitIndex = 1 });
+        var (respA, respB) = (await taskA, await taskB);
+
+        respA.StatusCode.Should().Be(HttpStatusCode.NoContent);
+        respB.StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+        var (after, percentage) = await LoadEnrollmentState(enrollmentId);
+        after.Should().NotBeNull(because: "both bits are present, so the course completed and the event fired");
+        percentage.Should().Be(100.0, because: "neither concurrent writer's bit may be lost");
+    }
 }
