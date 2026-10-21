@@ -18,6 +18,14 @@ public class TestAuthHandler : AuthenticationHandler<AuthenticationSchemeOptions
 
     protected override Task<AuthenticateResult> HandleAuthenticateAsync()
     {
+        // Anonymous opt-out (#32/D4): a request carrying `X-Test-Anonymous` runs through the
+        // host with NO identity — this is the only way the anonymous catalog/view paths and
+        // the real HttpTenantProvider claim/header precedence are exercised end-to-end.
+        if (Context.Request.Headers.ContainsKey("X-Test-Anonymous"))
+        {
+            return Task.FromResult(AuthenticateResult.NoResult());
+        }
+
         // Default: random user ids per request. `X-Test-User-Id` pins the caller identity
         // (sub/NameIdentifier) — the first sub claim wins in AuthorizationContextProvider,
         // so the pinned claims must REPLACE the defaults, not be appended.

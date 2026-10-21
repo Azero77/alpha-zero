@@ -56,11 +56,10 @@ public abstract class BaseIntegrationTest : IAsyncLifetime
         TestTenantProvider.StaticTenantId = tenantId;
 
         // Resolve from the test's private scope so the local DbContext sees it
-        var provider = _scope.ServiceProvider.GetRequiredService<ITenantProvider>() as TestTenantProvider;
-        if (provider != null)
-        {
-            provider.CurrentTenantId = tenantId;
-        }
+        // (the registered ITenantProvider is the anonymous-aware delegate; the static
+        // test provider is always available as a concrete service)
+        var provider = _scope.ServiceProvider.GetRequiredService<TestTenantProvider>();
+        provider.CurrentTenantId = tenantId;
     }
     protected async Task ExecuteDbContextAsync(Func<AppDbContext, Task> action)
     {
