@@ -52,10 +52,15 @@ public static class ProgressCalculation
         return Math.Min(100.0, (double)CompletedActiveItems(completedBitmask, activeItemsBitmask) / activeItems * 100.0);
     }
 
+    /// <summary>
+    /// True when every ACTIVE item is complete. False for a course with zero active items —
+    /// the vacuous all() result would let the completion transition fire for an empty course
+    /// (#32, L6/D10). The completion percentage stays 0 for the same empty denominator.
+    /// </summary>
     public static bool IsAllComplete(BitArray completedBitmask, BitArray activeItemsBitmask)
     {
         var activeItems = ActiveItems(activeItemsBitmask);
-        if (activeItems <= 0) return true;
+        if (activeItems <= 0) return false;
 
         return CompletedActiveItems(completedBitmask, activeItemsBitmask) >= activeItems;
     }

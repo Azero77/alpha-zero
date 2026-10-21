@@ -46,7 +46,18 @@ public class ProgressCalculationTests
         var student = Mask(4, 0, 1, 2, 3);
 
         ProgressCalculation.CompletionPercentage(student, new BitArray(0, false)).Should().Be(0);
-        ProgressCalculation.IsAllComplete(student, new BitArray(0, false)).Should().BeTrue();
+    }
+
+    [Fact]
+    public void IsAllComplete_Should_BeFalse_WhenThereAreNoActiveItems()
+    {
+        // #32 L6 (D10): "all complete" is false for a course with zero active items — a
+        // vacuous all() would let the completion transition fire for an empty course
+        // (latent until a backfill caller reaches it; CompleteItem itself rejects empty masks).
+        var student = Mask(4, 0, 1, 2, 3);
+
+        ProgressCalculation.IsAllComplete(student, new BitArray(0, false)).Should().BeFalse();
+        ProgressCalculation.IsAllComplete(new BitArray(0, false), new BitArray(0, false)).Should().BeFalse();
     }
 
     [Fact]
