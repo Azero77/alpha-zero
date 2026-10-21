@@ -194,9 +194,10 @@ public class CatalogTests : BaseIntegrationTest
 
         SetTenant(tenantId);
 
-        // '%' is a literal wildcard keyword — currently (unescaped) matches everything; after
-        // the fix it means "title or description containing a real percent character". The
-        // keyword must be URL-encoded in the request (raw % would be malformed percent-encoding).
+        // '%' is a literal wildcard keyword — the pattern is escaped, so the keyword acts as a
+        // literal-only match (this is the regression guard for L3/D10: an unescaped keyword
+        // used to match the whole catalog). It must be URL-encoded in the request (raw % would
+        // be malformed percent-encoding).
         var percentResponse = await Client.GetAsync($"/courses/catalog?Search={Uri.EscapeDataString("%")}");
         var percentCatalog = JsonResult(percentResponse);
         percentCatalog.TotalCount.Should().Be(1);
