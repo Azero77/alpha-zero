@@ -82,6 +82,13 @@ public class CatalogTests : BaseIntegrationTest
         return courseId;
     }
 
+    
+    private PagedResult<CourseCatalogItemDto> JsonResult(HttpResponseMessage response)
+    {
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        return response.Content.ReadFromJsonAsync<PagedResult<CourseCatalogItemDto>>().GetAwaiter().GetResult()!;
+    }
+
     private Task SetOverviewFields(Guid courseId, Guid? coverImageDocumentId, DateTime? createdAtUtc, DateTime? updatedAtUtc) =>
         ExecuteDbContextAsync(async db =>
         {
@@ -171,6 +178,63 @@ public class CatalogTests : BaseIntegrationTest
         var noneResponse = await Client.GetAsync("/courses/catalog?Search=nonexistent-keyword");
         var noneCatalog = await noneResponse.Content.ReadFromJsonAsync<PagedResult<CourseCatalogItemDto>>();
         noneCatalog!.TotalCount.Should().Be(0);
+    }
+
+    // #32 L3 (D10): % / _ / backslash are ILIKE wildcards — a user keyword is a literal, so
+    // the pattern must be escaped: "Search=%" matches only titles that contain a real "%",
+    // never the whole catalog.
+    [Fact]
+    public async Task Catalog_Search_Should_TreatWildcardsAsLiterals()
+    {
+        var tenantId = Guid.NewGuid();
+        var subjectId = await SeedSubject(tenantId);
+        var percentId = await SeedPublishedCourse(tenantId, "100% Pure Alpha", subjectId);
+        var underscoreId = await SeedPublishedCourse(tenantId, "Core_Logic Course", subjectId);
+        var plainId = await SeedPublishedCourse(tenantId, "Plain Cooking Basics", subjectId);
+
+        SetTenant(tenantId);
+
+        // '%' is a literal wildcard keyword — currently (unescaped) matches everything; after
+        // the fix it means "title or description containing a real percent character". The
+        // keyword must be URL-encoded in the request (raw % would be malformed percent-encoding).
+        var percentResponse = await Client.GetAsync($"/courses/catalog?Search={Uri.EscapeDataString("%")}");
+        var percentCatalog = JsonResult(percentResponse);
+        percentCatalog.TotalCount.Should().Be(1);
+        percentCatalog.Items.Single().Id.Should().Be(percentId);
+
+        // '_': same semantics for the single-character wildcard
+        var underscoreResponse = await Client.GetAsync("/courses/catalog?Search=_");
+        var underscoreCatalog = JsonResult(underscoreResponse);
+        underscoreCatalog.TotalCount.Should().Be(1);
+        underscoreCatalog.Items.Single().Id.Should().Be(underscoreId);
+        underscoreCatalog.Items.Should().NotContain(i => i.Id == plainId);
+
+        // a plain keyword search still works and is matched literally (not wildcard-expanded)
+        var keywordResponse = await Client.GetAsync("/courses/catalog?Search=cooking");
+        var keywordCatalog = JsonResult(keywordResponse);
+        keywordCatalog.TotalCount.Should().Be(1);
+        keywordCatalog.Items.Single().Id.Should().Be(plainId);
+        keywordCatalog.Items.Should().NotContain(i => i.Id == underscoreId);
+    }
+
+    [Fact]
+    public async Task Catalog_Search_AloneWildcardKeyword_MatchesNoRow_WhenNoTitleContainsOne()
+    {
+        var tenantId = Guid.NewGuid();
+        var subjectId = await SeedSubject(tenantId);
+        await SeedPublishedCourse(tenantId, "Alpha Course", subjectId);
+        await SeedPublishedCourse(tenantId, "Beta Course", subjectId);
+
+        SetTenant(tenantId);
+
+        var percentResponse = await Client.GetAsync($"/courses/catalog?Search={Uri.EscapeDataString("%")}");
+        var percentCatalog = JsonResult(percentResponse);
+        percentCatalog.TotalCount.Should().Be(0, because: "'%' alone is a literal, not match-everything");
+
+        // '_' is URL-safe on its own: the request can carry it verbatim
+        var underscoreResponse = await Client.GetAsync("/courses/catalog?Search=_");
+        var underscoreCatalog = JsonResult(underscoreResponse);
+        underscoreCatalog.TotalCount.Should().Be(0, because: "'_' alone is a literal, not match-everything");
     }
 
     [Fact]

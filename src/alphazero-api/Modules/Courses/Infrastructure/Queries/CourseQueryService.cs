@@ -85,6 +85,9 @@ public class CourseQueryService : ICourseQueryService
     /// hard server-side constraint (students and anonymous prospects only ever see published
     /// courses; there is no status parameter on this surface). Tenant scope and soft-delete
     /// exclusion come free from the module's global query filters.
+    /// Search keywords are LITERAL — <see cref="EscapeLikePattern"/> masks the ILIKE wildcards
+    /// (\, %, _) so "Search=%" can no longer match the whole catalog (#32, L3/D10). Postgres
+    /// ILIKE's default escape character is the backslash.
     /// Enrollment summary/duration enrichment below mirrors <see cref="GetCourseSummaryForViewAsync"/>
     /// — the correlated subqueries (subject name, overview cover/timestamps, video-duration
     /// sum) are EF-translated inline and shared only as a documented keep-in-sync contract.
@@ -97,10 +100,10 @@ public class CourseQueryService : ICourseQueryService
 
         if (!string.IsNullOrWhiteSpace(search))
         {
-            var keyword = search.Trim();
+            var keyword = EscapeLikePattern(search.Trim());
             query = query.Where(c =>
-                EF.Functions.ILike(c.Title, $"%{keyword}%") ||
-                (c.Description != null && EF.Functions.ILike(c.Description, $"%{keyword}%")));
+                EF.Functions.ILike(c.Title, $"%{keyword}%", @"\") ||
+                (c.Description != null && EF.Functions.ILike(c.Description, $"%{keyword}%", @"\")));
         }
 
         if (subjectId.HasValue)
@@ -148,6 +151,18 @@ public class CourseQueryService : ICourseQueryService
 
         return new PagedResult<CourseCatalogItemDto>(items, totalCount, page, perPage);
     }
+
+    /// <summary>
+    /// Escapes the ILIKE wildcards (\, %, _) in a user-supplied keyword so the pattern the
+    /// keyword participates in treats every character literally (#32, L3/D10). The backslash
+    /// must be escaped FIRST. <see cref="EF.Functions.ILike(string,string)"/>'s 2-argument
+    /// overload translates with ESCAPE '' (no escape character), so the 3-argument overload
+    /// must be used with the explicit "\" escape char — that is what makes \, \%, \_ literal.
+    /// </summary>
+    private static string EscapeLikePattern(string keyword) => keyword
+        .Replace(@"\", @"\\")
+        .Replace("%", @"\%")
+        .Replace("_", @"\_");
 
     public async Task<string?> GetCourseStatusAsync(Guid courseId, CancellationToken cancellationToken = default)
     {
