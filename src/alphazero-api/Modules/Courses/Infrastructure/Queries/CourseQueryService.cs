@@ -215,6 +215,7 @@ public class CourseQueryService : ICourseQueryService
                         i.MainResourceType.ToString(),
                         i.Order,
                         i.BitIndex,
+                        false, // no enrollment concerns in the base projection — the overlay sets the flag when resolving
                         i.Resources.OrderBy(r => r.Order).Select(r => new CourseViewResourceDto(
                             r.Id,
                             r.CourseAssetId == null ? null : r.CourseAssetId.Value.ToString(),

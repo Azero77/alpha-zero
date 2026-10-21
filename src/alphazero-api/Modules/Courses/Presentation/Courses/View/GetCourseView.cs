@@ -24,6 +24,7 @@ public record CourseViewItemResponse(
     string Type,
     int Order,
     int BitIndex,
+    bool IsCompleted,
     List<CourseViewResourceResponse> Resources);
 
 public record CourseViewSectionResponse(
@@ -131,6 +132,7 @@ public class GetCourseViewEndpoint : Endpoint<GetCourseViewRequest, CourseViewRe
                     i.Type,
                     i.Order,
                     i.BitIndex,
+                    i.IsCompleted,
                     i.Resources.Select(r => new CourseViewResourceResponse(
                         r.CurriculumResourceId,
                         r.CourseAssetId,

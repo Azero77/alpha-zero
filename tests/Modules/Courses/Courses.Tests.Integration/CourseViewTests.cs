@@ -28,7 +28,7 @@ public class CourseViewTests : BaseIntegrationTest
 
     public record ViewResourceResponse(Guid CurriculumResourceId, string? CourseAssetId, string? ResourceArn, string Type, int Order, double DurationSeconds);
 
-    public record ViewItemResponse(Guid Id, string Title, string Type, int Order, int BitIndex, List<ViewResourceResponse> Resources);
+    public record ViewItemResponse(Guid Id, string Title, string Type, int Order, int BitIndex, bool IsCompleted, List<ViewResourceResponse> Resources);
 
     public record ViewSectionResponse(Guid Id, string Title, int Order, List<ViewItemResponse> Items);
 
@@ -155,6 +155,9 @@ public class CourseViewTests : BaseIntegrationTest
         items.SelectMany(i => i.Resources).Should().OnlyContain(r => r != null && r.CourseAssetId != null && Guid.Parse(r.CourseAssetId) != Guid.Empty, because: body);
         items[0].Resources[0].DurationSeconds.Should().Be(300.0);
 
+        // ...and the per-item flag is false for every caller with no enrollment (prospect/admin shape)
+        items.Should().OnlyContain(i => !i.IsCompleted, because: "no enrollment concerns — the flag comes from the base projection");
+
         // ...and NO legacy metadata bucket anywhere in the response
         body.Should().NotContain("\"metadata\"", because: "the free-form metadata bucket is dropped from the view shape");
     }
@@ -177,6 +180,14 @@ public class CourseViewTests : BaseIntegrationTest
         view.View!.Enrollment.CompletionPercentage.Should().Be(50.0);
         view.View!.Enrollment.CompletedItemIds.Should().ContainSingle(id => id == itemOneId);
         view.View!.Enrollment.CompletedItemIds.Should().NotContain(itemTwoId);
+
+        // #32 D8: per-item IsCompleted flag derived server-side from the same active mask
+        // (bit index → item mapping) that produces CompletedItemIds — the client needs no
+        // re-derivation. CompletedItemIds stays for compatibility.
+        var items = view.View!.Sections.SelectMany(s => s.Items).ToList();
+        items.Should().HaveCount(2);
+        items.Single(i => i.Id == itemOneId).IsCompleted.Should().BeTrue(because: "bit 0 was completed");
+        items.Single(i => i.Id == itemTwoId).IsCompleted.Should().BeFalse(because: "bit 1 is still open");
     }
 
     [Fact]

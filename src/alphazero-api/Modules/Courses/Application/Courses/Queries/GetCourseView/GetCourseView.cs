@@ -27,6 +27,7 @@ public record CourseViewItemDto(
     string Type,
     int Order,
     int BitIndex,
+    bool IsCompleted,
     List<CourseViewResourceDto> Resources);
 
 public record CourseViewSectionDto(
@@ -138,7 +139,7 @@ public sealed class GetCourseViewQueryHandler : IRequestHandler<GetCourseViewQue
             return Error.NotFound("Course.NotFound", "Course not found.");
         }
 
-        var enrollmentOverlay = await ResolveOwnEnrollmentOverlayAsync(summary, request.CallerStudentId, cancellationToken);
+        var (enrollmentOverlay, overlaidSections) = await ResolveOwnEnrollmentOverlayAsync(summary, request.CallerStudentId, cancellationToken);
 
         return new CourseViewDto(
             summary.Id,
@@ -154,23 +155,23 @@ public sealed class GetCourseViewQueryHandler : IRequestHandler<GetCourseViewQue
             summary.ItemCount,
             summary.TotalDurationSeconds,
             summary.Plans,
-            summary.Sections,
+            overlaidSections,
             enrollmentOverlay);
     }
 
-    private async Task<CourseViewEnrollmentDto?> ResolveOwnEnrollmentOverlayAsync(
+    private async Task<(CourseViewEnrollmentDto? Enrollment, List<CourseViewSectionDto> Sections)> ResolveOwnEnrollmentOverlayAsync(
         CourseSummaryViewDto summary, Guid callerStudentId, CancellationToken cancellationToken)
     {
         if (callerStudentId == Guid.Empty)
         {
-            return null; // anonymous prospect: public shape, no overlay
+            return (null, summary.Sections); // anonymous prospect: public shape, no overlay
         }
 
         var enrollment = await _enrollmentQueryService.GetEnrollmentForCourseAsync(
             callerStudentId, summary.Id, cancellationToken);
         if (enrollment is null)
         {
-            return null; // admins/unenrolled callers: same shape, no overlay (#32)
+            return (null, summary.Sections); // admins/unenrolled callers: same shape, no overlay (#32)
         }
 
         var completedBitIndexes = enrollment.CompletedBitIndexes.ToHashSet();
@@ -180,10 +181,21 @@ public sealed class GetCourseViewQueryHandler : IRequestHandler<GetCourseViewQue
             .Select(i => i.Id)
             .ToList();
 
-        return new CourseViewEnrollmentDto(
+        // Per-item IsCompleted (D8): the same bit → item mapping that produced
+        // CompletedItemIds drives the flag — one source of truth, no client re-derivation.
+        var overlaidSections = summary.Sections
+            .Select(s => s with
+            {
+                Items = s.Items
+                    .Select(i => i with { IsCompleted = completedBitIndexes.Contains(i.BitIndex) })
+                    .ToList()
+            })
+            .ToList();
+
+        return (new CourseViewEnrollmentDto(
             enrollment.EnrollmentId,
             enrollment.Status,
             enrollment.CompletionPercentage,
-            completedItemIds);
+            completedItemIds), overlaidSections);
     }
 }
