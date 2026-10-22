@@ -74,9 +74,9 @@ public class Enrollment : TenantOwnedAggregate
 
         Progress = result.Value;
 
-        if (oldPercentage != ProgressCalculation.CompletionPercentage(Progress.Bitmask, activeItemsBitmask))
+        var newPercentage = ProgressCalculation.CompletionPercentage(Progress.Bitmask, activeItemsBitmask);
+        if (oldPercentage != newPercentage)
         {
-            var newPercentage = ProgressCalculation.CompletionPercentage(Progress.Bitmask, activeItemsBitmask);
             AddDomainEvent(new ItemCompletedDomainEvent(Id, CourseId, bitIndex, oldPercentage, newPercentage));
         }
 

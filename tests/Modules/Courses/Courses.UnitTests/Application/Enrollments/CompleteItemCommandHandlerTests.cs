@@ -3,10 +3,7 @@ using AlphaZero.Modules.Courses.Application.Repositories;
 using AlphaZero.Modules.Courses.Domain.Aggregates.Courses;
 using AlphaZero.Modules.Courses.Domain.Aggregates.Enrollments;
 using AlphaZero.Modules.Courses.Domain.Events;
-using AlphaZero.Shared.Application;
-using ErrorOr;
 using FluentAssertions;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
 using Xunit;
@@ -20,13 +17,12 @@ public class CompleteItemCommandHandlerTests
 
     private readonly IEnrollmentRepository _enrollmentRepository = Substitute.For<IEnrollmentRepository>();
     private readonly ICourseRepository _courseRepository = Substitute.For<ICourseRepository>();
-    private readonly IUnitOfWork _unitOfWork = Substitute.For<IUnitOfWork>();
     private readonly ILogger<CompleteItemCommandHandler> _logger = Substitute.For<ILogger<CompleteItemCommandHandler>>();
     private readonly CompleteItemCommandHandler _handler;
 
     public CompleteItemCommandHandlerTests()
     {
-        _handler = new CompleteItemCommandHandler(_enrollmentRepository, _courseRepository, _unitOfWork, _logger);
+        _handler = new CompleteItemCommandHandler(_enrollmentRepository, _courseRepository, _logger);
     }
 
     /// <summary>
@@ -54,7 +50,7 @@ public class CompleteItemCommandHandlerTests
     private void RegisterEnrollmentFor(CourseAggregate course, out Enrollment enrollment)
     {
         enrollment = Enrollment.Create(Guid.NewGuid(), TenantId, Guid.NewGuid(), course.Id).Value;
-        _enrollmentRepository.GetByIdAsync(enrollment.Id, Arg.Any<CancellationToken>()).Returns(enrollment);
+        _enrollmentRepository.GetByIdForUpdateAsync(enrollment.Id, Arg.Any<CancellationToken>()).Returns(enrollment);
         _courseRepository.GetById(course.Id, Arg.Any<CancellationToken>()).Returns(course);
     }
 
@@ -108,12 +104,24 @@ public class CompleteItemCommandHandlerTests
     }
 
     [Fact]
+    public async Task Handle_Should_ReturnNotFound_WhenEnrollmentIsMissing()
+    {
+        // Arrange
+        _enrollmentRepository.GetByIdForUpdateAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
+            .Returns((Enrollment?)null);
+
+        var result = await _handler.Handle(new CompleteItemCommand(Guid.NewGuid(), 0), CancellationToken.None);
+
+        result.FirstError.Code.Should().Be("Enrollment.NotFound");
+    }
+
+    [Fact]
     public async Task Handle_Should_ReturnNotFound_WhenCourseIsMissing()
     {
         // Arrange
         var course = CreateCourseWithActiveBits(3, 0, 1, 2);
         var enrollment = Enrollment.Create(Guid.NewGuid(), TenantId, Guid.NewGuid(), course.Id).Value;
-        _enrollmentRepository.GetByIdAsync(enrollment.Id, Arg.Any<CancellationToken>()).Returns(enrollment);
+        _enrollmentRepository.GetByIdForUpdateAsync(enrollment.Id, Arg.Any<CancellationToken>()).Returns(enrollment);
         _courseRepository.GetById(Arg.Any<Guid>(), Arg.Any<CancellationToken>()).Returns((CourseAggregate?)null);
 
         var result = await _handler.Handle(new CompleteItemCommand(enrollment.Id, 0), CancellationToken.None);
@@ -121,109 +129,59 @@ public class CompleteItemCommandHandlerTests
         result.FirstError.Code.Should().Be("Course.NotFound");
     }
 
-    // --- Optimistic-concurrency retry (#32/D3) ---
-
     [Fact]
-    public async Task Handle_Should_RetryOnce_AgainstFreshState_WhenSaveConflicts()
+    public async Task Handle_Should_AcquireRowLock_ViaGetByIdForUpdateAsync()
     {
-        // Arrange: a course with two active items; a concurrent writer already committed bit 0
-        // so the handler's stale save loses the rowversion race.
-        var course = CreateCourseWithActiveBits(2, 0, 1);
-        var staleEnrollment = Enrollment.Create(Guid.NewGuid(), TenantId, Guid.NewGuid(), course.Id).Value;
-        _enrollmentRepository.GetByIdAsync(staleEnrollment.Id, Arg.Any<CancellationToken>()).Returns(staleEnrollment);
-        _courseRepository.GetById(course.Id, Arg.Any<CancellationToken>()).Returns(course);
-        _enrollmentRepository.GetFreshByIdAsync(staleEnrollment.Id, Arg.Any<CancellationToken>())
-            .Returns(staleEnrollment); // the "fresh" reload reflects the other writer's commit
-
-        var saveCalls = 0;
-        _unitOfWork.SaveChangesAsync(Arg.Any<CancellationToken>())
-            .Returns(_ =>
-            {
-                if (saveCalls++ == 0) throw new DbUpdateConcurrencyException("row version conflict");
-                return 1;
-            });
-
-        // Act: complete bit 0 — the fresh state already carries it (completed by the other writer)
-        var result = await _handler.Handle(new CompleteItemCommand(staleEnrollment.Id, 0), CancellationToken.None);
-
-        // Assert: retried exactly once, save runs twice, and the fresh row ends up correct
-        result.IsError.Should().BeFalse();
-        saveCalls.Should().Be(2);
-        _ = _enrollmentRepository.Received(1).GetFreshByIdAsync(staleEnrollment.Id, Arg.Any<CancellationToken>());
-        staleEnrollment.Progress.IsComplete(0).Should().BeTrue();
-        staleEnrollment.DomainEvents.OfType<CourseCompletedDomainEvent>().Should().BeEmpty(
-            because: "one of two active items is still incomplete");
-    }
-
-    [Fact]
-    public async Task Handle_Retry_Should_SuppressDuplicateCompletionEvent_WhenFreshRowAlreadyCompleted()
-    {
-        // Arrange: BOTH active items are completed by the concurrent winner; the loser's
-        // stale save conflicts, and the fresh reload already carries CompletedOn.
-        var course = CreateCourseWithActiveBits(2, 0, 1);
-        var staleEnrollment = Enrollment.Create(Guid.NewGuid(), TenantId, Guid.NewGuid(), course.Id).Value;
-        staleEnrollment.CompleteItem(0, course.SnapshotActiveItemsBitmask());
-        staleEnrollment.PopDomainEvents();
-        _enrollmentRepository.GetByIdAsync(staleEnrollment.Id, Arg.Any<CancellationToken>()).Returns(staleEnrollment);
-        _courseRepository.GetById(course.Id, Arg.Any<CancellationToken>()).Returns(course);
-
-        // The fresh row = the concurrent winner's state: same aggregate content, CompletedOn stamped
-        var freshEnrollment = Enrollment.Create(staleEnrollment.Id, TenantId, staleEnrollment.StudentId, course.Id).Value;
-        freshEnrollment.CompleteItem(0, course.SnapshotActiveItemsBitmask());
-        freshEnrollment.CompleteItem(1, course.SnapshotActiveItemsBitmask());
-        freshEnrollment.PopDomainEvents();
-        freshEnrollment.CompletedOn.Should().NotBeNull("setup: the concurrent winner completed the course");
-        _enrollmentRepository.GetFreshByIdAsync(staleEnrollment.Id, Arg.Any<CancellationToken>()).Returns(freshEnrollment);
-
-        var saveCalls = 0;
-        _unitOfWork.SaveChangesAsync(Arg.Any<CancellationToken>())
-            .Returns(_ =>
-            {
-                if (saveCalls++ == 0) throw new DbUpdateConcurrencyException("row version conflict");
-                return 1;
-            });
-
-        // Act: the loser tries to complete the same last item
-        var result = await _handler.Handle(new CompleteItemCommand(staleEnrollment.Id, 1), CancellationToken.None);
-
-        // Assert: retry succeeds idempotently; NO duplicate completion milestone is raised
-        result.IsError.Should().BeFalse();
-        saveCalls.Should().Be(2);
-        freshEnrollment.DomainEvents.OfType<CourseCompletedDomainEvent>().Should().BeEmpty(
-            because: "the CompletedOn guard suppresses the duplicate completion event on retry");
-        freshEnrollment.CompletedOn.Should().NotBeNull();
-    }
-
-    [Fact]
-    public async Task Handle_Retry_Should_KeepLostBit_NoLostUpdate_WhenConcurrentBitsDiffer()
-    {
-        // Arrange: two writers complete DIFFERENT last bits concurrently (2-item course).
-        var course = CreateCourseWithActiveBits(2, 0, 1);
-        var staleEnrollment = Enrollment.Create(Guid.NewGuid(), TenantId, Guid.NewGuid(), course.Id).Value;
-        _enrollmentRepository.GetByIdAsync(staleEnrollment.Id, Arg.Any<CancellationToken>()).Returns(staleEnrollment);
-        _courseRepository.GetById(course.Id, Arg.Any<CancellationToken>()).Returns(course);
-
-        // The fresh row = the winner merged first bit 0; the loser's bit 1 must be re-applied on top.
-        var freshEnrollment = Enrollment.Create(staleEnrollment.Id, TenantId, staleEnrollment.StudentId, course.Id).Value;
-        freshEnrollment.CompleteItem(0, course.SnapshotActiveItemsBitmask());
-        _enrollmentRepository.GetFreshByIdAsync(staleEnrollment.Id, Arg.Any<CancellationToken>()).Returns(freshEnrollment);
-
-        var saveCalls = 0;
-        _unitOfWork.SaveChangesAsync(Arg.Any<CancellationToken>())
-            .Returns(_ =>
-            {
-                if (saveCalls++ == 0) throw new DbUpdateConcurrencyException("row version conflict");
-                return 1;
-            });
+        // Arrange
+        var course = CreateCourseWithActiveBits(3, 0, 1, 2);
+        RegisterEnrollmentFor(course, out var enrollment);
 
         // Act
-        var result = await _handler.Handle(new CompleteItemCommand(staleEnrollment.Id, 1), CancellationToken.None);
+        await _handler.Handle(new CompleteItemCommand(enrollment.Id, 0), CancellationToken.None);
 
-        // Assert: the merged mask contains BOTH bits, and the completion milestone fires exactly once
+        // Assert: the handler must use the FOR UPDATE variant, never the plain read
+        await _enrollmentRepository.Received(1).GetByIdForUpdateAsync(enrollment.Id, Arg.Any<CancellationToken>());
+        await _enrollmentRepository.DidNotReceive().GetByIdAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Handle_Should_RaiseCompletionEvent_WhenAllActiveItemsComplete()
+    {
+        // Arrange: 2-item course, complete both
+        var course = CreateCourseWithActiveBits(2, 0, 1);
+        RegisterEnrollmentFor(course, out var enrollment);
+
+        // Complete bit 0
+        enrollment.CompleteItem(0, course.SnapshotActiveItemsBitmask());
+        enrollment.PopDomainEvents(); // clear setup events
+
+        // Act: complete the last active item (bit 1)
+        var result = await _handler.Handle(new CompleteItemCommand(enrollment.Id, 1), CancellationToken.None);
+
+        // Assert
         result.IsError.Should().BeFalse();
-        saveCalls.Should().Be(2);
-        freshEnrollment.Progress.IsComplete(0).Should().BeTrue();
-        freshEnrollment.Progress.IsComplete(1).Should().BeTrue();
-        freshEnrollment.DomainEvents.OfType<CourseCompletedDomainEvent>().Should().ContainSingle();
+        enrollment.CompletedOn.Should().NotBeNull();
+        enrollment.DomainEvents.OfType<CourseCompletedDomainEvent>().Should().ContainSingle();
+    }
+
+    [Fact]
+    public async Task Handle_Should_NotRaiseDuplicateCompletionEvent_WhenAlreadyCompleted()
+    {
+        // Arrange: course already fully completed (CompletedOn is set)
+        var course = CreateCourseWithActiveBits(2, 0, 1);
+        RegisterEnrollmentFor(course, out var enrollment);
+
+        enrollment.CompleteItem(0, course.SnapshotActiveItemsBitmask());
+        enrollment.CompleteItem(1, course.SnapshotActiveItemsBitmask());
+        enrollment.CompletedOn.Should().NotBeNull();
+        enrollment.PopDomainEvents(); // clear
+
+        // Act: re-complete bit 0 (idempotent, already set)
+        var result = await _handler.Handle(new CompleteItemCommand(enrollment.Id, 0), CancellationToken.None);
+
+        // Assert: no duplicate completion event
+        result.IsError.Should().BeFalse();
+        enrollment.DomainEvents.OfType<CourseCompletedDomainEvent>().Should().BeEmpty(
+            because: "the CompletedOn guard suppresses duplicate completion events");
     }
 }

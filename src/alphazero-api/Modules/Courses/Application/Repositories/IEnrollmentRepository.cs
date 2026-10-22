@@ -8,10 +8,15 @@ public interface IEnrollmentRepository : IRepository<Enrollment>
     Task<Enrollment?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// The retry's fresh load evicts exactly the locally-tracked instance of this enrollment and its owned dependents (entity-scoped; not a tracker-wide reset) and returns a NEW instance re-read from the database.
-    /// This module's contract methods run on its own scoped AppDbContext; other modules register their own contexts, so this eviction cannot cross module boundaries today — revisit this sentence before introducing a pooled/long-lived context.
+    /// Loads the enrollment row with a Postgres <c>SELECT … FOR UPDATE</c> row-level exclusive
+    /// lock. The lock is held until the ambient transaction commits or rolls back, serialising
+    /// concurrent writers on the same enrollment without application-level retry logic.
+    ///
+    /// Use this for any write path that mutates the enrollment's progress bitmask or completion
+    /// state — it eliminates optimistic-concurrency retries and the ChangeTracker surgery they
+    /// required (#32 / D3 → pessimistic locking replacement).
     /// </summary>
-    Task<Enrollment?> GetFreshByIdAsync(Guid id, CancellationToken cancellationToken = default);
+    Task<Enrollment?> GetByIdForUpdateAsync(Guid id, CancellationToken cancellationToken = default);
 
     Task<List<Enrollment>> GetStudentEnrollmentsAcrossTenantsAsync(Guid studentId, CancellationToken cancellationToken = default);
 }
