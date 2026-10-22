@@ -19,6 +19,22 @@ public class EnrollmentRepository : BaseRepository<AppDbContext, Enrollment>, IE
             .FirstOrDefaultAsync(e => e.Id == id, cancellationToken);
     }
 
+    /// <summary>
+    /// Pessimistic row-level lock (#32/D3 replacement): acquires a Postgres FOR UPDATE lock on
+    /// the enrollment row so concurrent completions serialise at the database level — no
+    /// application-side retry, no ChangeTracker detach/re-read surgery.
+    ///
+    /// EF global query filters (tenant, soft-delete) are applied by composing LINQ on top of
+    /// the <c>FromSqlInterpolated</c> subquery — Postgres evaluates the raw SQL as an inner
+    /// relation and the filter predicates are added by EF in the outer WHERE clause.
+    /// </summary>
+    public async Task<Enrollment?> GetByIdForUpdateAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        return await _context.Enrollments
+            .FromSqlInterpolated($"""SELECT * FROM "Courses"."Enrollements" WHERE "Id" = {id} FOR UPDATE""")
+            .FirstOrDefaultAsync(cancellationToken);
+    }
+
     public async Task<List<Enrollment>> GetStudentEnrollmentsAcrossTenantsAsync(Guid studentId, CancellationToken cancellationToken = default)
     {
         return await _context.Enrollments

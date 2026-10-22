@@ -1,3 +1,4 @@
+using AlphaZero.Modules.Courses.Application.Courses.Queries.GetCourseView;
 using AlphaZero.Modules.Courses.Application.Enrollments.Queries.GetEnrollment;
 using AlphaZero.Modules.Courses.Application.Enrollments.Queries.GetStudentDashboard;
 using AlphaZero.Shared.Queries;
@@ -24,4 +25,7 @@ public interface IEnrollmentQueryService
 
     /// <summary>Enrollment detail (GET /courses/enrollments/{Id}): single enrollment, tenant-scoped.</summary>
     Task<EnrollmentDto?> GetEnrollmentByIdAsync(Guid enrollmentId, CancellationToken cancellationToken = default);
+
+    /// <summary>Course view overlay (GET /courses/{Id}/view): the caller's own enrollment, any status, tenant-scoped.</summary>
+    Task<EnrollmentCourseViewDto?> GetEnrollmentForCourseAsync(Guid studentId, Guid courseId, CancellationToken cancellationToken = default);
 }

@@ -55,10 +55,21 @@ public class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
             services.AddAuthorizationBuilder()
                 .SetDefaultPolicy(new Microsoft.AspNetCore.Authorization.AuthorizationPolicyBuilder("TestScheme").RequireAuthenticatedUser().Build());
 
-            // Replace Tenant Provider
+            // Replace Tenant Provider. The anonymous opt-out path (#32/D4) runs the REAL
+            // HttpTenantProvider so claim/header precedence (D2) is exercised end-to-end;
+            // every other request keeps the static TestTenantProvider — existing tests
+            // are unchanged.
             services.RemoveAll<ITenantProvider>();
             services.AddHttpContextAccessor();
-            services.AddScoped<ITenantProvider, TestTenantProvider>();
+            services.AddScoped<TestTenantProvider>();
+            services.AddScoped<HttpTenantProvider>();
+            services.AddScoped<ITenantProvider>(sp =>
+            {
+                var httpContext = sp.GetRequiredService<IHttpContextAccessor>().HttpContext;
+                return httpContext?.Request.Headers.ContainsKey("X-Test-Anonymous") == true
+                    ? (ITenantProvider)sp.GetRequiredService<HttpTenantProvider>()
+                    : sp.GetRequiredService<TestTenantProvider>();
+            });
 
             // Bypass IAM evaluation for integration tests when Testing:BypassIAM is set
             if (Environment.GetEnvironmentVariable("Testing:BypassIAM") == "true")

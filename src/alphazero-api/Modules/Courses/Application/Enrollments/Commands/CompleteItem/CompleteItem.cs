@@ -26,20 +26,27 @@ public sealed class CompleteItemCommandHandler : IRequestHandler<CompleteItemCom
 
     public async Task<ErrorOr<Success>> Handle(CompleteItemCommand request, CancellationToken cancellationToken)
     {
-        var enrollment = await _enrollmentRepository.GetByIdAsync(request.EnrollmentId, cancellationToken);
-        if (enrollment is null) return Error.NotFound("Enrollment.NotFound", "Enrollment not found.");
+        // FOR UPDATE: the row-level exclusive lock serialises concurrent completions on the
+        // same enrollment at the database level — no optimistic-concurrency retry needed.
+        // The lock is held for the duration of the ambient transaction (~milliseconds).
+        var enrollment = await _enrollmentRepository.GetByIdForUpdateAsync(request.EnrollmentId, cancellationToken);
+        if (enrollment is null)
+            return Error.NotFound("Enrollment.NotFound", "Enrollment not found.");
 
         // The Course owns the active-state of curriculum positions: its ActiveItemsBitmask is the
         // validation range (which positions exist), the activity gate (only active items can be
         // completed) and the denominator of the completion percentage. It is passed as a defensive
         // copy — the enrollment never keeps a reference to the course's mask.
         var course = await _courseRepository.GetById(enrollment.CourseId, cancellationToken);
-        if (course is null) return Error.NotFound("Course.NotFound", "Course not found.");
+        if (course is null)
+            return Error.NotFound("Course.NotFound", "Course not found.");
 
         var result = enrollment.CompleteItem(request.BitIndex, course.SnapshotActiveItemsBitmask());
         if (result.IsError) return result.Errors;
 
-        _logger.LogInformation("Item at bit index {BitIndex} completed for Enrollment {EnrollmentId}.", request.BitIndex, request.EnrollmentId);
+        // SaveChangesAsync is handled by the UnitOfWorkDecoratorCommandHandler pipeline behaviour.
+        _logger.LogInformation("Item at bit index {BitIndex} completed for Enrollment {EnrollmentId}.",
+            request.BitIndex, request.EnrollmentId);
         return Result.Success;
     }
 }

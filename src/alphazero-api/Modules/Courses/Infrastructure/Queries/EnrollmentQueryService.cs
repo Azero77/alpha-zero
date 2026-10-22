@@ -2,6 +2,7 @@ using AlphaZero.Modules.Courses.Application.Enrollments.Queries.GetEnrollment;
 using AlphaZero.Modules.Courses.Application.Enrollments.Queries.GetStudentDashboard;
 using AlphaZero.Modules.Courses.Application.Queries;
 using AlphaZero.Modules.Courses.Domain.Aggregates.Enrollments;
+using AlphaZero.Modules.Courses.Application.Courses.Queries.GetCourseView;
 using AlphaZero.Modules.Courses.Infrastructure.Persistance;
 using AlphaZero.Shared.Infrastructure.Database;
 using AlphaZero.Shared.Queries;
@@ -152,6 +153,56 @@ public class EnrollmentQueryService : IEnrollmentQueryService
             .FirstOrDefaultAsync(cancellationToken);
 
         return row is null ? null : Map(row);
+    }
+
+    /// <summary>
+    /// The view endpoint's single enrollment lookup (#32): scoped to the CALLER's own
+    /// (student × course). Any status is returned — status is part of the overlay contract —
+    /// while completed indexes and percentage are derived from
+    /// (Progress.Bitmask, Course.ActiveItemsBitmask) through <see cref="ProgressCalculation"/>,
+    /// so deleted curriculum positions never count as completed or active.
+    /// </summary>
+    public async Task<EnrollmentCourseViewDto?> GetEnrollmentForCourseAsync(Guid studentId, Guid courseId, CancellationToken cancellationToken = default)
+    {
+        var row = await _context.Set<Enrollment>()
+            .AsNoTracking()
+            .Where(e => e.StudentId == studentId && e.CourseId == courseId)
+            .OrderByDescending(e => e.EnrolledOn)
+            .Select(e => new EnrollmentRow(
+                e.Id,
+                e.StudentId,
+                e.CourseId,
+                e.Status,
+                e.EnrolledOn,
+                e.TenantId,
+                e.Progress.Bitmask,
+                _context.Courses.IgnoreQueryFilters(SoftDeleteOnly)
+                    .Where(c => c.Id == e.CourseId)
+                    .Select(c => c.ActiveItemsBitmask)
+                    .FirstOrDefault()))
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (row is null)
+        {
+            return null;
+        }
+
+        var activeMask = row.ActiveItemsBitmask ?? new BitArray(0);
+        var completedBitIndexes = new List<int>();
+        var sharedLength = Math.Min(row.ProgressBitmask.Length, activeMask.Length);
+        for (var bitIndex = 0; bitIndex < sharedLength; bitIndex++)
+        {
+            if (row.ProgressBitmask[bitIndex] && activeMask[bitIndex])
+            {
+                completedBitIndexes.Add(bitIndex);
+            }
+        }
+
+        return new EnrollmentCourseViewDto(
+            row.Id,
+            row.Status.ToString(),
+            ProgressCalculation.CompletionPercentage(row.ProgressBitmask, activeMask),
+            completedBitIndexes);
     }
 
     private static EnrollmentDto Map(EnrollmentRow row)
