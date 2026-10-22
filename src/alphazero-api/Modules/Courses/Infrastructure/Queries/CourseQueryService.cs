@@ -102,8 +102,8 @@ public class CourseQueryService : ICourseQueryService
         {
             var keyword = EscapeLikePattern(search.Trim());
             query = query.Where(c =>
-                EF.Functions.ILike(c.Title, $"%{keyword}%", @"\") ||
-                (c.Description != null && EF.Functions.ILike(c.Description, $"%{keyword}%", @"\")));
+                EF.Functions.ILike(c.Title, $"%{keyword}%", LikeEscapeChar) ||
+                (c.Description != null && EF.Functions.ILike(c.Description, $"%{keyword}%", LikeEscapeChar)));
         }
 
         if (subjectId.HasValue)
@@ -152,17 +152,20 @@ public class CourseQueryService : ICourseQueryService
         return new PagedResult<CourseCatalogItemDto>(items, totalCount, page, perPage);
     }
 
+    private const string LikeEscapeChar = @"\";
+
     /// <summary>
     /// Escapes the ILIKE wildcards (\, %, _) in a user-supplied keyword so the pattern the
     /// keyword participates in treats every character literally (#32, L3/D10). The backslash
     /// must be escaped FIRST. <see cref="EF.Functions.ILike(string,string)"/>'s 2-argument
     /// overload translates with ESCAPE '' (no escape character), so the 3-argument overload
-    /// must be used with the explicit "\" escape char — that is what makes \, \%, \_ literal.
+    /// must be used with the explicit escape char owned by <see cref="LikeEscapeChar"/> —
+    /// that is what makes \, \%, \_ literal.
     /// </summary>
     private static string EscapeLikePattern(string keyword) => keyword
-        .Replace(@"\", @"\\")
-        .Replace("%", @"\%")
-        .Replace("_", @"\_");
+        .Replace(LikeEscapeChar, LikeEscapeChar + LikeEscapeChar)
+        .Replace("%", LikeEscapeChar + "%")
+        .Replace("_", LikeEscapeChar + "_");
 
     public async Task<string?> GetCourseStatusAsync(Guid courseId, CancellationToken cancellationToken = default)
     {
