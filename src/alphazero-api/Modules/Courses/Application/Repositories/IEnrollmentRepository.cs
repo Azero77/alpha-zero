@@ -8,10 +8,8 @@ public interface IEnrollmentRepository : IRepository<Enrollment>
     Task<Enrollment?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Reloads an enrollment discarding any in-memory tracked state. Used by the completion
-    /// write path's optimistic-concurrency retry (#32/D3): after a DbUpdateConcurrencyException
-    /// the scoped context must read the database's authoritative row, including a concurrent
-    /// writer's just-committed values.
+    /// The retry's fresh load evicts exactly the locally-tracked instance of this enrollment and its owned dependents (entity-scoped; not a tracker-wide reset) and returns a NEW instance re-read from the database.
+    /// This module's contract methods run on its own scoped AppDbContext; other modules register their own contexts, so this eviction cannot cross module boundaries today — revisit this sentence before introducing a pooled/long-lived context.
     /// </summary>
     Task<Enrollment?> GetFreshByIdAsync(Guid id, CancellationToken cancellationToken = default);
 

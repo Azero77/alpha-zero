@@ -27,7 +27,27 @@ public class EnrollmentRepository : BaseRepository<AppDbContext, Enrollment>, IE
     /// </summary>
     public async Task<Enrollment?> GetFreshByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        _context.ChangeTracker.Clear();
+        // D3 retry fresh-read: detach only what we are about to re-read — a tracker-wide
+        // Clear() would evict unrelated tracked entities if a caller ever used a pooled
+        // context. Keep the contract narrow because callers trust the narrow name.
+        var tracked = _context.Set<Enrollment>().Local.FirstOrDefault(e => e.Id == id);
+        if (tracked is not null)
+        {
+            var entry = _context.Entry(tracked);
+            entry.State = EntityState.Detached;
+
+            // EF detaches the root only along its current owned references; owned rows
+            // replaced by the failed attempt's apply linger behind as orphaned entries,
+            // and an orphaned owned entry poisons the re-materialization below (the
+            // fresh instance comes back with its owned parts unbound). Evict the root's
+            // owned rows so the fresh read covers exactly this aggregate — root plus its
+            // own owned rows — and nothing else the tracker still holds.
+            foreach (var leftover in _context.ChangeTracker.Entries())
+                if (leftover.Metadata.IsOwned()
+                    && leftover.Metadata.FindOwnership()?.PrincipalEntityType == entry.Metadata)
+                    leftover.State = EntityState.Detached;
+        }
+
         return await GetByIdAsync(id, cancellationToken);
     }
 
