@@ -1,3 +1,4 @@
+using AlphaZero.Shared.Domain;
 using Microsoft.AspNetCore.Http;
 using System.Security.Claims;
 
@@ -40,14 +41,14 @@ public class HttpTenantProvider : ITenantProvider
         //   3. No usable claim and no parseable header → null: fail closed (empty results /
         //      404 masks), never a guessed tenant.
         var claim = _httpContextAccessor?.HttpContext?.User?.FindFirst(TenantClaim);
-        if (claim is not null && Guid.TryParse(claim.Value, out var tenantIdFromClaim) && tenantIdFromClaim != Guid.Empty)
+        if (claim is not null && Guid.TryParse(claim.Value, out var tenantIdFromClaim) && tenantIdFromClaim != ResourceArn.GlobalTenantGuid)
         {
             _cachedTenantId = tenantIdFromClaim;
             return tenantIdFromClaim;
         }
 
         var tenantIdFromHeaderString = _httpContextAccessor?.HttpContext?.Request?.Headers[TenantIdHeader].FirstOrDefault();
-        if (Guid.TryParse(tenantIdFromHeaderString, out var tenantIdFromHeader) && tenantIdFromHeader != Guid.Empty)
+        if (Guid.TryParse(tenantIdFromHeaderString, out var tenantIdFromHeader) && tenantIdFromHeader != ResourceArn.GlobalTenantGuid)
         {
             _cachedTenantId = tenantIdFromHeader;
             return tenantIdFromHeader;
