@@ -68,7 +68,6 @@ public class AnonymousCatalogViewTests : BaseIntegrationTest
             Title = "Video One"
         });
 
-        SetTenant(tenantId);
         await Client.PatchAsJsonAsync($"/courses/{courseId}/review", new { });
         await Client.PatchAsJsonAsync($"/courses/{courseId}/approve", new { });
         await Client.PostAsJsonAsync($"/courses/{courseId}/plans", new AddPlanRequest { Name = "Standard", PrincipalId = Guid.NewGuid() });

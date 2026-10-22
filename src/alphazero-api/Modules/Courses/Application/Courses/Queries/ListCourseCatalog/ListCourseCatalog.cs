@@ -61,10 +61,15 @@ public sealed class ListCourseCatalogQueryValidator : AbstractValidator<ListCour
         // Sort keys are matched case-insensitively (#32, L4/D10) — CourseQueryService
         // normalizes the key to lowercase ("title"/"newest") anyway, so "Title" must not 400.
         RuleFor(x => x.Sort)
-            .Must(s => s is null
-                || s.Trim().Equals(CatalogSortKeys.Newest, StringComparison.OrdinalIgnoreCase)
-                || s.Trim().Equals(CatalogSortKeys.Title, StringComparison.OrdinalIgnoreCase))
+            .Must(s => s is null || IsValidSortKey(s))
             .WithMessage("Sort must be 'newest' or 'title'.");
+    }
+
+    private static bool IsValidSortKey(string raw)
+    {
+        var key = raw.Trim();
+        return key.Equals(CatalogSortKeys.Newest, StringComparison.OrdinalIgnoreCase)
+            || key.Equals(CatalogSortKeys.Title, StringComparison.OrdinalIgnoreCase);
     }
 }
 
