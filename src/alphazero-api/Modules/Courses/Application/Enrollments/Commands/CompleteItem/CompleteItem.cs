@@ -6,7 +6,7 @@ using Microsoft.Extensions.Logging;
 
 namespace AlphaZero.Modules.Courses.Application.Enrollments.Commands.CompleteItem;
 
-public record CompleteItemCommand(Guid EnrollmentId, int BitIndex) : ICommand<Success>;
+public record CompleteItemCommand(Guid EnrollmentId, int BitIndex) : ICommand<Success>, ITransactionalCommand;
 
 public sealed class CompleteItemCommandHandler : IRequestHandler<CompleteItemCommand, ErrorOr<Success>>
 {
