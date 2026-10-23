@@ -19,20 +19,19 @@ public class EnrollmentConfiguration : IEntityTypeConfiguration<Enrollment>
             .HasConversion<string>();
         builder.HasIndex(e => new { e.StudentId, e.CourseId }).IsUnique();
 
-        // Optimistic concurrency (#32/D3): the Npgsql xmin system column backs a uint
-        // rowversion token. A concurrent completion's stale save fails with
-        // DbUpdateConcurrencyException; the completion write path retries ONCE against
-        // fresh loads, and the aggregate's CompletedOn guard then suppresses the
-        // duplicate completion milestone. (xmin is a system column — no physical DDL.)
-        builder.Property<uint>("xmin")
-            .IsRowVersion();
-
-        builder.OwnsOne(b => b.Progress, p =>
+        // Complex property, NOT OwnsOne (#32/D3): an owned type is modelled as a separate
+        // entity type with its own key and owner FK, so FromSql composition fetched it through a
+        // self-join of the same table. That join alias was scanned with the pre-lock snapshot,
+        // so a completion that waited on another writer's FOR UPDATE still materialised the old
+        // bitmask and overwrote it — see GetByIdForUpdateAsync. A complex type is part of the
+        // owner's row, so the lock and the returned mask come from the same fetch.
+        //
+        // Only the student's completion bits are stored. TotalItems/ActiveItems used to be
+        // persisted here; they are derived from the course's ActiveItemsBitmask at
+        // calculation time (ProgressCalculation) — never stored per enrollment.
+        builder.ComplexProperty(b => b.Progress, p =>
         {
-            // Only the student's completion bits are stored. TotalItems/ActiveItems used to be
-            // persisted here; they are derived from the course's ActiveItemsBitmask at
-            // calculation time (ProgressCalculation) — never stored per enrollment.
-            p.Property(p => p.Bitmask)
+            p.Property(x => x.Bitmask)
                 .HasColumnName("ProgressBitmask")
                 .HasConversion(
                     v => v,

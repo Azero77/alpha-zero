@@ -75,6 +75,7 @@ public class CompletionEventTests : BaseIntegrationTest
         {
             var e = await db.Enrollments.AsNoTracking().SingleAsync(x => x.Id == enrollmentId);
             var course = await db.Courses.AsNoTracking().SingleAsync(c => c.Id == e.CourseId);
+            Console.WriteLine($"[DB STATE] BitmaskLen={e.Progress.Bitmask.Length}, bit0={e.Progress.IsComplete(0)}, bit1={e.Progress.IsComplete(1)}");
             return (e.CompletedOn, ProgressCalculation.CompletionPercentage(e.Progress.Bitmask, course.ActiveItemsBitmask));
         });
 
@@ -130,11 +131,11 @@ public class CompletionEventTests : BaseIntegrationTest
         percentage.Should().Be(50.0);
     }
 
-    // --- Concurrent completions (#32/D3): the rowversion token + retry-once wave ---
+    // --- Concurrent completions (#32/D3): pessimistic row lock ---
     // Both call shapes converge deterministically no matter how the requests interleave:
-    // the loser either loads fresh state (no duplicate milestone) or conflicts at
-    // SaveChanges and retries against fresh loads — the persisted CompletedOn is stamped
-    // exactly once either way.
+    // GetByIdForUpdateAsync takes a FOR UPDATE lock inside the completion transaction, so the
+    // loser blocks until the winner commits and then reads the winner's bitmask. The persisted
+    // CompletedOn is stamped exactly once either way.
 
     [Fact]
     public async Task ConcurrentCompletionOfSameLastItem_Should_StampCompletedOn_ExactlyOnce()
@@ -151,7 +152,7 @@ public class CompletionEventTests : BaseIntegrationTest
         var taskB = Client.PostAsJsonAsync($"/courses/enrollments/{enrollmentId}/complete", new { BitIndex = 1 });
         var (respA, respB) = (await taskA, await taskB);
 
-        // The loser must NOT surface as an error: it either observes fresh state or retries
+        // The loser must NOT surface as an error: it waits on the row lock, then re-reads
         respA.StatusCode.Should().Be(HttpStatusCode.NoContent);
         respB.StatusCode.Should().Be(HttpStatusCode.NoContent);
 
@@ -173,9 +174,11 @@ public class CompletionEventTests : BaseIntegrationTest
         var (_, enrollmentId) = await SeedEnrolledPublishedCourse(tenantId, studentId);
         SetTenant(tenantId);
 
-        // Two writers complete the two different final items at the same moment. Without
-        // the rowversion token the last writer's mask overwrote the other bit — the course
-        // silently never completed ("different final bits → no lost bit, event fires", D3).
+        // Two writers complete the two different final items at the same moment. This is the case
+        // that caught the EF self-join bug: with Progress mapped as an owned type, FromSql composed
+        // a LEFT JOIN to the same row and the join alias was scanned with the pre-lock snapshot, so
+        // the blocked writer materialised an empty mask and overwrote the winner's bit. It is now a
+        // complex property, so the lock and the mask come from the same fetch.
         var taskA = Client.PostAsJsonAsync($"/courses/enrollments/{enrollmentId}/complete", new { BitIndex = 0 });
         var taskB = Client.PostAsJsonAsync($"/courses/enrollments/{enrollmentId}/complete", new { BitIndex = 1 });
         var (respA, respB) = (await taskA, await taskB);
