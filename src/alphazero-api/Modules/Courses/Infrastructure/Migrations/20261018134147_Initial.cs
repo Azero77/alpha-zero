@@ -33,6 +33,33 @@ namespace AlphaZero.Modules.Courses.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "CourseAssets",
+                schema: "Courses",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    ResourceArn = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: false),
+                    Title = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: false),
+                    CourseId = table.Column<Guid>(type: "uuid", nullable: false),
+                    State = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
+                    UploadedUtcAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    AssetType = table.Column<string>(type: "character varying(13)", maxLength: 13, nullable: false),
+                    QuestionsNumber = table.Column<int>(type: "integer", nullable: true),
+                    Type = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: true),
+                    FileName = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
+                    Size = table.Column<long>(type: "bigint", nullable: true),
+                    ContentType = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true),
+                    Duration = table.Column<TimeSpan>(type: "interval", nullable: true),
+                    ThumbnailUrl = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
+                    RelativeStreamingUrl = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
+                    TenantId = table.Column<Guid>(type: "uuid", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_CourseAssets", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "CourseRedemptionStates",
                 schema: "Courses",
                 columns: table => new
@@ -84,6 +111,7 @@ namespace AlphaZero.Modules.Courses.Infrastructure.Migrations
                     SubjectId = table.Column<Guid>(type: "uuid", nullable: false),
                     Status = table.Column<string>(type: "text", nullable: false),
                     NextAvailableBitIndex = table.Column<int>(type: "integer", nullable: false),
+                    ActiveItemsBitmask = table.Column<BitArray>(type: "varbit", nullable: false),
                     IsDeleted = table.Column<bool>(type: "boolean", nullable: false),
                     OnDeleted = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
                     TenantId = table.Column<Guid>(type: "uuid", nullable: false)
@@ -99,12 +127,11 @@ namespace AlphaZero.Modules.Courses.Infrastructure.Migrations
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    CompletedOn = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
                     StudentId = table.Column<Guid>(type: "uuid", nullable: false),
                     CourseId = table.Column<Guid>(type: "uuid", nullable: false),
                     Status = table.Column<string>(type: "text", nullable: false),
                     ProgressBitmask = table.Column<BitArray>(type: "varbit", nullable: false),
-                    ProgressTotalItems = table.Column<int>(type: "integer", nullable: false),
-                    ProgressActiveItems = table.Column<int>(type: "integer", nullable: false),
                     EnrolledOn = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     TenantId = table.Column<Guid>(type: "uuid", nullable: false)
                 },
@@ -172,32 +199,26 @@ namespace AlphaZero.Modules.Courses.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "CourseAssets",
+                name: "CourseOverviews",
                 schema: "Courses",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    ResourceArn = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: false),
-                    Title = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: false),
                     CourseId = table.Column<Guid>(type: "uuid", nullable: false),
-                    State = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
-                    UploadedUtcAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    AssetType = table.Column<string>(type: "character varying(13)", maxLength: 13, nullable: false),
-                    QuestionsNumber = table.Column<int>(type: "integer", nullable: true),
-                    Type = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: true),
-                    FileName = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
-                    Size = table.Column<long>(type: "bigint", nullable: true),
-                    ContentType = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true),
-                    Duration = table.Column<TimeSpan>(type: "interval", nullable: true),
-                    ThumbnailUrl = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
-                    RelativeStreamingUrl = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
+                    DescriptionContent = table.Column<string>(type: "jsonb", nullable: false),
+                    TargetAudienceContent = table.Column<string>(type: "jsonb", nullable: true),
+                    LearningObjectivesContent = table.Column<string>(type: "jsonb", nullable: true),
+                    CoverImageDocumentId = table.Column<Guid>(type: "uuid", nullable: true),
+                    CreatedAtUtc = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    UpdatedAtUtc = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    ETag = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: false),
                     TenantId = table.Column<Guid>(type: "uuid", nullable: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_CourseAssets", x => x.Id);
+                    table.PrimaryKey("PK_CourseOverviews", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_CourseAssets_Courses_CourseId",
+                        name: "FK_CourseOverviews_Courses_CourseId",
                         column: x => x.CourseId,
                         principalSchema: "Courses",
                         principalTable: "Courses",
@@ -237,8 +258,7 @@ namespace AlphaZero.Modules.Courses.Infrastructure.Migrations
                     Order = table.Column<int>(type: "integer", nullable: false),
                     CourseId = table.Column<Guid>(type: "uuid", nullable: false),
                     IsDeleted = table.Column<bool>(type: "boolean", nullable: false),
-                    OnDeleted = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
-                    TenantId = table.Column<Guid>(type: "uuid", nullable: false)
+                    OnDeleted = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -309,8 +329,7 @@ namespace AlphaZero.Modules.Courses.Infrastructure.Migrations
                     BitIndex = table.Column<int>(type: "integer", nullable: false),
                     MainType = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
                     IsDeleted = table.Column<bool>(type: "boolean", nullable: false),
-                    OnDeleted = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
-                    TenantId = table.Column<Guid>(type: "uuid", nullable: false)
+                    OnDeleted = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -330,10 +349,17 @@ namespace AlphaZero.Modules.Courses.Infrastructure.Migrations
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    CourseAssetId = table.Column<Guid>(type: "uuid", nullable: false),
+                    CurriculumItemId = table.Column<Guid>(type: "uuid", nullable: false),
                     Order = table.Column<int>(type: "integer", nullable: false),
-                    Metadata = table.Column<JsonElement>(type: "jsonb", nullable: false),
-                    CurriculumItemId = table.Column<Guid>(type: "uuid", nullable: false)
+                    CourseAssetId = table.Column<Guid>(type: "uuid", nullable: true),
+                    ResourceType = table.Column<string>(type: "character varying(21)", maxLength: 21, nullable: false),
+                    Content = table.Column<JsonElement>(type: "jsonb", nullable: true),
+                    PassingScore = table.Column<int>(type: "integer", nullable: true),
+                    Title = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
+                    DocumentType = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true),
+                    IsPublic = table.Column<bool>(type: "boolean", nullable: true),
+                    VariantName = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true),
+                    DurationSeconds = table.Column<double>(type: "double precision", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -375,6 +401,25 @@ namespace AlphaZero.Modules.Courses.Infrastructure.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
+                name: "IX_CourseAssets_TenantId",
+                schema: "Courses",
+                table: "CourseAssets",
+                column: "TenantId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_CourseOverviews_CourseId",
+                schema: "Courses",
+                table: "CourseOverviews",
+                column: "CourseId",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_CourseOverviews_TenantId",
+                schema: "Courses",
+                table: "CourseOverviews",
+                column: "TenantId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_CoursePlans_CourseId_Name",
                 schema: "Courses",
                 table: "CoursePlans",
@@ -386,6 +431,13 @@ namespace AlphaZero.Modules.Courses.Infrastructure.Migrations
                 schema: "Courses",
                 table: "Courses",
                 column: "IsDeleted",
+                filter: "\"IsDeleted\" = FALSE");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Courses_TenantId",
+                schema: "Courses",
+                table: "Courses",
+                column: "TenantId",
                 filter: "\"IsDeleted\" = FALSE");
 
             migrationBuilder.CreateIndex(
@@ -434,6 +486,12 @@ namespace AlphaZero.Modules.Courses.Infrastructure.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
+                name: "IX_Enrollements_TenantId",
+                schema: "Courses",
+                table: "Enrollements",
+                column: "TenantId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_InboxState_Delivered",
                 schema: "Courses",
                 table: "InboxState",
@@ -477,6 +535,13 @@ namespace AlphaZero.Modules.Courses.Infrastructure.Migrations
                 table: "Subjects",
                 column: "IsDeleted",
                 filter: "\"IsDeleted\" = FALSE");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Subjects_TenantId",
+                schema: "Courses",
+                table: "Subjects",
+                column: "TenantId",
+                filter: "\"IsDeleted\" = FALSE");
         }
 
         /// <inheritdoc />
@@ -484,6 +549,10 @@ namespace AlphaZero.Modules.Courses.Infrastructure.Migrations
         {
             migrationBuilder.DropTable(
                 name: "CourseAnalytics",
+                schema: "Courses");
+
+            migrationBuilder.DropTable(
+                name: "CourseOverviews",
                 schema: "Courses");
 
             migrationBuilder.DropTable(

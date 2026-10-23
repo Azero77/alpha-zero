@@ -14,8 +14,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace AlphaZero.Modules.Courses.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20261011130857_AddCompositeCurriculumItemAndAssetRefCount")]
-    partial class AddCompositeCurriculumItemAndAssetRefCount
+    [Migration("20261021102420_AddEnrollmentRowVersion")]
+    partial class AddEnrollmentRowVersion
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -32,6 +32,11 @@ namespace AlphaZero.Modules.Courses.Infrastructure.Migrations
                 {
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
+
+                    b.Property<BitArray>("ActiveItemsBitmask")
+                        .IsRequired()
+                        .HasColumnType("varbit")
+                        .HasColumnName("ActiveItemsBitmask");
 
                     b.Property<string>("Description")
                         .HasMaxLength(2048)
@@ -66,6 +71,9 @@ namespace AlphaZero.Modules.Courses.Infrastructure.Migrations
                     b.HasIndex("IsDeleted")
                         .HasFilter("\"IsDeleted\" = FALSE");
 
+                    b.HasIndex("TenantId")
+                        .HasFilter("\"IsDeleted\" = FALSE");
+
                     b.ToTable("Courses", "Courses");
                 });
 
@@ -81,11 +89,6 @@ namespace AlphaZero.Modules.Courses.Infrastructure.Migrations
 
                     b.Property<Guid>("CourseId")
                         .HasColumnType("uuid");
-
-                    b.Property<int>("RefCount")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasDefaultValue(0);
 
                     b.Property<string>("ResourceArn")
                         .IsRequired()
@@ -112,6 +115,8 @@ namespace AlphaZero.Modules.Courses.Infrastructure.Migrations
 
                     b.HasIndex("ResourceArn")
                         .IsUnique();
+
+                    b.HasIndex("TenantId");
 
                     b.HasIndex("CourseId", "State");
 
@@ -163,6 +168,8 @@ namespace AlphaZero.Modules.Courses.Infrastructure.Migrations
                     b.HasIndex("CourseId")
                         .IsUnique();
 
+                    b.HasIndex("TenantId");
+
                     b.ToTable("CourseOverviews", "Courses");
                 });
 
@@ -207,9 +214,6 @@ namespace AlphaZero.Modules.Courses.Infrastructure.Migrations
                     b.Property<int>("Order")
                         .HasColumnType("integer");
 
-                    b.Property<Guid>("TenantId")
-                        .HasColumnType("uuid");
-
                     b.Property<string>("Title")
                         .IsRequired()
                         .HasMaxLength(256)
@@ -233,16 +237,14 @@ namespace AlphaZero.Modules.Courses.Infrastructure.Migrations
                     b.Property<int>("BitIndex")
                         .HasColumnType("integer");
 
-                    b.Property<JsonElement>("Content")
-                        .HasColumnType("jsonb");
-
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
 
-                    b.Property<string>("MainType")
+                    b.Property<string>("MainResourceType")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("MainType");
 
                     b.Property<DateTime?>("OnDeleted")
                         .HasColumnType("timestamp with time zone");
@@ -251,9 +253,6 @@ namespace AlphaZero.Modules.Courses.Infrastructure.Migrations
                         .HasColumnType("integer");
 
                     b.Property<Guid>("SectionId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("TenantId")
                         .HasColumnType("uuid");
 
                     b.Property<string>("Title")
@@ -271,10 +270,46 @@ namespace AlphaZero.Modules.Courses.Infrastructure.Migrations
                     b.ToTable("CurriculumItems", "Courses");
                 });
 
+            modelBuilder.Entity("AlphaZero.Modules.Courses.Domain.Aggregates.Courses.CurriculumResource", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("CourseAssetId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CurriculumItemId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Discriminator")
+                        .IsRequired()
+                        .HasMaxLength(21)
+                        .HasColumnType("character varying(21)")
+                        .HasColumnName("ResourceType");
+
+                    b.Property<int>("Order")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CourseAssetId");
+
+                    b.HasIndex("CurriculumItemId");
+
+                    b.ToTable("CurriculumResources", "Courses");
+
+                    b.HasDiscriminator<string>("Discriminator").HasValue("CurriculumResource");
+
+                    b.UseTphMappingStrategy();
+                });
+
             modelBuilder.Entity("AlphaZero.Modules.Courses.Domain.Aggregates.Enrollments.Enrollment", b =>
                 {
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("CompletedOn")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<Guid>("CourseId")
                         .HasColumnType("uuid");
@@ -292,7 +327,15 @@ namespace AlphaZero.Modules.Courses.Infrastructure.Migrations
                     b.Property<Guid>("TenantId")
                         .HasColumnType("uuid");
 
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
                     b.HasKey("Id");
+
+                    b.HasIndex("TenantId");
 
                     b.HasIndex("StudentId", "CourseId")
                         .IsUnique();
@@ -326,6 +369,9 @@ namespace AlphaZero.Modules.Courses.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("IsDeleted")
+                        .HasFilter("\"IsDeleted\" = FALSE");
+
+                    b.HasIndex("TenantId")
                         .HasFilter("\"IsDeleted\" = FALSE");
 
                     b.ToTable("Subjects", "Courses");
@@ -657,13 +703,58 @@ namespace AlphaZero.Modules.Courses.Infrastructure.Migrations
                     b.HasDiscriminator().HasValue("Video");
                 });
 
-            modelBuilder.Entity("AlphaZero.Modules.Courses.Domain.Aggregates.Courses.CourseAsset", b =>
+            modelBuilder.Entity("AlphaZero.Modules.Courses.Domain.Aggregates.Courses.ArticleCurriculumResource", b =>
                 {
-                    b.HasOne("AlphaZero.Modules.Courses.Domain.Aggregates.Courses.Course", null)
-                        .WithMany("Assets")
-                        .HasForeignKey("CourseId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                    b.HasBaseType("AlphaZero.Modules.Courses.Domain.Aggregates.Courses.CurriculumResource");
+
+                    b.Property<JsonElement>("Content")
+                        .HasColumnType("jsonb");
+
+                    b.HasDiscriminator().HasValue("Article");
+                });
+
+            modelBuilder.Entity("AlphaZero.Modules.Courses.Domain.Aggregates.Courses.AssessmentCurriculumResource", b =>
+                {
+                    b.HasBaseType("AlphaZero.Modules.Courses.Domain.Aggregates.Courses.CurriculumResource");
+
+                    b.Property<int>("PassingScore")
+                        .HasColumnType("integer");
+
+                    b.HasDiscriminator().HasValue("Assessment");
+                });
+
+            modelBuilder.Entity("AlphaZero.Modules.Courses.Domain.Aggregates.Courses.DocumentCurriculumResource", b =>
+                {
+                    b.HasBaseType("AlphaZero.Modules.Courses.Domain.Aggregates.Courses.CurriculumResource");
+
+                    b.Property<string>("DocumentType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<bool>("IsPublic")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<string>("VariantName")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.HasDiscriminator().HasValue("Document");
+                });
+
+            modelBuilder.Entity("AlphaZero.Modules.Courses.Domain.Aggregates.Courses.VideoCurriculumResource", b =>
+                {
+                    b.HasBaseType("AlphaZero.Modules.Courses.Domain.Aggregates.Courses.CurriculumResource");
+
+                    b.Property<double>("DurationSeconds")
+                        .HasColumnType("double precision");
+
+                    b.HasDiscriminator().HasValue("Video");
                 });
 
             modelBuilder.Entity("AlphaZero.Modules.Courses.Domain.Aggregates.Courses.CourseOverview", b =>
@@ -700,46 +791,20 @@ namespace AlphaZero.Modules.Courses.Infrastructure.Migrations
                         .HasForeignKey("SectionId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
 
-                    b.OwnsMany("AlphaZero.Modules.Courses.Domain.Aggregates.Courses.CurriculumResource", "Resources", b1 =>
-                        {
-                            b1.Property<Guid>("Id")
-                                .ValueGeneratedOnAdd()
-                                .HasColumnType("uuid");
+            modelBuilder.Entity("AlphaZero.Modules.Courses.Domain.Aggregates.Courses.CurriculumResource", b =>
+                {
+                    b.HasOne("AlphaZero.Modules.Courses.Domain.Aggregates.Courses.CourseAsset", null)
+                        .WithMany()
+                        .HasForeignKey("CourseAssetId")
+                        .OnDelete(DeleteBehavior.Restrict);
 
-                            b1.Property<Guid>("CourseAssetId")
-                                .HasColumnType("uuid");
-
-                            b1.Property<Guid>("CurriculumItemId")
-                                .HasColumnType("uuid");
-
-                            b1.Property<JsonElement>("Metadata")
-                                .HasColumnType("jsonb");
-
-                            b1.Property<int>("Order")
-                                .HasColumnType("integer");
-
-                            b1.HasKey("Id");
-
-                            b1.HasIndex("CourseAssetId");
-
-                            b1.HasIndex("CurriculumItemId");
-
-                            b1.ToTable("CurriculumResources", "Courses");
-
-                            b1.HasOne("AlphaZero.Modules.Courses.Domain.Aggregates.Courses.CourseAsset", "Asset")
-                                .WithMany()
-                                .HasForeignKey("CourseAssetId")
-                                .OnDelete(DeleteBehavior.Restrict)
-                                .IsRequired();
-
-                            b1.WithOwner()
-                                .HasForeignKey("CurriculumItemId");
-
-                            b1.Navigation("Asset");
-                        });
-
-                    b.Navigation("Resources");
+                    b.HasOne("AlphaZero.Modules.Courses.Domain.Aggregates.Courses.CurriculumItem", null)
+                        .WithMany("Resources")
+                        .HasForeignKey("CurriculumItemId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("AlphaZero.Modules.Courses.Domain.Aggregates.Enrollments.Enrollment", b =>
@@ -749,18 +814,10 @@ namespace AlphaZero.Modules.Courses.Infrastructure.Migrations
                             b1.Property<Guid>("EnrollmentId")
                                 .HasColumnType("uuid");
 
-                            b1.Property<int>("ActiveItems")
-                                .HasColumnType("integer")
-                                .HasColumnName("ProgressActiveItems");
-
                             b1.Property<BitArray>("Bitmask")
                                 .IsRequired()
                                 .HasColumnType("varbit")
                                 .HasColumnName("ProgressBitmask");
-
-                            b1.Property<int>("TotalItems")
-                                .HasColumnType("integer")
-                                .HasColumnName("ProgressTotalItems");
 
                             b1.HasKey("EnrollmentId");
 
@@ -788,8 +845,6 @@ namespace AlphaZero.Modules.Courses.Infrastructure.Migrations
 
             modelBuilder.Entity("AlphaZero.Modules.Courses.Domain.Aggregates.Courses.Course", b =>
                 {
-                    b.Navigation("Assets");
-
                     b.Navigation("Plans");
 
                     b.Navigation("Sections");
@@ -798,6 +853,11 @@ namespace AlphaZero.Modules.Courses.Infrastructure.Migrations
             modelBuilder.Entity("AlphaZero.Modules.Courses.Domain.Aggregates.Courses.CourseSection", b =>
                 {
                     b.Navigation("Items");
+                });
+
+            modelBuilder.Entity("AlphaZero.Modules.Courses.Domain.Aggregates.Courses.CurriculumItem", b =>
+                {
+                    b.Navigation("Resources");
                 });
 #pragma warning restore 612, 618
         }

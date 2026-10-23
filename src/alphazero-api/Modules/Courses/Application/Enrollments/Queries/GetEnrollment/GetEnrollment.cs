@@ -9,6 +9,10 @@ public record EnrollmentDto(
     Guid StudentId,
     Guid CourseId,
     string Status,
+    // Transparent derived counts (never persisted per enrollment):
+    // completed = completed AND active positions; active = PopCount(course.ActiveItemsBitmask).
+    int CompletedItemsCount,
+    int ActiveItemsCount,
     double CompletionPercentage,
     DateTime EnrolledOn,
     Guid TenantId);

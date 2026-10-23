@@ -1,13 +1,18 @@
 using AlphaZero.Modules.Courses.Application.Courses.Commands.AddSection;
 using AlphaZero.Modules.Courses.Application.Courses.Commands.Assets;
 using AlphaZero.Modules.Courses.Application.Courses.Commands.Create;
+using AlphaZero.Modules.Courses.Application.Courses.Commands.Delete;
 using AlphaZero.Modules.Courses.Application.Courses.Commands.Items;
 using AlphaZero.Modules.Courses.Application.Courses.Commands.Plans;
 using AlphaZero.Modules.Courses.Application.Courses.Commands.Reorder;
+using AlphaZero.Modules.Courses.Application.Courses.Commands.Sections;
 using AlphaZero.Modules.Courses.Application.Courses.Commands.State;
 using AlphaZero.Modules.Courses.Application.Courses.Commands.SyncResourceMetadata;
+using AlphaZero.Modules.Courses.Application.Courses.Commands.Update;
 using AlphaZero.Modules.Courses.Application.Courses.Commands.UpsertOverview;
 using AlphaZero.Modules.Courses.Application.Subjects.Commands.Create;
+using AlphaZero.Modules.Courses.Application.Subjects.Commands.Delete;
+using AlphaZero.Modules.Courses.Application.Subjects.Commands.Update;
 using AlphaZero.Shared.Application;
 using AlphaZero.Shared.Infrastructure.Tenats;
 using ErrorOr;
@@ -57,10 +62,25 @@ public class CourseCacheEvictionBehavior<TRequest, TResponse>(
                     await cache.RemoveByTagAsync(CourseCacheKeys.CatalogTag(tenantProvider.GetTenant()), cancellationToken);
                     break;
 
+                // ── Course identity mutations (#29 CRUD): title/description/subject and soft
+                // delete change both the catalog row and the per-course family ──
+                case UpdateCourseCommand updateCourse:
+                    await EvictCourseAndCatalogAsync(updateCourse.CourseId, cancellationToken);
+                    break;
+                case DeleteCourseCommand deleteCourse:
+                    await EvictCourseAndCatalogAsync(deleteCourse.CourseId, cancellationToken);
+                    break;
+
                 // ── Per-course family (tree view, overview, readiness) ──
                 // Section/item mutations shape the curriculum tree and readiness.
                 case AddSectionCommand addSection:
                     await EvictCourseAsync(addSection.CourseId, cancellationToken);
+                    break;
+                case RenameCourseSectionCommand renameSection:
+                    await EvictCourseAsync(renameSection.CourseId, cancellationToken);
+                    break;
+                case DeleteCourseSectionCommand deleteSection:
+                    await EvictCourseAsync(deleteSection.CourseId, cancellationToken);
                     break;
                 case CreateCourseSectionItemCommand itemCreate:
                     await EvictCourseAsync(itemCreate.CourseId, cancellationToken);
@@ -122,7 +142,12 @@ public class CourseCacheEvictionBehavior<TRequest, TResponse>(
 
                 // ── Subjects family ──
                 case CreateSubjectCommand:
-                    await cache.RemoveByTagAsync(CourseCacheKeys.SubjectsTag(tenantProvider.GetTenant()), cancellationToken);
+                    await EvictSubjectsAsync(cancellationToken);
+                    break;
+                // A renamed/deleted subject also changes SubjectName in every catalog row.
+                case UpdateSubjectCommand or DeleteSubjectCommand:
+                    await EvictSubjectsAsync(cancellationToken);
+                    await cache.RemoveByTagAsync(CourseCacheKeys.CatalogTag(tenantProvider.GetTenant()), cancellationToken);
                     break;
 
                 // ── Asset state/metadata (media pipeline; commands carry no course id) ──
@@ -168,4 +193,7 @@ public class CourseCacheEvictionBehavior<TRequest, TResponse>(
 
     private Task EvictCourseAndCatalogAsync(Guid courseId, CancellationToken cancellationToken) =>
         EvictCourseDataAndCatalogAsync(tenantProvider.GetTenant(), courseId, cancellationToken);
+
+    private ValueTask EvictSubjectsAsync(CancellationToken cancellationToken) =>
+        cache.RemoveByTagAsync(CourseCacheKeys.SubjectsTag(tenantProvider.GetTenant()), cancellationToken);
 }

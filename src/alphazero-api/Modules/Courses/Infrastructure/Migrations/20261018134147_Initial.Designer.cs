@@ -14,8 +14,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace AlphaZero.Modules.Courses.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20261014120121_AddTenantIdIndexes")]
-    partial class AddTenantIdIndexes
+    [Migration("20261018134147_Initial")]
+    partial class Initial
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -32,6 +32,11 @@ namespace AlphaZero.Modules.Courses.Infrastructure.Migrations
                 {
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
+
+                    b.Property<BitArray>("ActiveItemsBitmask")
+                        .IsRequired()
+                        .HasColumnType("varbit")
+                        .HasColumnName("ActiveItemsBitmask");
 
                     b.Property<string>("Description")
                         .HasMaxLength(2048)
@@ -302,6 +307,9 @@ namespace AlphaZero.Modules.Courses.Infrastructure.Migrations
                 {
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("CompletedOn")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<Guid>("CourseId")
                         .HasColumnType("uuid");
@@ -800,18 +808,10 @@ namespace AlphaZero.Modules.Courses.Infrastructure.Migrations
                             b1.Property<Guid>("EnrollmentId")
                                 .HasColumnType("uuid");
 
-                            b1.Property<int>("ActiveItems")
-                                .HasColumnType("integer")
-                                .HasColumnName("ProgressActiveItems");
-
                             b1.Property<BitArray>("Bitmask")
                                 .IsRequired()
                                 .HasColumnType("varbit")
                                 .HasColumnName("ProgressBitmask");
-
-                            b1.Property<int>("TotalItems")
-                                .HasColumnType("integer")
-                                .HasColumnName("ProgressTotalItems");
 
                             b1.HasKey("EnrollmentId");
 

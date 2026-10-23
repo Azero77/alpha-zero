@@ -10,12 +10,12 @@ namespace AlphaZero.Modules.Courses.Infrastructure.Caching;
 ///    component. One academy's cached entries can never resolve into another's (tests assert
 ///    this behaviorally). Reads without a tenant context bypass the cache entirely (pass-through
 ///    to the database) — a cache entry never exists without a tenant.
-/// 2. NO VISIBILITY-VARIANT KEY SHARING: view-family keys carry an explicit class segment so a
-///    future visibility variant (e.g. an enrolled student view) carves its own keys instead of
-///    aliasing the current ones.
+/// 2. NO VISIBILITY-VARIANT KEY SHARING: view-family keys carry an explicit class segment, so the
+///    staff tree view (<c>class=staff</c>) and the public/student summary view
+///    (<c>class=public</c>) never alias each other.
 /// 3. TTLs are the documented caching tolerances (see Modules/Courses/CACHING.md):
-///    catalog 2 min, course tree view 10 min, course overview 10 min, readiness companion 3 min,
-///    tenant subject listing 15 min.
+///    catalog 2 min, course tree view 10 min, public course view 10 min, course overview 10 min,
+///    readiness companion 3 min, tenant subject listing 15 min.
 /// 4. Eviction is TAG-based: mutation commands remove whole tag families (see
 ///    <see cref="CourseCacheEvictionBehavior{TRequest,TResponse}"/>); individual keys are never
 ///    hand-listed at the call sites except where an exact single entry must go.
@@ -32,8 +32,19 @@ internal static class CourseCacheKeys
     public static string CatalogKey(Guid? tenantId, Guid? subjectId, int page, int perPage) =>
         $"courses:catalog:{Tenant(tenantId)}:subject={subjectId?.ToString() ?? "all"}:p={page}:size={perPage}";
 
+    /// <summary>Student catalog (#32): same family and tag as the admin list, but the key must
+    /// also carry search + sort — otherwise filters would alias one another.</summary>
+    public static string CourseCatalogKey(Guid? tenantId, string? search, Guid? subjectId, string? sort, int page, int perPage) =>
+        $"courses:catalog:{Tenant(tenantId)}:search={Normalise(search)}:subject={subjectId?.ToString() ?? "all"}:sort={Normalise(sort)}:p={page}:size={perPage}";
+
     public static string CourseViewKey(Guid? tenantId, Guid courseId) =>
         $"courses:view:{Tenant(tenantId)}:{courseId}:class=staff";
+
+    /// <summary>Public/student course summary (#32's <c>GET /courses/{id}/view</c> shape). The
+    /// summary carries no enrollment state — the per-caller overlay is resolved outside this
+    /// query — so one entry serves every caller, but under its OWN visibility class.</summary>
+    public static string CoursePublicViewKey(Guid? tenantId, Guid courseId) =>
+        $"courses:view:{Tenant(tenantId)}:{courseId}:class=public";
 
     public static string CourseOverviewKey(Guid? tenantId, Guid courseId) =>
         $"courses:overview:{Tenant(tenantId)}:{courseId}";
@@ -73,4 +84,10 @@ internal static class CourseCacheKeys
     };
 
     private static string Tenant(Guid? tenantId) => tenantId?.ToString() ?? NoTenant;
+
+    /// <summary>Filter values are part of the key identity; trim + case-fold so values the query
+    /// treats as equivalent ("Math"/"math", null/whitespace) share one entry instead of aliasing
+    /// the same result set under several keys.</summary>
+    private static string Normalise(string? value) =>
+        string.IsNullOrWhiteSpace(value) ? "all" : value.Trim().ToLowerInvariant();
 }

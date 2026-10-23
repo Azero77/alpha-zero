@@ -17,16 +17,18 @@ handlers) bypass the cache entirely and read the database directly.
 
 | Surface (endpoint / query) | TTL | Key family | Evicted by (stale at most the TTL, and only until the next mutation) |
 |---|---|---|---|
-| Catalog list `GET /courses` (`ListCoursesQuery`) | 2 min | `courses:catalog:{tenantId}:subject=?...` | course create; `Submit/Approve/Reject/Publish/Archive` (status in the summary) |
-| Course tree view `GET /courses/{id}` | 10 min | `courses:view:{tenantId}:{courseId}:class=staff` | section add, item create/update/delete, both reorders, assign/unassign/dismiss asset |
+| Catalog list `GET /courses` (`ListCoursesQuery`) | 2 min | `courses:catalog:{tenantId}:subject=?...` | course create/update/delete; `Submit/Approve/Reject/Publish/Archive` (status in the summary); subject rename/delete (`SubjectName` is a catalog field) |
+| Student catalog `GET /courses/catalog` (`ListCourseCatalogQuery`) | 2 min | `courses:catalog:{tenantId}:search=...:subject=...:sort=...` | same catalog family as above |
+| Course tree view `GET /courses/{id}` | 10 min | `courses:view:{tenantId}:{courseId}:class=staff` | section add/rename/delete, item create/update/delete, both reorders, assign/unassign/dismiss asset |
+| Public/student course view `GET /courses/{id}/view` | 10 min | `courses:view:{tenantId}:{courseId}:class=public` | same per-course family (enrollment overlay is resolved outside the cached summary) |
 | Course overview `GET /courses/{id}/overview` | 10 min | `courses:overview:{tenantId}:{courseId}` | overview upsert, state transitions |
 | Readiness companion `GET /courses/{id}/readiness` | 3 min | `courses:readiness:{tenantId}:{courseId}` | section/item/plan/asset mutations, overview upsert, transcoding state flips (`MarkCourseAssetAvailable/Failed`), metadata sync |
-| Tenant subject listing `GET /courses/subjects` | 15 min | `courses:subjects:{tenantId}:...` | subject create |
+| Tenant subject listing `GET /courses/subjects` | 15 min | `courses:subjects:{tenantId}:...` | subject create/update/delete |
 
 Tag families (eviction commands are consolidated in `CourseCacheEvictionBehavior`):
 
-- `courses:catalog:{tenantId}` — catalog list entries.
-- `courses:course:{tenantId}:{courseId}` — tree view + overview + readiness of one course.
+- `courses:catalog:{tenantId}` — catalog list entries (admin list + student catalog).
+- `courses:course:{tenantId}:{courseId}` — tree view + public view + overview + readiness of one course.
 - `courses:assets:{tenantId}` — tenant-wide asset-reader family, carried only by readiness
   entries (the asset-pipeline commands carry no course id; their stale bound is the 3-min
   readiness TTL).
@@ -38,11 +40,18 @@ Enrollment checks in write paths, enroll/redeem, complete-item, enrollment state
 the bus pipeline, the student dashboard, admin listing/pool/analytics playback ticketing —
 write-path correctness over speed; these surfaces always read DB-consistent state.
 
+`GetCourseStatusAsync` (the single-column status read behind the view pre-request's
+existence/visibility masking) is also a pass-through: caching it would widen the window in
+which an unpublished course is still served to a caller who is no longer allowed to see it.
+
 ## Visibility variants
 
-The current tree-view key carries `class=staff`. When the student/enrolled course view lands
-(#32's shape), it gets its own key family — a new visibility class must **never** share a key
-with the existing ones.
+Visibility classes never share a key. The staff tree view (`GET /courses/{id}`) uses
+`class=staff`; the public/student summary (`GET /courses/{id}/view`) uses `class=public`.
+The public summary is enrollment-free by construction — the caller's progress overlay is
+resolved by a separate enrollment query after the cached summary returns — so one entry can
+serve every caller without leaking one student's completion state to another. Any future
+visibility variant (e.g. a staff-only enrolled view) must carve yet another class segment.
 
 ## Known gaps on the current base (pre-existing, outside #33's caching scope)
 

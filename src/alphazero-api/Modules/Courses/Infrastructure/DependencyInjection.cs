@@ -4,6 +4,7 @@ using AlphaZero.Modules.Courses.Application.Repositories;
 using AlphaZero.Modules.Courses.Application.Services;
 using AlphaZero.Modules.Courses.Domain.Aggregates.Courses;
 using AlphaZero.Modules.Courses.Infrastructure.Authorization;
+using AlphaZero.Modules.Courses.Infrastructure.Behaviors;
 using AlphaZero.Modules.Courses.Infrastructure.Persistance;
 using AlphaZero.Modules.Courses.Infrastructure.Repositories;
 using AlphaZero.Modules.Courses.Infrastructure.RequestResponseMessaging;
@@ -84,6 +85,7 @@ public static class DependencyInjection
             opts.AddOpenBehavior(typeof(AlphaZero.Modules.Courses.Infrastructure.Caching.CourseCacheEvictionBehavior<,>));
             opts.AddOpenBehavior(typeof(ValidationBehavior<,>));
             opts.AddOpenBehavior(typeof(PreRequestBehavior<,>));
+            opts.AddOpenBehavior(typeof(TransactionalBehavior<,>));
             opts.AddOpenBehavior(typeof(UnitOfWorkDecoratorCommandHandler<,>));
         });
     }

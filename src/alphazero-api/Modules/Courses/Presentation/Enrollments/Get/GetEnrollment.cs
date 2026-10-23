@@ -15,6 +15,8 @@ public record EnrollmentResponse(
     Guid StudentId,
     Guid CourseId,
     string Status,
+    int CompletedItemsCount,
+    int ActiveItemsCount,
     double CompletionPercentage,
     DateTime EnrolledOn,
     Guid TenantId);
@@ -66,6 +68,8 @@ public class GetEnrollmentEndpoint : Endpoint<GetEnrollmentRequest, EnrollmentRe
             enrollment.StudentId,
             enrollment.CourseId,
             enrollment.Status,
+            enrollment.CompletedItemsCount,
+            enrollment.ActiveItemsCount,
             enrollment.CompletionPercentage,
             enrollment.EnrolledOn,
             enrollment.TenantId);

@@ -1,6 +1,8 @@
 using AlphaZero.Modules.Courses.Application.Courses.Queries;
 using AlphaZero.Modules.Courses.Application.Courses.Queries.GetCourse;
 using AlphaZero.Modules.Courses.Application.Courses.Queries.GetCourseOverview;
+using AlphaZero.Modules.Courses.Application.Courses.Queries.GetCourseView;
+using AlphaZero.Modules.Courses.Application.Courses.Queries.ListCourseCatalog;
 using AlphaZero.Modules.Courses.Application.Courses.Queries.ListCourses;
 using AlphaZero.Modules.Courses.Application.Queries;
 using AlphaZero.Modules.Courses.Domain.Aggregates.Courses;
@@ -13,8 +15,8 @@ namespace AlphaZero.Modules.Courses.Infrastructure.Caching;
 
 /// <summary>
 /// Decorator over <see cref="ICourseQueryService"/> wiring the module's cached read surfaces
-/// (catalog, course tree view, course overview public shape, readiness companion) to the
-/// platform HybridCache — the same read-through pattern as Identity's
+/// (catalog, public/student course view, course tree view, course overview public shape,
+/// readiness companion) to the platform HybridCache — the same read-through pattern as Identity's
 /// <c>CachePublicKeyProvider</c> / <c>CachingTenantUserPrincipalAssignmentRepository</c>.
 /// Sibling precedent imitated, no shared-infrastructure changes.
 ///
@@ -42,6 +44,49 @@ public class CachedCourseQueryService(
             async token => await inner.ListCoursesAsync(subjectId, page, perPage, token),
             CourseCacheKeys.CatalogEntry,
             tags: [CourseCacheKeys.CatalogTag(tenantId)],
+            cancellationToken: cancellationToken);
+    }
+
+    public async Task<PagedResult<CourseCatalogItemDto>> ListCourseCatalogAsync(
+        string? search,
+        Guid? subjectId,
+        string? sort,
+        int page,
+        int perPage,
+        CancellationToken cancellationToken = default)
+    {
+        var tenantId = tenantProvider.GetTenant();
+        if (tenantId is null)
+            return await inner.ListCourseCatalogAsync(search, subjectId, sort, page, perPage, cancellationToken);
+
+        return await cache.GetOrCreateAsync<PagedResult<CourseCatalogItemDto>>(
+            CourseCacheKeys.CourseCatalogKey(tenantId, search, subjectId, sort, page, perPage),
+            async token => await inner.ListCourseCatalogAsync(search, subjectId, sort, page, perPage, token),
+            CourseCacheKeys.CatalogEntry,
+            tags: [CourseCacheKeys.CatalogTag(tenantId)],
+            cancellationToken: cancellationToken);
+    }
+
+    public async Task<string?> GetCourseStatusAsync(Guid courseId, CancellationToken cancellationToken = default)
+    {
+        // Deliberately uncached: a cheap single-column read used by the view pre-request for
+        // existence/visibility masking. Serving it stale would widen the masking window.
+        return await inner.GetCourseStatusAsync(courseId, cancellationToken);
+    }
+
+    public async Task<CourseSummaryViewDto?> GetCourseSummaryForViewAsync(Guid courseId, CancellationToken cancellationToken = default)
+    {
+        var tenantId = tenantProvider.GetTenant();
+        if (tenantId is null)
+            return await inner.GetCourseSummaryForViewAsync(courseId, cancellationToken);
+
+        // Enrollment-free summary (the caller's overlay is resolved separately), cached under
+        // its own visibility class so it can never alias the staff tree-view entry.
+        return await cache.GetOrCreateAsync<CourseSummaryViewDto?>(
+            CourseCacheKeys.CoursePublicViewKey(tenantId, courseId),
+            async token => await inner.GetCourseSummaryForViewAsync(courseId, token),
+            CourseCacheKeys.CourseViewEntry,
+            tags: [CourseCacheKeys.CourseTag(tenantId, courseId)],
             cancellationToken: cancellationToken);
     }
 
