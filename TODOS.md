@@ -1,10 +1,10 @@
 # Project TODOs
 
 ## [Architecture / Identity] Distributed Cache Invalidation for Principal Assignments
-- **What:** Replace in-process `IMemoryCache` in `CachingTenantUserPrincipalAssignmentRepository` with `HybridCache` and distributed invalidation.
-- **Why:** `CachingTenantUserPrincipalAssignmentRepository` caches assignments in local memory for 30 minutes. When background MassTransit consumers assign or revoke roles on background worker processes, the API web server processes retain stale assignments until local cache TTL expires.
-- **Context:** `AlphaZero.Shared` already configures `services.AddHybridCache()`. Migrating `CachingTenantUserPrincipalAssignmentRepository` ensures L1 in-memory speed combined with L2 Redis cache and bus-driven cache eviction across all nodes.
-- **Depends on / blocked by:** Core IAM sub-resource and capability ticketing fixes.
+- **Status:** The `IMemoryCache` → shared `ICachingService` migration shipped in #33; assignments are now cached through `HybridCache` (L1).
+- **What remains:** cross-node invalidation of `user_assignments:*` when a background MassTransit consumer assigns or revokes a role, so API instances stop serving the entry until its 30-minute TTL expires.
+- **Context:** Tracked by the distributed-invalidation item below; this entry records the Identity-specific impact.
+- **Depends on / blocked by:** the distributed L2/backplane decision below.
 - **Priority:** P2
 
 ## [Performance / Courses] Catalog predicate index check (from /plan-eng-review D10, 2026-10-21)

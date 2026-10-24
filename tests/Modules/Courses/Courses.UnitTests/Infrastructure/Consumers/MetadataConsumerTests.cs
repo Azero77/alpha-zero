@@ -41,7 +41,7 @@ public class MetadataConsumerTests
         var courseId = Guid.NewGuid();
         var videoId = Guid.NewGuid();
         var courseArn = ResourceArn.ForCourse(tenantId, courseId).Value;
-        var msg = new VideoPublishedIntegrationEvent(videoId, "master.m3u8");
+        var msg = new VideoPublishedIntegrationEvent(videoId, tenantId, "master.m3u8");
         contextMock.Setup(x => x.Message).Returns(msg);
 
         _coursesModuleMock.Setup(x => x.Send(It.IsAny<MarkCourseAssetAvailableCommand>(), It.IsAny<CancellationToken>()))
@@ -66,7 +66,7 @@ public class MetadataConsumerTests
         var courseId = Guid.NewGuid();
         var videoId = Guid.NewGuid();
         var courseArn = ResourceArn.ForCourse(tenantId, courseId).Value;
-        var msg = new VideoProcessingFailedEvent(videoId, "failed");
+        var msg = new VideoProcessingFailedEvent(videoId, tenantId, "failed");
         contextMock.Setup(x => x.Message).Returns(msg);
 
         _coursesModuleMock.Setup(x => x.Send(It.IsAny<MarkCourseAssetFailedCommand>(), It.IsAny<CancellationToken>()))
@@ -107,7 +107,8 @@ public class MetadataConsumerTests
         var consumer = new VideoMetadataChangedConsumer(_coursesModuleMock.Object);
         var contextMock = new Mock<ConsumeContext<VideoMetadataChangedIntegrationEvent>>();
         var videoId = Guid.NewGuid();
-        var msg = new VideoMetadataChangedIntegrationEvent(videoId, "Updated Video", "New Description");
+        var tenantId = Guid.NewGuid();
+        var msg = new VideoMetadataChangedIntegrationEvent(videoId, tenantId, "Updated Video", "New Description");
         contextMock.Setup(x => x.Message).Returns(msg);
 
         _coursesModuleMock.Setup(x => x.Send(It.IsAny<SyncResourceMetadataCommand>(), It.IsAny<CancellationToken>()))

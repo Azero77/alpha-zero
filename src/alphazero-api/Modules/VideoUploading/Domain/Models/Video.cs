@@ -106,7 +106,7 @@ public class Video : AggregateRoot, IDomainTenantOwned, ISoftDeletable
         Title = title;
         Description = description;
 
-        AddDomainEvent(new VideoMetadataUpdatedDomainEvent(Id, Title, Description));
+        AddDomainEvent(new VideoMetadataUpdatedDomainEvent(Id, TenantId, Title, Description));
 
         return Result.Success;
     }

@@ -19,7 +19,6 @@ using Microsoft.AspNetCore.Authorization.Policy;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Caching.Hybrid;
 using AlphaZero.Modules.Identity.Domain.Models.Principals;
 
 namespace AlphaZero.Modules.Identity.Infrastructure;
@@ -63,7 +62,6 @@ public static class DependencyInjection
         services.AddScoped<IDeviceSignatureVerifier, DeviceSignatureVerifier>();
         services.AddScoped<IPublicKeyProvider, PublicKeyProvider>();
         services.AddSingleton<PrincipalLoginService>();
-        services.AddMemoryCache();
         services.Decorate<IPublicKeyProvider, CachePublicKeyProvider>();
         services.Scan(scan => scan.FromAssemblyOf<IOperationEvaluator>()
         .AddClasses(classes => classes.AssignableTo<IOperationEvaluator>())

@@ -77,4 +77,40 @@ public class CourseOverviewTests : BaseIntegrationTest
         dto.Should().NotBeNull();
         dto!.CourseId.Should().Be(courseId);
     }
+
+    [Fact]
+    public async Task UpsertCourseOverview_PersistsContent_AndEvictsCachedOverview()
+    {
+        // Arrange
+        var tenantId = Guid.NewGuid();
+        var subjectId = await SeedSubject(tenantId);
+        var courseId = await SeedCourse(tenantId, subjectId);
+
+        // Warm the cached overview so eviction is observable through the ETag.
+        var warm = await Client.GetAsync($"/courses/{courseId}/overview");
+        warm.StatusCode.Should().Be(HttpStatusCode.OK);
+        var warmTag = warm.Headers.ETag!.Tag;
+
+        var marker = $"persisted-{Guid.NewGuid():N}";
+        var request = new UpsertCourseOverviewRequest
+        {
+            DescriptionContent = JsonDocument.Parse(
+                $"{{\"type\":\"doc\",\"content\":[{{\"type\":\"paragraph\",\"content\":[{{\"type\":\"text\",\"text\":\"{marker}\"}}]}}]}}").RootElement
+        };
+
+        // Act
+        var response = await Client.PutAsJsonAsync($"/courses/{courseId}/overview", request);
+
+        // Assert: the command is an ICommand now, so the UnitOfWork persists it.
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var persisted = await ExecuteDbContextAsync(async db =>
+            await db.CourseOverviews.AsNoTracking().FirstAsync(o => o.CourseId == courseId));
+        persisted.DescriptionContent.Value.Should().Contain(marker);
+
+        // The overview mutation carries the per-course tag, so the warmed GET is refreshed.
+        var fresh = await Client.GetAsync($"/courses/{courseId}/overview");
+        fresh.StatusCode.Should().Be(HttpStatusCode.OK);
+        fresh.Headers.ETag!.Tag.Should().NotBe(warmTag);
+        fresh.Headers.ETag!.Tag.Should().Be(persisted.ETag);
+    }
 }

@@ -6,45 +6,36 @@ using AlphaZero.Modules.Courses.Application.Courses.Queries.ListCourseCatalog;
 using AlphaZero.Modules.Courses.Application.Courses.Queries.ListCourses;
 using AlphaZero.Modules.Courses.Application.Queries;
 using AlphaZero.Modules.Courses.Domain.Aggregates.Courses;
+using AlphaZero.Shared.Infrastructure.Caching;
 using AlphaZero.Shared.Infrastructure.Tenats;
 using AlphaZero.Shared.Queries;
-using ErrorOr;
-using Microsoft.Extensions.Caching.Hybrid;
 
 namespace AlphaZero.Modules.Courses.Infrastructure.Caching;
 
 /// <summary>
 /// Decorator over <see cref="ICourseQueryService"/> wiring the module's cached read surfaces
-/// (catalog, public/student course view, course tree view, course overview public shape,
-/// readiness companion) to the platform HybridCache — the same read-through pattern as Identity's
-/// <c>CachePublicKeyProvider</c> / <c>CachingTenantUserPrincipalAssignmentRepository</c>.
-/// Sibling precedent imitated, no shared-infrastructure changes.
-///
-/// Conservative default: only the surfaces named by the issue are cached here. Tenant
-/// enrollment/dashboard/analytics/pool/admin reads consciously stay uncached (write-path
-/// correctness over speed). Without a tenant context the decorator is a pure pass-through —
-/// no cache key ever exists without a tenant id.
-///
-/// Eviction is tag-based and lives in <see cref="CourseCacheEvictionBehavior{TRequest,TResponse}"/>
-/// (wired to the exact mutation commands, invalidated only after the commit).
+/// (catalog, public/student course view, course tree view, overview and readiness) to the
+/// shared caching abstraction. Without a tenant the decorator is a pure pass-through: no key
+/// or tag is ever created without a tenant. Reads whose paging/filter shape is not the default
+/// also bypass the cache, so request parameters never enter cache keys.
 /// </summary>
 public class CachedCourseQueryService(
     ICourseQueryService inner,
-    HybridCache cache,
+    ICachingService cache,
     ITenantProvider tenantProvider) : ICourseQueryService
 {
     public async Task<PagedResult<CourseSummaryDto>> ListCoursesAsync(Guid? subjectId, int page, int perPage, CancellationToken cancellationToken = default)
     {
-        var tenantId = tenantProvider.GetTenant();
-        if (tenantId is null)
+        var scope = CacheScope.ForTenant(tenantProvider.GetTenant());
+        if (!scope.IsEnabled || subjectId is not null || !CourseCacheKeys.IsDefaultPage(page, perPage))
             return await inner.ListCoursesAsync(subjectId, page, perPage, cancellationToken);
 
-        return await cache.GetOrCreateAsync<PagedResult<CourseSummaryDto>>(
-            CourseCacheKeys.CatalogKey(tenantId, subjectId, page, perPage),
-            async token => await inner.ListCoursesAsync(subjectId, page, perPage, token),
-            CourseCacheKeys.CatalogEntry,
-            tags: [CourseCacheKeys.CatalogTag(tenantId)],
-            cancellationToken: cancellationToken);
+        return await cache.GetOrCreateAsync(
+            CourseCacheKeys.StaffCatalog(scope),
+            CourseCacheKeys.CatalogPolicy,
+            [CourseCacheKeys.CatalogTag(scope)],
+            token => inner.ListCoursesAsync(subjectId, page, perPage, token),
+            cancellationToken);
     }
 
     public async Task<PagedResult<CourseCatalogItemDto>> ListCourseCatalogAsync(
@@ -55,16 +46,22 @@ public class CachedCourseQueryService(
         int perPage,
         CancellationToken cancellationToken = default)
     {
-        var tenantId = tenantProvider.GetTenant();
-        if (tenantId is null)
+        var scope = CacheScope.ForTenant(tenantProvider.GetTenant());
+        if (!scope.IsEnabled
+            || !string.IsNullOrWhiteSpace(search)
+            || subjectId is not null
+            || !CourseCacheKeys.IsDefaultCatalogSort(sort)
+            || !CourseCacheKeys.IsDefaultPage(page, perPage))
+        {
             return await inner.ListCourseCatalogAsync(search, subjectId, sort, page, perPage, cancellationToken);
+        }
 
-        return await cache.GetOrCreateAsync<PagedResult<CourseCatalogItemDto>>(
-            CourseCacheKeys.CourseCatalogKey(tenantId, search, subjectId, sort, page, perPage),
-            async token => await inner.ListCourseCatalogAsync(search, subjectId, sort, page, perPage, token),
-            CourseCacheKeys.CatalogEntry,
-            tags: [CourseCacheKeys.CatalogTag(tenantId)],
-            cancellationToken: cancellationToken);
+        return await cache.GetOrCreateAsync(
+            CourseCacheKeys.StudentCatalog(scope),
+            CourseCacheKeys.CatalogPolicy,
+            [CourseCacheKeys.CatalogTag(scope)],
+            token => inner.ListCourseCatalogAsync(search, subjectId, sort, page, perPage, token),
+            cancellationToken);
     }
 
     public async Task<string?> GetCourseStatusAsync(Guid courseId, CancellationToken cancellationToken = default)
@@ -76,60 +73,58 @@ public class CachedCourseQueryService(
 
     public async Task<CourseSummaryViewDto?> GetCourseSummaryForViewAsync(Guid courseId, CancellationToken cancellationToken = default)
     {
-        var tenantId = tenantProvider.GetTenant();
-        if (tenantId is null)
+        var scope = CacheScope.ForTenant(tenantProvider.GetTenant());
+        if (!scope.IsEnabled)
             return await inner.GetCourseSummaryForViewAsync(courseId, cancellationToken);
 
-        // Enrollment-free summary (the caller's overlay is resolved separately), cached under
-        // its own visibility class so it can never alias the staff tree-view entry.
-        return await cache.GetOrCreateAsync<CourseSummaryViewDto?>(
-            CourseCacheKeys.CoursePublicViewKey(tenantId, courseId),
-            async token => await inner.GetCourseSummaryForViewAsync(courseId, token),
-            CourseCacheKeys.CourseViewEntry,
-            tags: [CourseCacheKeys.CourseTag(tenantId, courseId)],
-            cancellationToken: cancellationToken);
+        return await cache.GetOrCreateAsync(
+            CourseCacheKeys.CoursePublicView(scope, courseId),
+            CourseCacheKeys.CourseViewPolicy,
+            [CourseCacheKeys.CourseTag(scope, courseId), CourseCacheKeys.CourseViewsTag(scope)],
+            token => inner.GetCourseSummaryForViewAsync(courseId, token),
+            cancellationToken);
     }
 
     public async Task<CourseDto?> GetCourseByIdAsync(Guid courseId, CancellationToken cancellationToken = default)
     {
-        var tenantId = tenantProvider.GetTenant();
-        if (tenantId is null)
+        var scope = CacheScope.ForTenant(tenantProvider.GetTenant());
+        if (!scope.IsEnabled)
             return await inner.GetCourseByIdAsync(courseId, cancellationToken);
 
-        return await cache.GetOrCreateAsync<CourseDto?>(
-            CourseCacheKeys.CourseViewKey(tenantId, courseId),
-            async token => await inner.GetCourseByIdAsync(courseId, token),
-            CourseCacheKeys.CourseViewEntry,
-            tags: [CourseCacheKeys.CourseTag(tenantId, courseId)],
-            cancellationToken: cancellationToken);
+        return await cache.GetOrCreateAsync(
+            CourseCacheKeys.CourseView(scope, courseId),
+            CourseCacheKeys.CourseViewPolicy,
+            [CourseCacheKeys.CourseTag(scope, courseId), CourseCacheKeys.CourseViewsTag(scope)],
+            token => inner.GetCourseByIdAsync(courseId, token),
+            cancellationToken);
     }
 
     public async Task<CourseReadiness?> GetCourseReadinessAsync(Guid courseId, CancellationToken cancellationToken = default)
     {
-        var tenantId = tenantProvider.GetTenant();
-        if (tenantId is null)
+        var scope = CacheScope.ForTenant(tenantProvider.GetTenant());
+        if (!scope.IsEnabled)
             return await inner.GetCourseReadinessAsync(courseId, cancellationToken);
 
-        return await cache.GetOrCreateAsync<CourseReadiness?>(
-            CourseCacheKeys.CourseReadinessKey(tenantId, courseId),
-            async token => await inner.GetCourseReadinessAsync(courseId, token),
-            CourseCacheKeys.CourseReadinessEntry,
-            tags: [CourseCacheKeys.CourseTag(tenantId, courseId), CourseCacheKeys.CourseAssetsTag(tenantId)],
-            cancellationToken: cancellationToken);
+        return await cache.GetOrCreateAsync(
+            CourseCacheKeys.CourseReadiness(scope, courseId),
+            CourseCacheKeys.CourseReadinessPolicy,
+            [CourseCacheKeys.CourseTag(scope, courseId), CourseCacheKeys.CourseAssetsTag(scope)],
+            token => inner.GetCourseReadinessAsync(courseId, token),
+            cancellationToken);
     }
 
     public async Task<CourseOverviewDto?> GetCourseOverviewAsync(Guid courseId, CancellationToken cancellationToken = default)
     {
-        var tenantId = tenantProvider.GetTenant();
-        if (tenantId is null)
+        var scope = CacheScope.ForTenant(tenantProvider.GetTenant());
+        if (!scope.IsEnabled)
             return await inner.GetCourseOverviewAsync(courseId, cancellationToken);
 
-        return await cache.GetOrCreateAsync<CourseOverviewDto?>(
-            CourseCacheKeys.CourseOverviewKey(tenantId, courseId),
-            async token => await inner.GetCourseOverviewAsync(courseId, token),
-            CourseCacheKeys.CourseOverviewEntry,
-            tags: [CourseCacheKeys.CourseTag(tenantId, courseId)],
-            cancellationToken: cancellationToken);
+        return await cache.GetOrCreateAsync(
+            CourseCacheKeys.CourseOverview(scope, courseId),
+            CourseCacheKeys.CourseOverviewPolicy,
+            [CourseCacheKeys.CourseTag(scope, courseId)],
+            token => inner.GetCourseOverviewAsync(courseId, token),
+            cancellationToken);
     }
 
     public async Task<List<CourseAssetDto>> GetCoursePoolAsync(

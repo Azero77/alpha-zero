@@ -74,15 +74,17 @@ public static class DependencyInjection
         moduleServices.AddScoped<AlphaZero.Modules.Courses.Application.Queries.IEnrollmentQueryService, AlphaZero.Modules.Courses.Infrastructure.Queries.EnrollmentQueryService>();
         moduleServices.AddScoped<AlphaZero.Modules.Courses.Application.Queries.ICourseAnalyticsQueryService, AlphaZero.Modules.Courses.Infrastructure.Queries.CourseAnalyticsQueryService>();
 
+        moduleServices.AddScoped<AlphaZero.Shared.Infrastructure.Caching.IEntityEvictionPolicy, AlphaZero.Modules.Courses.Infrastructure.Caching.CourseEvictionPolicy>();
+
         moduleServices.AddValidatorsFromAssembly(typeof(ICoursesApplicationMarker).Assembly);
         moduleServices.AddPreRequestHandlersFromAssembly(typeof(ICoursesApplicationMarker).Assembly);
 
         moduleServices.AddMediatR(opts =>
         {
             opts.RegisterServicesFromAssembly(typeof(ICoursesApplicationMarker).Assembly);
-            // Cache eviction must be the OUTERMOST behavior (first AddOpenBehavior) so
-            // invalidation runs after the UnitOfWork commit (MediatR: first registered = outermost).
-            opts.AddOpenBehavior(typeof(AlphaZero.Modules.Courses.Infrastructure.Caching.CourseCacheEvictionBehavior<,>));
+            // Eviction tags are queued by UnitOfWork before the commit; this behavior is the
+            // OUTERMOST one and flushes them only after the commit succeeds.
+            opts.AddOpenBehavior(typeof(AlphaZero.Shared.Infrastructure.Caching.CacheEvictionFlushBehavior<,>));
             opts.AddOpenBehavior(typeof(ValidationBehavior<,>));
             opts.AddOpenBehavior(typeof(PreRequestBehavior<,>));
             opts.AddOpenBehavior(typeof(TransactionalBehavior<,>));

@@ -193,6 +193,7 @@ public class SyncResourceMetadataIntegrationTests : BaseIntegrationTest
         // Act: Publish integration event
         await bus.Publish(new VideoMetadataChangedIntegrationEvent(
             videoId,
+            tenantId,
             "Updated Video Name via Bus",
             "Updated Description via Bus"));
 

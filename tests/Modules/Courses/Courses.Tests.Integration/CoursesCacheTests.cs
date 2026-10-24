@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
+using AlphaZero.Modules.Courses.Application.Courses.Queries.ListCourseCatalog;
 using AlphaZero.Modules.Courses.Application.Courses.Queries.ListCourses;
 using AlphaZero.Modules.Courses.Application.Enrollments.Queries.GetStudentDashboard;
 using AlphaZero.Modules.Courses.Application.Subjects.Queries.GetSubject;
@@ -14,10 +15,13 @@ using AlphaZero.Modules.Courses.Presentation.Courses.Plans.AddPlan;
 using AlphaZero.Modules.Courses.Presentation.Enrollments.Dashboard;
 using AlphaZero.Modules.Courses.Presentation.Enrollments.Enroll;
 using AlphaZero.Modules.Courses.Presentation.Subjects.Create;
+using AlphaZero.Modules.VideoUploading.IntegrationEvents;
+using AlphaZero.Shared.Domain;
 using AlphaZero.Shared.Queries;
 using Courses.Tests.Integration.Abstractions;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Courses.Tests.Integration;
 
@@ -122,16 +126,15 @@ public class CoursesCacheTests : BaseIntegrationTest
 
     // ── Course overview public shape ──
     //
-    // NOTE (pre-existing defects observed on this base, reported on the owning issues — not
-    // fixed here because they are outside #33's caching scope):
+    // NOTE (pre-existing defect observed on this base, reported on the owning issue — not
+    // fixed here because it is outside #33's caching scope):
     //  * GetCourseOverviewAsync's LINQ projection (`o.DescriptionContent.Value` on a
     //    value-converted RichText property) materializes as null, so the response's
     //    descriptionContent is always null even when the DB row holds real content.
-    //  * UpsertCourseOverviewCommand is an IRequest (not ICommand), so the UnitOfWork behavior
-    //    never saves it — overview edits are silently discarded.
     // The cache still wraps this surface exactly as specified; the observable state here is the
     // ETag (a fresh GUID on every overview Update), which lets us prove both cache-serve and
-    // tag-family eviction without depending on the broken fields.
+    // tag-family eviction without depending on the broken field. Persistence of the overview
+    // command itself is covered by CourseOverviewTests.
     [Fact]
     public async Task Overview_WarmsPublicShape_IsServedFromCache_AndCourseFamilyEvictionRefreshes()
     {
@@ -237,10 +240,184 @@ public class CoursesCacheTests : BaseIntegrationTest
         fresh.Items.Should().Contain(s => s.Name == "First Subject");
     }
 
+    // ── Default-shape cardinality: non-default requests bypass the cache ──
+
+    [Fact]
+    public async Task Catalog_NonDefaultPaging_BypassesCache_AndShowsDbStateImmediately()
+    {
+        var tenantId = Guid.NewGuid();
+        SetTenant(tenantId);
+        var subjectId = await CreateSubjectByHttp();
+        await CreateCourseByHttp("Default Shape Course", subjectId);
+
+        var warm = await Client.GetFromJsonAsync<PagedResult<CourseSummaryDto>>("/courses");
+        warm!.Items.Should().ContainSingle(c => c.Title == "Default Shape Course");
+
+        await ExecuteDbContextAsync(async db =>
+        {
+            db.Courses.Add(Course.Create(Guid.NewGuid(), tenantId, "NonDefault Paging Ghost", null, subjectId).Value);
+            await db.SaveChangesAsync();
+        });
+
+        // perPage=5 is not the cached default shape, so the read goes straight to the DB.
+        var bypass = await Client.GetFromJsonAsync<PagedResult<CourseSummaryDto>>("/courses?perPage=5");
+        bypass!.Items.Should().Contain(c => c.Title == "NonDefault Paging Ghost");
+
+        // The default-shaped entry is untouched and still warm.
+        var cached = await Client.GetFromJsonAsync<PagedResult<CourseSummaryDto>>("/courses");
+        cached!.Items.Should().NotContain(c => c.Title == "NonDefault Paging Ghost");
+    }
+
+    // ── Subject dependencies: catalog and views embed the subject name ──
+
+    [Fact]
+    public async Task StudentCatalog_SearchBypassesCache_AndSubjectRenameRefreshesCatalogAndView()
+    {
+        var tenantId = Guid.NewGuid();
+        SetTenant(tenantId);
+        var subjectId = await CreateSubjectByHttp();
+        var courseId = await CreateCourseByHttp("Catalog Freshness Course", subjectId);
+        await PublishCourseDirectly(courseId);
+
+        // Warm both surfaces that embed the subject name.
+        var catalogWarm = await Client.GetFromJsonAsync<PagedResult<CourseCatalogItemDto>>("/courses/catalog");
+        catalogWarm!.Items.Should().ContainSingle(i => i.Id == courseId && i.SubjectName == "Cache Test Subject");
+        var viewWarm = await Client.GetFromJsonAsync<CourseViewShim>($"/courses/{courseId}/view");
+        viewWarm!.SubjectName.Should().Be("Cache Test Subject");
+
+        // A caller-controlled search value never enters a key: the query is served cold.
+        await ExecuteDbContextAsync(async db =>
+        {
+            var ghost = Course.Create(Guid.NewGuid(), tenantId, "Searchable Ghost", null, subjectId).Value;
+            db.Courses.Add(ghost);
+            db.Entry(ghost).Property(c => c.Status).CurrentValue = CourseStatus.Published;
+            await db.SaveChangesAsync();
+        });
+        var searched = await Client.GetFromJsonAsync<PagedResult<CourseCatalogItemDto>>("/courses/catalog?search=Searchable");
+        searched!.Items.Should().ContainSingle(i => i.Title == "Searchable Ghost");
+
+        // Rename: subject mutations evict the subject listing, every catalog entry and the
+        // tenant-wide course-view family (views embed SubjectName).
+        var rename = await Client.PutAsJsonAsync($"/courses/subjects/{subjectId}",
+            new { Name = "Renamed Subject" });
+        rename.StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+        var catalogFresh = await Client.GetFromJsonAsync<PagedResult<CourseCatalogItemDto>>("/courses/catalog");
+        catalogFresh!.Items.Should().Contain(i => i.Id == courseId && i.SubjectName == "Renamed Subject");
+        var viewFresh = await Client.GetFromJsonAsync<CourseViewShim>($"/courses/{courseId}/view");
+        viewFresh!.SubjectName.Should().Be("Renamed Subject");
+    }
+
+    [Fact]
+    public async Task Subjects_WarmListing_DeleteRefreshesListing()
+    {
+        var tenantId = Guid.NewGuid();
+        SetTenant(tenantId);
+
+        var create = await Client.PostAsJsonAsync("/courses/subjects", new CreateSubjectRequest { Name = "Doomed Subject" });
+        create.StatusCode.Should().Be(HttpStatusCode.Created);
+        var subjectId = (await create.Content.ReadFromJsonAsync<CreateSubjectResponse>())!.Id;
+
+        var warm = await Client.GetFromJsonAsync<PagedResult<SubjectDto>>("/courses/subjects");
+        warm!.Items.Should().ContainSingle(s => s.Id == subjectId && s.Name == "Doomed Subject");
+
+        var delete = await Client.DeleteAsync($"/courses/subjects/{subjectId}");
+        delete.StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+        // The subject listing is evicted by the delete, so the next read is cold.
+        var fresh = await Client.GetFromJsonAsync<PagedResult<SubjectDto>>("/courses/subjects");
+        fresh!.Items.Should().NotContain(s => s.Id == subjectId);
+    }
+
+    // ── In-place reorder: change-tracker eviction without an explicit Update call ──
+
+    [Fact]
+    public async Task CourseView_ReorderEvictsTree_ColdRefillShowsNewOrder()
+    {
+        var tenantId = Guid.NewGuid();
+        SetTenant(tenantId);
+        var subjectId = await CreateSubjectByHttp();
+        var courseId = await CreateCourseByHttp("Reorder Cache Course", subjectId);
+
+        var first = await AddSection(courseId, "First Section");
+        var second = await AddSection(courseId, "Second Section");
+
+        var warm = await Client.GetFromJsonAsync<CourseSummaryTree>($"/courses/{courseId}");
+        warm!.Sections.Select(s => s.Id).Should().Equal(first, second);
+
+        var reorder = await Client.PostAsJsonAsync($"/courses/{courseId}/sections/reorder",
+            new { CourseId = courseId, SectionIds = new[] { second, first } });
+        reorder.StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+        // The reorder command mutates tracked sections only — no repository.Update call — so
+        // this proves the change tracker drives eviction.
+        var fresh = await Client.GetFromJsonAsync<CourseSummaryTree>($"/courses/{courseId}");
+        fresh!.Sections.Select(s => s.Id).Should().Equal(second, first);
+    }
+
+    // ── Consumer scope: ambient tenant restored from the integration event ──
+
+    [Fact]
+    public async Task AssetAvailable_FromTenantLessBusScope_UpdatesAssetAndRefreshesReadiness()
+    {
+        var tenantId = Guid.NewGuid();
+        SetTenant(tenantId);
+        var subjectId = await CreateSubjectByHttp();
+        var courseId = await CreateCourseByHttp("Consumer Asset Course", subjectId);
+        var sectionId = await AddSection(courseId);
+
+        var videoId = Guid.NewGuid();
+        var videoArn = ResourceArn.ForVideo(tenantId, videoId);
+        await ExecuteDbContextAsync(async db =>
+        {
+            var course = await db.Courses.Include(c => c.Sections).FirstAsync(c => c.Id == courseId);
+            var section = course.Sections.Single(s => s.Id == sectionId);
+            var resource = new VideoCurriculumResource(Guid.NewGuid(), 0, videoId);
+            var addItem = section.AddItem(Guid.NewGuid(), "Consumer Video Item", ResourceType.Video,
+                course.AllocateNextBitIndex(), [resource]);
+            addItem.IsError.Should().BeFalse();
+            db.CourseAssets.Add(VideoCourseAsset.Create(videoId, tenantId, videoArn, "Consumer Video", courseId).Value);
+            await db.SaveChangesAsync();
+        });
+
+        // Warm readiness: the attached asset is still Pending (transcoding).
+        var warm = await Client.GetFromJsonAsync<CourseReadiness>($"/courses/{courseId}/readiness");
+        warm!.BlockingReasons.Should().Contain(r => r.Contains("still transcoding"));
+
+        // Simulate the real consumer: no HTTP context and no static test tenant. Only the
+        // consume filter's ambient tenant (from the event's TenantId) can resolve the asset.
+        TestTenantProvider.StaticTenantId = null;
+
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var bus = scope.ServiceProvider.GetRequiredService<MassTransit.IBus>();
+            await bus.Publish(new VideoPublishedIntegrationEvent(videoId, tenantId, "streaming/consumer/master.m3u8"));
+        }
+
+        CourseAssetState? state = null;
+        for (var i = 0; i < 100; i++)
+        {
+            state = await ExecuteDbContextAsync(async db => await db.CourseAssets
+                .IgnoreQueryFilters()
+                .Where(a => a.Id == videoId)
+                .Select(a => (CourseAssetState?)a.State)
+                .FirstOrDefaultAsync());
+            if (state == CourseAssetState.Available) break;
+            await Task.Delay(100);
+        }
+
+        TestTenantProvider.StaticTenantId = tenantId;
+
+        state.Should().Be(CourseAssetState.Available);
+        // The asset mutation evicted the per-course family, so the warmed readiness entry is gone.
+        var fresh = await Client.GetFromJsonAsync<CourseReadiness>($"/courses/{courseId}/readiness");
+        fresh!.BlockingReasons.Should().NotContain(r => r.Contains("still transcoding"));
+    }
+
     // ── Tenant isolation inside the cache ──
 
     [Fact]
-    public async Task CacheSurfaces_AreTenantIsolated_CrossTenantReadsReturnNothingOfTheOtherTenant()
+    public async Task CacheSurfaces_AreTenantIsolated_AcrossAllSevenCachedReads()
     {
         var tenantA = Guid.NewGuid();
         var tenantB = Guid.NewGuid();
@@ -248,42 +425,44 @@ public class CoursesCacheTests : BaseIntegrationTest
         SetTenant(tenantA);
         var subjectA = await CreateSubjectByHttp();
         var courseA = await CreateCourseByHttp("Tenant A Exclusive Course", subjectA);
-        var warmA = await Client.GetFromJsonAsync<PagedResult<CourseSummaryDto>>("/courses");
-        warmA!.Items.Should().ContainSingle(c => c.Id == courseA); // A warmed its catalog
+        await PublishCourseDirectly(courseA);
 
-        // Requesting the same-shaped catalog as tenant B (identical key shape minus the tenant
-        // component) must NOT resolve into A's warmed entry.
-        SetTenant(tenantB);
-        var catalogB = await Client.GetFromJsonAsync<PagedResult<CourseSummaryDto>>("/courses");
-        catalogB!.Items.Should().BeEmpty();
-        catalogB.Items.Should().NotContain(c => c.Id == courseA);
-
-        // B's warmed empty catalog read again — still nothing of A's.
-        var catalogBRepeat = await Client.GetFromJsonAsync<PagedResult<CourseSummaryDto>>("/courses");
-        catalogBRepeat!.Items.Should().BeEmpty();
-
-        // Overview: B requesting A's course id (same tenant-shaped read) gets 404, never A's content.
-        var overviewB = await Client.GetAsync($"/courses/{courseA}/overview");
-        overviewB.StatusCode.Should().Be(HttpStatusCode.NotFound);
-
-        // Subjects follow the same isolation: B's listing has only B's data even after B's listing got cached.
-        var subjectsB = await Client.GetFromJsonAsync<PagedResult<SubjectDto>>("/courses/subjects");
-        subjectsB!.Items.Should().NotContain(s => s.Name == "Tenant A Subject");
-
-        // Back in A: A's cached catalog still resolves A's own course.
-        SetTenant(tenantA);
-        var catalogARepeat = await Client.GetFromJsonAsync<PagedResult<CourseSummaryDto>>("/courses");
-        catalogARepeat!.Items.Should().ContainSingle(c => c.Id == courseA);
-
-        // A creating a subject refreshes only A's subject listing; B remains isolated.
-        await Client.PostAsJsonAsync("/courses/subjects", new CreateSubjectRequest { Name = "Tenant A Subject" });
+        // Warm every cached surface under tenant A.
+        var staffA = await Client.GetFromJsonAsync<PagedResult<CourseSummaryDto>>("/courses");
+        staffA!.Items.Should().ContainSingle(c => c.Id == courseA);
+        var studentA = await Client.GetFromJsonAsync<PagedResult<CourseCatalogItemDto>>("/courses/catalog");
+        studentA!.Items.Should().ContainSingle(c => c.Id == courseA);
+        var viewA = await Client.GetFromJsonAsync<CourseViewShim>($"/courses/{courseA}/view");
+        viewA!.Id.Should().Be(courseA);
+        var treeA = await Client.GetFromJsonAsync<CourseSummaryTree>($"/courses/{courseA}");
+        treeA!.Id.Should().Be(courseA);
+        (await Client.GetAsync($"/courses/{courseA}/overview")).StatusCode.Should().Be(HttpStatusCode.OK);
+        (await Client.GetFromJsonAsync<CourseReadiness>($"/courses/{courseA}/readiness")).Should().NotBeNull();
         var subjectsA = await Client.GetFromJsonAsync<PagedResult<SubjectDto>>("/courses/subjects");
-        subjectsA!.Items.Should().Contain(s => s.Name == "Tenant A Subject");
+        subjectsA!.Items.Should().ContainSingle(s => s.Name == "Cache Test Subject");
 
+        // Tenant B issues same-shaped requests: none may resolve into A's warmed entries.
         SetTenant(tenantB);
-        var subjectsB2 = await Client.GetFromJsonAsync<PagedResult<SubjectDto>>("/courses/subjects");
-        subjectsB2!.Items.Should().NotContain(s => s.Name == "Tenant A Subject");
-        catalogB!.Items.Should().NotContain(c => c.Id == courseA);
+        (await Client.GetFromJsonAsync<PagedResult<CourseSummaryDto>>("/courses"))!.Items.Should().BeEmpty();
+        (await Client.GetFromJsonAsync<PagedResult<CourseCatalogItemDto>>("/courses/catalog"))!.Items.Should().BeEmpty();
+        (await Client.GetAsync($"/courses/{courseA}/view")).StatusCode.Should().Be(HttpStatusCode.NotFound);
+        (await Client.GetAsync($"/courses/{courseA}")).StatusCode.Should().Be(HttpStatusCode.NotFound);
+        (await Client.GetAsync($"/courses/{courseA}/overview")).StatusCode.Should().Be(HttpStatusCode.NotFound);
+        (await Client.GetAsync($"/courses/{courseA}/readiness")).StatusCode.Should().Be(HttpStatusCode.NotFound);
+        (await Client.GetFromJsonAsync<PagedResult<SubjectDto>>("/courses/subjects"))!.Items.Should().BeEmpty();
+
+        // B's empty entries are warmed now; repeating still yields nothing of A's.
+        (await Client.GetFromJsonAsync<PagedResult<CourseSummaryDto>>("/courses"))!.Items.Should().BeEmpty();
+
+        // Back in A every warmed entry still resolves A's own data.
+        SetTenant(tenantA);
+        (await Client.GetFromJsonAsync<PagedResult<CourseSummaryDto>>("/courses"))!.Items.Should().ContainSingle(c => c.Id == courseA);
+        (await Client.GetFromJsonAsync<PagedResult<CourseCatalogItemDto>>("/courses/catalog"))!.Items.Should().ContainSingle(c => c.Id == courseA);
+        (await Client.GetFromJsonAsync<CourseViewShim>($"/courses/{courseA}/view"))!.Id.Should().Be(courseA);
+        (await Client.GetFromJsonAsync<CourseSummaryTree>($"/courses/{courseA}"))!.Id.Should().Be(courseA);
+        (await Client.GetAsync($"/courses/{courseA}/overview")).StatusCode.Should().Be(HttpStatusCode.OK);
+        (await Client.GetFromJsonAsync<CourseReadiness>($"/courses/{courseA}/readiness")).Should().NotBeNull();
+        (await Client.GetFromJsonAsync<PagedResult<SubjectDto>>("/courses/subjects"))!.Items.Should().ContainSingle(s => s.Name == "Cache Test Subject");
     }
 
     // ── Explicit exclusion: enrollment surfaces stay DB-consistent (uncached) ──
@@ -322,8 +501,6 @@ public class CoursesCacheTests : BaseIntegrationTest
 
     // ── helpers ──
 
-    private static JsonElement c(string json) => JsonDocument.Parse(json).RootElement;
-
     private async Task<Guid> CreateSubjectByHttp()
     {
         var response = await Client.PostAsJsonAsync("/courses/subjects", new CreateSubjectRequest { Name = "Cache Test Subject" });
@@ -339,25 +516,37 @@ public class CoursesCacheTests : BaseIntegrationTest
         return (await response.Content.ReadFromJsonAsync<CreateCourseResponse>())!.Id;
     }
 
-    private async Task<Guid> AddSection(Guid courseId)
+    private async Task<Guid> AddSection(Guid courseId, string title = "Cache Section")
     {
         var response = await Client.PostAsJsonAsync($"/courses/{courseId}/sections",
-            new { Title = "Cache Section" });
+            new { Title = title });
         response.EnsureSuccessStatusCode();
 
         Guid sectionId = default;
         await ExecuteDbContextAsync(async db =>
         {
             sectionId = await db.Set<CourseSection>()
-                .Where(s => s.CourseId == courseId && !s.IsDeleted)
+                .Where(s => s.CourseId == courseId && s.Title == title && !s.IsDeleted)
                 .Select(s => s.Id)
                 .FirstAsync();
         });
         return sectionId;
     }
 
+    /// <summary>Direct DB write (no command): seeds a Published course before warming a cache.</summary>
+    private async Task PublishCourseDirectly(Guid courseId)
+    {
+        await ExecuteDbContextAsync(async db =>
+        {
+            var course = await db.Courses.FirstAsync(c => c.Id == courseId);
+            db.Entry(course).Property(c => c.Status).CurrentValue = CourseStatus.Published;
+            await db.SaveChangesAsync();
+        });
+    }
+
     // Response-model shims (test-local, deserialization only)
     public record CourseSummaryTree(Guid Id, string Title, List<SectionShim> Sections);
-    public record SectionShim(Guid Id, string Title, List<ItemShim> Items);
+    public record SectionShim(Guid Id, string Title, int Order, List<ItemShim> Items);
     public record ItemShim(Guid Id, string Title);
+    public record CourseViewShim(Guid Id, string Title, string SubjectName);
 }

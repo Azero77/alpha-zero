@@ -1,76 +1,116 @@
 # Courses module — caching tolerances (#33)
 
-The Courses module caches its hot read paths through the platform `HybridCache`
-(in-process L1 (+ Redis L2 where configured) — see `AlphaZero.Shared/Infrastructure/DependencyInjection.cs`,
-`AddHybridCache`). Read-through decorators: `Infrastructure/Caching/CachedCourseQueryService.cs`,
-`CachedSubjectQueryService.cs`. Eviction: `Infrastructure/Caching/CourseCacheEvictionBehavior.cs`
-(tag invalidation on the exact mutation commands, executed **after** the UnitOfWork commit).
+The Courses module caches its hot read paths through the platform `ICachingService`
+(`AlphaZero.Shared/Infrastructure/Caching`). That abstraction is the only place that touches
+ASP.NET Core `HybridCache`; module code never references `Microsoft.Extensions.Caching.Hybrid`.
+The platform runs a single in-process L1 cache — there is **no Redis L2** in this deployment.
+Read-through decorators live in `Infrastructure/Caching/CachedCourseQueryService.cs` and
+`CachedSubjectQueryService.cs`.
 
 ## Cache keys and tenant isolation
 
-Every key and every eviction tag **starts with the owning tenant id**. One academy's cached
-entries can never be served to another. Tenant isolation is asserted behaviorally by the
-integration suite (`CoursesCacheTests`). Requests without a tenant context (background bus
-handlers) bypass the cache entirely and read the database directly.
+Every Courses key and tag is built through `CacheScope`, which prepends the owning tenant id:
+`{family}:{tenantId:N}:…` (for example `courses:view:{tenant}:{courseId}:class=staff`).
+One academy's entries can never be served to another. This is asserted behaviorally across all
+seven cached surfaces by `CoursesCacheTests`.
 
-## Surface × TTL × eviction triggers
+Requests without a tenant context (background bus handlers, tenant-less test scopes) **bypass
+the cache entirely** and read the database. `CacheScope.Key/Tag` throw rather than ever writing a
+placeholder segment such as `none`.
 
-| Surface (endpoint / query) | TTL | Key family | Evicted by (stale at most the TTL, and only until the next mutation) |
+Only default-shaped queries are cached. Paging must be `page=1, perPage=10`; the student catalog
+also requires no `search`, no `subject` filter and the default sort (`null`/empty or `newest`).
+Caller-supplied paging, search, subject and sort values therefore never enter a cache key — a
+non-default request bypasses the cache and reads current DB state immediately.
+
+## Surface × TTL × eviction
+
+| Surface (endpoint / query) | TTL | Key shape (after `{tenant}`) | Tags carried |
 |---|---|---|---|
-| Catalog list `GET /courses` (`ListCoursesQuery`) | 2 min | `courses:catalog:{tenantId}:subject=?...` | course create/update/delete; `Submit/Approve/Reject/Publish/Archive` (status in the summary); subject rename/delete (`SubjectName` is a catalog field) |
-| Student catalog `GET /courses/catalog` (`ListCourseCatalogQuery`) | 2 min | `courses:catalog:{tenantId}:search=...:subject=...:sort=...` | same catalog family as above |
-| Course tree view `GET /courses/{id}` | 10 min | `courses:view:{tenantId}:{courseId}:class=staff` | section add/rename/delete, item create/update/delete, both reorders, assign/unassign/dismiss asset |
-| Public/student course view `GET /courses/{id}/view` | 10 min | `courses:view:{tenantId}:{courseId}:class=public` | same per-course family (enrollment overlay is resolved outside the cached summary) |
-| Course overview `GET /courses/{id}/overview` | 10 min | `courses:overview:{tenantId}:{courseId}` | overview upsert, state transitions |
-| Readiness companion `GET /courses/{id}/readiness` | 3 min | `courses:readiness:{tenantId}:{courseId}` | section/item/plan/asset mutations, overview upsert, transcoding state flips (`MarkCourseAssetAvailable/Failed`), metadata sync |
-| Tenant subject listing `GET /courses/subjects` | 15 min | `courses:subjects:{tenantId}:...` | subject create/update/delete |
+| Staff catalog `GET /courses` (`ListCoursesQuery`) | 2 min | `courses:catalog:{tenant}:class=staff` | `courses:catalog:{tenant}` |
+| Student catalog `GET /courses/catalog` (`ListCourseCatalogQuery`) | 2 min | `courses:catalog:{tenant}:class=student` | `courses:catalog:{tenant}` |
+| Course tree view `GET /courses/{id}` | 10 min | `courses:view:{tenant}:{courseId}:class=staff` | `courses:course:{tenant}:{courseId}`, `courses:views:{tenant}` |
+| Public/student view `GET /courses/{id}/view` | 10 min | `courses:view:{tenant}:{courseId}:class=public` | `courses:course:{tenant}:{courseId}`, `courses:views:{tenant}` |
+| Course overview `GET /courses/{id}/overview` | 10 min | `courses:overview:{tenant}:{courseId}` | `courses:course:{tenant}:{courseId}` |
+| Readiness companion `GET /courses/{id}/readiness` | 3 min | `courses:readiness:{tenant}:{courseId}` | `courses:course:{tenant}:{courseId}`, `courses:assets:{tenant}` |
+| Tenant subject listing `GET /courses/subjects` | 15 min | `courses:subjects:{tenant}` | `courses:subjects:{tenant}` |
 
-Tag families (eviction commands are consolidated in `CourseCacheEvictionBehavior`):
+The staff `GET /courses` listing stays cached deliberately: it is a hot admin surface, and every
+mutation that changes it is evicted through the persistence pipeline below.
 
-- `courses:catalog:{tenantId}` — catalog list entries (admin list + student catalog).
-- `courses:course:{tenantId}:{courseId}` — tree view + public view + overview + readiness of one course.
-- `courses:assets:{tenantId}` — tenant-wide asset-reader family, carried only by readiness
-  entries (the asset-pipeline commands carry no course id; their stale bound is the 3-min
-  readiness TTL).
-- `courses:subjects:{tenantId}` — subject listing entries.
+## Eviction is a persistence concern
+
+Commands and handlers contain **no cache logic**. The pipeline is:
+
+1. `UnitOfWork.SaveChangesAsync` calls `IEvictionStrategy.CollectAsync` *before* `SaveChanges`.
+2. `ChangeTrackerEvictionStrategy` walks added/modified/deleted entries (skipping owned types) and
+   dispatches each concrete EF CLR type to the module's `IEntityEvictionPolicy`.
+3. `CourseEvictionPolicy` resolves the affected course/tenant from the entity (or from its parent
+   chain) and queues tags in `IEvictionProvider`.
+4. `CacheEvictionFlushBehavior` — the outermost MediatR behavior — flushes the queue only after
+   the outer UnitOfWork has committed. Nested dispatches (domain-event handlers, `Send` inside a
+   handler) never flush early.
+
+Failure semantics: an `ErrorOr` error result or an exception discards the queued tags; a flush
+failure after a successful commit is logged and swallowed (entries then age out via TTL), except
+`OperationCanceledException`, which always propagates. The queue and the nesting counter are
+`AsyncLocal`-backed because each module dispatch runs in a new child container scope.
+
+### Entity → tag mapping
+
+| Changed entity | Tags queued |
+|---|---|
+| `Course` (create/update/delete, any status transition) | per-course + catalog |
+| `CourseSection`, `CoursePlan` | resolve parent course → per-course + catalog |
+| `CurriculumItem` | resolve section → course → per-course + catalog |
+| `CurriculumResource` (video/document/article/assessment) | resolve item → section → course → per-course + catalog |
+| `CourseOverview` | per-course + catalog |
+| `CourseAsset` (any concrete TPH type) | per-course when `CourseId` is set, otherwise tenant-wide `courses:assets` |
+| `Subject` | subjects + catalog + views |
+
+Adding, renaming, deleting or reordering sections/items, assignment/dismissal of assets and
+transcode-state flips (`MarkCourseAssetAvailable/Failed`) therefore all evict without any
+command-specific code. Over-eviction is deliberate: a missing tag is a correctness bug, an extra
+tag is a cache miss.
+
+Per-course asset eviction keeps unrelated courses cached. The tenant-wide `courses:assets` tag is
+a coarse fallback only for assets with no course binding; readiness entries also carry it, so a
+fallback eviction can only invalidate readiness rows, never a tenant's entire course family.
+
+`UpsertCourseOverviewCommand` now implements `ICommand<Success>`, so the UnitOfWork decorator
+persists overview edits and the change tracker evicts the cached overview.
 
 ## Explicitly uncached
 
-Enrollment checks in write paths, enroll/redeem, complete-item, enrollment state commands and
-the bus pipeline, the student dashboard, admin listing/pool/analytics playback ticketing —
+Enrollment checks in write paths, enroll/redeem, complete-item, enrollment state commands and the
+bus pipeline, the student dashboard, admin listing/pool/analytics playback ticketing —
 write-path correctness over speed; these surfaces always read DB-consistent state.
 
 `GetCourseStatusAsync` (the single-column status read behind the view pre-request's
-existence/visibility masking) is also a pass-through: caching it would widen the window in
-which an unpublished course is still served to a caller who is no longer allowed to see it.
+existence/visibility masking) is also a pass-through: caching it would widen the window in which
+an unpublished course is served to a caller who is no longer allowed to see it.
+
+Subject-by-id reads and non-default paging/filter requests are pass-through as well.
 
 ## Visibility variants
 
-Visibility classes never share a key. The staff tree view (`GET /courses/{id}`) uses
-`class=staff`; the public/student summary (`GET /courses/{id}/view`) uses `class=public`.
-The public summary is enrollment-free by construction — the caller's progress overlay is
-resolved by a separate enrollment query after the cached summary returns — so one entry can
-serve every caller without leaking one student's completion state to another. Any future
-visibility variant (e.g. a staff-only enrolled view) must carve yet another class segment.
+Visibility classes never share a key. The staff tree view uses `class=staff`; the public/student
+summary uses `class=public`. The public summary is enrollment-free by construction — the caller's
+progress overlay is resolved by a separate enrollment query after the cached summary returns — so
+one entry serves every caller without leaking one student's completion state. Any future
+visibility variant must carve yet another class segment.
 
-## Known gaps on the current base (pre-existing, outside #33's caching scope)
+## Known gap (pre-existing, outside #33's caching scope)
 
-Observed with the test-host probes (reported on the owning issues, not fixed here):
+`GET /courses/{id}/overview` always returns `descriptionContent: null`: the read projection
+`o.DescriptionContent.Value` on the value-converted `RichText` property does not materialize.
+The DB row holds real content and the materialized entity reads it; only the projection yields
+null. Caching wraps the surface as specified and inherits the defect. Cache-serve and eviction for
+overview are therefore asserted through the response `ETag`.
 
-- `GET /courses/{id}/overview` always returns `descriptionContent: null`: the read projection
-  `o.DescriptionContent.Value` on the value-converted `RichText` property does not materialize
-  (verified: the DB row holds real content, the materialized entity reads it, the projection
-  yields null). Caching wraps the surface as specified; the wrapper inherits the defect.
-- `UpsertCourseOverviewCommand` is an `IRequest` (not `ICommand`), so the UnitOfWork behavior
-  never saves it — overview edits are silently discarded. Its eviction case in
-  `CourseCacheEvictionBehavior` therefore does not fire yet; it activates as soon as that
-  command implements `ICommand`. The course tag family already invalidates overview entries via
-  every other course-family mutation (verified in `CoursesCacheTests`).
-
-Because of the first gap the overview cache tests assert the observable state (response `ETag`)
-for cache-serve and tag-family eviction rather than description content.
-
-## Stampede
+## Stampede and multi-instance behaviour
 
 Concurrent cold loads are protected by `HybridCache`'s own single-flight guarantee; this module
-adds no stampede code.
+adds no stampede code. Invalidation is in-process only: with more than one API instance, a
+mutation on one instance does not invalidate another instance's L1 entries — those entries remain
+stale for at most their TTL. Introducing a distributed L2/backplane is tracked in `TODOS.md`.
