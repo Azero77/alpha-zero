@@ -19,4 +19,14 @@ public interface ICachingService
         CancellationToken cancellationToken = default);
 
     Task RemoveByTagAsync(CacheTag tag, CancellationToken cancellationToken = default);
+
+    /// <summary>Queues one key on the flow-local eviction queue (removed at the commit point).</summary>
+    void Evict(CacheKey key);
+
+    /// <summary>Queues a set of keys on the flow-local eviction queue (removed at the commit point).</summary>
+    void Evict(IEnumerable<CacheKey> keys);
+
+    void Evict(CacheTag tag);
+
+    void Evict(IEnumerable<CacheTag> tags);
 }

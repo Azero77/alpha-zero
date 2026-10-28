@@ -52,14 +52,16 @@ explicitly so asset-driven invalidation works from bus scopes.
 
 ## Courses module
 
-Courses uses tenant-scoped, typed keys with default-shape-only caching and a
-persistence-driven eviction pipeline. See
+Courses uses tenant-scoped, typed keys with default-shape-only caching on reads and write-side
+repository decorators for eviction. See
 [`Modules/Courses/CACHING.md`](../src/alphazero-api/Modules/Courses/CACHING.md) for the full
 surface/TTL/tag matrix.
 
-In short: `UnitOfWork.SaveChangesAsync` collects tags from the EF change tracker via the module's
-`IEntityEvictionPolicy` before committing; the outermost MediatR behavior flushes them after the
-commit. Commands remain cache-agnostic.
+In short: each decorated write repository method derives tags from the aggregate it receives
+(no change-tracker scan, no parent lookup) and queues them; the outermost MediatR behavior flushes
+them after the UnitOfWork commits. Commands remain cache-agnostic. A save-time coverage
+interceptor warns when a cache-feeding entity is persisted with no queued tag, making a bypassed
+decorator observable.
 
 ## Identity module: policy and assignment caching
 

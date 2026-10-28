@@ -41,6 +41,7 @@ public sealed class UpdatePlanCommandHandler : IRequestHandler<UpdatePlanCommand
         var result = course.UpdatePlan(request.PlanId, request.Name, request.PrincipalId);
         if (result.IsError) return result.Errors;
 
+        _courseRepository.Update(course);
         _logger.LogInformation("Plan {PlanId} updated for Course {CourseId}.", request.PlanId, request.CourseId);
 
         return Result.Success;

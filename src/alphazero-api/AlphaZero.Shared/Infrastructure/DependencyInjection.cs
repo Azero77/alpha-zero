@@ -51,8 +51,12 @@ public static class DependencyInjection
         services.AddSingleton(typeof(TenantPublishFilter<>));
         services.AddScoped<ICachingService, HybridCachingService>();
         services.AddScoped<IEvictionProvider, ScopedEvictionProvider>();
-        services.AddScoped<IEvictionStrategy, ChangeTrackerEvictionStrategy>();
-        services.AddSingleton<EvictionFlushScope>();
+        // Eviction flush interceptors: the queue lives in AsyncLocal state on the provider, so the
+        // interceptors may be singletons; they are registered scoped to keep the IEvictionProvider
+        // dependency scope-legal. They are no-ops when the flow queue is empty, so adding them to
+        // other module DbContexts later is safe.
+        services.AddScoped<EvictionSaveChangesInterceptor>();
+        services.AddScoped<EvictionTransactionInterceptor>();
         services.AddHttpContextAccessor();
 
         // 5. Cloudflare Edge Security & Playback Ticketing

@@ -5,6 +5,7 @@ using AlphaZero.Modules.Courses.Application.Services;
 using AlphaZero.Modules.Courses.Domain.Aggregates.Courses;
 using AlphaZero.Modules.Courses.Infrastructure.Authorization;
 using AlphaZero.Modules.Courses.Infrastructure.Behaviors;
+using AlphaZero.Modules.Courses.Infrastructure.Caching;
 using AlphaZero.Modules.Courses.Infrastructure.Persistance;
 using AlphaZero.Modules.Courses.Infrastructure.Repositories;
 using AlphaZero.Modules.Courses.Infrastructure.RequestResponseMessaging;
@@ -34,7 +35,10 @@ public static class DependencyInjection
                 h.MigrationsAssembly(typeof(AppDbContext).Assembly.FullName);
                 h.MigrationsHistoryTable("__CoursesMigrationHistory", AppDbContext.Schema);
             });
-            opts.AddInterceptors(sp.GetRequiredService<SoftDeleteInterceptor>());
+            opts.AddInterceptors(
+                sp.GetRequiredService<SoftDeleteInterceptor>(),
+                sp.GetRequiredService<EvictionSaveChangesInterceptor>(),
+                sp.GetRequiredService<EvictionTransactionInterceptor>());
         });
 
         services.AddScoped<IArnResolver, CourseArnResolver>();
@@ -43,10 +47,14 @@ public static class DependencyInjection
     public static void AddCoursesPrivateInfrastructure(this IServiceCollection moduleServices, IConfiguration configuration)
     {
         moduleServices.AddScoped<ICourseRepository, CourseRepository>();
+        moduleServices.Decorate<ICourseRepository, CachingCourseRepositoryDecorator>();
         moduleServices.AddScoped<ICourseResourceQueryService, CourseResourceQueryService>();
         moduleServices.AddScoped<ICourseOverviewRepository, CourseOverviewRepository>();
+        moduleServices.Decorate<ICourseOverviewRepository, CachingCourseOverviewRepositoryDecorator>();
         moduleServices.AddScoped<IRepository<CourseAsset>, BaseRepository<AppDbContext, CourseAsset>>();
+        moduleServices.Decorate<IRepository<CourseAsset>, CachingCourseAssetRepositoryDecorator>();
         moduleServices.AddScoped<ISubjectRepository, SubjectRepository>();
+        moduleServices.Decorate<ISubjectRepository, CachingSubjectRepositoryDecorator>();
         moduleServices.AddScoped<IEnrollmentRepository, EnrollmentRepository>();
         moduleServices.AddScoped<ICourseAnalyticsRepository, CourseAnalyticsRepository>();
         moduleServices.AddScoped<IAssessmentService, AssessmentService>();
@@ -74,17 +82,14 @@ public static class DependencyInjection
         moduleServices.AddScoped<AlphaZero.Modules.Courses.Application.Queries.IEnrollmentQueryService, AlphaZero.Modules.Courses.Infrastructure.Queries.EnrollmentQueryService>();
         moduleServices.AddScoped<AlphaZero.Modules.Courses.Application.Queries.ICourseAnalyticsQueryService, AlphaZero.Modules.Courses.Infrastructure.Queries.CourseAnalyticsQueryService>();
 
-        moduleServices.AddScoped<AlphaZero.Shared.Infrastructure.Caching.IEntityEvictionPolicy, AlphaZero.Modules.Courses.Infrastructure.Caching.CourseEvictionPolicy>();
-
         moduleServices.AddValidatorsFromAssembly(typeof(ICoursesApplicationMarker).Assembly);
         moduleServices.AddPreRequestHandlersFromAssembly(typeof(ICoursesApplicationMarker).Assembly);
 
         moduleServices.AddMediatR(opts =>
         {
             opts.RegisterServicesFromAssembly(typeof(ICoursesApplicationMarker).Assembly);
-            // Eviction tags are queued by UnitOfWork before the commit; this behavior is the
-            // OUTERMOST one and flushes them only after the commit succeeds.
-            opts.AddOpenBehavior(typeof(AlphaZero.Shared.Infrastructure.Caching.CacheEvictionFlushBehavior<,>));
+            // Eviction flushing happens in the EF interceptors (EvictionSaveChangesInterceptor /
+            // EvictionTransactionInterceptor) at DB commit points — not in a MediatR behavior.
             opts.AddOpenBehavior(typeof(ValidationBehavior<,>));
             opts.AddOpenBehavior(typeof(PreRequestBehavior<,>));
             opts.AddOpenBehavior(typeof(TransactionalBehavior<,>));

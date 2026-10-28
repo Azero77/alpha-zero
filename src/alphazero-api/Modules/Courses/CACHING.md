@@ -5,7 +5,8 @@ The Courses module caches its hot read paths through the platform `ICachingServi
 ASP.NET Core `HybridCache`; module code never references `Microsoft.Extensions.Caching.Hybrid`.
 The platform runs a single in-process L1 cache — there is **no Redis L2** in this deployment.
 Read-through decorators live in `Infrastructure/Caching/CachedCourseQueryService.cs` and
-`CachedSubjectQueryService.cs`.
+`CachedSubjectQueryService.cs`; write-side decorators around the four Courses write repositories
+queue eviction tags (see below).
 
 ## Cache keys and tenant isolation
 
@@ -36,49 +37,58 @@ non-default request bypasses the cache and reads current DB state immediately.
 | Tenant subject listing `GET /courses/subjects` | 15 min | `courses:subjects:{tenant}` | `courses:subjects:{tenant}` |
 
 The staff `GET /courses` listing stays cached deliberately: it is a hot admin surface, and every
-mutation that changes it is evicted through the persistence pipeline below.
+mutation that changes it is evicted through the write decorators below.
 
 ## Eviction is a persistence concern
 
 Commands and handlers contain **no cache logic**. The pipeline is:
 
-1. `UnitOfWork.SaveChangesAsync` calls `IEvictionStrategy.CollectAsync` *before* `SaveChanges`.
-2. `ChangeTrackerEvictionStrategy` walks added/modified/deleted entries (skipping owned types) and
-   dispatches each concrete EF CLR type to the module's `IEntityEvictionPolicy`.
-3. `CourseEvictionPolicy` resolves the affected course/tenant from the entity (or from its parent
-   chain) and queues tags in `IEvictionProvider`.
+1. A handler mutates an aggregate and calls a write repository method (`Update(course)`,
+   `Add(asset)`, …).
+2. The Scrutor decorator for that repository derives tags from the aggregate argument
+   (`CourseCacheTags`) and queues them in `IEvictionProvider`; then it delegates to the real
+   repository. No change-tracker scan and no parent lookup are involved.
+3. `UnitOfWork.SaveChangesAsync` drains domain events and commits the transaction. It has no
+   caching dependency.
 4. `CacheEvictionFlushBehavior` — the outermost MediatR behavior — flushes the queue only after
    the outer UnitOfWork has committed. Nested dispatches (domain-event handlers, `Send` inside a
    handler) never flush early.
+
+Tag derivation is write-side and opt-in: a handler that mutates a tracked aggregate without
+calling the decorated repository method bypasses eviction. All Courses handlers that relied on
+implicit change tracking (`AddSection`, `UpdatePlan`, `RemovePlan`, both reorder handlers) now
+call `_courseRepository.Update(course)`. As a backstop,
+`CoursesEvictionCoverageInterceptor` logs a warning when an active eviction scope persists a
+cache-feeding Courses entity with an empty queue; it never throws and never queries.
 
 Failure semantics: an `ErrorOr` error result or an exception discards the queued tags; a flush
 failure after a successful commit is logged and swallowed (entries then age out via TTL), except
 `OperationCanceledException`, which always propagates. The queue and the nesting counter are
 `AsyncLocal`-backed because each module dispatch runs in a new child container scope.
 
-### Entity → tag mapping
+### Write decorator → tag mapping
 
-| Changed entity | Tags queued |
+| Decorated write | Tags queued |
 |---|---|
-| `Course` (create/update/delete, any status transition) | per-course + catalog |
-| `CourseSection`, `CoursePlan` | resolve parent course → per-course + catalog |
-| `CurriculumItem` | resolve section → course → per-course + catalog |
-| `CurriculumResource` (video/document/article/assessment) | resolve item → section → course → per-course + catalog |
-| `CourseOverview` | per-course + catalog |
-| `CourseAsset` (any concrete TPH type) | per-course when `CourseId` is set, otherwise tenant-wide `courses:assets` |
-| `Subject` | subjects + catalog + views |
+| `ICourseRepository` `Add`/`Update`/`Remove` (create/update/delete, any status transition) | per-course + catalog |
+| `ICourseOverviewRepository` `Add`/`Update`/`Remove` | per-course only |
+| `IRepository<CourseAsset>` `Add`/`Update`/`Remove` (any concrete TPH type) | per-course when `CourseId` is set, otherwise tenant-wide `courses:assets` |
+| `ISubjectRepository` `Add`/`Update`/`Remove` | subjects + catalog + views |
 
-Adding, renaming, deleting or reordering sections/items, assignment/dismissal of assets and
-transcode-state flips (`MarkCourseAssetAvailable/Failed`) therefore all evict without any
-command-specific code. Over-eviction is deliberate: a missing tag is a correctness bug, an extra
-tag is a cache miss.
+Sections, plans, curriculum items and resources have no decorator of their own: every write to
+them loads the `Course` aggregate and calls `ICourseRepository.Update(course)`, which queues the
+per-course and catalog tags. Adding, renaming, deleting or reordering sections/items,
+assignment/dismissal of assets and transcode-state flips (`MarkCourseAssetAvailable/Failed`)
+therefore all evict without any command-specific code. Over-eviction is deliberate: a missing tag
+is a correctness bug, an extra tag is a cache miss.
 
 Per-course asset eviction keeps unrelated courses cached. The tenant-wide `courses:assets` tag is
 a coarse fallback only for assets with no course binding; readiness entries also carry it, so a
 fallback eviction can only invalidate readiness rows, never a tenant's entire course family.
 
 `UpsertCourseOverviewCommand` now implements `ICommand<Success>`, so the UnitOfWork decorator
-persists overview edits and the change tracker evicts the cached overview.
+persists overview edits and the overview repository decorator evicts the per-course family
+(overview edits never affect catalog summary fields).
 
 ## Explicitly uncached
 

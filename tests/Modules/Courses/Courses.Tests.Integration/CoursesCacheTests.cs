@@ -349,10 +349,69 @@ public class CoursesCacheTests : BaseIntegrationTest
             new { CourseId = courseId, SectionIds = new[] { second, first } });
         reorder.StatusCode.Should().Be(HttpStatusCode.NoContent);
 
-        // The reorder command mutates tracked sections only — no repository.Update call — so
-        // this proves the change tracker drives eviction.
+        // The reorder handler calls Update(course) so the write-side decorator queues the
+        // course family tag; the next read is a cold refill.
         var fresh = await Client.GetFromJsonAsync<CourseSummaryTree>($"/courses/{courseId}");
         fresh!.Sections.Select(s => s.Id).Should().Equal(second, first);
+    }
+
+    [Fact]
+    public async Task CourseView_AddSection_EvictsWarmedTree()
+    {
+        var tenantId = Guid.NewGuid();
+        SetTenant(tenantId);
+        var subjectId = await CreateSubjectByHttp();
+        var courseId = await CreateCourseByHttp("Add Section Cache Course", subjectId);
+
+        var warm = await Client.GetFromJsonAsync<CourseSummaryTree>($"/courses/{courseId}");
+        warm!.Sections.Should().BeEmpty();
+
+        var sectionId = await AddSection(courseId, "Fresh Section");
+
+        // The AddSection handler now calls Update(course); without it the warmed empty tree
+        // would be served for the rest of the TTL.
+        var fresh = await Client.GetFromJsonAsync<CourseSummaryTree>($"/courses/{courseId}");
+        fresh!.Sections.Should().ContainSingle(s => s.Id == sectionId);
+    }
+
+    [Fact]
+    public async Task CourseView_PlanUpdateAndRemove_EvictWarmedView()
+    {
+        var tenantId = Guid.NewGuid();
+        SetTenant(tenantId);
+        var subjectId = await CreateSubjectByHttp();
+        var courseId = await CreateCourseByHttp("Plan Eviction Cache Course", subjectId);
+        await PublishCourseDirectly(courseId);
+
+        var principalId = Guid.NewGuid();
+        var addPlan = await Client.PostAsJsonAsync($"/courses/{courseId}/plans",
+            new AddPlanRequest { CourseId = courseId, Name = "Original Plan", PrincipalId = principalId });
+        addPlan.EnsureSuccessStatusCode();
+
+        Guid planId = default;
+        await ExecuteDbContextAsync(async db =>
+        {
+            planId = await db.CoursePlans
+                .Where(p => p.CourseId == courseId)
+                .Select(p => p.Id)
+                .FirstAsync();
+        });
+
+        var warm = await Client.GetFromJsonAsync<CourseViewShim>($"/courses/{courseId}/view");
+        warm!.Plans.Should().ContainSingle(p => p.Name == "Original Plan");
+
+        var update = await Client.PutAsJsonAsync($"/courses/{courseId}/plans/{planId}",
+            new { CourseId = courseId, PlanId = planId, Name = "Renamed Plan", PrincipalId = principalId });
+        update.StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+        var updated = await Client.GetFromJsonAsync<CourseViewShim>($"/courses/{courseId}/view");
+        updated!.Plans.Should().ContainSingle(p => p.Name == "Renamed Plan");
+
+        var remove = await Client.DeleteAsync($"/courses/{courseId}/plans/{planId}");
+        remove.StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+        var removed = await Client.GetFromJsonAsync<CourseViewShim>($"/courses/{courseId}/view");
+        removed!.Plans.Should().BeEmpty();
     }
 
     // ── Consumer scope: ambient tenant restored from the integration event ──
@@ -548,5 +607,6 @@ public class CoursesCacheTests : BaseIntegrationTest
     public record CourseSummaryTree(Guid Id, string Title, List<SectionShim> Sections);
     public record SectionShim(Guid Id, string Title, int Order, List<ItemShim> Items);
     public record ItemShim(Guid Id, string Title);
-    public record CourseViewShim(Guid Id, string Title, string SubjectName);
+    public record CourseViewShim(Guid Id, string Title, string SubjectName, List<PlanShim> Plans);
+    public record PlanShim(Guid Id, string Name);
 }

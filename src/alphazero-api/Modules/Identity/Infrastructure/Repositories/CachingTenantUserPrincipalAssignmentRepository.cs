@@ -54,14 +54,12 @@ public class CachingTenantUserPrincipalAssignmentRepository : TenantUserPrincipa
     public override void Add(TenantUserPrincipalAssignment entity)
     {
         _inner.Add(entity);
-        _cache.RemoveAsync(IdentityCacheKeys.UserAssignments(entity.TenantUser.Id.ToString()))
-            .GetAwaiter().GetResult();
+        _cache.Evict(IdentityCacheKeys.UserAssignments(entity.TenantUser.Id.ToString())); //evict key
     }
 
     public override void Remove(TenantUserPrincipalAssignment entity)
     {
         _inner.Remove(entity);
-        _cache.RemoveAsync(IdentityCacheKeys.UserAssignments(entity.TenantUser.Id.ToString()))
-            .GetAwaiter().GetResult();
+        _cache.Evict(IdentityCacheKeys.UserAssignments(entity.TenantUser.Id.ToString())); //evict key
     }
 }

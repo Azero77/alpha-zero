@@ -10,8 +10,13 @@ namespace AlphaZero.Shared.Infrastructure.Caching;
 public sealed class HybridCachingService : ICachingService
 {
     private readonly HybridCache _cache;
+    private readonly IEvictionProvider _evictionProvider;
 
-    public HybridCachingService(HybridCache cache) => _cache = cache;
+    public HybridCachingService(HybridCache cache, IEvictionProvider evictionProvider)
+    {
+        _cache = cache;
+        _evictionProvider = evictionProvider;
+    }
 
     public async Task<T> GetOrCreateAsync<T>(
         CacheKey key,
@@ -31,7 +36,7 @@ public sealed class HybridCachingService : ICachingService
             factory,
             static (cachedFactory, token) => new ValueTask<T>(cachedFactory(token)),
             options,
-            tags.Select(tag => tag.Value).ToArray(),
+            tags.Select(static tag => tag.Value),
             cancellationToken);
     }
 
@@ -56,4 +61,18 @@ public sealed class HybridCachingService : ICachingService
 
     public async Task RemoveByTagAsync(CacheTag tag, CancellationToken cancellationToken = default)
         => await _cache.RemoveByTagAsync(tag.Value, cancellationToken);
+
+    // No need for repositories to know that we are using IEvictionProvider to achieve loose coupling.
+    // Keys are the primary eviction currency; tags are fan-out only.
+    public void Evict(CacheKey key) => _evictionProvider.Evict(key);
+
+    public void Evict(IEnumerable<CacheKey> keys) => _evictionProvider.Evict(keys);
+
+    public void Evict(CacheTag tag) => _evictionProvider.EvictTag(tag);
+
+    public void Evict(IEnumerable<CacheTag> tags)
+    {
+        foreach (var tag in tags)
+            _evictionProvider.EvictTag(tag);
+    }
 }
