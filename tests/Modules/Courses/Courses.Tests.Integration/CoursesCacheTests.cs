@@ -1,9 +1,12 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
+using AlphaZero.Modules.Courses.Application;
+using AlphaZero.Modules.Courses.Application.Courses.Commands.SyncResourceMetadata;
 using AlphaZero.Modules.Courses.Application.Courses.Queries.ListCourseCatalog;
 using AlphaZero.Modules.Courses.Application.Courses.Queries.ListCourses;
 using AlphaZero.Modules.Courses.Application.Enrollments.Queries.GetStudentDashboard;
+using AlphaZero.Modules.Courses.Application.Repositories;
 using AlphaZero.Modules.Courses.Application.Subjects.Queries.GetSubject;
 using AlphaZero.Modules.Courses.Domain.Aggregates.Courses;
 using AlphaZero.Modules.Courses.Domain.Aggregates.Subject;
@@ -562,6 +565,293 @@ public class CoursesCacheTests : BaseIntegrationTest
         after!.Academies.Should().BeEmpty();
     }
 
+    // ── Overview upsert: the read-modify-write overview write face (5+1 evicted keys) ──
+    //
+    // The cover image is only ever materialized by an external writer (no Courses command sets
+    // it), so the ghost-write below plays that external writer. The upsert must (a) evict the
+    // overview-facing surfaces (both catalogs, public view, overview, readiness) and (b)
+    // preserve the ghost cover: its read-modify-write reads the COLD overview repository
+    // read-through straight from the live row, so nothing is resurrected over it.
+    [Fact]
+    public async Task Overview_UpsertCoverChangeExternal_RefreshesCatalogsViewOverviewAndReadiness()
+    {
+        var tenantId = Guid.NewGuid();
+        SetTenant(tenantId);
+        var subjectId = await CreateSubjectByHttp();
+        var courseId = await CreateCourseByHttp("Overview Upsert Cache Course", subjectId);
+        await PublishCourseDirectly(courseId);
+
+        // Warm: staff list, student catalog, public view, overview endpoint, readiness.
+        (await Client.GetFromJsonAsync<PagedResult<CourseSummaryDto>>("/courses"))!.Items
+            .Should().ContainSingle(c => c.Id == courseId);
+
+        var catalogWarm = await Client.GetFromJsonAsync<PagedResult<CourseCatalogItemShim>>("/courses/catalog");
+        catalogWarm!.Items.Should().ContainSingle(c => c.Id == courseId && c.CoverImageDocumentId == null);
+
+        (await Client.GetFromJsonAsync<CourseViewShim>($"/courses/{courseId}/view"))!
+            .SubjectName.Should().Be("Cache Test Subject"); // view surface warm (no cover)
+
+        var viewWarm = await Client.GetFromJsonAsync<CourseViewDetailShim>($"/courses/{courseId}/view");
+        viewWarm!.CoverImageDocumentId.Should().BeNull();
+
+        var overviewWarm = await Client.GetAsync($"/courses/{courseId}/overview");
+        overviewWarm.StatusCode.Should().Be(HttpStatusCode.OK);
+        var warmTag = overviewWarm.Headers.ETag!.Tag;
+
+        var readinessWarm = await Client.GetFromJsonAsync<CourseReadiness>($"/courses/{courseId}/readiness");
+        readinessWarm!.BlockingReasons.Should().Contain("Course cover image is required.");
+
+        // Ghost writes behind the cache: the external cover change plus a second staff-list row.
+        var cover = Guid.NewGuid();
+        await ExecuteDbContextAsync(async db =>
+        {
+            var row = await db.CourseOverviews.FirstAsync(o => o.CourseId == courseId);
+            db.Entry(row).Property(o => o.CoverImageDocumentId).CurrentValue = cover;
+            await db.SaveChangesAsync();
+        });
+        await ExecuteDbContextAsync(async db =>
+        {
+            var ghost = Course.Create(Guid.NewGuid(), tenantId, "Ghost Behind Upsert", null, subjectId).Value;
+            db.Courses.Add(ghost);
+            db.Entry(ghost).Property(c => c.Status).CurrentValue = CourseStatus.Published;
+            await db.SaveChangesAsync();
+        });
+
+        // All warmed surfaces are blind to the ghost writes inside the TTL window.
+        (await Client.GetFromJsonAsync<PagedResult<CourseSummaryDto>>("/courses"))!.Items
+            .Should().NotContain(c => c.Title == "Ghost Behind Upsert");
+        (await Client.GetFromJsonAsync<PagedResult<CourseCatalogItemShim>>("/courses/catalog"))!.Items
+            .Should().ContainSingle(c => c.Id == courseId && c.CoverImageDocumentId == null);
+        (await Client.GetFromJsonAsync<CourseViewDetailShim>($"/courses/{courseId}/view"))!
+            .CoverImageDocumentId.Should().BeNull();
+        (await Client.GetAsync($"/courses/{courseId}/overview")).Headers.ETag!.Tag.Should().Be(warmTag);
+        (await Client.GetFromJsonAsync<CourseReadiness>($"/courses/{courseId}/readiness"))!
+            .BlockingReasons.Should().Contain("Course cover image is required.");
+
+        // Freshness: the eviction-wired overview upsert refreshes all five surfaces.
+        var upsert = await Client.PutAsJsonAsync($"/courses/{courseId}/overview",
+            new { DescriptionContent = new { type = "doc", content = new object[] { } } });
+        upsert.EnsureSuccessStatusCode();
+
+        (await Client.GetFromJsonAsync<PagedResult<CourseSummaryDto>>("/courses"))!.Items
+            .Should().Contain(c => c.Title == "Ghost Behind Upsert");
+        (await Client.GetFromJsonAsync<PagedResult<CourseCatalogItemShim>>("/courses/catalog"))!.Items
+            .Should().ContainSingle(c => c.Id == courseId && c.CoverImageDocumentId == cover);
+        (await Client.GetFromJsonAsync<CourseViewDetailShim>($"/courses/{courseId}/view"))!
+            .CoverImageDocumentId.Should().Be(cover);
+        // The upsert itself re-tags the row, so the overview endpoint now serves the new tag.
+        var afterUpsertRowTag = await ExecuteDbContextAsync(async db =>
+            (string)(await db.CourseOverviews
+                .Where(o => o.CourseId == courseId)
+                .Select(o => o.ETag)
+                .FirstAsync()));
+        (await Client.GetAsync($"/courses/{courseId}/overview")).Headers.ETag!.Tag.Should().Be(afterUpsertRowTag);
+        (await Client.GetFromJsonAsync<CourseReadiness>($"/courses/{courseId}/readiness"))!
+            .BlockingReasons.Should().NotContain("Course cover image is required.");
+    }
+
+    // ── Course lifecycle: update / state / delete command writes refresh the cached lists ──
+
+    [Fact]
+    public async Task Course_UpdateStateAndDelete_CommandWrites_RefreshCachedLists()
+    {
+        var tenantId = Guid.NewGuid();
+        SetTenant(tenantId);
+        var subjectId = await CreateSubjectByHttp();
+        var courseId = await CreateCourseByHttp("State Cache Course", subjectId);
+
+        // Warm the staff list.
+        (await Client.GetFromJsonAsync<PagedResult<CourseSummaryDto>>("/courses"))!.Items
+            .Should().ContainSingle(c => c.Id == courseId && c.Title == "State Cache Course");
+
+        // Course update via command refreshes the staff list (the aggregate description also
+        // satisfies the publish readiness read, which is independent of the overview row).
+        var update = await Client.PutAsJsonAsync($"/courses/{courseId}",
+            new
+            {
+                CourseId = courseId,
+                Title = "State Cache Course Renamed",
+                Description = "Publishable description",
+                SubjectId = subjectId
+            });
+        update.StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+        (await Client.GetFromJsonAsync<PagedResult<CourseSummaryDto>>("/courses"))!.Items
+            .Should().ContainSingle(c => c.Id == courseId && c.Title == "State Cache Course Renamed");
+
+        // State via command (direct publish from draft): the full readiness is assembled first.
+        var sectionId = await AddSection(courseId);
+        var item = await Client.PostAsJsonAsync(
+            $"/courses/{courseId}/sections/{sectionId}/items",
+            new CreateCourseSectionItemRequest
+            {
+                CourseId = courseId,
+                SectionId = sectionId,
+                Title = "State Item",
+                MainType = "Article",
+                Content = ItemContent
+            });
+        item.StatusCode.Should().Be(HttpStatusCode.Created);
+
+        var plan = await Client.PostAsJsonAsync($"/courses/{courseId}/plans",
+            new AddPlanRequest { CourseId = courseId, Name = "State Plan", PrincipalId = Guid.NewGuid() });
+        plan.EnsureSuccessStatusCode();
+
+        var upsert = await Client.PutAsJsonAsync($"/courses/{courseId}/overview",
+            new { DescriptionContent = new { type = "doc", content = new object[] { } } });
+        upsert.EnsureSuccessStatusCode();
+
+        var cover = Guid.NewGuid();
+        await ExecuteDbContextAsync(async db =>
+        {
+            var row = await db.CourseOverviews.FirstAsync(o => o.CourseId == courseId);
+            db.Entry(row).Property(o => o.CoverImageDocumentId).CurrentValue = cover;
+            await db.SaveChangesAsync();
+        });
+
+        // Warm the student catalog while the course is still draft (an empty entry).
+        (await Client.GetFromJsonAsync<PagedResult<CourseCatalogItemShim>>("/courses/catalog"))!.Items
+            .Should().BeEmpty();
+
+        var publish = await Client.PatchAsJsonAsync($"/courses/{courseId}/publish", new { });
+        publish.StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+        (await Client.GetFromJsonAsync<PagedResult<CourseCatalogItemShim>>("/courses/catalog"))!.Items
+            .Should().ContainSingle(c => c.Id == courseId);
+
+        // Delete via command: the staff list drops the soft-deleted course on the next read.
+        (await Client.GetFromJsonAsync<PagedResult<CourseSummaryDto>>("/courses"))!.Items
+            .Should().ContainSingle(c => c.Id == courseId);
+
+        var delete = await Client.DeleteAsync($"/courses/{courseId}");
+        delete.StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+        (await Client.GetFromJsonAsync<PagedResult<CourseSummaryDto>>("/courses"))!.Items
+            .Should().NotContain(c => c.Id == courseId);
+    }
+
+    // ── Asset metadata sync: the duration-sync handler evicts the asset key set ──
+
+    [Fact]
+    public async Task Asset_DurationSyncThroughHandler_RefreshesPublicViewTimings()
+    {
+        var tenantId = Guid.NewGuid();
+        SetTenant(tenantId);
+        var subjectId = await CreateSubjectByHttp();
+        var courseId = await CreateCourseByHttp("Duration Sync Cache Course", subjectId);
+        await PublishCourseDirectly(courseId);
+
+        var sectionId = await AddSection(courseId);
+        var videoId = Guid.NewGuid();
+        var videoArn = ResourceArn.ForVideo(tenantId, videoId);
+        await ExecuteDbContextAsync(async db =>
+        {
+            var course = await db.Courses.Include(c => c.Sections).FirstAsync(c => c.Id == courseId);
+            var section = course.Sections.Single(s => s.Id == sectionId);
+            var resource = new VideoCurriculumResource(Guid.NewGuid(), 0, videoId);
+            var addItem = section.AddItem(Guid.NewGuid(), "Duration Sync Video", ResourceType.Video,
+                course.AllocateNextBitIndex(), [resource]);
+            addItem.IsError.Should().BeFalse();
+            db.CourseAssets.Add(VideoCourseAsset.Create(videoId, tenantId, videoArn, "Sync Video", courseId).Value);
+            await db.SaveChangesAsync();
+        });
+
+        // Warm the public view: the seeded asset has zero duration.
+        var warm = await Client.GetFromJsonAsync<CourseViewDetailShim>($"/courses/{courseId}/view");
+        warm!.TotalDurationSeconds.Should().Be(0);
+
+        // Direct DB duration change behind the cache: the view is still the warmed zero.
+        await ExecuteDbContextAsync(async db =>
+        {
+            var asset = await db.CourseAssets.OfType<VideoCourseAsset>().FirstAsync(a => a.Id == videoId);
+            db.Entry(asset).Property(a => a.Duration).CurrentValue = TimeSpan.FromMinutes(5);
+            await db.SaveChangesAsync();
+        });
+        (await Client.GetFromJsonAsync<CourseViewDetailShim>($"/courses/{courseId}/view"))!
+            .TotalDurationSeconds.Should().Be(0);
+
+        // Freshness: the real sync handler path (asset decorator queueing) evicts the asset set;
+        // the view then shows the synced duration, not the ghost value either.
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var coursesModule = scope.ServiceProvider.GetRequiredService<ICoursesModule>();
+            var payload = JsonDocument.Parse("""{ "duration": "00:12:34" }""").RootElement;
+            var result = await coursesModule.Send(new SyncResourceMetadataCommand(videoId, payload));
+            result.IsError.Should().BeFalse();
+        }
+
+        var fresh = await Client.GetFromJsonAsync<CourseViewDetailShim>($"/courses/{courseId}/view");
+        // Total duration aggregates the LIVE asset durations, so the synced value shows. Per-item
+        // DurationSeconds is the placement-time snapshot on the curriculum resource and is not
+        // rewritten by the sync handler — the sync only updates the pool asset.
+        fresh!.TotalDurationSeconds.Should().Be(TimeSpan.FromMinutes(12).Add(TimeSpan.FromSeconds(34)).TotalSeconds);
+    }
+
+    // ── Decorator read-through freshness (spec-33 G11) ──
+    //
+    // GetByCourseIdAsync is the ONE cached repository read (CourseOverviewEntity key, 5-min
+    // TTL). A direct DB ETag change stays invisible behind the warmed copy; the upsert command
+    // write — whose flush removes the CourseOverviewEntity entry too — makes the repository
+    // read see the DB again. Asserted through the repository surface itself, resolved from the
+    // courses module scope (module-scoped registration; no HTTP endpoint exposes the repository
+    // and none was invented for this).
+    [Fact]
+    public async Task OverviewRepository_ReadThrough_ServesStaleCopyUntilCommandWriteEvicts()
+    {
+        var tenantId = Guid.NewGuid();
+        SetTenant(tenantId);
+        var subjectId = await CreateSubjectByHttp();
+        var courseId = await CreateCourseByHttp("Read-Through Cache Course", subjectId);
+
+        string warmTag;
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var module = scope.ServiceProvider.GetRequiredService<ICoursesModule>();
+            var dto = await module.Resolve<ICourseOverviewRepository>().GetByCourseIdAsync(courseId);
+            dto.Should().NotBeNull();
+            warmTag = dto!.ETag;
+        }
+        warmTag.Should().NotBeNullOrEmpty();
+
+        // Direct DB write: the row's ETag moves; the read-through entry cannot see it.
+        string ghostTag = null!;
+        await ExecuteDbContextAsync(async db =>
+        {
+            var row = await db.CourseOverviews.FirstAsync(o => o.CourseId == courseId);
+            row.Update(RichText.Create(@"{""type"":""doc"",""content"":[]}").Value, null, null, null);
+            await db.SaveChangesAsync();
+            ghostTag = row.ETag;
+        });
+        ghostTag.Should().NotBe(warmTag);
+
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var module = scope.ServiceProvider.GetRequiredService<ICoursesModule>();
+            var stale = await module.Resolve<ICourseOverviewRepository>().GetByCourseIdAsync(courseId);
+            stale!.ETag.Should().Be(warmTag); // the cached copy was served
+        }
+
+        // Command write (upsert): its Update queues the course-overview set whose flush also
+        // removes the CourseOverviewEntity entry. The next repository read is a cold DB read.
+        var upsert = await Client.PutAsJsonAsync($"/courses/{courseId}/overview",
+            new { DescriptionContent = new { type = "doc", content = new object[] { } } });
+        upsert.EnsureSuccessStatusCode();
+
+        // The upsert re-tags the row: read the live tag, then prove the read-through serves it.
+        var postUpsertRowTag = await ExecuteDbContextAsync(async db =>
+            (string)(await db.CourseOverviews
+                .Where(o => o.CourseId == courseId)
+                .Select(o => o.ETag)
+                .FirstAsync()));
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var module = scope.ServiceProvider.GetRequiredService<ICoursesModule>();
+            var fresh = await module.Resolve<ICourseOverviewRepository>().GetByCourseIdAsync(courseId);
+            fresh!.ETag.Should().Be(postUpsertRowTag);
+            fresh.ETag.Should().NotBe(warmTag);
+        }
+    }
+
     // ── helpers ──
 
     private async Task<Guid> CreateSubjectByHttp()
@@ -613,4 +903,12 @@ public class CoursesCacheTests : BaseIntegrationTest
     public record ItemShim(Guid Id, string Title);
     public record CourseViewShim(Guid Id, string Title, string SubjectName, List<PlanShim> Plans);
     public record PlanShim(Guid Id, string Name);
+    public record CourseViewDetailShim(
+        Guid Id,
+        Guid? CoverImageDocumentId,
+        double TotalDurationSeconds,
+        List<CourseViewDetailSectionShim> Sections);
+    public record CourseViewDetailSectionShim(Guid Id, List<CourseViewDetailItemShim> Items);
+    public record CourseViewDetailItemShim(Guid Id, double DurationSeconds);
+    public record CourseCatalogItemShim(Guid Id, string Title, Guid? CoverImageDocumentId);
 }
