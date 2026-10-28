@@ -15,6 +15,11 @@ namespace AlphaZero.Shared.Infrastructure.Caching;
 /// </summary>
 public sealed class ScopedEvictionProvider : IEvictionProvider
 {
+    // Lanes are guarded: Evict may legally be called from any thread inside the scope (e.g. a
+    // parallel MediatR publish strategy), while FlushAsync/Discard serialize the snapshot-and-clear
+    // against concurrent queuers. The cache I/O happens OUTSIDE the lock — only the lane-snapshot
+    // bookkeeping is serialized.
+    private readonly object _gate = new();
     private HashSet<CacheKey>? _pendingKeys;
     private HashSet<CacheTag>? _pendingTags;
 
@@ -27,27 +32,44 @@ public sealed class ScopedEvictionProvider : IEvictionProvider
         _logger = logger;
     }
 
-    public bool IsActive => _pendingKeys is not null || _pendingTags is not null;
+    public bool IsActive
+    {
+        get
+        {
+            lock (_gate)
+            {
+                return _pendingKeys is not null || _pendingTags is not null;
+            }
+        }
+    }
 
-    public bool HasPendingKeys => _pendingKeys is { Count: > 0 };
+    public bool HasPendingKeys
+    {
+        get
+        {
+            lock (_gate)
+            {
+                return _pendingKeys is { Count: > 0 };
+            }
+        }
+    }
 
     public void Begin()
     {
-        _pendingKeys ??= [];
-        _pendingTags ??= [];
+        lock (_gate)
+        {
+            _pendingKeys ??= [];
+            _pendingTags ??= [];
+        }
     }
 
     public void Evict(CacheKey key)
     {
-        var pending = _pendingKeys;
-        if (pending is null)
+        lock (_gate)
         {
-            // Should only happen if a save runs outside a flow; keep the key anyway.
-            pending = [];
-            _pendingKeys = pending;
+            _pendingKeys ??= [];
+            _pendingKeys.Add(key);
         }
-
-        pending.Add(key);
     }
 
     public void Evict(IEnumerable<CacheKey> keys)
@@ -58,31 +80,30 @@ public sealed class ScopedEvictionProvider : IEvictionProvider
 
     public void EvictTag(CacheTag tag)
     {
-        var pending = _pendingTags;
-        if (pending is null)
+        lock (_gate)
         {
-            // Should only happen if a save runs outside a flow; keep the tag anyway.
-            pending = [];
-            _pendingTags = pending;
+            _pendingTags ??= [];
+            _pendingTags.Add(tag);
         }
-
-        pending.Add(tag);
     }
 
     public async Task FlushAsync(CancellationToken cancellationToken)
     {
-        var keyLane = _pendingKeys;
-        var tagLane = _pendingTags;
+        CacheKey[] keySnapshot;
+        CacheTag[] tagSnapshot;
+        lock (_gate)
+        {
+            // Snapshot and clear both lanes under the lock: a failed flush must not be retried by
+            // an enclosing scope, and concurrent queuers that land after the snapshot belong to
+            // the NEXT save.
+            keySnapshot = _pendingKeys is { Count: > 0 } ? _pendingKeys.ToArray() : [];
+            _pendingKeys?.Clear();
+            tagSnapshot = _pendingTags is { Count: > 0 } ? _pendingTags.ToArray() : [];
+            _pendingTags?.Clear();
+        }
 
-        if ((keyLane is null || keyLane.Count == 0) && (tagLane is null || tagLane.Count == 0))
+        if (keySnapshot.Length == 0 && tagSnapshot.Length == 0)
             return;
-
-        // Snapshot and clear both lanes first: a failed flush must not be retried by an enclosing
-        // scope.
-        var keySnapshot = keyLane is { Count: > 0 } ? keyLane.ToArray() : [];
-        keyLane?.Clear();
-        var tagSnapshot = tagLane is { Count: > 0 } ? tagLane.ToArray() : [];
-        tagLane?.Clear();
 
         foreach (var key in keySnapshot)
         {
@@ -125,7 +146,10 @@ public sealed class ScopedEvictionProvider : IEvictionProvider
 
     public void Discard()
     {
-        _pendingKeys?.Clear();
-        _pendingTags?.Clear();
+        lock (_gate)
+        {
+            _pendingKeys?.Clear();
+            _pendingTags?.Clear();
+        }
     }
 }
