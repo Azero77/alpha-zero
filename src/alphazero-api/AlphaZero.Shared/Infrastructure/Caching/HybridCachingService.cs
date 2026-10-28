@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Caching.Hybrid;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace AlphaZero.Shared.Infrastructure.Caching;
 
@@ -10,13 +11,21 @@ namespace AlphaZero.Shared.Infrastructure.Caching;
 public sealed class HybridCachingService : ICachingService
 {
     private readonly HybridCache _cache;
-    private readonly IEvictionProvider _evictionProvider;
 
-    public HybridCachingService(HybridCache cache, IEvictionProvider evictionProvider)
+    // The Evict pass-throughs resolve the request-scoped eviction queue LAZILY: the provider
+    // depends back on ICachingService to flush, so a constructor link service → provider would be
+    // a strict constructor cycle (Autofac rejects it the moment any scoped resolution touches the
+    // cache — every AppDbContext creation does, via the eviction interceptors). Both services
+    // share the lifetime scope, so a resolve-at-call yields the same queue instance.
+    private readonly IServiceProvider _services;
+
+    public HybridCachingService(HybridCache cache, IServiceProvider services)
     {
         _cache = cache;
-        _evictionProvider = evictionProvider;
+        _services = services;
     }
+
+    private IEvictionProvider Eviction => _services.GetRequiredService<IEvictionProvider>();
 
     public async Task<T> GetOrCreateAsync<T>(
         CacheKey key,
@@ -62,17 +71,15 @@ public sealed class HybridCachingService : ICachingService
     public async Task RemoveByTagAsync(CacheTag tag, CancellationToken cancellationToken = default)
         => await _cache.RemoveByTagAsync(tag.Value, cancellationToken);
 
-    // No need for repositories to know that we are using IEvictionProvider to achieve loose coupling.
-    // Keys are the primary eviction currency; tags are fan-out only.
-    public void Evict(CacheKey key) => _evictionProvider.Evict(key);
+    public void Evict(CacheKey key) => Eviction.Evict(key);
 
-    public void Evict(IEnumerable<CacheKey> keys) => _evictionProvider.Evict(keys);
+    public void Evict(IEnumerable<CacheKey> keys) => Eviction.Evict(keys);
 
-    public void Evict(CacheTag tag) => _evictionProvider.EvictTag(tag);
+    public void Evict(CacheTag tag) => Eviction.EvictTag(tag);
 
     public void Evict(IEnumerable<CacheTag> tags)
     {
         foreach (var tag in tags)
-            _evictionProvider.EvictTag(tag);
+            Eviction.EvictTag(tag);
     }
 }

@@ -51,10 +51,11 @@ public static class DependencyInjection
         services.AddSingleton(typeof(TenantPublishFilter<>));
         services.AddScoped<ICachingService, HybridCachingService>();
         services.AddScoped<IEvictionProvider, ScopedEvictionProvider>();
-        // Eviction flush interceptors: the queue lives in AsyncLocal state on the provider, so the
-        // interceptors may be singletons; they are registered scoped to keep the IEvictionProvider
-        // dependency scope-legal. They are no-ops when the flow queue is empty, so adding them to
-        // other module DbContexts later is safe.
+        // Eviction flush interceptors: the queue lives ON the request-scoped ScopedEvictionProvider
+        // instance, and every participant in a write (repository decorators, unit of work,
+        // DbContext, both interceptors) resolves from the same lifetime scope, so the flush sees
+        // the lanes queued by the handlers. They are no-ops when the queue is empty, so adding
+        // them to other module DbContexts later is safe.
         services.AddScoped<EvictionSaveChangesInterceptor>();
         services.AddScoped<EvictionTransactionInterceptor>();
         services.AddHttpContextAccessor();

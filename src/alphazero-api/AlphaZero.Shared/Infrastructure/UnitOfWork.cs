@@ -56,9 +56,12 @@ public class UnitOfWork<TContext> : IUnitOfWork
     }
 }
 
-// Both interceptors hold no per-instance eviction state: the queues live in static AsyncLocal
-// state on the provider (flow-scoped), so they may be registered as singletons — the flow they
-// observe is the async execution context, not their DI lifetime.
+// Both interceptors hold no per-instance eviction state: the queues live on the request-scoped
+// ScopedEvictionProvider instance, which decorators, the unit of work, the DbContext and both
+// interceptors resolve from the SAME lifetime scope (all registered scoped). The queue must live
+// on the shared instance, NOT in AsyncLocal: the EF interceptor fires from the MediatR pipeline
+// level that called SaveChangesAsync, an ANCESTOR context of the command handler in which the
+// decorators queued — and AsyncLocal writes never flow back up to an ancestor context.
 public class EvictionSaveChangesInterceptor(IEvictionProvider evictionProvider) : SaveChangesInterceptor
 {
     public override async ValueTask<int> SavedChangesAsync(

@@ -3,15 +3,20 @@ using Microsoft.Extensions.Logging;
 namespace AlphaZero.Shared.Infrastructure.Caching;
 
 /// <summary>
-/// Flow-local dual eviction queue. The queues are <c>static readonly AsyncLocal</c> state, so this
-/// instance itself holds nothing per-flow and may be registered as a singleton (or scoped) without
-/// changing semantics: every flow — including EF interceptor events — sees its own lanes because
-/// <see cref="AsyncLocal{T}"/> flows across async boundaries.
+/// Request-scope dual eviction queue (keys + fan-out tag). The lanes are <c>HashSet</c> state on
+/// the instance, which guarantees the guardrail the pipeline depends on: decorators queue inside a
+/// command handler (necessarily a <em>descendant</em> async context of the MediatR behavior that
+/// later saves), and the EF interceptors flush from the behavior that called
+/// <c>SaveChangesAsync</c>. AsyncLocal writes made in a descendant do NOT flow back up to the
+/// caller, so flow-scoped lanes would always be empty at flush time under the module pipeline;
+/// shared instance state does, because decorators, the unit of work, the DbContext and both
+/// interceptors resolve from the SAME lifetime scope (everything is registered scoped for exactly
+/// this reason). One scope ⇒ one queue; a disposed scope drops its queue with it.
 /// </summary>
 public sealed class ScopedEvictionProvider : IEvictionProvider
 {
-    private static readonly AsyncLocal<HashSet<CacheKey>?> PendingKeys = new();
-    private static readonly AsyncLocal<HashSet<CacheTag>?> PendingTags = new();
+    private HashSet<CacheKey>? _pendingKeys;
+    private HashSet<CacheTag>? _pendingTags;
 
     private readonly ICachingService _cache;
     private readonly ILogger<ScopedEvictionProvider> _logger;
@@ -22,24 +27,24 @@ public sealed class ScopedEvictionProvider : IEvictionProvider
         _logger = logger;
     }
 
-    public bool IsActive => PendingKeys.Value is not null || PendingTags.Value is not null;
+    public bool IsActive => _pendingKeys is not null || _pendingTags is not null;
 
-    public bool HasPendingKeys => PendingKeys.Value is { Count: > 0 };
+    public bool HasPendingKeys => _pendingKeys is { Count: > 0 };
 
     public void Begin()
     {
-        PendingKeys.Value ??= [];
-        PendingTags.Value ??= [];
+        _pendingKeys ??= [];
+        _pendingTags ??= [];
     }
 
     public void Evict(CacheKey key)
     {
-        var pending = PendingKeys.Value;
+        var pending = _pendingKeys;
         if (pending is null)
         {
             // Should only happen if a save runs outside a flow; keep the key anyway.
             pending = [];
-            PendingKeys.Value = pending;
+            _pendingKeys = pending;
         }
 
         pending.Add(key);
@@ -53,12 +58,12 @@ public sealed class ScopedEvictionProvider : IEvictionProvider
 
     public void EvictTag(CacheTag tag)
     {
-        var pending = PendingTags.Value;
+        var pending = _pendingTags;
         if (pending is null)
         {
             // Should only happen if a save runs outside a flow; keep the tag anyway.
             pending = [];
-            PendingTags.Value = pending;
+            _pendingTags = pending;
         }
 
         pending.Add(tag);
@@ -66,15 +71,14 @@ public sealed class ScopedEvictionProvider : IEvictionProvider
 
     public async Task FlushAsync(CancellationToken cancellationToken)
     {
-        var keyLane = PendingKeys.Value;
-        var tagLane = PendingTags.Value;
+        var keyLane = _pendingKeys;
+        var tagLane = _pendingTags;
 
         if ((keyLane is null || keyLane.Count == 0) && (tagLane is null || tagLane.Count == 0))
             return;
 
         // Snapshot and clear both lanes first: a failed flush must not be retried by an enclosing
-        // scope. Clear IN PLACE — assigning PendingX.Value after an await would not be visible to
-        // the caller's execution context, so the next flow would re-evict stale entries.
+        // scope.
         var keySnapshot = keyLane is { Count: > 0 } ? keyLane.ToArray() : [];
         keyLane?.Clear();
         var tagSnapshot = tagLane is { Count: > 0 } ? tagLane.ToArray() : [];
@@ -121,7 +125,7 @@ public sealed class ScopedEvictionProvider : IEvictionProvider
 
     public void Discard()
     {
-        PendingKeys.Value?.Clear();
-        PendingTags.Value?.Clear();
+        _pendingKeys?.Clear();
+        _pendingTags?.Clear();
     }
 }
