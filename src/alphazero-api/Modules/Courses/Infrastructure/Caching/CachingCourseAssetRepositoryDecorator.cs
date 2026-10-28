@@ -5,7 +5,8 @@ using AlphaZero.Shared.Infrastructure.Repositores;
 
 namespace AlphaZero.Modules.Courses.Infrastructure.Caching;
 
-/// <summary>Write-side cache decorator for the course asset pool.</summary>
+/// <summary>Write-side cache decorator for the course asset pool: queues the asset row of the
+/// eviction matrix from the aggregate argument only (the asset owns the tenant and its course).</summary>
 public sealed class CachingCourseAssetRepositoryDecorator : IRepository<CourseAsset>
 {
     private readonly IRepository<CourseAsset> _inner;
@@ -59,7 +60,13 @@ public sealed class CachingCourseAssetRepositoryDecorator : IRepository<CourseAs
 
     private void Evict(CourseAsset asset)
     {
-        foreach (var tag in CourseCacheTags.ForAsset(asset))
-            _eviction.EvictTag(tag);
+        if (asset.TenantId == Guid.Empty)
+            return; // No tenant → no scoped cache; queue nothing under a placeholder tenant.
+
+        var keys = CourseCacheKeys.EvictCourseAsset(CacheScope.ForTenant(asset.TenantId), asset.CourseId, asset.Id);
+        if (keys.Count == 0)
+            return; // Unassigned pool asset (CourseId == Guid.Empty): not part of any course surface.
+
+        _eviction.Evict(keys);
     }
 }

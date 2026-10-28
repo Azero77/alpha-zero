@@ -7,8 +7,9 @@ namespace AlphaZero.Modules.Courses.Infrastructure.Caching;
 
 /// <summary>
 /// Write-side cache decorator for the course aggregate. Every curriculum mutation is persisted
-/// through the root, so the course and catalog tags are known from the entity argument — no
-/// change-tracker scan and no parent lookup. Reads pass through: repository reads are not cached.
+/// through the root, so the affected key set is derivable from the entity argument alone — no
+/// change-tracker scan, no parent lookup, no tenant lookup (the aggregate owns the tenant).
+/// Reads pass through: aggregate <c>GetById</c> is a tracked-identity bridge and is never cached.
 /// </summary>
 public sealed class CachingCourseRepositoryDecorator : ICourseRepository
 {
@@ -68,7 +69,9 @@ public sealed class CachingCourseRepositoryDecorator : ICourseRepository
 
     private void Evict(Course course)
     {
-        foreach (var tag in CourseCacheTags.ForCourse(course.TenantId, course.Id))
-            _eviction.EvictTag(tag);
+        if (course.TenantId == Guid.Empty)
+            return; // No tenant → no scoped cache; queue nothing under a placeholder tenant.
+
+        _eviction.Evict(CourseCacheKeys.EvictCourse(CacheScope.ForTenant(course.TenantId), course.Id));
     }
 }

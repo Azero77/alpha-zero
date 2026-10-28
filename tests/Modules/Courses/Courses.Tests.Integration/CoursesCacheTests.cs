@@ -296,14 +296,18 @@ public class CoursesCacheTests : BaseIntegrationTest
         var searched = await Client.GetFromJsonAsync<PagedResult<CourseCatalogItemDto>>("/courses/catalog?search=Searchable");
         searched!.Items.Should().ContainSingle(i => i.Title == "Searchable Ghost");
 
-        // Rename: subject mutations evict the subject listing, every catalog entry and the
-        // tenant-wide course-view family (views embed SubjectName).
+        // Rename (spec-33 G4.1/G4.2): subject mutations queue SubjectList + SubjectEntity keys
+        // and THE fan-out tag, so the subject listing and the tagged public course view refresh
+        // immediately. The student catalog is deliberately NOT fan-out tagged; its staleness
+        // after a subject rename is accepted (≤2-min TTL, rare operation) and is asserted below
+        // as the served-from-cache proof.
         var rename = await Client.PutAsJsonAsync($"/courses/subjects/{subjectId}",
             new { Name = "Renamed Subject" });
         rename.StatusCode.Should().Be(HttpStatusCode.NoContent);
 
-        var catalogFresh = await Client.GetFromJsonAsync<PagedResult<CourseCatalogItemDto>>("/courses/catalog");
-        catalogFresh!.Items.Should().Contain(i => i.Id == courseId && i.SubjectName == "Renamed Subject");
+        var catalogStale = await Client.GetFromJsonAsync<PagedResult<CourseCatalogItemDto>>("/courses/catalog");
+        catalogStale!.Items.Should().ContainSingle(i => i.Id == courseId && i.SubjectName == "Cache Test Subject");
+
         var viewFresh = await Client.GetFromJsonAsync<CourseViewShim>($"/courses/{courseId}/view");
         viewFresh!.SubjectName.Should().Be("Renamed Subject");
     }

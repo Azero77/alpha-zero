@@ -1,59 +1,17 @@
-using AlphaZero.Modules.Courses.Domain.Aggregates.Courses;
 using AlphaZero.Shared.Infrastructure.Caching;
-using SubjectAggregate = AlphaZero.Modules.Courses.Domain.Aggregates.Subject.Subject;
 
 namespace AlphaZero.Modules.Courses.Infrastructure.Caching;
 
 /// <summary>
-/// Pure entity-to-tag mapping for Courses writes. Kept in one place so every write decorator
-/// emits the same families the cached read surfaces are tagged with.
+/// THE one fan-out tag builder for Courses (spec-33 G4.1): the tenant-wide course-view family.
+/// Tags exist only for non-enumerable fan-out — a subject rename is not attributable to any
+/// single course, and public course-view summaries embed the subject name. It is therefore
+/// carried by exactly the public-view read entry, and the subject write decorator is the only
+/// place in Courses that queues it. Never add a second Courses tag family; a new "can't
+/// enumerate" case returns to grilling instead.
 /// </summary>
 internal static class CourseCacheTags
 {
-    public static IReadOnlyCollection<CacheTag> ForCourse(Guid tenantId, Guid courseId)
-    {
-        if (tenantId == Guid.Empty || courseId == Guid.Empty)
-            return [];
-
-        var scope = CacheScope.ForTenant(tenantId);
-        return [CourseCacheKeys.CourseTag(scope, courseId), CourseCacheKeys.CatalogTag(scope)];
-    }
-
-    /// <summary>Overview edits never change catalog summary fields, so only the per-course
-    /// family is evicted.</summary>
-    public static IReadOnlyCollection<CacheTag> ForCourseOverview(Guid tenantId, Guid courseId)
-    {
-        if (tenantId == Guid.Empty || courseId == Guid.Empty)
-            return [];
-
-        return [CourseCacheKeys.CourseTag(CacheScope.ForTenant(tenantId), courseId)];
-    }
-
-    public static IReadOnlyCollection<CacheTag> ForAsset(CourseAsset asset)
-    {
-        if (asset.TenantId == Guid.Empty)
-            return [];
-
-        var scope = CacheScope.ForTenant(asset.TenantId);
-
-        // A resolved course is the precise family (readiness entries carry the course tag).
-        // The tenant-wide fallback only exists for assets with no course binding.
-        return asset.CourseId != Guid.Empty
-            ? [CourseCacheKeys.CourseTag(scope, asset.CourseId)]
-            : [CourseCacheKeys.CourseAssetsTag(scope)];
-    }
-
-    public static IReadOnlyCollection<CacheTag> ForSubject(Guid tenantId)
-    {
-        if (tenantId == Guid.Empty)
-            return [];
-
-        var scope = CacheScope.ForTenant(tenantId);
-        return
-        [
-            CourseCacheKeys.SubjectsTag(scope),
-            CourseCacheKeys.CatalogTag(scope),
-            CourseCacheKeys.CourseViewsTag(scope)
-        ];
-    }
+    /// <summary>Tenant-wide family for public course view entries (name unchanged from #32).</summary>
+    public static CacheTag CoursePublicViews(CacheScope scope) => scope.Tag("courses:views");
 }

@@ -25,7 +25,7 @@ public class CachedSubjectQueryService(
         return await cache.GetOrCreateAsync(
             CourseCacheKeys.SubjectList(scope),
             CourseCacheKeys.SubjectListPolicy,
-            [CourseCacheKeys.SubjectsTag(scope)],
+            [], // Evicted by key on every subject write.
             token => inner.ListSubjectsAsync(page, perPage, token),
             cancellationToken);
     }

@@ -33,7 +33,7 @@ public class CachedCourseQueryService(
         return await cache.GetOrCreateAsync(
             CourseCacheKeys.StaffCatalog(scope),
             CourseCacheKeys.CatalogPolicy,
-            [CourseCacheKeys.CatalogTag(scope)],
+            [],
             token => inner.ListCoursesAsync(subjectId, page, perPage, token),
             cancellationToken);
     }
@@ -59,7 +59,7 @@ public class CachedCourseQueryService(
         return await cache.GetOrCreateAsync(
             CourseCacheKeys.StudentCatalog(scope),
             CourseCacheKeys.CatalogPolicy,
-            [CourseCacheKeys.CatalogTag(scope)],
+            [],
             token => inner.ListCourseCatalogAsync(search, subjectId, sort, page, perPage, token),
             cancellationToken);
     }
@@ -80,7 +80,10 @@ public class CachedCourseQueryService(
         return await cache.GetOrCreateAsync(
             CourseCacheKeys.CoursePublicView(scope, courseId),
             CourseCacheKeys.CourseViewPolicy,
-            [CourseCacheKeys.CourseTag(scope, courseId), CourseCacheKeys.CourseViewsTag(scope)],
+            // THE fan-out tag (G4.1): subject renames cannot be fanned out by keys, so this is
+            // the only Courses read entry still tagged. Freshness after a rename is immediate;
+            // worst-case staleness for an UNRELATED broadcaster is bounded by the 10-min TTL.
+            [CourseCacheTags.CoursePublicViews(scope)],
             token => inner.GetCourseSummaryForViewAsync(courseId, token),
             cancellationToken);
     }
@@ -94,7 +97,7 @@ public class CachedCourseQueryService(
         return await cache.GetOrCreateAsync(
             CourseCacheKeys.CourseView(scope, courseId),
             CourseCacheKeys.CourseViewPolicy,
-            [CourseCacheKeys.CourseTag(scope, courseId), CourseCacheKeys.CourseViewsTag(scope)],
+            [], // Staff tree carries SubjectId only and is evicted by key on every course write.
             token => inner.GetCourseByIdAsync(courseId, token),
             cancellationToken);
     }
@@ -108,7 +111,7 @@ public class CachedCourseQueryService(
         return await cache.GetOrCreateAsync(
             CourseCacheKeys.CourseReadiness(scope, courseId),
             CourseCacheKeys.CourseReadinessPolicy,
-            [CourseCacheKeys.CourseTag(scope, courseId), CourseCacheKeys.CourseAssetsTag(scope)],
+            [], // Evicted by key on course AND asset writes — never by tag.
             token => inner.GetCourseReadinessAsync(courseId, token),
             cancellationToken);
     }
@@ -122,7 +125,7 @@ public class CachedCourseQueryService(
         return await cache.GetOrCreateAsync(
             CourseCacheKeys.CourseOverview(scope, courseId),
             CourseCacheKeys.CourseOverviewPolicy,
-            [CourseCacheKeys.CourseTag(scope, courseId)],
+            [], // Evicted by key on course and overview writes.
             token => inner.GetCourseOverviewAsync(courseId, token),
             cancellationToken);
     }

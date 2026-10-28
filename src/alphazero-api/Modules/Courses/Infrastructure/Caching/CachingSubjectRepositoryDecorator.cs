@@ -5,7 +5,11 @@ using SubjectAggregate = AlphaZero.Modules.Courses.Domain.Aggregates.Subject.Sub
 
 namespace AlphaZero.Modules.Courses.Infrastructure.Caching;
 
-/// <summary>Write-side cache decorator for subjects (subject listing, catalog and course views).</summary>
+/// <summary>
+/// Write-side cache decorator for subjects: queues the subject row of the eviction matrix
+/// (SubjectList + SubjectEntity) plus THE one fan-out tag — public course views embed the
+/// subject name and a rename is not attributable to any single course (spec-33 G4.1/G4.2).
+/// </summary>
 public sealed class CachingSubjectRepositoryDecorator : ISubjectRepository
 {
     private readonly ISubjectRepository _inner;
@@ -58,9 +62,17 @@ public sealed class CachingSubjectRepositoryDecorator : ISubjectRepository
 
     public void IgnoreQueryFilter() => _inner.IgnoreQueryFilter();
 
+    /// <summary>The ONLY <c>EvictTag</c> call site in Modules/Courses: subject writes cannot be
+    /// fanned out by keys, so the tenant-wide course-views family is invalidated for them. The
+    /// student catalog deliberately does NOT ride this tag (G4.2: accepted ≤2-min staleness for
+    /// these rare operations; the catalog is evicted by key on course writes).</summary>
     private void Evict(SubjectAggregate subject)
     {
-        foreach (var tag in CourseCacheTags.ForSubject(subject.TenantId))
-            _eviction.EvictTag(tag);
+        if (subject.TenantId == Guid.Empty)
+            return; // No tenant → no scoped cache; queue nothing under a placeholder tenant.
+
+        var scope = CacheScope.ForTenant(subject.TenantId);
+        _eviction.Evict(CourseCacheKeys.EvictSubject(scope, subject.Id));
+        _eviction.EvictTag(CourseCacheTags.CoursePublicViews(scope));
     }
 }
