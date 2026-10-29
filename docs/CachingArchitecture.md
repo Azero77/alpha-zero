@@ -52,16 +52,24 @@ explicitly so asset-driven invalidation works from bus scopes.
 
 ## Courses module
 
-Courses uses tenant-scoped, typed keys with default-shape-only caching on reads and write-side
-repository decorators for eviction. See
+Courses uses tenant-scoped, typed keys with default-shape-only caching on reads, plus write-side
+repository decorators that invalidate by **exact key set**. See
 [`Modules/Courses/CACHING.md`](../src/alphazero-api/Modules/Courses/CACHING.md) for the full
-surface/TTL/tag matrix.
+surface/TTL/eviction matrix.
 
-In short: each decorated write repository method derives tags from the aggregate it receives
-(no change-tracker scan, no parent lookup) and queues them; the outermost MediatR behavior flushes
-them after the UnitOfWork commits. Commands remain cache-agnostic. A save-time coverage
-interceptor warns when a cache-feeding entity is persisted with no queued tag, making a bypassed
-decorator observable.
+In short: each decorated write repository method derives the affected key set from the aggregate
+it receives via the static `CourseCacheKeys` helpers (no change-tracker scan, no parent lookup)
+and queues it in the request-scoped `IEvictionProvider`; the subject decorator is the only
+Courses call site that also queues a tag — the single fan-out family `courses:views`, carried
+by the public-view read entry (G4.1: worst-case public-view staleness after a subject rename =
+its 10-minute TTL; the 2-minute catalogs are deliberately key-evicted with an accepted
+≤2-minute rename window, G4.2). The queue is flushed at the DB commit points by two EF Core
+interceptors in `AlphaZero.Shared/Infrastructure/UnitOfWork.cs` — standalone saves flush at
+their own save (failures discard), explicit EF transactions flush at commit (rollbacks discard,
+ambiguous commit-path failures flush defensively), and an ambient `System.Transactions`
+transaction fails fast. Commands remain cache-agnostic; exactly one repository read
+(`GetByCourseIdAsync`) is read-cached, and aggregate reads stay uncached on purpose (they are
+tracked-identity bridges).
 
 ## Identity module: policy and assignment caching
 
@@ -121,9 +129,15 @@ rotation delay to the TTL.
 ## Operational guidance
 
 - TTLs are the upper bound on staleness for any path that fails to evict. Choose them per surface:
-  catalogs are short (2 min), per-course reads longer (10 min), readiness shortest (3 min) because
+  catalogs are short (2 min), per-course reads longer (10 min), readiness 3 min because
   asset pipelines flip it.
 - Eviction is best-effort after commit: a cache outage degrades freshness, never correctness.
   Cache exceptions during eviction are logged and swallowed; cancellation is not.
 - Never build keys from caller-controlled paging, search or sort values. Cache only default
   request shapes and bypass otherwise.
+- Flush points live inside the EF pipeline (the two interceptors in `UnitOfWork.cs`). A module
+  that adds write-side repository decorators registers them on its `AppDbContext` via
+  `opts.AddInterceptors(...)`; they are no-ops while the queue is empty. Do not flush from a
+  MediatR behavior or anywhere else — one mechanism, at the DB commit boundary.
+- Tags are for non-enumerable fan-out only (Courses has exactly one). Over-eviction by key is
+  always acceptable; a second tag family needs a new design discussion, not a new tag.
