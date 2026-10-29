@@ -7,6 +7,8 @@ Related documents:
 
 - [`spec-33/code-review-plan.md`](../../spec-33/code-review-plan.md) — the authoritative design
   record and decision log (D1–D24, filled G1–G12 ledger in §11).
+- [`docs/caching/CACHE-TREE.md`](CACHE-TREE.md) — every key, tag and family with who reads and
+  who evicts it (live inventory).
 - [`docs/CachingArchitecture.md`](../CachingArchitecture.md) — shorter platform overview.
 - [`Modules/Courses/CACHING.md`](../../src/alphazero-api/Modules/Courses/CACHING.md) — Courses
   surface/TTL/eviction matrix and tolerances.
