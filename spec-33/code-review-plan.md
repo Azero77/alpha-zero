@@ -2,6 +2,10 @@
 
 Generated 2026-10-23 from a read-only review of the `spec/33-caching` worktree.
 **Rewritten 2026-10-27** after the second eviction-design pivot agreed with the issue owner.
+**Reconciled 2026-10-29** per `spec-33/spec-33-caching-handoff.md` §8 (that handoff is the
+binding source of truth; this plan now matches the as-built implementation. Phases 0–3 are
+implemented and committed; the verified key-set deltas and the filled G1–G12 ledger are in
+§5/§11).
 
 > **Design pivot (binding for this document).**
 >
@@ -16,10 +20,15 @@ Generated 2026-10-23 from a read-only review of the `spec/33-caching` worktree.
 >    `CourseCacheKeys` functions, and queues them in `IEvictionProvider`.
 > 3. **Tags are reserved for non-enumerable fan-out.** The only known case is subject →
 >    public course views (G4). The subject decorator also queues the fan-out tag. Tags are not
->    a general eviction currency; the next AI authors the exact tag list (§5/§6).
-> 4. The queue is flow-local and dual. The outermost MediatR behavior
->    (`CacheEvictionFlushBehavior`) removes the queued keys with `RemoveAsync` and the queued
->    tags with `RemoveByTagAsync`, only after the UnitOfWork commits.
+>    a general eviction currency. As built (G4.1, §5): exactly one tag — the tenant-wide
+>    `courses:views` — carried by the public-view read entry only.
+> 4. The queue is scope-local and dual. Two EF Core interceptors in
+>    `AlphaZero.Shared/Infrastructure/UnitOfWork.cs` flush it at DB commit points —
+>    `EvictionSaveChangesInterceptor` (standalone saves; discards standalone failures) and
+>    `EvictionTransactionInterceptor` (commit → flush, rollback → discard, ambiguous
+>    commit-path failure → flush). An ambient `System.Transactions` transaction fails fast.
+>    There is NO MediatR eviction behavior and no staging state. Apologies to past readers:
+>    this item used to describe `CacheEvictionFlushBehavior`, which is deleted.
 >
 > No change tracker and no lookups: `IEvictionStrategy`, `IEntityEvictionPolicy`,
 > `ChangeTrackerEvictionStrategy`, `CourseEvictionPolicy`, `UnitOfWork.CollectAsync`, any
@@ -29,7 +38,11 @@ Generated 2026-10-23 from a read-only review of the `spec/33-caching` worktree.
 > Open for the next AI: authoring the fan-out tag list (§5) and the lookup grilling agenda
 > (§6, G4 first). Do not write tag code outside the narrowed fan-out row before those close.
 
-This file is self-contained input for the next AI session. No code was changed to produce it.
+*Sections G1–G12 are closed — the full answers with evidence live in §11; the as-built tag list
+is in §5 "Confirmed cells".*
+
+This file started as plan-only input for the next AI session; Phases 0–3 of it are now
+implemented and committed (see §8 status marks and `spec-33/spec-33-caching-handoff.md`).
 
 ---
 
@@ -104,6 +117,9 @@ benchmarking.
 
 ## 2. Verified facts at HEAD
 
+*Captured 2026-10-27, pre-implementation. F9/F11/F15 describe the pre-pivot state they were
+meant to replace; §4.2, §4.7 and §5 are the as-built truth.*
+
 Every row was checked against the source on 2026-10-27. Re-derive only if the branch moves.
 
 | # | Fact | Evidence |
@@ -177,9 +193,11 @@ finding or the design pivot removes it; "Open" means this plan still requires wo
 4. **Tags exist only for non-enumerable fan-out.** The only known case is subject → public
    course views (G4). The subject decorator queues the fan-out tag; no other decorator queues
    a tag. The next AI authors the tag list (§5/§6).
-5. The queue is flow-local and dual: `CacheEvictionFlushBehavior` (outermost) removes the
-   queued keys with `RemoveAsync` and the queued tags with `RemoveByTagAsync` after the
-   UnitOfWork has committed.
+5. The queue is scope-local and dual: two EF Core interceptors in
+   `AlphaZero.Shared/Infrastructure/UnitOfWork.cs` flush it at DB commit points —
+   `EvictionSaveChangesInterceptor` (standalone saves) and `EvictionTransactionInterceptor`
+   (explicit EF transactions). There is NO MediatR eviction behavior (superseded; handoff §1.3),
+   no staging states and no `ConfirmSave()`.
 6. No component inspects the EF change tracker, resolves a parent through the database, or
    dispatches on an entity type to find tags. The aggregate argument is the only eviction
    input.
@@ -212,18 +230,31 @@ Caching<Course>RepositoryDecorator            (Courses infrastructure)
    ▼
 inner repository → DbSet write
    ▼
-UnitOfWork.SaveChangesAsync                    (no caching dependency)
+UnitOfWork.SaveChangesAsync                    (no caching dependency; drains domain events)
    ▼
-DbContext.SaveChangesAsync  (commit)
+DbContext.SaveChangesAsync  — the flush machinery lives here, in the EF pipeline
+   │
+   ├─ No EF transaction (standalone save)
+   │    EvictionSaveChangesInterceptor (UnitOfWork.cs)
+   │      SavedChangesAsync → provider.FlushAsync()
+   │      SaveChangesFailedAsync → provider.Discard()   (burn exactly the failed save's keys)
    ▼
-TransactionalBehavior.CommitAsync              (only for ITransactionalCommand)
-   ▼
-CacheEvictionFlushBehavior (outermost)         ← after commit
-   │  provider.FlushAsync()
+Explicit EF transaction (TransactionalBehavior CommitAsync; retry-strategy internal txns land
+here too, because EnableRetryOnFailure wraps saves in internal transactions)
+   EvictionTransactionInterceptor (UnitOfWork.cs)
+   TransactionCommittedAsync      → provider.FlushAsync()   (ONE flush for the whole transaction)
+   TransactionRolledBack          → provider.Discard()
+   TransactionFailedAsync         → commit-path failure → FlushAsync (ambiguity = over-eviction);
+                                    other failures  → Discard()
    ▼
 ICachingService.RemoveAsync(key) for each queued key
 ICachingService.RemoveByTagAsync(tag) for each queued tag
 ```
+
+The flush machinery is **the two EF interceptors in `UnitOfWork.cs`, not a MediatR behavior**.
+There is no depth gating: a transaction ends with exactly one flush; a standalone save flushes
+at its own save point. Failure rows: standalone-save-failure → discard, ambient → throw,
+commit-ambiguity → flush (§4.8).
 
 Bus path is unchanged from D5=A:
 
@@ -252,25 +283,29 @@ public interface IEvictionProvider
 }
 ```
 
-`ScopedEvictionProvider` changes:
+`ScopedEvictionProvider` (as built):
 
-- `AsyncLocal<HashSet<CacheKey>?>` for the key queue (replacing `HashSet<CacheTag>?`), plus a
-  second `AsyncLocal<HashSet<CacheTag>?>` for the tag queue.
+- Two `HashSet` lanes on the instance — the `CacheKey` set and the `CacheTag` set (a
+  `HashSet` gives dedupe for free) — guarded by a private lock so queuers may queue from any
+  thread inside the scope while `FlushAsync` snapshots-and-clears atomically; the cache I/O
+  awaits run outside the lock.
+- The lanes are **request-scoped instance state, not `AsyncLocal`**. The EF interceptor fires
+  from the MediatR pipeline level that called `SaveChangesAsync` — an ANCESTOR context of the
+  command handler in which the decorators queued — and AsyncLocal writes never flow back up to
+  an ancestor context (proven live: every `FlushAsync` logged `keys=0 tags=0` under the
+  AsyncLocal design). Decorators, the unit of work, the DbContext and both interceptors resolve
+  the same scoped instance, and one `IModule.Send` creates one child scope — so one scope is
+  exactly one queue; a disposed scope drops its queue with it.
 - `FlushAsync` snapshots and clears both queues in place, then calls
   `ICachingService.RemoveAsync(key, cancellationToken)` for each key and
   `ICachingService.RemoveByTagAsync(tag, cancellationToken)` for each tag.
-- Failure semantics stay: `OperationCanceledException` propagates; every other exception is
-  logged and swallowed because the write already committed.
-- `Discard` (or an error result / exception) drops both queues.
+- `Discard` clears both queues.
 
 `ICachingService` keeps `RemoveByTagAsync`; the Courses path now reaches it only through the
 eviction flush, for the fan-out tag. `GetOrCreateAsync`/`SetAsync` keep the tag parameter, but
-Courses read entries pass `[]` — an entry carries a tag only for the fan-out family authored
-by the next AI (§5). `CourseCacheKeys` stops exposing tag builders; tag building moves to a
-narrowed `CourseCacheTags` (fan-out row only).
-
-`CacheEvictionFlushBehavior` and `EvictionFlushScope` do not change; they flush whatever the
-queues hold.
+Courses read entries pass `[]` — only the public-view entry carries the one fan-out tag
+(`CourseCacheTags.CoursePublicViews`, `CachedCourseQueryService.cs:86`). `CourseCacheKeys`
+exposes no tag builders; tag building lives in the narrowed `CourseCacheTags` (fan-out row only).
 
 ### 4.4 Static key functions are the single registry
 
@@ -355,18 +390,22 @@ The `Caching<Aggregate>RepositoryDecorator` handles both directions. Old read-ca
 eviction logic is removed from wherever it lives today and replaced by the rules below; no
 new mechanism is added beyond them.
 
-**Read methods (new read-through caching):**
+**Read methods (read-through, as resolved by G11/G12):**
 
 1. Build `CacheScope.ForTenant(<ambient tenant>)` the same way the existing read decorators
-   in the query services already do (there is no aggregate argument on a read; G11 settles
+   in the query services already do (there is no aggregate argument on a read; G11 settled
    the tenant source).
-2. Wrap cacheable reads (single-entity reads per G12) in `ICachingService.GetOrCreate` with
-   the static entity key from `CourseCacheKeys` (§4.4).
+2. Wrap cacheable reads in `ICachingService.GetOrCreate` with the static entity key from
+   `CourseCacheKeys` (§4.4). As built, exactly ONE repository read is cacheable:
+   `ICourseOverviewRepository.GetByCourseIdAsync` — a flat, STJ-safe DTO — under
+   `CourseOverviewEntity`. All aggregate `GetById`-shaped reads delegate UNCACHED (G12:
+   the aggregate is a tracked-identity bridge).
 3. Never cache collection reads whose shape depends on caller paging/search/sort — they
    bypass to the inner repository, exactly as non-default projections already do.
-4. Serialization safety of cached aggregates is an authoring task for the next AI (G12): if
-   an aggregate cannot be cached safely, that read delegates directly and nothing else
-   changes.
+4. Serialization safety decided the G11/G12 boundary: aggregates are tracked-identity
+   bridges (and many have private constructors/collections), so no aggregate graph is cached;
+   a new cacheable read needs a flat, write-coupled DTO plus its `*Entity` key queued by every
+   write family that feeds it.
 
 **Write methods (`Add`/`Update`/`Remove`):**
 
@@ -379,24 +418,29 @@ Each method:
 4. Decorator-cached reads are invalidated by the same queue: each write's key set contains
    the entity keys (§4.4), so no separate read-invalidation path exists.
 
-Example:
+Example (the one as-built read-through, `CachingCourseOverviewRepositoryDecorator`):
 
 ```csharp
-public async Task<Course?> GetCourseByIdAsync(Guid courseId, CancellationToken ct)
+public async Task<CourseOverviewDto?> GetByCourseIdAsync(Guid courseId, CancellationToken ct)
 {
-    var scope = CacheScope.ForTenant(_tenant.CurrentTenantId);   // same source as query services
-    return await _caching.GetOrCreateAsync(
-        CourseCacheKeys.CourseEntity(scope, courseId),
-        () => _inner.GetCourseByIdAsync(courseId, ct), ct);
+    var scope = CacheScope.ForTenant(_tenantProvider.GetTenant());      // ambient source (F5)
+    if (!scope.IsEnabled)
+        return _inner.GetByCourseIdAsync(courseId, ct);
+
+    return await _cache.GetOrCreateAsync(
+        CourseCacheKeys.CourseOverviewEntity(scope, courseId),
+        CourseCacheKeys.EntityPolicy,
+        [],
+        token => _inner.GetByCourseIdAsync(courseId, token), ct);
 }
 
-public void Update(Course course)
+public void Update(CourseOverview overview)
 {
-    var scope = CacheScope.ForTenant(course.TenantId);
+    var scope = CacheScope.ForTenant(overview.TenantId);   // never ITenantProvider on writes
     if (scope.IsEnabled)
-        _eviction.Evict(CourseCacheKeys.EvictCourse(scope, course.Id));
+        _eviction.Evict(CourseCacheKeys.EvictCourseOverview(scope, overview.CourseId));
 
-    _inner.Update(course);
+    _inner.Update(overview);
 }
 ```
 
@@ -445,7 +489,7 @@ Current audit (F16):
 | `CreateCourse` | `ICourseRepository.Add` | OK |
 | `UpdateCourse`, `DeleteCourse` | `ICourseRepository.Update` | OK |
 | `SectionCommands` (add/rename/delete) | `Update(course)` | OK |
-| `AddSection` | none | **BROKEN — add `_courseRepository.Update(course)`** |
+| `AddSection` | `Update(course)` | OK — fixed in Phase 3 (`AddSection.cs:41`); its regression test `CourseView_AddSection_EvictsWarmedTree` passes. Phase 3 also re-committed all three mask-mutation paths in `CourseActiveItemsDomainEventHandler` with explicit `Update` |
 | `CourseSectionItemCommands` | `Update(course)` | OK |
 | `ReorderCommands` (sections/items) | `Update(course)` | OK |
 | `AddPlan`, `UpdatePlan`, `RemovePlan` | `Update(course)` | OK |
@@ -460,37 +504,47 @@ Current audit (F16):
 The `AddSection` gap is a real stale-cache bug, not a test-only concern. Fix it in the same
 change as the key conversion.
 
-### 4.8 Failure semantics
+### 4.8 Failure semantics (as built — the §1.3 handoff contract)
+
+Flush points have no depth gating. The rows below replace the old outermost-behavior table;
+there is no MediatR eviction behavior and no `EvictionFlushScope`.
 
 | Situation | Queue | Cache call | Caller observes |
 |---|---|---|---|
-| Success, flush succeeds | Snapshot, cleared in place | `RemoveAsync` per key + `RemoveByTagAsync` per tag | Normal result |
-| Success, cache throws | Cleared before calls | Failures logged | Normal result; entries age out by TTL |
-| Success, cache call cancels | Cleared | `OperationCanceledException` rethrown | Cancellation propagates (write already committed) |
-| `ErrorOr` error / validator rejects | Discarded | None | The error result |
-| Exception anywhere in the pipeline | Discarded | None | The exception rethrown |
-| Nested dispatch returns | Kept | None | Inner result; outer flush applies the keys and tags |
-| Save outside the outermost behavior | Queued invariants kept by the provider guard | None until a flush | Documented guard path |
+| Standalone save succeeds | Snapshot, cleared in place | `RemoveAsync` per key + `RemoveByTagAsync` per tag | Normal result |
+| Standalone save fails | `SaveChangesFailedAsync` → `Discard()` | None | The failure; nothing evicted |
+| Saves inside an explicit EF transaction | Kept through intermediate saves | None | Commit interceptor decides |
+| EF transaction commits | ONE flush for the whole transaction | `RemoveAsync` per key + `RemoveByTagAsync` per tag | Normal result |
+| EF transaction rolls back | `Discard()` | None | Rollback; nothing evicted |
+| `TransactionFailed` on the commit path | Flushed defensively | `RemoveAsync`/`RemoveByTagAsync` | Ambiguous commit → over-eviction only (never stale) |
+| `TransactionFailed` otherwise (e.g. rollback failure) | `Discard()` | None | The failure |
+| Save inside an ambient `System.Transactions.Transaction` | Guard throws in `SavedChangesAsync` | None | `InvalidOperationException` — fail fast; an ambient commit has no EF hook, so queued keys could never be flushed |
+| Cache I/O cancels | Cleared before calls | `OperationCanceledException` rethrown | Cancellation propagates (the write already committed) |
+| Cache I/O throws | Cleared before calls | Logged and swallowed | Normal result; entries age out by TTL |
+| Handler error result before any save | Keys remain queued; dropped with the request scope | None | Nothing evicted (safe no-op) |
+
+Belt-and-braces for the ambient row: `DatabaseSettings.cs:26-28` appends `Enlist=false` to every
+connection string that lacks it, so an opt-in `TransactionScope` cannot silently enlist. Today
+grep proves no `TransactionScope` usage exists in `src/`.
 
 A flush failure after commit must never turn a successful write into a failed request.
 
-### 4.9 Delete the coverage interceptor (recommended)
+### 4.9 Delete the coverage interceptor — DONE (Phase 2)
 
-`CoursesEvictionCoverageInterceptor` is the only remaining `ChangeTracker` read in the caching
-path (F20). It cannot derive keys, only warn. The direction for this change is no change-tracker
-involvement in eviction, so:
+`CoursesEvictionCoverageInterceptor`, its DI registration and
+`CoursesEvictionCoverageInterceptorTests` were deleted in Phase 2 (commit `72260467`); the
+§10 verification grep confirms zero hits. It was the last `ChangeTracker` read in the caching
+path, and it could only warn.
 
-- Delete `CoursesEvictionCoverageInterceptor`, its DI registration, and
-  `CoursesEvictionCoverageInterceptorTests`.
-- Replace it with the handler audit (§4.7), the decorator unit tests (§10.1), and the
-  mutation-family integration tests (§10.2).
-- Remove `HasPendingTags` from the provider API (it exists only for the guard); tags are
-  queued without a pending flag via `EvictTag`.
+Replaced by the handler audit (§4.7), the decorator unit tests (§10.1) and the
+mutation-family integration tests (§10.2). `HasPendingTags` is gone from the provider API;
+tags are queued without a pending flag via `EvictTag` (the subject decorator is the only
+Courses call site).
 
-Tradeoff to state: a future handler that forgets `Update(course)` will be caught by tests and
+Tradeoff on record: a future handler that forgets `Update(course)` is caught by tests and
 review, not at runtime. That is acceptable because the write surface is small (four
-repositories) and the audit is now explicit. If the team later wants a runtime alarm, it must
-not use `ChangeTracker`; that would be a new design question, not part of this plan.
+repositories) and the audit is explicit. If the team later wants a runtime alarm, it must not
+use `ChangeTracker`; that would be a new design question, not part of this plan.
 
 ### 4.10 Deleted or narrowed by this design
 
@@ -541,6 +595,17 @@ Notes for the author:
 - If G4 chooses the generation fallback instead of the fan-out tag, `CoursePublicView` (and
   `CourseView` if needed) gains a generation segment; the static function signature changes,
   not the decorator rule. The tag is the default recommendation (D13/D21).
+
+**Confirmed cells (as built — Phase 2 deltas over this draft, 2026-10-29):**
+
+| Helper | As built | Delta vs draft |
+|---|---|---|
+| `EvictCourse(scope, courseId)` | **8 keys**: StaffCatalog, StudentCatalog, CourseView (tree), CoursePublicView, CourseOverview, CourseReadiness, **CourseStatus**, CourseEntity (`CourseCacheKeys.cs:93-103`) | Draft had 7; adds the eviction-only `CourseStatus` key (the status read is deliberately uncached; queuing the key is a defensive no-op until it ever caches) |
+| `EvictCourseOverview(scope, courseId)` | **6 keys**: CourseOverview, CourseReadiness, CoursePublicView, StaffCatalog, StudentCatalog, CourseOverviewEntity (`:109-117`) | Matches draft incl. the entity key (prevents a stale cover resurrection: the upsert handler decides add-or-update from the read-through DTO) |
+| `EvictCourseAsset(scope, courseId, assetId)` | **5 keys**: CourseReadiness, CoursePublicView, StaffCatalog, StudentCatalog, CourseAssetEntity(assetId) — `[]` for `courseId == Guid.Empty` (`:123-136`) | Draft had 4 + entity; the asset entity key is keyed by **assetId**, so the helper takes both ids; no tree key (confirmed: the staff tree reads only `r.CourseAssetId`, never the asset table — G7) |
+| `EvictSubject(scope, subjectId)` | **2 keys**: SubjectList, SubjectEntity (`:140-144`) + the one tag | Draft queued both catalogs too. Dropped: catalogs are 2-min-TTL and evicted by key on every course write; G4.2 accepts their ≤2-min staleness after the rare rename/delete instead of over-evicting two hot entries on every subject write |
+| Entity keys | `CourseEntity`, `CourseOverviewEntity`, `CourseAssetEntity`, `SubjectEntity`, TTL 5 m (`EntityPolicy`, `:27`) | Family split per aggregate. Only `CourseOverviewEntity` is actually read-cached today (G11); the other three are eviction-only keys (G12 uncached aggregate reads) |
+| Tag (G4.1) | exactly one: `CourseCacheTags.CoursePublicViews(scope)` = tenant-wide `courses:views`; carried by the public-view read entry only (`CachedCourseQueryService.cs:86`); queued by the subject decorator only (`CachingSubjectRepositoryDecorator.cs:76`) | Fan-out tag authored; strictly one family, tenant-granular |
 
 ---
 
@@ -748,7 +813,7 @@ Final state of the decisions that matter for implementation.
 | D9 | Test host Redis | No container; L1 behavior tests | — |
 | D10 | Docs | Update after code | `CACHING.md`, caching README, architecture doc |
 | D11 | Catalog key cardinality | Default first page only (done) | No search/sort/page/perPage in keys |
-| D12 | Flush point | Outermost behavior, after commit, depth-gated (done) | No early flush from nested sends |
+| D12 | Flush point | **Flush at the EF save/commit interceptors in `UnitOfWork.cs` — no staging states, no depth gating** (supersedes the outermost-behavior design: handoff §1.3) | `EvictionSaveChangesInterceptor` flushes standalone saves and discards standalone failures; `EvictionTransactionInterceptor` flushes at commit, discards on rollback, flushes an ambiguous commit-path failure; the ambient-transaction guard throws (D24) |
 | D13 | Eviction currency | **Keys for enumerable surfaces; tags only for non-enumerable fan-out** (user decision 2026-10-27, 2nd revision) | `IEvictionProvider` dual queue: `Evict(CacheKey)` + `EvictTag(CacheTag)`; `FlushAsync` calls `RemoveAsync` then `RemoveByTagAsync` |
 | D14 | Key construction | **Static `CourseCacheKeys` functions only** | Decorators call the same functions the read decorators use; no literals |
 | D15 | ChangeTracker | **No change-tracker read in eviction or in read caching**; delete the coverage interceptor | Bypass detection moves to the handler audit + tests |
@@ -758,12 +823,15 @@ Final state of the decisions that matter for implementation.
 | D19 | Key table authorship | Next AI authors/confirms §5 before code | The plan is the input; the table is the implementation contract |
 | D20 | Read caching ownership | **Repository decorators cache their entity reads; query-service projection caching is kept** (user decision 2026-10-27, 2nd revision) | Read-through via static `*Entity` keys; details grilled in G11/G12 |
 | D21 | Tag authorship | **Next AI authors the tag list** (user decision 2026-10-27) | Only the G4 fan-out tag may exist in Courses until the list is decided |
+| D22 | Read-caching ownership (G11/G12 outcome) | **Exactly ONE repository read is cached**: `ICourseOverviewRepository.GetByCourseIdAsync` — a flat, STJ-safe DTO under the `CourseOverviewEntity` key, `EntityPolicy` (5 m), ambient `ITenantProvider`, `[]` tags (`CachingCourseOverviewRepositoryDecorator.cs:46-50`). All aggregate `GetById`-shaped reads (Course/Asset/Subject) delegate UNCACHED | Aggregate graphs are tracked-identity bridges (G12); serializing them would hand handlers detached copies. Never fix with a change-tracker scan; new cacheable reads need a flat, write-coupled DTO and their `*Entity` key queued by every write family |
+| D23 | Tag authorship (G4 outcome) | **ONE fan-out tag, tenant-widest granularity**: `courses:views` per tenant (`CourseCacheTags.CoursePublicViews`), carried ONLY by the public-view read entry (`CachedCourseQueryService.cs:86`), queued ONLY by the subject decorator (`CachingSubjectRepositoryDecorator.cs:76`) | G4.1: subject rename is not attributable to any single course; public views recapitulate the subject name. Worst-case staleness = public-view TTL = 10 min. G4.2: catalogs are NOT on the tag — accepted ≤2-min staleness after rename/delete (catalog TTL 2 min, evicted by key on course writes); lookups remain forbidden |
+| D24 | Ambient `TransactionScope` | **Fail-fast guard + `Enlist=false`** (user decision, handoff §5) | `EvictionSaveChangesInterceptor.SavedChangesAsync` throws `InvalidOperationException` when `System.Transactions.Transaction.Current` is not null (an ambient commit has no EF hook → unflushable queue → stale cache); `DatabaseSettings.cs:26-28` appends `Enlist=false` to every connection string. Empty `TransactionScope` usage in `src/` today; the guard is the invariant |
 
 ---
 
 ## 8. Remaining work
 
-### 8.1 Phase 0 — grill (no code)
+### 8.1 Phase 0 — grill (no code) — COMPLETE (ledger §11 filled)
 
 - Run §6 G1–G12; record answers in a decision ledger next to this plan.
 - Close G4 first (the lookup issue); the fan-out tag is the default, and its details are the
@@ -771,7 +839,7 @@ Final state of the decisions that matter for implementation.
 - Close G11/G12 before writing the decorator read-through caching.
 - Close G6/G7 before finalizing the overview/asset key rows.
 
-### 8.2 Phase 1 — dual queue (shared)
+### 8.2 Phase 1 — dual queue (shared) — COMPLETE (`f0a31c81`, plus the interceptor pivot)
 
 1. Convert `IEvictionProvider` to a dual queue: `Evict(CacheKey)` /
    `Evict(IEnumerable<CacheKey>)` plus `EvictTag(CacheTag)`; remove `HasPendingTags`; add
@@ -779,11 +847,12 @@ Final state of the decisions that matter for implementation.
 2. Update `ScopedEvictionProvider`: replace the tag-only store with a key queue and a tag
    queue; `FlushAsync` calls `RemoveAsync` per key and `RemoveByTagAsync` per tag; `Discard`
    clears both.
-3. Update `EvictionPipelineTests` (keys and tags: queue once, flush once, discard,
+3. Update the provider tests (keys and tags: queue once, flush once, discard,
    cancellation, failure).
-4. Leave `CacheEvictionFlushBehavior` and `EvictionFlushScope` unchanged.
+4. ~~Leave `CacheEvictionFlushBehavior` and `EvictionFlushScope` unchanged.~~ Superseded: both
+   were DELETED in the pivot to flush-at-commit interceptors (handoff §1.3, §4.2).
 
-### 8.3 Phase 2 — Courses decorators
+### 8.3 Phase 2 — Courses decorators — COMPLETE (`72260467`)
 
 1. Add the `*Entity` keys and key-set helpers to `CourseCacheKeys` (§4.4), using the same
    read functions.
@@ -798,14 +867,14 @@ Final state of the decisions that matter for implementation.
 7. Update `CoursesRepositoryDecoratorTests` to assert exact keys, exact tag calls (fan-out
    only), and read-through caching.
 
-### 8.4 Phase 3 — handler fix
+### 8.4 Phase 3 — handler fix — COMPLETE (`2c184204`)
 
 1. Add `_courseRepository.Update(course)` to `AddSectionCommandHandler` after a successful
    `AddSection` and before returning.
 2. Confirm `CourseView_AddSection_EvictsWarmedTree` passes.
 3. Re-run the audit in §4.7 against the source (all write handlers).
 
-### 8.5 Phase 4 — tests
+### 8.5 Phase 4 — tests — COMPLETE (Phase 2 unit + Phase 3 integration additions)
 
 1. Unit: each decorator queues exactly the §5 key set (and the subject decorator the fan-out
    tag); read methods cache with the `*Entity` keys but queue nothing; `TenantId ==
@@ -820,7 +889,7 @@ Final state of the decisions that matter for implementation.
 5. Remove the unused `c(string)` helper / duplicate assertion in `CoursesCacheTests` if still
    present.
 
-### 8.6 Phase 5 — docs
+### 8.6 Phase 5 — docs — THIS RECONCILIATION (2026-10-29)
 
 - `Modules/Courses/CACHING.md`: keys for enumerable surfaces and the narrowed fan-out tag;
   document decorator read caching; correct the false `AddSection` claim; state the G4
@@ -829,9 +898,9 @@ Final state of the decisions that matter for implementation.
   read-through caching; no interceptor; update the invariants table.
 - `docs/CachingArchitecture.md`: key eviction + fan-out tag; decorator read caching; no
   change tracker.
-- `docs/caching/spec-33/issues/course-eviction-parent-lookup.md`: this plan's companion
+- ~~`docs/caching/spec-33/issues/course-eviction-parent-lookup.md`: this plan's companion
   grilling document; it is rewritten for the decorator-owned design and §6 (G4 first). Do not
-  leave the old tag table there.
+  leave the old tag table there.~~ Out of the handoff §8 amendment scope — not touched.
 
 ### 8.7 Phase 6 — verification
 
@@ -901,22 +970,26 @@ grep -rn "EvictTag" src/alphazero-api/Modules/Courses
 
 ### 10.1 Unit (Courses.UnitTests/Infrastructure/Caching)
 
-| # | Test | Assertion |
+The interceptor matrix uses a minimal SQLite-backed stub context (kept-open
+`SqliteConnection`, `EnsureCreated`, real saves/transactions): the interceptors are
+context- and provider-agnostic, so no module context is needed — the module model uses
+Postgres-only column types (`jsonb`/`varbit`) and cannot build on SQLite. Assertions go through
+an `ICachingService` stub (the provider is real, so `provider.Received()` is not usable;
+the flush result is observable via the cache stub).
+
+| # | Test (file) | Assertion |
 |---|---|---|
-| U1 | `Course` decorator writes | `Add`/`Update`/`Remove` queue exactly the seven §5 keys (including `CourseEntity`); read methods queue nothing |
-| U2 | `CourseOverview` decorator writes | Queues overview, readiness, public view, both catalogs, overview entity key |
-| U3 | `CourseAsset` decorator writes | Queues readiness, public view, both catalogs, asset entity key; queues nothing for `CourseId == Guid.Empty` |
-| U4 | `Subject` decorator writes | Queues subject list, both catalogs, subject entity key, and the fan-out tag via `EvictTag` |
+| U1 | `Course` decorator writes (`CoursesRepositoryDecoratorTests`) | `Add`/`Update`/`Remove` queue exactly the 8-key §5 row (including `CourseStatus` and `CourseEntity`); read methods queue nothing |
+| U2 | `CourseOverview` decorator writes | Queues overview, readiness, public view, both catalogs, overview entity key (6 keys) |
+| U3 | `CourseAsset` decorator writes | Queues readiness, public view, both catalogs, asset entity key (5 keys, no tree); queues nothing for `CourseId == Guid.Empty` |
+| U4 | `Subject` decorator writes | Queues subject list + subject entity key (2 keys) and the ONE fan-out tag via `EvictTag` — exact call count |
 | U5 | Disabled scope | `TenantId == Guid.Empty` queues nothing and does not throw |
 | U6 | Key provenance | Every queued key equals the value returned by the corresponding `CourseCacheKeys` function |
-| U7 | Flush | Provider calls `RemoveAsync` once per unique key and `RemoveByTagAsync` for the fan-out tag, clears both queues, dedupes |
-| U8 | Failure/cancellation | Cache failure is logged/swallowed; `OperationCanceledException` propagates |
-| U9 | Nesting/discard | Nested dispatch does not flush; `ErrorOr` error and exception discard keys and tags |
-| U10 | Handler audit | A source test or the integration matrix proves `AddSection` and the tracking-only handlers evict |
-| U11 | G4 mechanism | Subject write evicts the view fan-out tag; the next view read misses and repopulates |
-| U12 | Read-through | A cacheable read calls the inner repository once on miss and not at all on hit; the key equals the `*Entity` function |
-| U13 | Read bypass | Parameterized collection reads delegate directly; nothing caches and nothing queues |
-| U14 | No new mechanisms | No decorator, key builder, or test references a change tracker, an entity dispatch, or a lookup |
+| U7 | Provider contract (`ScopedEvictionProviderTests`) | Dual lanes; dedupe; `FlushAsync` → `RemoveAsync` per unique key + `RemoveByTagAsync` per unique tag; snapshots-and-clears; empty queue is a no-op; `Discard` clears both; failure logged/swallowed; cancellation propagates |
+| U8 | Interceptor matrix (`EvictionInterceptorTests`) | Standalone save success → flush; standalone save FAILURE → discard; transaction (2 saves) + commit → ONE flush; transaction + rollback → discard; `TransactionFailed` commit → flush; ambient transaction → the guard throws and nothing was flushed; saves with nothing queued → no cache calls |
+| U9 | Read-through (G11) | `GetByCourseIdAsync` calls the inner repository once on miss and not at all on hit; keyed by `CourseOverviewEntity` under the ambient tenant; aggregate `GetById` reads delegate UNCACHED (G12) |
+| U10 | Read bypass | Parameterized collection reads delegate directly; nothing caches and nothing queues |
+| U11 | Key registry hygiene | No decorator/test references a change tracker, an entity dispatch, a lookup, or a raw key/tag string outside the two registries (also asserted by the §8.7 verification greps) |
 
 ### 10.2 Integration (`CoursesCacheTests`)
 
@@ -940,24 +1013,45 @@ entry is cached; a command write proves eviction.
 | I13 | Dashboard/enrollment | Remains uncached; direct DB change is immediately visible |
 | I14 | Decorator read-through | Warm an entity read → direct DB change without a command → the next repository read is fresh after the command write evicts the entity key |
 
+Phase 3 additions (all green): `Overview_UpsertCoverChangeExternal_RefreshesCatalogsViewOverviewAndReadiness`
+(zeros in on I6 with a ghost cover + ghost draft), `Course_UpdateStateAndDelete_CommandWrites_RefreshCachedLists`
+(I5 via command writes: update, direct publish, soft-delete),
+`Asset_DurationSyncThroughHandler_RefreshesPublicViewTimings` (I8 driven by the real
+`SyncResourceMetadataCommand` path in a fresh module scope),
+`OverviewRepository_ReadThrough_ServesStaleCopyUntilCommandWriteEvicts` (I14 against the
+repository surface resolved from the courses module scope).
+
 ---
 
-## 11. Decision ledger (fill during the grilling)
+## 11. Decision ledger (filled — grilling complete, Phase 0–3)
 
 | ID | Question | Answer | Evidence / consequence |
 |---|---|---|---|
-| G1 | Asset single-owner? | | |
-| G2 | Empty `CourseAsset.CourseId`? | | |
-| G3 | Parent moves? | | |
-| G4 | Subject→view fan-out mechanism | | |
-| G5 | Subject delete/cascade | | |
-| G6 | Overview fields | | |
-| G7 | Asset fields in staff tree | | |
-| G8 | Handler audit complete? | | |
-| G9 | Hidden cascades? | | |
-| G10 | Remaining tags? | | |
-| G11 | Cacheable repository reads / read tenant source | | |
-| G12 | Cached entity vs tracked entity in handlers | | |
+| G1 | Asset single-owner? | **Yes — single owner.** Assignment rejects a mismatched course; `CourseId` is private-set with no move/rebind method | `AssignAssetToCurriculum.cs:40` (`asset.CourseId != request.CourseId` → rejected), same guard in `DismissAsset.cs:31`; `CourseMediaAsset.cs:28` `public Guid CourseId { get; private set; }` and no rebind API exists. No command, consumer or migration re-parents an asset. One per-course key set is complete (per-course asset keys, P1 resolved) |
+| G2 | Empty `CourseAsset.CourseId`? | **Unassigned pool asset → queues NOTHING**; also `TenantId == Guid.Empty` queues nothing on every decorator | `CourseCacheKeys.EvictCourseAsset` returns `[]` for `Guid.Empty` (`CourseCacheKeys.cs:123-126`); `CachingCourseAssetRepositoryDecorator.Evict` early-returns when `TenantId == Guid.Empty` or `keys.Count == 0` (`:77-90`). A pool asset is referenced by no cached surface. Proven behaviorally: the asset-available integration test runs from a null-tenant bus scope (`TenantConsumeFilter`) and the tenant comes from the entity's own `TenantId` |
+| G3 | Parent moves? | **No move exists for sections, items, resources or plans** — every child write loads and updates the Course root | All curriculum/plan/reorder/status commands mutate the loaded `Course` and call `Update(course)` (audit §4.7); children carry course placement ids with no re-parent command. If one is ever added: the handler loads and updates BOTH course roots (and each root's 8-key set)` |
+| G4 | Subject→view fan-out mechanism | **The tag. Exactly one, tenant-wide**: `courses:views` (`CourseCacheTags.CoursePublicViews(scope)`), carried by the public-view read entry ONLY, queued by the subject decorator ONLY | G4.1: `CourseCacheTags.cs` (single builder); carried at `CachedCourseQueryService.cs:86` only — every other read entry passes `[]`; queued at `CachingSubjectRepositoryDecorator.cs:76` (the ONLY `EvictTag` call site in `Modules/Courses`). Lookup rejected (never sources `ITenantProvider` into eviction; never queries courses for the rename). **G4.2 staleness bounds (accepted):** public views ≤10 min (their TTL); student/staff catalogs ≤2 min after a subject rename/delete (catalog TTL 2 min, evicted by key on course writes) — deliberately NOT on the tag to avoid over-evicting two hot entries per subject write; subject list key is flushed immediately. Behavioral proof: `StudentCatalog_SearchBypassesCache_AndSubjectRenameRefreshesCatalogAndView` |
+| G5 | Subject delete / cascade | **Blocked while referenced**; no cascade reaches cached entries otherwise | `DeleteSubject.cs:34-36`: `Any(c => c.SubjectId == subjectId)` → `Error.Conflict("Subject.InUse", ...)`. Cached per-course entries can therefore never outlive a (blocked) referenced-subject delete; after the last reference is gone, the SubjectList key is flushed by the delete write itself. Integration: `SubjectDelete_...` test |
+| G6 | Which overview fields feed catalog / public view / readiness? | **`CoverImageDocumentId`** feeds all three (plus `DescriptionContent` feeds the overview endpoint and readiness's description check); title/description of the AGGREGATE come from the Course row, not the overview | `UpsertCourseOverview` read-modify-write shape — the upsert handler makes add-or-update from the `GetByCourseIdAsync` DTO and preserves the existing cover on update (no command can set a cover; it is only ever materialized externally). Hence `EvictCourseOverview` includes both catalogs + view + readiness + the overview key itself. Actually observed by the Phase 3 cover-upsert integration test |
+| G7 | Asset fields in staff tree? | **None.** The staff tree reads only `r.CourseAssetId` from resources — never the asset table | The tree is built from the Course aggregate sections (placement ids) via the query service/get handler (`GetCourseView.cs` consumes `r.DurationSeconds`, the placement snapshot). Consequently `EvictCourseAsset` deliberately omits the tree key (the draft's confirmed §5 cell) |
+| G8 | Handler audit complete? | **Yes — every cache-feeding write goes through a decorated repository (§4.7).** The last gap (`AddSection`) was fixed in Phase 3 | `AddSection.cs:41` now calls `_courseRepository.Update(course)` after the error check; `CourseActiveItemsDomainEventHandler` re-commits all three mask-mutation paths with explicit `Update` (`:48`, `:58`, `:68`); the tracked-identity bridge in `AddItem`/`RemoveItem` handlers (:74-82 region) is untouched by design (G12). Regression: `CourseView_AddSection_EvictsWarmedTree` green |
+| G9 | Hidden cascades? | **Two scoped ones, both handled**: (a) course soft-delete is state-agnostic — deletes draft/published alike and the 8-key set still evicts; (b) subject delete is blocked while referenced (G5). No cascade writes pool/enrollment/analytics surfaces | `Course.Delete()` soft-deletes without status gating (verified PH1); staff list observed to drop the deleted course in the Phase 3 lifecycle test. Nothing else cascades between cached families |
+| G10 | Remaining tags? | **Exactly one** — the G4 fan-out tag on public-view entries. No second family may be added; a new "can't enumerate" case returns to grilling | `CourseCacheTags.cs` has a single builder; the §8.7 grep proves `EvictTag` appears only in the subject decorator |
+| G11 | Cacheable repository reads / read tenant source | **Only `GetByCourseIdAsync` is read-cached.** Tenant source: ambient `ITenantProvider` (the same source the query services use); `CacheScope` throws when tenantless, and a disabled scope bypasses to the inner repository | `CachingCourseOverviewRepositoryDecorator.cs:46-50/58-61` (key `CourseOverviewEntity(scope, courseId)`, policy `EntityPolicy` 5 min `CourseCacheKeys.cs:27`, tags `[]`). The DTO is a flat STJ round-trip-safe record coupled exclusively to overview writes (which queue the key). Collection/filtered reads (`GetFirst`/`Get`/`GetAll`/`Any`/`Count`/`Query`) bypass — no caller shape ever enters a key |
+| G12 | Cached entity vs tracked entity in handlers | **All aggregate `GetById`-shaped reads delegate UNCACHED** — the aggregate is a tracked-identity bridge: a cached, deserialized copy handed to the inner repository collides with the live tracked instance in the same `AppDbContext` (identity resolution conflict: two instances, one key), and the read-through cannot proxy a tracked aggregate. Never "fix" with a change-tracker scan | `CachingCourseRepositoryDecorator.GetById` → `_inner.GetById` (uncached, class doc); same for asset/subject decorators (`ById` pass-through; the asset/subject entity keys are eviction-only today). The upsert overview handler works entirely from the flat `GetByCourseIdAsync` DTO — it reconstructs the entity and writes via explicit `Add`/`Update` — which is safe only because `CourseOverviewEntity` is queued by EVERY overview write (§5 delta): the add-or-update decision can never be made from a stale copy. This is exactly why the one read-through had to be a flat, write-coupled DTO rather than the aggregate |
+
+**Phase 2 key-set deltas (supersede the §5 draft):** 8-key `EvictCourse` (adds eviction-only
+`CourseStatus`), 6-key `EvictCourseOverview` (includes `CourseOverviewEntity` to prevent stale
+cover resurrection), 5-key `EvictCourseAsset` keyed by `(courseId, assetId)` with `[]` for
+`CourseId == Guid.Empty`, 2-key + 1-tag `EvictSubject` (catalogs dropped per G4.2),
+entity-family split `CourseEntity`/`CourseOverviewEntity`/`CourseAssetEntity`/`SubjectEntity`
+(TTL 5 m, `EntityPolicy`; only the overview one is read-cached per G11/G12), and readiness TTL
+fixed at 3 min (the §2 tree's 1-min row was draft-only). The `courses:views` tag is tenant-wide.
+**Phase 3 pipeline deltas (supersede handoff §1.3/§1.4 lane wording):** the queue lives on the
+request-scoped `ScopedEvictionProvider` instance under a lock — NOT `AsyncLocal` (ancestor
+context invisibility proven live, see §4.3) — and `HybridCachingService` resolves the provider
+lazily via `IServiceProvider` to break the constructor cycle. Flush-at-commit semantics,
+failure table and dual-lane contract are unchanged.
 
 ---
 
@@ -1005,15 +1099,16 @@ entry is cached; a command write proves eviction.
 
 ## 14. One-paragraph prompt for the next AI
 
-You are implementing issue #33 on `spec/33-caching`. The `Caching*RepositoryDecorator` classes
-own the cache logic: they cache cacheable repository entity reads through static
-`CourseCacheKeys` `*Entity` functions (the query-service projection caching stays as-is), and
-on writes they queue exact key sets built from the same static functions into
-`IEvictionProvider`. Tags are queued only for non-enumerable fan-out — currently subject →
-public course views: author that tag list yourself per §5 and run the grilling agenda in §6,
-starting with G4 (the lookup issue) and G1/G2/G3 (asset ownership, parent moves). Do not
-introduce a change-tracker scan, an `Evict(entity)` dispatch, a database lookup in eviction, or
-raw key/tag strings. The provider holds a key queue and a tag queue; the outermost behavior
-flushes with `RemoveAsync` and `RemoveByTagAsync` after commit. Fix the `AddSection` bypass,
-delete the coverage interceptor and the unused tag builders, update the tests and docs, and
-report the G1–G12 answers with file/line evidence before changing code.
+Issue #33 is implemented on `spec/33-caching` (Phases 0–3 committed; the `Caching*RepositoryDecorator`
+classes own the cache: one read-through — `ICourseOverviewRepository.GetByCourseIdAsync` under
+`CourseOverviewEntity` — and write-side key sets from `CourseCacheKeys` into `IEvictionProvider`,
+flushed by the two EF interceptors in `UnitOfWork.cs` at save/commit points; the ONE fan-out tag
+is tenant-wide `courses:views`, carried by the public-view entry and queued only by the subject
+decorator). If you touch this area: queue exact key sets built from the aggregate argument only;
+never introduce a change-tracker read, an `Evict(entity)` dispatch, a database lookup in eviction
+or for key building, a staging state, a second tag family, or a raw key/tag string outside
+`CourseCacheKeys`/`CourseCacheTags`; keep the queue on the request-scoped provider instance (NOT
+`AsyncLocal` — ancestor-context invisibility, §4.3) and keep the ambient-transaction fail-fast
+guard + `Enlist=false`. Documented decisions live in §7 (D1–D24) and the filled ledger in §11;
+the verified key-set deltas are in §5; run the §8.7 verification greps and both suites
+(integration ALONE) after any change.

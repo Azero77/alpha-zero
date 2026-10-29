@@ -74,8 +74,9 @@ public class EvictionSaveChangesInterceptor(IEvictionProvider evictionProvider) 
         //  B. Inside an explicit EF transaction → do nothing; the transaction interceptor flushes at commit.
         //  C. Inside an ambient System.Transactions transaction → fail fast: an ambient commit has no
         //     EF hook, so queued keys could never be flushed — silently serving stale cache. Nothing in
-        //     the repo uses TransactionScope (Npgsql connections are opened with Enlist=false), so this
-        //     guard is the invariant that keeps the write path cache-safe.
+        //     the repo opens no ambient System.Transactions transaction (Npgsql connections are
+        //     opened with Enlist=false), so this guard is the invariant that keeps the write path
+        //     cache-safe.
         if (System.Transactions.Transaction.Current is not null)
         {
             throw new InvalidOperationException(
