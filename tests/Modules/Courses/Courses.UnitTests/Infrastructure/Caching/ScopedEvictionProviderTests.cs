@@ -176,6 +176,56 @@ public class ScopedEvictionProviderTests
         await cache.DidNotReceive().RemoveByTagAsync(Arg.Any<CacheTag>(), Arg.Any<CancellationToken>());
     }
 
+    [Fact]
+    public async Task ConcurrentProducersAndFlush_NeverLoseAKey()
+    {
+        var cache = Substitute.For<ICachingService>();
+        var removedKeys = new System.Collections.Concurrent.ConcurrentBag<CacheKey>();
+        cache.RemoveAsync(Arg.Any<CacheKey>(), Arg.Any<CancellationToken>())
+            .Returns(Task.CompletedTask)
+            .AndDoes(ci => removedKeys.Add(ci.Arg<CacheKey>()));
+
+        var provider = new ScopedEvictionProvider(cache, Substitute.For<ILogger<ScopedEvictionProvider>>());
+        provider.Begin();
+
+        const int producerCount = 8;
+        const int keysPerProducer = 50;
+        var allKeys = Enumerable.Range(0, producerCount * keysPerProducer)
+            .Select(i => Key($"contention-{i}"))
+            .ToArray();
+
+        using var barrier = new Barrier(producerCount + 1);
+
+        var producers = Enumerable.Range(0, producerCount).Select(p => Task.Run(() =>
+        {
+            barrier.SignalAndWait();
+            for (var i = p * keysPerProducer; i < (p + 1) * keysPerProducer; i++)
+            {
+                provider.Evict(allKeys[i]);
+            }
+        })).ToArray();
+
+        var flusher = Task.Run(async () =>
+        {
+            barrier.SignalAndWait();
+            while (!Task.WhenAll(producers).IsCompleted)
+            {
+                await provider.FlushAsync(CancellationToken.None);
+                await Task.Yield();
+            }
+            // Final drain after producers quiesce
+            await provider.FlushAsync(CancellationToken.None);
+        });
+
+        await Task.WhenAll(producers);
+        await flusher;
+
+        removedKeys.Should().HaveCount(allKeys.Length,
+            "every queued key must be removed exactly once across all flushes — no doubles");
+        removedKeys.ToHashSet().Should().BeEquivalentTo(allKeys,
+            "every queued key must be removed across all flushes — no loss");
+    }
+
     private sealed class RecordingLogger<T> : ILogger<T>
     {
         public List<(LogLevel Level, string Message, Exception? Exception)> Entries { get; } = [];

@@ -1,10 +1,12 @@
+using System.Collections.Immutable;
+using System.Threading;
 using Microsoft.Extensions.Logging;
 
 namespace AlphaZero.Shared.Infrastructure.Caching;
 
 /// <summary>
-/// Request-scope dual eviction queue (keys + fan-out tag). The lanes are <c>HashSet</c> state on
-/// the instance, which guarantees the guardrail the pipeline depends on: decorators queue inside a
+/// Request-scope dual eviction queue (keys + fan-out tag). The lanes are instance state on
+/// the scoped object, which guarantees the guardrail the pipeline depends on: decorators queue inside a
 /// command handler (necessarily a <em>descendant</em> async context of the MediatR behavior that
 /// later saves), and the EF interceptors flush from the behavior that called
 /// <c>SaveChangesAsync</c>. AsyncLocal writes made in a descendant do NOT flow back up to the
@@ -12,16 +14,42 @@ namespace AlphaZero.Shared.Infrastructure.Caching;
 /// shared instance state does, because decorators, the unit of work, the DbContext and both
 /// interceptors resolve from the SAME lifetime scope (everything is registered scoped for exactly
 /// this reason). One scope ⇒ one queue; a disposed scope drops its queue with it.
+/// <para>
+/// <b>Synchronization Protocol:</b>
+/// State is held in a single <c>volatile Lanes? _lanes</c> reference pointing to an immutable
+/// <see cref="Lanes"/> record containing <see cref="ImmutableHashSet{CacheKey}"/> and
+/// <see cref="ImmutableHashSet{CacheTag}"/>.
+/// <list type="bullet">
+/// <item><description>
+/// <b>Atomicity &amp; Snapshot:</b> <see cref="FlushAsync"/> executes a single
+/// <see cref="Interlocked.Exchange{T}(ref T, T)"/> replacing <c>_lanes</c> with <see cref="Lanes.Empty"/>.
+/// This atomically captures the point-in-time snapshot and clears both lanes in one operation.
+/// </description></item>
+/// <item><description>
+/// <b>No Key Loss:</b> Producers (<see cref="Evict(CacheKey)"/> and <see cref="EvictTag(CacheTag)"/>)
+/// read <c>_lanes</c>, create a new immutable <see cref="Lanes"/> instance with the added element, and
+/// install it via an <see cref="Interlocked.CompareExchange{T}(ref T, T, T)"/> retry loop.
+/// A producer racing a flush either succeeds before the exchange (coalescing into the current flush snapshot)
+/// or fails CAS / observes <see cref="Lanes.Empty"/> after the exchange (carrying over to the next flush snapshot).
+/// Thus, no key or tag is ever lost across any pattern of concurrent saves.
+/// </description></item>
+/// <item><description>
+/// <b>Deduplication:</b> Deduplication is structurally guaranteed by <see cref="ImmutableHashSet{T}"/> semantics;
+/// adding an existing key or tag produces the identical set reference.
+/// </description></item>
+/// <item><description>
+/// <b>No Await under Synchronization:</b> Cache I/O (<c>RemoveAsync</c>, <c>RemoveByTagAsync</c>) is awaited
+/// outside any synchronization region on the local snapshot reference.
+/// </description></item>
+/// <item><description>
+/// <b>Discard:</b> Atomically resets the active queue back to <see cref="Lanes.Empty"/> without performing any cache operations.
+/// </description></item>
+/// </list>
+/// </para>
 /// </summary>
 public sealed class ScopedEvictionProvider : IEvictionProvider
 {
-    // Lanes are guarded: Evict may legally be called from any thread inside the scope (e.g. a
-    // parallel MediatR publish strategy), while FlushAsync/Discard serialize the snapshot-and-clear
-    // against concurrent queuers. The cache I/O happens OUTSIDE the lock — only the lane-snapshot
-    // bookkeeping is serialized.
-    private readonly object _gate = new();
-    private HashSet<CacheKey>? _pendingKeys;
-    private HashSet<CacheTag>? _pendingTags;
+    private volatile Lanes? _lanes;
 
     private readonly ICachingService _cache;
     private readonly ILogger<ScopedEvictionProvider> _logger;
@@ -32,43 +60,29 @@ public sealed class ScopedEvictionProvider : IEvictionProvider
         _logger = logger;
     }
 
-    public bool IsActive
-    {
-        get
-        {
-            lock (_gate)
-            {
-                return _pendingKeys is not null || _pendingTags is not null;
-            }
-        }
-    }
+    public bool IsActive => _lanes is not null;
 
-    public bool HasPendingKeys
-    {
-        get
-        {
-            lock (_gate)
-            {
-                return _pendingKeys is { Count: > 0 };
-            }
-        }
-    }
+    public bool HasPendingKeys => _lanes is { Keys.IsEmpty: false };
 
     public void Begin()
     {
-        lock (_gate)
-        {
-            _pendingKeys ??= [];
-            _pendingTags ??= [];
-        }
+        Interlocked.CompareExchange(ref _lanes, Lanes.Empty, null);
     }
 
     public void Evict(CacheKey key)
     {
-        lock (_gate)
+        SpinWait spin = default;
+        while (true)
         {
-            _pendingKeys ??= [];
-            _pendingKeys.Add(key);
+            var current = _lanes;
+            var next = new Lanes(
+                (current?.Keys ?? ImmutableHashSet<CacheKey>.Empty).Add(key),
+                current?.Tags ?? ImmutableHashSet<CacheTag>.Empty);
+
+            if (Interlocked.CompareExchange(ref _lanes, next, current) == current)
+                return;
+
+            spin.SpinOnce();
         }
     }
 
@@ -80,32 +94,29 @@ public sealed class ScopedEvictionProvider : IEvictionProvider
 
     public void EvictTag(CacheTag tag)
     {
-        lock (_gate)
+        SpinWait spin = default;
+        while (true)
         {
-            _pendingTags ??= [];
-            _pendingTags.Add(tag);
+            var current = _lanes;
+            var next = new Lanes(
+                current?.Keys ?? ImmutableHashSet<CacheKey>.Empty,
+                (current?.Tags ?? ImmutableHashSet<CacheTag>.Empty).Add(tag));
+
+            if (Interlocked.CompareExchange(ref _lanes, next, current) == current)
+                return;
+
+            spin.SpinOnce();
         }
     }
 
     public async Task FlushAsync(CancellationToken cancellationToken)
     {
-        CacheKey[] keySnapshot;
-        CacheTag[] tagSnapshot;
-        lock (_gate)
-        {
-            // Snapshot and clear both lanes under the lock: a failed flush must not be retried by
-            // an enclosing scope, and concurrent queuers that land after the snapshot belong to
-            // the NEXT save.
-            keySnapshot = _pendingKeys is { Count: > 0 } ? _pendingKeys.ToArray() : [];
-            _pendingKeys?.Clear();
-            tagSnapshot = _pendingTags is { Count: > 0 } ? _pendingTags.ToArray() : [];
-            _pendingTags?.Clear();
-        }
+        var snapshot = Interlocked.Exchange(ref _lanes, Lanes.Empty);
 
-        if (keySnapshot.Length == 0 && tagSnapshot.Length == 0)
+        if (snapshot is null || (snapshot.Keys.IsEmpty && snapshot.Tags.IsEmpty))
             return;
 
-        foreach (var key in keySnapshot)
+        foreach (var key in snapshot.Keys)
         {
             try
             {
@@ -124,7 +135,7 @@ public sealed class ScopedEvictionProvider : IEvictionProvider
             }
         }
 
-        foreach (var tag in tagSnapshot)
+        foreach (var tag in snapshot.Tags)
         {
             try
             {
@@ -146,10 +157,24 @@ public sealed class ScopedEvictionProvider : IEvictionProvider
 
     public void Discard()
     {
-        lock (_gate)
+        SpinWait spin = default;
+        while (true)
         {
-            _pendingKeys?.Clear();
-            _pendingTags?.Clear();
+            var current = _lanes;
+            if (current is null)
+                return;
+
+            if (Interlocked.CompareExchange(ref _lanes, Lanes.Empty, current) == current)
+                return;
+
+            spin.SpinOnce();
         }
+    }
+
+    private sealed record Lanes(ImmutableHashSet<CacheKey> Keys, ImmutableHashSet<CacheTag> Tags)
+    {
+        public static readonly Lanes Empty = new(
+            ImmutableHashSet<CacheKey>.Empty,
+            ImmutableHashSet<CacheTag>.Empty);
     }
 }
