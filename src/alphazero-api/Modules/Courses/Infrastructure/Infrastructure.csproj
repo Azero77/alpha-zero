@@ -7,6 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="Courses.UnitTests" />
     <PackageReference Include="AWS.Messaging" />
     <PackageReference Include="AWS.Messaging.Telemetry.OpenTelemetry" />
     <PackageReference Include="AWSSDK.MediaConvert" />

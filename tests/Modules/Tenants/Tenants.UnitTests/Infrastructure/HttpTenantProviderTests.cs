@@ -17,8 +17,19 @@ public class HttpTenantProviderTests
     private static readonly Guid TenantA = Guid.NewGuid();
     private static readonly Guid TenantB = Guid.NewGuid();
 
-    private static HttpTenantProvider CreateProvider(HttpContext context) =>
-        new HttpTenantProvider(new HttpContextAccessor { HttpContext = context });
+    private static HttpTenantProvider CreateProvider(HttpContext context, Guid? ambientTenantId = null) =>
+        new HttpTenantProvider(
+            new HttpContextAccessor { HttpContext = context },
+            new TestAmbientTenantContext(ambientTenantId));
+
+    private sealed class TestAmbientTenantContext(Guid? tenantId) : IAmbientTenantContext
+    {
+        public Guid? TenantId { get; } = tenantId;
+
+        public IDisposable Push(Guid? tenantId) => throw new NotSupportedException();
+
+        public static TestAmbientTenantContext Empty { get; } = new(null);
+    }
 
     private static HttpContext Context(string? headerValue = null, string? tidClaimValue = null)
     {

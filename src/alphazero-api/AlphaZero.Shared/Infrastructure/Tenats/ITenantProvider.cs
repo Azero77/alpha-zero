@@ -17,14 +17,16 @@ public class FakeTenantProvider : ITenantProvider
 public class HttpTenantProvider : ITenantProvider
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly IAmbientTenantContext _ambientTenant;
     private const string TenantClaim = "tid";
     private const string TenantIdHeader = "X-TenantId";
 
     private Guid? _cachedTenantId = null;
 
-    public HttpTenantProvider(IHttpContextAccessor httpContextAccessor)
+    public HttpTenantProvider(IHttpContextAccessor httpContextAccessor, IAmbientTenantContext ambientTenant)
     {
         _httpContextAccessor = httpContextAccessor;
+        _ambientTenant = ambientTenant;
     }
 
     public Guid? GetTenant()
@@ -52,6 +54,14 @@ public class HttpTenantProvider : ITenantProvider
         {
             _cachedTenantId = tenantIdFromHeader;
             return tenantIdFromHeader;
+        }
+
+        // Message consumers and background work have no HTTP context; the consume filter
+        // publishes the message tenant through the ambient context before handlers run.
+        if (_ambientTenant.TenantId is { } tenantIdFromAmbient)
+        {
+            _cachedTenantId = tenantIdFromAmbient;
+            return tenantIdFromAmbient;
         }
 
         return null;

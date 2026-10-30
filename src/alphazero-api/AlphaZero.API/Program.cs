@@ -1,6 +1,7 @@
 using AlphaZero.Shared.Application;
 using AlphaZero.Shared.Authorization;
 using AlphaZero.Shared.Infrastructure;
+using AlphaZero.Shared.Infrastructure.Messaging;
 using Autofac;
 using Autofac.Extensions.DependencyInjection;
 using FastEndpoints;
@@ -253,6 +254,8 @@ public class Program
             x.UsingInMemory((context, cfg) =>
             {
                 cfg.UseDelayedMessageScheduler();
+                cfg.UseConsumeFilter(typeof(TenantConsumeFilter<>), context);
+                cfg.UsePublishFilter(typeof(TenantPublishFilter<>), context);
                 cfg.ConfigureEndpoints(context);
             });
 
@@ -282,6 +285,8 @@ public class Program
             {
                 var hostRegion = region;
                 cfg.Host(hostRegion, h => { });
+                cfg.UseConsumeFilter(typeof(TenantConsumeFilter<>), context);
+                cfg.UsePublishFilter(typeof(TenantPublishFilter<>), context);
                 cfg.ConfigureEndpoints(context);
             });
 

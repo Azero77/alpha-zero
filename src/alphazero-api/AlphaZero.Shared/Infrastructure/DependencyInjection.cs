@@ -9,6 +9,8 @@ using Amazon.MediaConvert;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Hosting;
 using AlphaZero.Shared.Infrastructure.SoftDelete;
+using AlphaZero.Shared.Infrastructure.Caching;
+using AlphaZero.Shared.Infrastructure.Messaging;
 using Microsoft.Extensions.Caching.Hybrid;
 
 namespace AlphaZero.Shared.Infrastructure;
@@ -44,6 +46,18 @@ public static class DependencyInjection
         }
         // 4. Common Utilities
         services.AddSingleton<IClock, Clock>();
+        services.AddSingleton<IAmbientTenantContext, AmbientTenantContext>();
+        services.AddSingleton(typeof(TenantConsumeFilter<>));
+        services.AddSingleton(typeof(TenantPublishFilter<>));
+        services.AddScoped<ICachingService, HybridCachingService>();
+        services.AddScoped<IEvictionProvider, ScopedEvictionProvider>();
+        // Eviction flush interceptors: the queue lives ON the request-scoped ScopedEvictionProvider
+        // instance, and every participant in a write (repository decorators, unit of work,
+        // DbContext, both interceptors) resolves from the same lifetime scope, so the flush sees
+        // the lanes queued by the handlers. They are no-ops when the queue is empty, so adding
+        // them to other module DbContexts later is safe.
+        services.AddScoped<EvictionSaveChangesInterceptor>();
+        services.AddScoped<EvictionTransactionInterceptor>();
         services.AddHttpContextAccessor();
 
         // 5. Cloudflare Edge Security & Playback Ticketing
@@ -67,13 +81,10 @@ public static class DependencyInjection
 
         services.AddHybridCache(o =>
         {
-            o = new HybridCacheOptions()
+            o.DefaultEntryOptions = new HybridCacheEntryOptions
             {
-                DefaultEntryOptions = new()
-                {
-                    Expiration = TimeSpan.FromMinutes(10),
-                    LocalCacheExpiration = TimeSpan.FromMinutes(5)
-                },
+                Expiration = TimeSpan.FromMinutes(10),
+                LocalCacheExpiration = TimeSpan.FromMinutes(5)
             };
         });
         

@@ -19,6 +19,15 @@ public  class DatabaseSettings
             dbSettings.ConnectionString = conn;
         }
 
+        // Belt-and-braces for the cache eviction pipeline: ambient System.Transactions transactions
+        // have no EF commit hook to flush eviction at, so the write path must never enlist in one.
+        // The UnitOfWork interceptor also fails fast if an ambient transaction is ever encountered.
+        if (!string.IsNullOrEmpty(dbSettings.ConnectionString)
+            && !dbSettings.ConnectionString.Contains("Enlist=", StringComparison.OrdinalIgnoreCase))
+        {
+            dbSettings.ConnectionString = dbSettings.ConnectionString.TrimEnd(';') + ";Enlist=false";
+        }
+
         return dbSettings;
     }
 }

@@ -38,7 +38,7 @@ public sealed class AddSectionCommandHandler : IRequestHandler<AddSectionCommand
 
         var result = course.AddSection(request.Title);
         if (result.IsError) return result.Errors;
-
+        _courseRepository.Update(course);
         _logger.LogInformation("Section '{Title}' added to Course {CourseId}.", request.Title, request.CourseId);
 
         return Result.Success;

@@ -39,6 +39,7 @@ public sealed class RemovePlanCommandHandler : IRequestHandler<RemovePlanCommand
         var result = course.RemovePlan(request.PlanId);
         if (result.IsError) return result.Errors;
 
+        _courseRepository.Update(course);
         _logger.LogInformation("Plan {PlanId} removed from Course {CourseId}.", request.PlanId, request.CourseId);
 
         return Result.Success;

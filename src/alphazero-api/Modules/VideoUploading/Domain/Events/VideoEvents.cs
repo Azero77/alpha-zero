@@ -19,12 +19,14 @@ public class VideoFailedDomainEvent(Guid videoId, Guid tenantId,string reason) :
 public class VideoMetadataUpdatedDomainEvent : DomainEvent
 {
     public Guid VideoId { get; }
+    public Guid TenantId { get; }
     public string Title { get; }
     public string? Description { get; }
 
-    public VideoMetadataUpdatedDomainEvent(Guid videoId, string title, string? description)
+    public VideoMetadataUpdatedDomainEvent(Guid videoId, Guid tenantId, string title, string? description)
     {
         VideoId = videoId;
+        TenantId = tenantId;
         Title = title;
         Description = description;
     }

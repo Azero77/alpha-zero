@@ -1,7 +1,6 @@
 using AlphaZero.Modules.Identity.Domain.Models;
 using AlphaZero.Modules.Identity.Domain.Repositories;
 using AlphaZero.Shared.Application;
-using Microsoft.Extensions.Caching.Hybrid;
 using ErrorOr;
 using MediatR;
 using Microsoft.Extensions.Logging;

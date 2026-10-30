@@ -9,8 +9,11 @@ namespace AlphaZero.Modules.Courses.Application.Courses.EventHandlers;
 /// Keeps Course.ActiveItemsBitmask consistent with every curriculum modification. One focused
 /// handler translates each local domain event into the matching Course mask operation, so the
 /// curriculum change and the mask update are persisted by the SAME SaveChangesAsync transaction
-/// (events are dispatched by the UnitOfWork before the save). This is a local domain invariant —
-/// deliberately NOT the MassTransit outbox pipeline (see DomainEventHandler for integration events).
+/// (events are dispatched by the UnitOfWork before the save). Each mutating path re-commits the
+/// aggregate with an explicit <see cref="ICourseRepository.Update"/> (spec-33 conversion rule:
+/// handlers must not rely on implicit change-tracker write-through) so the write-side cache
+/// decorator queues the course key set. This is a local domain invariant — deliberately NOT the
+/// MassTransit outbox pipeline (see DomainEventHandler for integration events).
 /// </summary>
 public class CourseActiveItemsDomainEventHandler :
     INotificationHandler<CourseSectionAddedDomainEvent>,
@@ -42,6 +45,7 @@ public class CourseActiveItemsDomainEventHandler :
     {
         var course = await LoadCourseOrFail(notification.CourseId, cancellationToken);
         course.DeactivateCurriculumBits(notification.BitIndexes);
+        _courseRepository.Update(course);
 
         _logger.LogInformation("Section {SectionId} deleted in course {CourseId}; deactivated {BitCount} positions ({BitIndexes}).",
             notification.SectionId, notification.CourseId, notification.BitIndexes.Count, string.Join(',', notification.BitIndexes));
@@ -51,6 +55,7 @@ public class CourseActiveItemsDomainEventHandler :
     {
         var course = await LoadCourseOrFail(notification.CourseId, cancellationToken);
         course.ActivateCurriculumBit(notification.BitIndex);
+        _courseRepository.Update(course);
 
         _logger.LogInformation("Curriculum item {ItemId} added to course {CourseId}; activated bit position {BitIndex}.",
             notification.ItemId, notification.CourseId, notification.BitIndex);
@@ -60,6 +65,7 @@ public class CourseActiveItemsDomainEventHandler :
     {
         var course = await LoadCourseOrFail(notification.CourseId, cancellationToken);
         course.DeactivateCurriculumBits([notification.BitIndex]);
+        _courseRepository.Update(course);
 
         _logger.LogInformation("Curriculum item {ItemId} deleted from course {CourseId}; deactivated bit position {BitIndex}.",
             notification.ItemId, notification.CourseId, notification.BitIndex);
@@ -67,9 +73,9 @@ public class CourseActiveItemsDomainEventHandler :
 
     /// <summary>
     /// The course is already tracked by the ambient AppDbContext (the command handler mutated it),
-    /// so resolving it by id yields the same in-memory instance — mask mutations land in the same
-    /// change-tracking bag and commit with the curriculum edit. A missing course means the event
-    /// refers to state that will never be persisted: fail loudly so the whole transaction rolls back.
+    /// so resolving it by id yields the same in-memory instance — the mask mutation lands on the
+    /// aggregate the caller will persist. A missing course means the event refers to state that
+    /// will never be persisted: fail loudly so the whole transaction rolls back.
     /// </summary>
     private async Task<Domain.Aggregates.Courses.Course> LoadCourseOrFail(Guid courseId, CancellationToken cancellationToken)
     {

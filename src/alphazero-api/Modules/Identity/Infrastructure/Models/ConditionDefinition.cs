@@ -2,8 +2,10 @@
 using AlphaZero.Modules.Identity.Domain.Models.Principals;
 using AlphaZero.Modules.Identity.Domain.Repositories;
 using AlphaZero.Modules.Identity.Infrastructure.Persistance;
-using Microsoft.Extensions.Caching.Hybrid;
-using System.Runtime.CompilerServices;
+using AlphaZero.Modules.Identity.Infrastructure.Repositories;
+using AlphaZero.Modules.Identity.Infrastructure.Serialization;
+using AlphaZero.Shared.Infrastructure.Caching;
+using System.Text.Json;
 
 namespace AlphaZero.Modules.Identity.Infrastructure.Models;
 
@@ -16,23 +18,35 @@ public class ConditionDefinition
 
 public class ConditionRepository : IConditionRepository
 {
-    private readonly AppDbContext _context;
-    private readonly HybridCache _hybridCache;
+    private static readonly CachePolicy Policy = new(TimeSpan.FromMinutes(10));
 
-    public ConditionRepository(AppDbContext context, HybridCache hybridCache)
+    private readonly AppDbContext _context;
+    private readonly ICachingService _cache;
+
+    public ConditionRepository(AppDbContext context, ICachingService cache)
     {
         _context = context;
-        _hybridCache = hybridCache;
+        _cache = cache;
     }
 
     public async Task<IConditionNode?> GetNodeByConditionReferenceName(string name)
     {
-        return await _hybridCache.GetOrCreateAsync($"ConditionDefinition_{name}",  async (token) =>
-        {
-            var item = await _context.ConditionDefinitions
-               .FindAsync(new { Name = name }, token);
+        // HybridCache serialises even L1 entries; IConditionNode is polymorphic and only
+        // round-trips through the shared converter, so cache its JSON representation.
+        var json = await _cache.GetOrCreateAsync(
+            IdentityCacheKeys.ConditionDefinition(name),
+            Policy,
+            [],
+            async token =>
+            {
+                var item = await _context.ConditionDefinitions
+                   .FindAsync(new object?[] { name }, token);
 
-            return item?.InnerCondition;
-        });
+                return item?.InnerCondition is { } node
+                    ? JsonSerializer.Serialize(node, IdentityCacheJson.Options)
+                    : null;
+            });
+
+        return json is null ? null : JsonSerializer.Deserialize<IConditionNode>(json, IdentityCacheJson.Options);
     }
 }

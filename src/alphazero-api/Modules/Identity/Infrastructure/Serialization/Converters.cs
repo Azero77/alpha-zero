@@ -69,6 +69,7 @@ public class ConditionNodeJsonConverter : JsonConverter<IConditionNode>
             ConditionType.And => JsonSerializer.Deserialize<AndNode>(root.GetRawText(), options),
             ConditionType.Or => JsonSerializer.Deserialize<OrNode>(root.GetRawText(), options),
             ConditionType.Not => JsonSerializer.Deserialize<NotNode>(root.GetRawText(), options),
+            ConditionType.Reference => JsonSerializer.Deserialize<ConditionReferenceNode>(root.GetRawText(), options),
             _ => throw new JsonException($"Unsupported condition type: {conditionType}")
         };
     }

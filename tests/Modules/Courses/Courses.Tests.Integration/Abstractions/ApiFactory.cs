@@ -104,6 +104,7 @@ public class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
 public class TestTenantProvider : ITenantProvider
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly IAmbientTenantContext _ambientTenant;
     private static readonly AsyncLocal<Guid?> _asyncLocalTenantId = new();
     private static Guid? _fallbackTenantId;
 
@@ -127,9 +128,10 @@ public class TestTenantProvider : ITenantProvider
         }
     }
 
-    public TestTenantProvider(IHttpContextAccessor httpContextAccessor)
+    public TestTenantProvider(IHttpContextAccessor httpContextAccessor, IAmbientTenantContext ambientTenant)
     {
         _httpContextAccessor = httpContextAccessor;
+        _ambientTenant = ambientTenant;
     }
 
     public Guid? GetTenant()
@@ -142,6 +144,11 @@ public class TestTenantProvider : ITenantProvider
                 return tenantId;
             }
         }
+
+        // Consumers have no HTTP context; the consume filter sets this. It must win over the
+        // static fallback so a genuinely tenant-less bus scope is observable in tests.
+        if (_ambientTenant.TenantId is { } ambientTenantId)
+            return ambientTenantId;
 
         return CurrentTenantId ?? StaticTenantId;
     }
