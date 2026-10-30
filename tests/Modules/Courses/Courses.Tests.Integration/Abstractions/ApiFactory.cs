@@ -74,10 +74,21 @@ public class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
             services.AddAuthorizationBuilder()
                 .SetDefaultPolicy(new Microsoft.AspNetCore.Authorization.AuthorizationPolicyBuilder("TestScheme").RequireAuthenticatedUser().Build());
 
-            // Replace Tenant Provider
+            // Replace Tenant Provider. The anonymous opt-out path (#32/D4) runs the REAL
+            // HttpTenantProvider so claim/header precedence (D2) is exercised end-to-end;
+            // every other request keeps the static TestTenantProvider — existing tests
+            // are unchanged.
             services.RemoveAll<ITenantProvider>();
             services.AddHttpContextAccessor();
-            services.AddScoped<ITenantProvider, TestTenantProvider>();
+            services.AddScoped<TestTenantProvider>();
+            services.AddScoped<HttpTenantProvider>();
+            services.AddScoped<ITenantProvider>(sp =>
+            {
+                var httpContext = sp.GetRequiredService<IHttpContextAccessor>().HttpContext;
+                return httpContext?.Request.Headers.ContainsKey("X-Test-Anonymous") == true
+                    ? (ITenantProvider)sp.GetRequiredService<HttpTenantProvider>()
+                    : sp.GetRequiredService<TestTenantProvider>();
+            });
 
             // Bypass IAM evaluation for integration tests when Testing:BypassIAM is set
             if (Environment.GetEnvironmentVariable("Testing:BypassIAM") == "true")
@@ -116,6 +127,7 @@ public class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
 public class TestTenantProvider : ITenantProvider
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly IAmbientTenantContext _ambientTenant;
     private static readonly AsyncLocal<Guid?> _asyncLocalTenantId = new();
     private static Guid? _fallbackTenantId;
 
@@ -139,9 +151,10 @@ public class TestTenantProvider : ITenantProvider
         }
     }
 
-    public TestTenantProvider(IHttpContextAccessor httpContextAccessor)
+    public TestTenantProvider(IHttpContextAccessor httpContextAccessor, IAmbientTenantContext ambientTenant)
     {
         _httpContextAccessor = httpContextAccessor;
+        _ambientTenant = ambientTenant;
     }
 
     public Guid? GetTenant()
@@ -154,6 +167,11 @@ public class TestTenantProvider : ITenantProvider
                 return tenantId;
             }
         }
+
+        // Consumers have no HTTP context; the consume filter sets this. It must win over the
+        // static fallback so a genuinely tenant-less bus scope is observable in tests.
+        if (_ambientTenant.TenantId is { } ambientTenantId)
+            return ambientTenantId;
 
         return CurrentTenantId ?? StaticTenantId;
     }

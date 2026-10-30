@@ -33,7 +33,10 @@ public sealed class ReorderCommandsHandlers :
         if (course is null) return Error.NotFound("Course.NotFound", "Course not found.");
 
         var result = course.ReorderSections(request.SectionIds);
-        if (!result.IsError) _logger.LogInformation("Sections reordered for Course {CourseId}.", request.CourseId);
+        if (result.IsError) return result;
+
+        _courseRepository.Update(course);
+        _logger.LogInformation("Sections reordered for Course {CourseId}.", request.CourseId);
         return result;
     }
 
@@ -46,7 +49,10 @@ public sealed class ReorderCommandsHandlers :
         if (course is null) return Error.NotFound("Course.NotFound", "Course not found.");
 
         var result = course.ReorderItems(request.SectionId, request.ItemIds);
-        if (!result.IsError) _logger.LogInformation("Items reordered for Section {SectionId} in Course {CourseId}.", request.SectionId, request.CourseId);
+        if (result.IsError) return result;
+
+        _courseRepository.Update(course);
+        _logger.LogInformation("Items reordered for Section {SectionId} in Course {CourseId}.", request.SectionId, request.CourseId);
         return result;
     }
 }

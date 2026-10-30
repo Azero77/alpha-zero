@@ -2,6 +2,7 @@ using ErrorOr;
 using MediatR;
 using AlphaZero.Modules.Courses.Domain.Aggregates.Courses;
 using AlphaZero.Modules.Courses.Application.Repositories;
+using AlphaZero.Shared.Application;
 using AlphaZero.Shared.Infrastructure.Tenats;
 using AlphaZero.Modules.Courses.Domain.ValueObjects;
 
@@ -11,7 +12,7 @@ public record UpsertCourseOverviewCommand(
     Guid CourseId,
     string DescriptionContent,
     string? TargetAudienceContent,
-    string? LearningObjectivesContent) : IRequest<ErrorOr<Success>>;
+    string? LearningObjectivesContent) : ICommand<Success>;
 
 public class UpsertCourseOverviewCommandHandler : IRequestHandler<UpsertCourseOverviewCommand, ErrorOr<Success>>
 {

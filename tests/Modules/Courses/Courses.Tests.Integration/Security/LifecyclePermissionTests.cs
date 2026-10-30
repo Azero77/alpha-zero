@@ -52,14 +52,6 @@ public class LifecycleSecurityApiFactory : ApiFactory
     }
 }
 
-public class FakePolicyEvaluatorService : IPolicyEvaluatorService
-{
-    public ErrorOr<Success> ResultToReturn { get; set; } = ErrorOr.Result.Success;
-
-    public Task<ErrorOr<Success>> Authorize(AuthorizationContext context) =>
-        Task.FromResult(ResultToReturn);
-}
-
 [Collection("Integration")]
 public class LifecyclePermissionTests : IClassFixture<LifecycleSecurityApiFactory>, IDisposable
 {

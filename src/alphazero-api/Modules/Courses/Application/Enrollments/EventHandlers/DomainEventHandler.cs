@@ -11,7 +11,8 @@ public class DomainEventHandler :
     INotificationHandler<EnrollmentCreatedDomainEvent>,
     INotificationHandler<EnrollmentSuspendedDomainEvent>,
     INotificationHandler<EnrollmentResumedDomainEvent>,
-    INotificationHandler<EnrollmentExpiredDomainEvent>
+    INotificationHandler<EnrollmentExpiredDomainEvent>,
+    INotificationHandler<CourseCompletedDomainEvent>
 {
     private readonly IPublishEndpoint _moduleBus;
 
@@ -69,6 +70,17 @@ public class DomainEventHandler :
             notification.StudentId,
             notification.CourseId,
             notification.TenantId
+        ), cancellationToken);
+    }
+
+    public async Task Handle(CourseCompletedDomainEvent notification, CancellationToken cancellationToken)
+    {
+        await _moduleBus.Publish(new CourseCompletedIntegrationEvent(
+            notification.EnrollmentId,
+            notification.CourseId,
+            notification.StudentId,
+            notification.TenantId,
+            notification.CompletedOnUtc
         ), cancellationToken);
     }
 }

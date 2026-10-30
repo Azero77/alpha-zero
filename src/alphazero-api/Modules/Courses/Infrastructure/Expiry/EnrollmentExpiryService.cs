@@ -103,17 +103,33 @@ public class EnrollmentExpiryService(
             if (enrollment.Status != EnrollmentStatus.Expired)
                 continue; // skipped by the domain guard this pass
 
+            // Counts are never persisted (#32): derive the course's active-items mask and let
+            // ProgressCalculation single-source both the completed indexes and the percentage.
+            var courseMask = context.Courses
+                .IgnoreQueryFilters([DbContstants.SoftDeleteFilter])
+                .Where(c => c.Id == enrollment.CourseId)
+                .Select(c => c.ActiveItemsBitmask)
+                .FirstOrDefault();
+            if (courseMask is null)
+                continue; // course unreadable — nothing attributable is on the counters
+
             var completedIndexes = new List<int>();
-            for (var i = 0; i < enrollment.Progress.Bitmask.Length; i++)
+            // Both arrays are indexed by position, so only positions that exist in BOTH masks
+            // can count (the progress mask grows lazily as items are completed, #32).
+            var sharedLength = Math.Min(enrollment.Progress.Bitmask.Length, courseMask.Length);
+            for (var i = 0; i < sharedLength; i++)
             {
-                if (enrollment.Progress.Bitmask[i])
+                if (enrollment.Progress.Bitmask[i] && courseMask[i])
                     completedIndexes.Add(i);
             }
+
+            var completionPercentage =
+                ProgressCalculation.CompletionPercentage(enrollment.Progress.Bitmask, courseMask);
 
             try
             {
                 await analyticsRepository.DecrementExpiredEnrollmentAsync(
-                    enrollment.CourseId, enrollment.Progress.CompletionPercentage, completedIndexes, cancellationToken);
+                    enrollment.CourseId, completionPercentage, completedIndexes, cancellationToken);
             }
             catch (Exception ex)
             {

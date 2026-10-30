@@ -33,6 +33,12 @@ public class TenantUserPrincipalAssignment : AggregateRoot, IDomainTenantOwned
     public DateTime TimeCreated { get; private set; }
     public IReadOnlyCollection<IPolicy> Policies => Principal.Policies;
 
+    /// <summary>
+    /// For persistence and cache rehydration only.
+    /// </summary>
+    public static TenantUserPrincipalAssignment Hydrate(Guid id, Guid tenantId, TenantUser tenantUser, Principal principal, ResourceArn resource, DateTime timeCreated)
+        => new(id, tenantId, tenantUser, principal, resource, timeCreated);
+
     public static ErrorOr<TenantUserPrincipalAssignment> Create(Guid tenantId, TenantUser tenantUser, Principal principal, string resourceArn, DateTime createdAt)
     {
         if (principal.PrincipalScope is not null)

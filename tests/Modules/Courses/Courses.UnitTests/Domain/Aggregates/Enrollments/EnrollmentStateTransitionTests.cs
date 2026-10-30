@@ -1,3 +1,4 @@
+using System.Collections;
 using AlphaZero.Modules.Courses.Domain.Aggregates.Enrollments;
 using AlphaZero.Modules.Courses.Domain.Events;
 using ErrorOr;
@@ -16,7 +17,7 @@ public class EnrollmentStateTransitionTests
 
     private static Enrollment NewEnrollment()
     {
-        var enrollment = Enrollment.Create(Guid.NewGuid(), TenantId, Guid.NewGuid(), Guid.NewGuid(), 5).Value;
+        var enrollment = Enrollment.Create(Guid.NewGuid(), TenantId, Guid.NewGuid(), Guid.NewGuid()).Value;
         enrollment.PopDomainEvents(); // drop the creation event
         return enrollment;
     }
@@ -239,7 +240,7 @@ public class EnrollmentStateTransitionTests
     public void Transitions_Should_PreserveProgressBitmask(EnrollmentStatus via)
     {
         var enrollment = NewEnrollment();
-        enrollment.CompleteItem(2).IsError.Should().BeFalse();
+        enrollment.CompleteItem(2, new BitArray(5, true)).IsError.Should().BeFalse();
 
         switch (via)
         {
@@ -257,6 +258,6 @@ public class EnrollmentStateTransitionTests
         enrollment.Reactivate(Guid.NewGuid()).IsError.Should().BeFalse();
         enrollment.Status.Should().Be(EnrollmentStatus.Active);
         enrollment.Progress.IsComplete(2).Should().BeTrue();
-        enrollment.Progress.CompletionPercentage.Should().BeApproximately(20.0, 0.01);
+        ProgressCalculation.CompletionPercentage(enrollment.Progress.Bitmask, new BitArray(5, true)).Should().BeApproximately(20.0, 0.01);
     }
 }

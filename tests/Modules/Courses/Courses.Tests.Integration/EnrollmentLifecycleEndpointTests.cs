@@ -266,9 +266,9 @@ public class EnrollmentLifecycleEndpointTests : BaseIntegrationTest
         var enrollmentId = Guid.NewGuid();
         var enrollment = Enrollment.Create(
             enrollmentId, tenantId, studentId, courseId,
-            totalTrackedItems: 1, activeTrackedItems: 1,
             accessExpiresOn: DateTime.UtcNow.AddSeconds(-5)).Value; // short-TTL test clock: window just passed
-        enrollment.CompleteItem(0).IsError.Should().BeFalse(); // earned progress must survive expiry
+        var allActiveMask = new System.Collections.BitArray(1, true);
+        enrollment.CompleteItem(0, allActiveMask).IsError.Should().BeFalse(); // earned progress must survive expiry
 
         await ExecuteDbContextAsync(async db =>
         {

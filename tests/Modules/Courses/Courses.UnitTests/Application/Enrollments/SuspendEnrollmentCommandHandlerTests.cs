@@ -19,7 +19,7 @@ public class SuspendEnrollmentCommandHandlerTests
 
     private static EnrollmentAggregate CreateEnrollment()
     {
-        return EnrollmentAggregate.Create(Guid.NewGuid(), TenantId, Guid.NewGuid(), Guid.NewGuid(), 3).Value;
+        return EnrollmentAggregate.Create(Guid.NewGuid(), TenantId, Guid.NewGuid(), Guid.NewGuid()).Value;
     }
 
     [Fact]

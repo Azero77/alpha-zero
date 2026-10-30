@@ -47,6 +47,7 @@ public class VideoFailedDomainEventHandlerPublishIntegrationEvent(IPublishEndpoi
     {
         await moduleBus.Publish(new VideoProcessingFailedEvent(
             notification.VideoId,
+            notification.TenantId,
             notification.Reason), cancellationToken);
     }
 }

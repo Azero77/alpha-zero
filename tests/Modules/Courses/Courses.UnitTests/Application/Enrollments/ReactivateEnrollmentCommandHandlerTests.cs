@@ -1,3 +1,4 @@
+using System.Collections;
 using AlphaZero.Modules.Courses.Application.Enrollments.Commands.Reactivate;
 using AlphaZero.Modules.Courses.Application.Repositories;
 using AlphaZero.Modules.Courses.Domain.Aggregates.Enrollments;
@@ -25,7 +26,7 @@ public class ReactivateEnrollmentCommandHandlerTests
 
     private static EnrollmentAggregate CreateEnrollment()
     {
-        return EnrollmentAggregate.Create(Guid.NewGuid(), TenantId, Guid.NewGuid(), Guid.NewGuid(), 3).Value;
+        return EnrollmentAggregate.Create(Guid.NewGuid(), TenantId, Guid.NewGuid(), Guid.NewGuid()).Value;
     }
 
     private void SetupExisting(EnrollmentAggregate enrollment)
@@ -41,7 +42,7 @@ public class ReactivateEnrollmentCommandHandlerTests
     {
         // Arrange
         var enrollment = CreateEnrollment();
-        enrollment.CompleteItem(1).IsError.Should().BeFalse();
+        enrollment.CompleteItem(1, new BitArray(3, true)).IsError.Should().BeFalse();
         SetupExisting(enrollment);
         switch (startingStatus)
         {

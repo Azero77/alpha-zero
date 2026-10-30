@@ -47,6 +47,8 @@ public class GetEnrollmentQueryHandlerTests
             Guid.NewGuid(),
             Guid.NewGuid(),
             "Active",
+            3,
+            4,
             75.5,
             DateTime.UtcNow,
             Guid.NewGuid());

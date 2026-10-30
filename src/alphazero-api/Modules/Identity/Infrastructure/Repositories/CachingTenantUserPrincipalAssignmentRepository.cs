@@ -1,21 +1,24 @@
 using AlphaZero.Modules.Identity.Domain.Models;
 using AlphaZero.Modules.Identity.Domain.Repositories;
 using AlphaZero.Modules.Identity.Infrastructure.Persistance;
+using AlphaZero.Modules.Identity.Infrastructure.Serialization;
 using AlphaZero.Shared.Domain;
-using Microsoft.Extensions.Caching.Memory;
+using AlphaZero.Shared.Infrastructure.Caching;
 
 namespace AlphaZero.Modules.Identity.Infrastructure.Repositories;
 
 public class CachingTenantUserPrincipalAssignmentRepository : TenantUserPrincipalAssignmentRepository
 {
-    private readonly IMemoryCache _cache;
+    private static readonly CachePolicy Policy = new(TimeSpan.FromMinutes(30));
+
+    private readonly ICachingService _cache;
     private readonly ITenantUserPrincipalAssignmentRepository _inner;
 
     public CachingTenantUserPrincipalAssignmentRepository(
         AppDbContext context, 
         IPrincipalRepository principalRepository, 
         ITenantUserPrincipalAssignmentRepository inner,
-        IMemoryCache cache) 
+        ICachingService cache) 
         : base(context, principalRepository)
     {
         _inner = inner;
@@ -24,14 +27,18 @@ public class CachingTenantUserPrincipalAssignmentRepository : TenantUserPrincipa
 
     public override async Task<TenantUserPrincipalAssignment?> GetActiveAssignment(Guid tenantUserId, string? resourceArn = null, CancellationToken ct = default)
     {
-        var cacheKey = $"user_assignments:{tenantUserId}";
-        var assignments = await _cache.GetOrCreateAsync(cacheKey, async entry =>
-        {
-            entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(30);
-            return await _inner.GetAllAssignmentsEagerAsync(tenantUserId, ct);
-        });
+        // HybridCache serialises even L1 entries, so the cached value is a JSON-safe projection
+        // which is rehydrated into the domain aggregates on every read.
+        var cached = await _cache.GetOrCreateAsync(
+            IdentityCacheKeys.UserAssignments(tenantUserId.ToString()),
+            Policy,
+            [],
+            async token => CachedAssignmentMapper.ToCache(await _inner.GetAllAssignmentsEagerAsync(tenantUserId, token)),
+            ct);
 
-        if (assignments is null || !assignments.Any()) return null;
+        var assignments = CachedAssignmentMapper.ToDomain(cached);
+
+        if (assignments.Count == 0) return null;
 
         if (resourceArn is null)
             return assignments.FirstOrDefault();
@@ -47,12 +54,12 @@ public class CachingTenantUserPrincipalAssignmentRepository : TenantUserPrincipa
     public override void Add(TenantUserPrincipalAssignment entity)
     {
         _inner.Add(entity);
-        _cache.Remove($"user_assignments:{entity.TenantUser.Id}");
+        _cache.Evict(IdentityCacheKeys.UserAssignments(entity.TenantUser.Id.ToString())); //evict key
     }
 
     public override void Remove(TenantUserPrincipalAssignment entity)
     {
         _inner.Remove(entity);
-        _cache.Remove($"user_assignments:{entity.TenantUser.Id}");
+        _cache.Evict(IdentityCacheKeys.UserAssignments(entity.TenantUser.Id.ToString())); //evict key
     }
 }

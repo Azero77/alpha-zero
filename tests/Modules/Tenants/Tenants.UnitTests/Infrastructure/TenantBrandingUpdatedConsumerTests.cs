@@ -1,8 +1,8 @@
 using AlphaZero.Modules.Tenants.Domain;
 using AlphaZero.Modules.Tenants.Infrastructure.Consumers;
+using AlphaZero.Shared.Infrastructure.Caching;
 using FluentAssertions;
 using MassTransit;
-using Microsoft.Extensions.Caching.Hybrid;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
@@ -18,7 +18,7 @@ public class TenantBrandingUpdatedConsumerTests
     public async Task Handle_WhenCacheAvailable_ShouldInvalidateCacheEntries()
     {
         // Arrange
-        var cache = Substitute.For<HybridCache>();
+        var cache = Substitute.For<ICachingService>();
         var consumer = new TenantBrandingUpdatedConsumer(_logger, cache);
         var branding = TenantBranding.Create("#059669", "#F97316").Value;
         var domainEvent = new TenantBrandingUpdatedDomainEvent(Guid.NewGuid(), "Harvard", branding);
@@ -27,16 +27,18 @@ public class TenantBrandingUpdatedConsumerTests
         await consumer.Handle(domainEvent, CancellationToken.None);
 
         // Assert
-        await cache.Received(1).RemoveAsync("tenant:subdomain:harvard", Arg.Any<CancellationToken>());
-        await cache.Received(1).RemoveByTagAsync("tenant-harvard", Arg.Any<CancellationToken>());
+        await cache.Received(1).RemoveAsync(
+            CacheKey.Create("tenant:subdomain", "harvard"), Arg.Any<CancellationToken>());
+        await cache.Received(1).RemoveByTagAsync(
+            CacheTag.Create("tenant-branding", "harvard"), Arg.Any<CancellationToken>());
     }
 
     [Fact]
     public async Task Handle_WhenCacheThrows_ShouldCatchGracefully()
     {
         // Arrange
-        var cache = Substitute.For<HybridCache>();
-        cache.When(c => c.RemoveAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()))
+        var cache = Substitute.For<ICachingService>();
+        cache.When(c => c.RemoveAsync(Arg.Any<CacheKey>(), Arg.Any<CancellationToken>()))
             .Do(_ => throw new InvalidOperationException("Cache service failure"));
 
         var consumer = new TenantBrandingUpdatedConsumer(_logger, cache);
@@ -48,6 +50,21 @@ public class TenantBrandingUpdatedConsumerTests
 
         // Assert - should catch and log warning, not throw
         await act.Should().NotThrowAsync();
+    }
+
+    [Fact]
+    public async Task Handle_WhenCacheCancels_ShouldPropagateCancellation()
+    {
+        var cache = Substitute.For<ICachingService>();
+        cache.RemoveAsync(Arg.Any<CacheKey>(), Arg.Any<CancellationToken>())
+            .Returns(Task.FromException(new OperationCanceledException()));
+
+        var consumer = new TenantBrandingUpdatedConsumer(_logger, cache);
+        var domainEvent = new TenantBrandingUpdatedDomainEvent(Guid.NewGuid(), "yale", TenantBranding.Default);
+
+        var act = () => consumer.Handle(domainEvent, CancellationToken.None);
+
+        await act.Should().ThrowAsync<OperationCanceledException>();
     }
 
     [Fact]
@@ -69,7 +86,7 @@ public class TenantBrandingUpdatedConsumerTests
     public async Task Consume_ShouldInvalidateCacheEntries()
     {
         // Arrange
-        var cache = Substitute.For<HybridCache>();
+        var cache = Substitute.For<ICachingService>();
         var consumer = new TenantBrandingUpdatedConsumer(_logger, cache);
         var branding = TenantBranding.Create("#2563EB", "#38BDF8").Value;
         var domainEvent = new TenantBrandingUpdatedDomainEvent(Guid.NewGuid(), "stanford", branding);
@@ -82,7 +99,9 @@ public class TenantBrandingUpdatedConsumerTests
         await consumer.Consume(context);
 
         // Assert
-        await cache.Received(1).RemoveAsync("tenant:subdomain:stanford", Arg.Any<CancellationToken>());
-        await cache.Received(1).RemoveByTagAsync("tenant-stanford", Arg.Any<CancellationToken>());
+        await cache.Received(1).RemoveAsync(
+            CacheKey.Create("tenant:subdomain", "stanford"), Arg.Any<CancellationToken>());
+        await cache.Received(1).RemoveByTagAsync(
+            CacheTag.Create("tenant-branding", "stanford"), Arg.Any<CancellationToken>());
     }
 }

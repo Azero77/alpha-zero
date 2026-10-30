@@ -70,13 +70,9 @@ public sealed class AssignAssetToCurriculumCommandHandler
             _ => ResourceType.Article
         };
 
-        var bitIndex = course.AllocateNextBitIndex();
-        var itemResult = section.AddItem(
-            Guid.NewGuid(),
-            request.Title,
-            mainType,
-            bitIndex,
-            new[] { resource });
+        // Single domain operation: BitIndex allocation + item addition + CurriculumItemAddedDomainEvent
+        // (the active-mask bit for the new position is activated in the same transaction).
+        var itemResult = course.AddItem(request.SectionId, request.Title, mainType, new[] { resource });
 
         if (itemResult.IsError)
             return itemResult.Errors;

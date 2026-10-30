@@ -4,7 +4,6 @@ using AlphaZero.Modules.Identity.Domain.Repositories;
 using AlphaZero.Shared.Application;
 using AlphaZero.Shared.Infrastructure.Repositores;
 using AlphaZero.Shared.Infrastructure.Tenats;
-using Microsoft.Extensions.Caching.Hybrid;
 using ErrorOr;
 using FluentValidation;
 using MediatR;
