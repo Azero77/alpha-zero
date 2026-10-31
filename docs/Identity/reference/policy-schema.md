@@ -46,6 +46,7 @@ Conditions allow for context-aware authorization. The `ConditionEvaluator` suppo
 - **And**: All child conditions must be true.
 - **Or**: At least one child condition must be true.
 - **Not**: Inverts the result of the child condition.
+- **Reference**: Delegates evaluation to a named condition definition stored in the `ConditionDefinitions` table (re-usable named condition trees).
 
 ### Comparison Operators
 
@@ -65,6 +66,19 @@ The most powerful security operator in AlphaZero. It verifies that:
 1. The request is coming from the user's registered **Main Device**.
 2. The request carries a valid **RSA Signature** signed by the device's private key.
 3. The signature includes a timestamp to prevent **Replay Attacks** (5-minute window).
+
+#### `AccessTicketValid`
+Course-entitlement operator (issue #34): verifies the **access-window ticket** sent in the
+dedicated `X-Access-Ticket` header (NOT the JWT). The ticket is a signed, stateless capability
+minted by the Courses stateful gate; this operator is **course-agnostic and reads NO database**:
+1. The header must be present and the ticket must verify against the shared signer
+   (**access ticket**, dedicated `AccessTicket:Secret`, HMAC-SHA256).
+2. The ticket must be bound to the acting actor (`uid` = context.Id, `tid` = context.TenantId).
+3. The ticket must not be expired (`exp`, ~2h re-mint bound) and its frozen **access window**
+   (`windowStart`/`windowEnd`, the "they bought N days" entitlement) must still be open.
+
+Every failing shape — missing header, malformed/unverifiable token, wrong key, foreign ticket,
+elapsed window — **fails closed** (deny). Policy statement shape: `{ "Property": "Id", "Operator": "AccessTicketValid", "Value": true }` (the `Value` is ignored; the operator is header-driven).
 
 ---
 

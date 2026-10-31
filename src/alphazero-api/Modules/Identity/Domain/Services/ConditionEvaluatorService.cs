@@ -137,9 +137,11 @@ public class ConditionEvaluatorService(IConditionRepository conditionRepository,
     {
         try
         {
-            if (op == Operator.IsMainDevice)
+            // Heavy/strategy operators delegate to the per-operator evaluator (header-driven
+            // gates that cannot be expressed as left-vs-right comparison).
+            if (op is Operator.IsMainDevice or Operator.AccessTicketValid)
             {
-                return await getOperationEvaluator(Operator.IsMainDevice).Evaluate(left, right, context);
+                return await getOperationEvaluator(op).Evaluate(left, right, context);
             }
 
             bool isMatch = op switch
