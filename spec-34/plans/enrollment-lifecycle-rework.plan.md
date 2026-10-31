@@ -22,7 +22,7 @@
 | 2 | Aggregate cleanup (no transition plumbing, spelling, guards intact) | `[x] Done` | f83c710c | Unit: 272 passed (updated matrix); build green (Courses+API+integration) |
 | 3 | Story #9 read path from audit table | `[x] Done` | 1f3ab20e | Unit: 272 passed; build green; latest-entry fetch rides the house correlated-subquery convention (`docs/QueryArchitecture.md`) |
 | 4 | Story #10 `IPreRequestHandler` actor guards | `[x] Done` | b035c03c | Unit: 278 passed (4 new guard tests); builds green; refusal integration test authored (CI-run) |
-| 5 | Shared access-ticket signer/verifier | `[ ] Not started` | — | — |
+| 5 | Shared access-ticket signer/verifier | `[x] Done` | 7d1beada | Unit: 297 passed (round-trip/tamper/expiry/window + config fail-fast); builds green |
 | 6 | Identity: window operator + `IOperationEvaluator` | `[ ] Not started` | — | — |
 | 7 | Identity: `PrincipalExpired` integration event (first one) | `[ ] Not started` | — | — |
 | 8 | Courses consumer: idempotent guarded `MarkExpired` | `[ ] Not started` | — | — |
@@ -354,6 +354,7 @@ ON CONFLICT ("CourseId") DO UPDATE SET
 | 6 | 2 | `MarkExpired(DateTime occuredOn)` trimmed to parameterless `MarkExpired()` (aggregate owns the clock, `EnrolledOn`/`CompletedOn` precedent) instead of merely fixing the spelling. | §1.1.2 explicitly sanctions "rename occuredOn / **trim the param with the redesign**"; the param fed nothing once the audit columns were gone. | executor (step 2) |
 | 7 | 4 | The guard's "AccessControl envelope" signal required the dev/bypass host to actually HAVE the envelope: `IAMDevPreprocessor` now stashes the typed request into `__FastEndpoints_Request__` exactly like `IAMPreprocessor` (evaluation stays skipped). Without it, every bypass-harness AccessControl'd request degraded to no-permission-metadata and the "admin HTTP path passes" gate could not hold anywhere. | The plan (§3.5/step-4 tasks) prescribes the envelope as the tenant-admin signal and "keep the provider change but narrow the catch", but §4 didn't address the bypass-harness envelope gap; this makes the harness faithful to prod rather than loosening the guard. The provider degrade is additionally narrowed with `when (!iamRanFirst)` per smell #8 — with the stash present in dev too, a cast failure under the typed request is a programming error and now surfaces. | executor (step 4) |
 | 8 | 4 | "Transport-claimed actor" for the revocation saga implemented as an explicit AsyncLocal claim (`EnrollmentTransitionAutomation.ClaimSagaTransport`) that the saga consumer wraps around `coursesModule.Send` — the module dispatch runs in a fresh scope, so no scoped DI service could carry the signal. | §3.5 says "(transport-claimed)" without fixing the mechanism; `AppModule.Send`'s per-dispatch scope rules out ambient DI state. The claim is set/disposed ONLY by the saga consumer path. | executor (step 4) |
+| 9 | 5 | `PlaybackTicketSecretValidationTests` production-composition test now configures the new (mandatory-in-Production) `AccessTicket:Secret` alongside the playback secret; step-5 tests satisfy both shared fail-fast gates. | The plan does not address that the new prod gate re-raises inside the pre-existing composition test's config; keeping that test green (rather than weakening the fail-fast) is the safe resolution. | executor (step 5) |
 
 ## §7. Final gate checklist
 
