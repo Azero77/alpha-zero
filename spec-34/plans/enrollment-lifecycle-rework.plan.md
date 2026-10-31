@@ -24,7 +24,7 @@
 | 4 | Story #10 `IPreRequestHandler` actor guards | `[x] Done` | b035c03c | Unit: 278 passed (4 new guard tests); builds green; refusal integration test authored (CI-run) |
 | 5 | Shared access-ticket signer/verifier | `[x] Done` | 7d1beada | Unit: 297 passed (round-trip/tamper/expiry/window + config fail-fast); builds green |
 | 6 | Identity: window operator + `IOperationEvaluator` | `[x] Done` | b7a6147a | Identity unit: 54 passed (8 operator allow/deny tests); Courses unit: 297 passed; build green |
-| 7 | Identity: `PrincipalExpired` integration event (first one) | `[ ] Not started` | — | — |
+| 7 | Identity: `PrincipalExpired` integration event (first one) | `[x] Done` | 71e88142 | Identity unit: 58 passed (4 publish-shape tests); builds green; publish-observer integration test authored (CI-run, docker) |
 | 8 | Courses consumer: idempotent guarded `MarkExpired` | `[ ] Not started` | — | — |
 | 9 | Per-(course,plan) principal creation + enrollment grant branch | `[ ] Not started` | — | — |
 | 10 | Courses mint endpoint (stateful gate, lazy expiry path b) | `[ ] Not started` | — | — |
