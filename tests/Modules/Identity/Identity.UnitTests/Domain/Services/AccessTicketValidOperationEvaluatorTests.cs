@@ -4,9 +4,12 @@ using AlphaZero.Modules.Identity.Domain.Services;
 using AlphaZero.Shared.Authorization;
 using AlphaZero.Shared.Security;
 using AlphaZero.Shared.Infrastructure.Security;
+using AlphaZero.Modules.Identity.IntegrationEvents;
 using ErrorOr;
 using FluentAssertions;
+using MassTransit;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using NSubstitute;
 using System.Text.Json;
@@ -28,6 +31,7 @@ public class AccessTicketValidOperationEvaluatorTests
     private readonly Guid _tenantId = Guid.NewGuid();
     private readonly Guid _userId = Guid.NewGuid();
     private readonly Guid _enrollmentId = Guid.NewGuid();
+    private readonly IPublishEndpoint _publish = Substitute.For<IPublishEndpoint>();
 
     private AuthorizationContext Context() => new()
     {
@@ -42,7 +46,7 @@ public class AccessTicketValidOperationEvaluatorTests
     private static IAccessTicketSigner Signer(string secret) => new AccessTicketSigner(
         Options.Create(new AccessTicketSettings { Secret = secret, TtlSeconds = 7200 }));
 
-    private static IOperationEvaluator Evaluator(IHeaderDictionary? headers)
+    private IOperationEvaluator Evaluator(IHeaderDictionary? headers)
     {
         var context = new DefaultHttpContext();
         foreach (var (key, value) in headers ?? new HeaderDictionary())
@@ -51,7 +55,8 @@ public class AccessTicketValidOperationEvaluatorTests
         var accessor = Substitute.For<IHttpContextAccessor>();
         accessor.HttpContext.Returns(context);
 
-        return new AccessTicketValidOperationEvaluator(accessor, Signer(TestSecret));
+        return new AccessTicketValidOperationEvaluator(accessor, Signer(TestSecret), _publish,
+            Substitute.For<ILogger<AccessTicketValidOperationEvaluator>>());
     }
 
     private static JsonElement TrueValue() => JsonDocument.Parse("true").RootElement;
@@ -86,7 +91,8 @@ public class AccessTicketValidOperationEvaluatorTests
         var accessor = Substitute.For<IHttpContextAccessor>();
         accessor.HttpContext.Returns(httpContext);
 
-        var evaluator = new AccessTicketValidOperationEvaluator(accessor, Signer(TestSecret));
+        var evaluator = new AccessTicketValidOperationEvaluator(accessor, Signer(TestSecret), _publish,
+            Substitute.For<ILogger<AccessTicketValidOperationEvaluator>>());
         var service = new ConditionEvaluatorService(Substitute.For<IConditionRepository>(), [evaluator]);
 
         var condition = new ConditionNode("Id", Operator.AccessTicketValid, TrueValue());
@@ -113,7 +119,8 @@ public class AccessTicketValidOperationEvaluatorTests
     {
         var accessor = Substitute.For<IHttpContextAccessor>();
         accessor.HttpContext.Returns((HttpContext?)null);
-        var evaluator = new AccessTicketValidOperationEvaluator(accessor, Signer(TestSecret));
+        var evaluator = new AccessTicketValidOperationEvaluator(accessor, Signer(TestSecret), _publish,
+            Substitute.For<ILogger<AccessTicketValidOperationEvaluator>>());
 
         var result = await evaluator.Evaluate(null!, TrueValue(), Context());
 
@@ -187,5 +194,70 @@ public class AccessTicketValidOperationEvaluatorTests
         var result = await evaluator.Evaluate(null!, TrueValue(), Context());
 
         result.FirstError.Code.Should().Be("Condition.AccessTicketForeign");
+    }
+
+    // ------------------------------------------------------------------
+    // Step 7 (§3.4 path a): the closed window raises PrincipalExpired (best-effort)
+    // ------------------------------------------------------------------
+
+    [Fact]
+    public async Task Evaluate_ShouldRaisePrincipalExpired_WhenAccessWindowHasClosed()
+    {
+        var ticket = Signer(TestSecret).GenerateTicket(_tenantId, _userId, _enrollmentId,
+            DateTimeOffset.UtcNow.AddDays(-90), DateTimeOffset.UtcNow.AddDays(-1)); // window elapsed
+
+        var evaluator = Evaluator(new HeaderDictionary { [AccessTicketHttpHeader.Name] = ticket });
+
+        var result = await evaluator.Evaluate(null!, TrueValue(), Context());
+
+        // Deny stands…
+        result.FirstError.Code.Should().Be("Condition.AccessWindowClosed");
+
+        // …and the lazy-mark signal carries the acting identity + resource path.
+        await _publish.Received(1).Publish(
+            Arg.Is<PrincipalExpiredIntegrationEvent>(e =>
+                e.UserId == _userId
+                && e.TenantId == _tenantId
+                && e.ResourcePath == "video/1"
+                && e.PrincipalId == null), // the acting context is a tenant user, not a principal
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Evaluate_ShouldNotRaisePrincipalExpired_WhenWindowIsStillOpen()
+    {
+        var evaluator = Evaluator(new HeaderDictionary { [AccessTicketHttpHeader.Name] = ValidTicket() });
+
+        await evaluator.Evaluate(null!, TrueValue(), Context());
+
+        await _publish.DidNotReceive().Publish(Arg.Any<PrincipalExpiredIntegrationEvent>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Evaluate_ShouldNotRaisePrincipalExpired_WhenTicketIsMalformed()
+    {
+        // Garbage tickets must NOT poison the lazy mark with unverifiable ids.
+        var evaluator = Evaluator(new HeaderDictionary { [AccessTicketHttpHeader.Name] = "glarb.warb" });
+
+        await evaluator.Evaluate(null!, TrueValue(), Context());
+
+        await _publish.DidNotReceive().Publish(Arg.Any<PrincipalExpiredIntegrationEvent>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Evaluate_ShouldStillDeny_WhenThePublishFails()
+    {
+        // Best-effort (§3.4): bus failures never flip the deny decision — the scheduled sweep
+        // (path c) is the guaranteed backstop.
+        var ticket = Signer(TestSecret).GenerateTicket(_tenantId, _userId, _enrollmentId,
+            DateTimeOffset.UtcNow.AddDays(-90), DateTimeOffset.UtcNow.AddDays(-1));
+
+        _publish.Publish(Arg.Any<PrincipalExpiredIntegrationEvent>(), Arg.Any<CancellationToken>())
+            .Returns(Task.FromException(new InvalidOperationException("bus is down")));
+
+        var evaluator = Evaluator(new HeaderDictionary { [AccessTicketHttpHeader.Name] = ticket });
+        var result = await evaluator.Evaluate(null!, TrueValue(), Context());
+
+        result.FirstError.Code.Should().Be("Condition.AccessWindowClosed");
     }
 }
