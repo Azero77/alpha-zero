@@ -51,11 +51,15 @@ public class PlaybackTicketSecretValidationTests
     public void Add_WhenPlaybackTicketSecretConfiguredAndEnvironmentIsProduction_Composes()
     {
         var services = new ServiceCollection();
+        // Step 5 (#34): production additionally mandates a dedicated AccessTicket:Secret, so the
+        // composition test must satisfy BOTH fail-fast gates now.
         var config = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
                 [$"{CloudflareSettings.SectionName}:{nameof(CloudflareSettings.PlaybackTicketSecret)}"] =
-                    "configured-prod-secret-min-32-chars-long!!!"
+                    "configured-prod-secret-min-32-chars-long!!!",
+                [$"{AccessTicketSettings.SectionName}:{nameof(AccessTicketSettings.Secret)}"] =
+                    "configured-prod-access-secret-min-32-chars!!"
             })
             .Build();
         var env = Substitute.For<IHostEnvironment>();
