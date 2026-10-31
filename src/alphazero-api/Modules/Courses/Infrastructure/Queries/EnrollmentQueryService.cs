@@ -15,10 +15,11 @@ namespace AlphaZero.Modules.Courses.Infrastructure.Queries;
 /// <summary>
 /// Read side of enrollments. One query per endpoint, each a single round trip: the enrollment
 /// set stays untouched by any filter bypass (the tenant-driven filter on Enrollments is _the_
-/// tenant boundary and is never relaxed here), while a small correlated subquery fetches only
-/// the course's mask bytes.
+/// tenant boundary and is never relaxed here), while small correlated subqueries fetch only the
+/// course's mask bytes and the latest audit entry (story #9, rework §3.1: last-transition
+/// who/when lives in <c>EnrollmentAuditEntries</c>, not on the aggregate).
 ///
-/// The subquery ignores just the named filters it must: SoftDelete so an enrollment whose course
+/// The subqueries ignore just the named filters they must: SoftDelete so an enrollment whose course
 /// was soft-deleted keeps its exact derived counts (mask bytes have no tenant surface — they
 /// cannot widen what rows exist). For the dashboard, which spans tenants by design, the subquery
 /// additionally bypasses Tenant, preserving real numbers on every row.
@@ -36,6 +37,11 @@ public class EnrollmentQueryService : IEnrollmentQueryService
     // are illegal inside trees; a static array reference translates fine).
     private static readonly string[] SoftDeleteOnly = [DbContstants.SoftDeleteFilter];
     private static readonly string[] AcrossTenantsMaskReads = [DbContstants.TenantFilter, DbContstants.SoftDeleteFilter];
+
+    /// <summary>
+    /// Correlated latest-audit-entry fetch (see <see cref="LastTransitionStamp"/>): used by every
+    /// projection whose DTO exposes last-transition who/when (story #9).
+    /// </summary>
 
     public EnrollmentQueryService(AppDbContext context)
     {
@@ -65,6 +71,12 @@ public class EnrollmentQueryService : IEnrollmentQueryService
                 e.Status,
                 e.EnrolledOn,
                 e.TenantId,
+                _context.EnrollmentAuditEntries
+                    .Where(a => a.SubjectId == e.Id)
+                    .OrderByDescending(a => a.OccurredOn)
+                    .ThenBy(a => a.Id)
+                    .Select(a => new AuditStampEntry(a.ActorId, a.OccurredOn))
+                    .FirstOrDefault(),
                 e.Progress.Bitmask,
                 _context.Courses.IgnoreQueryFilters(SoftDeleteOnly)
                     .Where(c => c.Id == e.CourseId)
@@ -92,6 +104,12 @@ public class EnrollmentQueryService : IEnrollmentQueryService
                 e.Status,
                 e.EnrolledOn,
                 e.TenantId,
+                _context.EnrollmentAuditEntries
+                    .Where(a => a.SubjectId == e.Id)
+                    .OrderByDescending(a => a.OccurredOn)
+                    .ThenBy(a => a.Id)
+                    .Select(a => new AuditStampEntry(a.ActorId, a.OccurredOn))
+                    .FirstOrDefault(),
                 e.Progress.Bitmask,
                 _context.Courses.IgnoreQueryFilters(SoftDeleteOnly)
                     .Where(c => c.Id == e.CourseId)
@@ -122,6 +140,12 @@ public class EnrollmentQueryService : IEnrollmentQueryService
                 e.Status,
                 e.EnrolledOn,
                 e.TenantId,
+                _context.EnrollmentAuditEntries
+                    .Where(a => a.SubjectId == e.Id)
+                    .OrderByDescending(a => a.OccurredOn)
+                    .ThenBy(a => a.Id)
+                    .Select(a => new AuditStampEntry(a.ActorId, a.OccurredOn))
+                    .FirstOrDefault(),
                 e.Progress.Bitmask,
                 _context.Courses.IgnoreQueryFilters(SoftDeleteOnly)
                     .Where(c => c.Id == e.CourseId)
@@ -150,6 +174,7 @@ public class EnrollmentQueryService : IEnrollmentQueryService
                 e.Status,
                 e.EnrolledOn,
                 e.TenantId,
+                null,
                 e.Progress.Bitmask,
                 _context.Courses.IgnoreQueryFilters(AcrossTenantsMaskReads)
                     .Where(c => c.Id == e.CourseId)
@@ -172,6 +197,12 @@ public class EnrollmentQueryService : IEnrollmentQueryService
                 e.Status,
                 e.EnrolledOn,
                 e.TenantId,
+                _context.EnrollmentAuditEntries
+                    .Where(a => a.SubjectId == e.Id)
+                    .OrderByDescending(a => a.OccurredOn)
+                    .ThenBy(a => a.Id)
+                    .Select(a => new AuditStampEntry(a.ActorId, a.OccurredOn))
+                    .FirstOrDefault(),
                 e.Progress.Bitmask,
                 _context.Courses.IgnoreQueryFilters(SoftDeleteOnly)
                     .Where(c => c.Id == e.CourseId)
@@ -202,6 +233,7 @@ public class EnrollmentQueryService : IEnrollmentQueryService
                 e.Status,
                 e.EnrolledOn,
                 e.TenantId,
+                null,
                 e.Progress.Bitmask,
                 _context.Courses.IgnoreQueryFilters(SoftDeleteOnly)
                     .Where(c => c.Id == e.CourseId)
@@ -236,6 +268,8 @@ public class EnrollmentQueryService : IEnrollmentQueryService
     {
         var courseMask = row.ActiveItemsBitmask ?? new BitArray(0);
 
+        // Story #9 (rework §3.1): the DTO field names are the external contract (kept), but the
+        // SOURCE is the enrollment audit trail — the aggregate no longer stamps anything.
         return new EnrollmentDto(
             row.Id,
             row.StudentId,
@@ -246,9 +280,8 @@ public class EnrollmentQueryService : IEnrollmentQueryService
             ProgressCalculation.CompletionPercentage(row.ProgressBitmask, courseMask),
             row.EnrolledOn,
             row.TenantId,
-            null,
-            null /* TODO(step 3, story #9): last-transition who/when comes from the audit table —
-                  * the aggregate no longer carries audit plumbing; the DTO field names stay. */);
+            row.LastTransition?.OccurredOn,
+            row.LastTransition?.ActorId);
     }
 
     private static DashboardEnrollmentRow MapToDashboardRow(EnrollmentRow row)
@@ -266,7 +299,7 @@ public class EnrollmentQueryService : IEnrollmentQueryService
             row.TenantId);
     }
 
-    /// <summary>What a listing row carries: the scalar fields the endpoint shows plus the two varbit masks the derived counts need — no full aggregate row. The course mask is null only when the course row itself is unreadable (never for a live course). Last-transition who/when is NOT fetched here in step 2 (aggregate plumbing removed); step 3 (story #9) supplies it from the audit table.</summary>
+    /// <summary>What a listing row carries: the scalar fields the endpoint shows plus the two varbit masks the derived counts need and the latest audit stamp — no full aggregate row. The course mask is null only when the course row itself is unreadable (never for a live course); the audit stamp is null when the enrollment never left Active.</summary>
     private sealed record EnrollmentRow(
         Guid Id,
         Guid StudentId,
@@ -274,6 +307,10 @@ public class EnrollmentQueryService : IEnrollmentQueryService
         EnrollmentStatus Status,
         DateTime EnrolledOn,
         Guid TenantId,
+        AuditStampEntry? LastTransition,
         BitArray ProgressBitmask,
         BitArray? ActiveItemsBitmask);
+
+    /// <summary>The latest audit entry's who/when (story #9); kind/subtable stays server-side.</summary>
+    private sealed record AuditStampEntry(Guid? ActorId, DateTime OccurredOn);
 }
