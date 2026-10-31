@@ -39,13 +39,12 @@ public sealed class SuspendEnrollmentCommandHandler(
             return Error.NotFound("Enrollment.NotFound", "Enrollment not found.");
         }
 
-        var previousStatus = enrollment.Status;
-        var result = enrollment.Suspend(EnrollmentTransitionActor.Resolve(authorizationContextProvider), request.Reason);
+        var (result, changed) = repository.Transitioned(enrollment,
+            () => enrollment.Suspend(EnrollmentTransitionActor.Resolve(authorizationContextProvider), request.Reason));
         if (result.IsError) return result.Errors;
 
-        if (previousStatus != enrollment.Status)
+        if (changed)
         {
-            repository.Update(enrollment);
             logger.LogWarning("Enrollment {EnrollmentId} for Student {StudentId} in Course {CourseId} has been SUSPENDED (reason: {Reason}).",
                 enrollment.Id, enrollment.StudentId, enrollment.CourseId, request.Reason ?? "unspecified");
         }

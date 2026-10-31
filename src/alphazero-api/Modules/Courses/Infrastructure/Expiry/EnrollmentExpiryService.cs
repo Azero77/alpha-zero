@@ -50,7 +50,7 @@ public class EnrollmentExpiryService(
 
             foreach (var enrollment in batch)
             {
-                var result = enrollment.MarkExpired(DateTime.UtcNow);
+                var result = enrollment.MarkExpired();
                 if (result.IsError)
                 {
                     logger.LogWarning("Skipping enrollment {EnrollmentId} during expiry: {Errors}",

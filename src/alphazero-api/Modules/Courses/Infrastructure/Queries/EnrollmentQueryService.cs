@@ -65,8 +65,6 @@ public class EnrollmentQueryService : IEnrollmentQueryService
                 e.Status,
                 e.EnrolledOn,
                 e.TenantId,
-                e.LastStatusChangedOn,
-                e.LastStatusChangedBy,
                 e.Progress.Bitmask,
                 _context.Courses.IgnoreQueryFilters(SoftDeleteOnly)
                     .Where(c => c.Id == e.CourseId)
@@ -94,8 +92,6 @@ public class EnrollmentQueryService : IEnrollmentQueryService
                 e.Status,
                 e.EnrolledOn,
                 e.TenantId,
-                e.LastStatusChangedOn,
-                e.LastStatusChangedBy,
                 e.Progress.Bitmask,
                 _context.Courses.IgnoreQueryFilters(SoftDeleteOnly)
                     .Where(c => c.Id == e.CourseId)
@@ -126,8 +122,6 @@ public class EnrollmentQueryService : IEnrollmentQueryService
                 e.Status,
                 e.EnrolledOn,
                 e.TenantId,
-                e.LastStatusChangedOn,
-                e.LastStatusChangedBy,
                 e.Progress.Bitmask,
                 _context.Courses.IgnoreQueryFilters(SoftDeleteOnly)
                     .Where(c => c.Id == e.CourseId)
@@ -156,8 +150,6 @@ public class EnrollmentQueryService : IEnrollmentQueryService
                 e.Status,
                 e.EnrolledOn,
                 e.TenantId,
-                e.LastStatusChangedOn,
-                e.LastStatusChangedBy,
                 e.Progress.Bitmask,
                 _context.Courses.IgnoreQueryFilters(AcrossTenantsMaskReads)
                     .Where(c => c.Id == e.CourseId)
@@ -180,8 +172,6 @@ public class EnrollmentQueryService : IEnrollmentQueryService
                 e.Status,
                 e.EnrolledOn,
                 e.TenantId,
-                e.LastStatusChangedOn,
-                e.LastStatusChangedBy,
                 e.Progress.Bitmask,
                 _context.Courses.IgnoreQueryFilters(SoftDeleteOnly)
                     .Where(c => c.Id == e.CourseId)
@@ -212,8 +202,6 @@ public class EnrollmentQueryService : IEnrollmentQueryService
                 e.Status,
                 e.EnrolledOn,
                 e.TenantId,
-                e.LastStatusChangedOn,
-                e.LastStatusChangedBy,
                 e.Progress.Bitmask,
                 _context.Courses.IgnoreQueryFilters(SoftDeleteOnly)
                     .Where(c => c.Id == e.CourseId)
@@ -258,8 +246,9 @@ public class EnrollmentQueryService : IEnrollmentQueryService
             ProgressCalculation.CompletionPercentage(row.ProgressBitmask, courseMask),
             row.EnrolledOn,
             row.TenantId,
-            row.LastStatusChangedOn,
-            row.LastStatusChangedBy);
+            null,
+            null /* TODO(step 3, story #9): last-transition who/when comes from the audit table —
+                  * the aggregate no longer carries audit plumbing; the DTO field names stay. */);
     }
 
     private static DashboardEnrollmentRow MapToDashboardRow(EnrollmentRow row)
@@ -277,7 +266,7 @@ public class EnrollmentQueryService : IEnrollmentQueryService
             row.TenantId);
     }
 
-    /// <summary>What a listing row carries: the scalar fields the endpoint shows plus the two varbit masks the derived counts need — no full aggregate row. The course mask is null only when the course row itself is unreadable (never for a live course).</summary>
+    /// <summary>What a listing row carries: the scalar fields the endpoint shows plus the two varbit masks the derived counts need — no full aggregate row. The course mask is null only when the course row itself is unreadable (never for a live course). Last-transition who/when is NOT fetched here in step 2 (aggregate plumbing removed); step 3 (story #9) supplies it from the audit table.</summary>
     private sealed record EnrollmentRow(
         Guid Id,
         Guid StudentId,
@@ -285,8 +274,6 @@ public class EnrollmentQueryService : IEnrollmentQueryService
         EnrollmentStatus Status,
         DateTime EnrolledOn,
         Guid TenantId,
-        DateTime? LastStatusChangedOn,
-        Guid? LastStatusChangedBy,
         BitArray ProgressBitmask,
         BitArray? ActiveItemsBitmask);
 }

@@ -4,8 +4,9 @@ namespace AlphaZero.Modules.Courses.Domain.Audits;
 
 /// <summary>
 /// Append-only lifecycle audit row (issue #34 §3.1). Generic columns so new event kinds join
-/// without a schema change; replaces the <c>LastStatusChanged*</c> plumbing that used to live on
-/// the Enrollment aggregate — that aggregate carries no update serves-only-read data any more.
+/// without a schema change; it replaces the per-enrollment read-boundary plumbing that used to
+/// sit on the Enrollment aggregate (who/when comes from HERE, story #9 — the aggregate carries
+/// no read-serves data any more).
 ///
 /// The writer is the in-process Courses <c>DomainEventHandler</c> (MediatR notification handlers),
 /// which stages rows on the SAME module DbContext the aggregate mutation touches — the UnitOfWork

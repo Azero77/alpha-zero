@@ -53,7 +53,7 @@ public class ReactivateEnrollmentCommandHandlerTests
                 enrollment.Suspend().IsError.Should().BeFalse();
                 break;
             case EnrollmentStatus.Expired:
-                enrollment.MarkExpired(DateTime.UtcNow).IsError.Should().BeFalse();
+                enrollment.MarkExpired().IsError.Should().BeFalse();
                 break;
         }
 

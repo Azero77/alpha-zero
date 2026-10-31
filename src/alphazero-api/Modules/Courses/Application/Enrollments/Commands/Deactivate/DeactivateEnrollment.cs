@@ -26,14 +26,12 @@ public sealed class DeactivateEnrollmentCommandHandler(
             return Error.NotFound("Enrollment.NotFound", "Enrollment not found for this user and course.");
         }
 
-        var previousStatus = enrollment.Status;
-        var result = enrollment.Deactivate(EnrollmentTransitionActor.Resolve(authorizationContextProvider));
+        var (result, _) = repository.Transitioned(enrollment,
+            () => enrollment.Deactivate(EnrollmentTransitionActor.Resolve(authorizationContextProvider)));
         if (result.IsError) return result.Errors;
 
-        if (enrollment.Status != previousStatus) // idempotent no-op (Inactive) writes nothing
-        {
-            repository.Update(enrollment);
-        }
+        // idempotent no-op (Inactive) marks nothing — the helper resolves the change flag; the
+        // saga's revocation log stays unconditional (it cares that the request was processed).
 
         logger.LogWarning("Enrollment {EnrollmentId} for User {UserId} in Course {CourseId} has been DEACTIVATED.",
             enrollment.Id, request.UserId, request.CourseId);

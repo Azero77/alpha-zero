@@ -41,7 +41,7 @@ public class EnrollmentStateTransitionTests
     private static Enrollment ExpiredEnrollment()
     {
         var enrollment = NewEnrollment();
-        enrollment.MarkExpired(DateTime.UtcNow).IsError.Should().BeFalse();
+        enrollment.MarkExpired().IsError.Should().BeFalse();
         enrollment.PopDomainEvents();
         return enrollment;
     }
@@ -51,25 +51,21 @@ public class EnrollmentStateTransitionTests
     // ------------------------------------------------------------------
 
     [Fact]
-    public void Suspend_Should_MoveActiveToSuspended_AndRecordTransitionMetadata_AndEmitEvent()
+    public void Suspend_Should_MoveActiveToSuspended_AndEmitGuardedTransitionEvent()
     {
         var enrollment = NewEnrollment();
         var operatorId = Guid.NewGuid();
-        var before = DateTime.UtcNow.AddSeconds(-1);
 
         var result = enrollment.Suspend(operatorId);
 
         result.IsError.Should().BeFalse();
-        var after = DateTime.UtcNow.AddSeconds(1);
         enrollment.Status.Should().Be(EnrollmentStatus.Suspended);
-        enrollment.LastStatusChangedBy.Should().Be(operatorId);
-        enrollment.LastStatusChangedOn.Should().BeOnOrAfter(before).And.BeOnOrBefore(after);
         enrollment.DomainEvents.OfType<EnrollmentSuspendedDomainEvent>().Should().ContainSingle()
             .Which.FromStatus.Should().Be(EnrollmentStatus.Active);
     }
 
     [Fact]
-    public void Deactivate_Should_MoveActiveToInactive_AndRecordTransitionMetadata()
+    public void Deactivate_Should_MoveActiveToInactive_AndEmitAuditOnlyEvent()
     {
         var enrollment = NewEnrollment();
         var operatorId = Guid.NewGuid();
@@ -78,7 +74,6 @@ public class EnrollmentStateTransitionTests
 
         result.IsError.Should().BeFalse();
         enrollment.Status.Should().Be(EnrollmentStatus.Inactive);
-        enrollment.LastStatusChangedBy.Should().Be(operatorId);
 
         // Audit-only domain event (issue #34 §3.1): deactivation raises the EnrollmentDeactivated
         // event for the in-process audit writer but keeps its integration-event-less identity —
@@ -100,7 +95,6 @@ public class EnrollmentStateTransitionTests
 
         result.IsError.Should().BeFalse();
         enrollment.Status.Should().Be(EnrollmentStatus.Active);
-        enrollment.LastStatusChangedBy.Should().Be(operatorId);
         enrollment.DomainEvents.OfType<EnrollmentResumedDomainEvent>().Should().ContainSingle()
             .Which.FromStatus.Should().Be(EnrollmentStatus.Inactive);
     }
@@ -123,16 +117,16 @@ public class EnrollmentStateTransitionTests
     public void MarkExpired_Should_MoveActiveToExpired_AndEmitExpiryEvent_WithSystemActor()
     {
         var enrollment = NewEnrollment();
-        var now = DateTime.UtcNow;
 
-        var result = enrollment.MarkExpired(now);
+        var before = DateTime.UtcNow.AddSeconds(-1);
+        var result = enrollment.MarkExpired();
+        var after = DateTime.UtcNow.AddSeconds(1);
 
         result.IsError.Should().BeFalse();
-        enrollment.Status.Should().Be(EnrollmentStatus.Expired);
-        enrollment.LastStatusChangedOn.Should().BeCloseTo(now, TimeSpan.FromSeconds(1));
-        enrollment.LastStatusChangedBy.Should().BeNull(); // automated trigger records no actor
-        enrollment.DomainEvents.OfType<EnrollmentExpiredDomainEvent>().Should().ContainSingle()
-            .Which.FromStatus.Should().Be(EnrollmentStatus.Active);
+        enrollment.Status.Should().Be(EnrollmentStatus.Expired); // the aggregate owns the clock now
+        var emitted = enrollment.DomainEvents.OfType<EnrollmentExpiredDomainEvent>().Should().ContainSingle().Subject;
+        emitted.FromStatus.Should().Be(EnrollmentStatus.Active);
+        emitted.OccuredOn.Should().BeOnOrAfter(before).And.BeOnOrBefore(after);
     }
 
     [Fact]
@@ -140,28 +134,26 @@ public class EnrollmentStateTransitionTests
     {
         var enrollment = SuspendedEnrollment();
 
-        enrollment.MarkExpired(DateTime.UtcNow).IsError.Should().BeFalse();
+        enrollment.MarkExpired().IsError.Should().BeFalse();
 
         enrollment.Status.Should().Be(EnrollmentStatus.Expired);
     }
 
     // ------------------------------------------------------------------
-    // Idempotency — repeated trigger of the same transition succeeds, no rewrite
-    // (no new domain events, no metadata churn) — stories #4, #11
+    // Idempotency — repeated trigger of the same transition succeeds with no rewrite
+    // (no state churn, no new domain events) — stories #4, #11
     // ------------------------------------------------------------------
 
     [Fact]
     public void Suspend_Should_BeIdempotent_WhenAlreadySuspended()
     {
         var enrollment = SuspendedEnrollment();
-        var previousMetadata = enrollment.LastStatusChangedOn;
         var previousEventCount = enrollment.DomainEvents.Count;
 
         var result = enrollment.Suspend(Guid.NewGuid());
 
         result.IsError.Should().BeFalse();
         enrollment.Status.Should().Be(EnrollmentStatus.Suspended);
-        enrollment.LastStatusChangedOn.Should().Be(previousMetadata);
         enrollment.DomainEvents.Count.Should().Be(previousEventCount);
     }
 
@@ -169,13 +161,11 @@ public class EnrollmentStateTransitionTests
     public void Deactivate_Should_BeIdempotent_WhenAlreadyInactive()
     {
         var enrollment = InactiveEnrollment();
-        var previousMetadata = enrollment.LastStatusChangedOn;
 
         var result = enrollment.Deactivate(Guid.NewGuid());
 
         result.IsError.Should().BeFalse();
         enrollment.Status.Should().Be(EnrollmentStatus.Inactive);
-        enrollment.LastStatusChangedOn.Should().Be(previousMetadata);
         enrollment.DomainEvents.Should().BeEmpty();
     }
 
@@ -183,14 +173,12 @@ public class EnrollmentStateTransitionTests
     public void Reactivate_Should_BeIdempotent_WhenAlreadyActive()
     {
         var enrollment = NewEnrollment();
-        var previousMetadata = enrollment.LastStatusChangedOn;
         var previousEventCount = enrollment.DomainEvents.Count;
 
         var result = enrollment.Reactivate(Guid.NewGuid());
 
         result.IsError.Should().BeFalse();
         enrollment.Status.Should().Be(EnrollmentStatus.Active);
-        enrollment.LastStatusChangedOn.Should().Be(previousMetadata);
         enrollment.DomainEvents.Count.Should().Be(previousEventCount);
     }
 
@@ -198,13 +186,11 @@ public class EnrollmentStateTransitionTests
     public void MarkExpired_Should_BeIdempotent_WhenAlreadyExpired()
     {
         var enrollment = ExpiredEnrollment();
-        var previousMetadata = enrollment.LastStatusChangedOn;
 
-        var result = enrollment.MarkExpired(DateTime.UtcNow.AddMinutes(1));
+        var result = enrollment.MarkExpired();
 
         result.IsError.Should().BeFalse();
         enrollment.Status.Should().Be(EnrollmentStatus.Expired);
-        enrollment.LastStatusChangedOn.Should().Be(previousMetadata);
         enrollment.DomainEvents.Should().BeEmpty();
     }
 
@@ -233,7 +219,7 @@ public class EnrollmentStateTransitionTests
     {
         var enrollment = InactiveEnrollment(); // no access left to expire
 
-        var result = enrollment.MarkExpired(DateTime.UtcNow);
+        var result = enrollment.MarkExpired();
 
         result.IsError.Should().BeTrue();
         result.FirstError.Code.Should().Be("Enrollment.InvalidTransition");
@@ -262,7 +248,7 @@ public class EnrollmentStateTransitionTests
                 enrollment.Deactivate(Guid.NewGuid()).IsError.Should().BeFalse();
                 break;
             case EnrollmentStatus.Expired:
-                enrollment.MarkExpired(DateTime.UtcNow).IsError.Should().BeFalse();
+                enrollment.MarkExpired().IsError.Should().BeFalse();
                 break;
         }
 

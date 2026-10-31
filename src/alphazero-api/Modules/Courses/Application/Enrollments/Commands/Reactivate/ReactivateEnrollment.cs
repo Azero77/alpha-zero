@@ -39,13 +39,12 @@ public sealed class ReactivateEnrollmentCommandHandler(
             return Error.NotFound("Enrollment.NotFound", "Enrollment not found.");
         }
 
-        var previousStatus = enrollment.Status;
-        var result = enrollment.Reactivate(EnrollmentTransitionActor.Resolve(authorizationContextProvider));
+        var (result, changed) = repository.Transitioned(enrollment,
+            () => enrollment.Reactivate(EnrollmentTransitionActor.Resolve(authorizationContextProvider)));
         if (result.IsError) return result.Errors;
 
-        if (previousStatus != enrollment.Status)
+        if (changed)
         {
-            repository.Update(enrollment);
             logger.LogInformation("Enrollment {EnrollmentId} for Student {StudentId} in Course {CourseId} has been REACTIVATED.",
                 enrollment.Id, enrollment.StudentId, enrollment.CourseId);
         }

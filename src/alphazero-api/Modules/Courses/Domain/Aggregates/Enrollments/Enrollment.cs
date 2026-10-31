@@ -16,16 +16,9 @@ public class Enrollment : TenantOwnedAggregate
     /// <summary>
     /// Optional expiry instant (issue #34 stories #5/#6): staleness edge for enrollments whose
     /// originating course plan carries an access window. Null = never expires automatically.
+    /// Frozen at enroll by intent ("they bought 30 days") — plan edits are future-only (§3.2.5).
     /// </summary>
     public DateTime? AccessExpiresOn { get; private set; }
-
-    /// <summary>
-    /// Last-transition audit metadata (issue #34 stories #9): who fired the transition and when.
-    /// Null for enrollments that have never left Active, and null <see cref="LastStatusChangedBy"/>
-    /// for automated (saga / expiry-scan) transitions that have no acting principal.
-    /// </summary>
-    public DateTime? LastStatusChangedOn { get; private set; }
-    public Guid? LastStatusChangedBy { get; private set; }
 
     /// <summary>
     /// Set exactly once when a completion attempt flips the course to
@@ -133,7 +126,7 @@ public class Enrollment : TenantOwnedAggregate
             return InvalidTransition("Deactivate", Status, EnrollmentStatus.Inactive);
 
         var previousStatus = Status;
-        ApplyTransition(EnrollmentStatus.Inactive, operatorId);
+        ApplyTransition(EnrollmentStatus.Inactive);
 
         // Audit-only domain event (issue #34 §3.1): deactivation keeps its event-less integration
         // identity — no integration event is projected onto the bus for it (the Payments revocation
@@ -156,7 +149,7 @@ public class Enrollment : TenantOwnedAggregate
             return InvalidTransition("Suspend", Status, EnrollmentStatus.Suspended);
 
         var previousStatus = Status;
-        ApplyTransition(EnrollmentStatus.Suspended, operatorId);
+        ApplyTransition(EnrollmentStatus.Suspended);
         AddDomainEvent(new EnrollmentSuspendedDomainEvent(Id, StudentId, CourseId, TenantId, previousStatus, operatorId, reason));
         return Result.Success;
     }
@@ -173,7 +166,7 @@ public class Enrollment : TenantOwnedAggregate
             return InvalidTransition("Reactivate", Status, EnrollmentStatus.Active);
 
         var previousStatus = Status;
-        ApplyTransition(EnrollmentStatus.Active, operatorId);
+        ApplyTransition(EnrollmentStatus.Active);
         AddDomainEvent(new EnrollmentResumedDomainEvent(Id, StudentId, CourseId, TenantId, previousStatus, operatorId));
         return Result.Success;
     }
@@ -181,8 +174,10 @@ public class Enrollment : TenantOwnedAggregate
     /// <summary>
     /// Automated expiry (issues #34 stories #5/#6): Active/Suspended → Expired, idempotent from
     /// Expired. Not reachable from Inactive — nothing is on the clock once access is revoked.
+    /// The aggregate owns the clock (same discipline as EnrolledOn/CompletedOn) — the sweep and
+    /// the lazy-mint path both mean "expired at evaluation time".
     /// </summary>
-    public ErrorOr<Success> MarkExpired(DateTime occuredOn)
+    public ErrorOr<Success> MarkExpired()
     {
         if (Status is EnrollmentStatus.Expired)
             return Result.Success;
@@ -191,16 +186,16 @@ public class Enrollment : TenantOwnedAggregate
             return InvalidTransition("Expire", Status, EnrollmentStatus.Expired);
 
         var previousStatus = Status;
-        ApplyTransition(EnrollmentStatus.Expired, operatorId: null, changedOn: occuredOn);
+        ApplyTransition(EnrollmentStatus.Expired);
         AddDomainEvent(new EnrollmentExpiredDomainEvent(Id, StudentId, CourseId, TenantId, previousStatus));
         return Result.Success;
     }
 
-    private void ApplyTransition(EnrollmentStatus target, Guid? operatorId, DateTime? changedOn = null)
+    private void ApplyTransition(EnrollmentStatus target)
     {
+        // Transition metadata (who/when) lives in the enrollment audit trail (issue #34 §3.1),
+        // carried by the domain events — the aggregate carries no read-boundary plumbing.
         Status = target;
-        LastStatusChangedOn = changedOn ?? DateTime.UtcNow;
-        LastStatusChangedBy = operatorId;
     }
 
     private static Error InvalidTransition(string transition, EnrollmentStatus from, EnrollmentStatus to) =>
