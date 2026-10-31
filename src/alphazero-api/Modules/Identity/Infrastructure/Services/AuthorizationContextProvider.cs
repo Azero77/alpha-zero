@@ -143,9 +143,8 @@ namespace AlphaZero.Modules.Identity.Infrastructure.Services
             if (globalRequirement is null && tenantScopedRequirement is null) 
                 return (ValueTuple<string, ResourceArn>?)null;
 
-            var requestObj = (httpContext.Items.TryGetValue("__FastEndpoints_Request__", out var fastReq) && fastReq is not null)
-                ? fastReq
-                : (object)httpContext.Request;
+            var iamRanFirst = httpContext.Items.TryGetValue("__FastEndpoints_Request__", out var fastReq) && fastReq is not null;
+            var requestObj = iamRanFirst ? fastReq! : (object)httpContext.Request;
 
             ResourceArn arn;
             try
@@ -165,11 +164,16 @@ namespace AlphaZero.Modules.Identity.Infrastructure.Services
             catch (InvalidCastException)
             {
                 // The ARN lambdas cast requestObj to the typed request; the envelope is only
-                // guaranteed when IAM enforcement ran first (IAMPreprocessor stashes the
-                // FastEndpoints request in Items). Under dev/bypass pipelines that skip the
-                // preprocessor the raw HttpRequest arrives — degrade to "no permission
-                // metadata" so callers resolving the actor context still succeed.
-                return (ValueTuple<string, ResourceArn>?)null;
+                // guaranteed when IAM ran first (the preprocessor stashes the FastEndpoints request
+                // in Items). Narrow degrade (review smell #8): only the genuinely raw-request case
+                // (no FastEndpoints host pipeline, no stash) degrades to "no permission metadata";
+                // a cast failure with the typed request present is a programming error and must
+                // surface, not be swallowed.
+                if (!iamRanFirst)
+                {
+                    return (ValueTuple<string, ResourceArn>?)null;
+                }
+                throw;
             }
             string? permission = globalRequirement?.Action ?? tenantScopedRequirement?.Action;
 

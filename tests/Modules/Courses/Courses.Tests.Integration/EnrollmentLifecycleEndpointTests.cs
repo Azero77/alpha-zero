@@ -265,6 +265,26 @@ public class EnrollmentLifecycleEndpointTests : BaseIntegrationTest
     }
 
     // ------------------------------------------------------------------
+    // Story #10 in-process refusal (§3.5): a module dispatch with NO HTTP context and NO
+    // transport claim must be refused BEFORE the aggregate is loaded — a nonexistent id
+    // surfaces the guard error, not 404.
+    // ------------------------------------------------------------------
+
+    [Fact]
+    public async Task Lifecycle_Guard_Should_RefuseInProcessSends_WithoutTransportClaim()
+    {
+        var coursesModule = Factory.Services.GetRequiredService<AlphaZero.Modules.Courses.Presentation.CoursesModule>();
+
+        var suspend = await coursesModule.Send(new AlphaZero.Modules.Courses.Application.Enrollments.Commands.Suspend.SuspendEnrollmentCommand(Guid.NewGuid(), "in-process"));
+        suspend.IsError.Should().BeTrue();
+        suspend.FirstError.Code.Should().Be("Enrollment.TransitionUnauthorized");
+
+        var reactivate = await coursesModule.Send(new AlphaZero.Modules.Courses.Application.Enrollments.Commands.Reactivate.ReactivateEnrollmentCommand(Guid.NewGuid()));
+        reactivate.IsError.Should().BeTrue();
+        reactivate.FirstError.Code.Should().Be("Enrollment.TransitionUnauthorized");
+    }
+
+    // ------------------------------------------------------------------
     // Cross-tenant denial — a tenant B operator cannot touch tenant A's enrollment
     [Fact]
     public async Task Expiry_Should_ExcludeExpiredEnrollment_FromActiveCourseAnalytics()

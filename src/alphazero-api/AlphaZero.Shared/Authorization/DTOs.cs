@@ -100,7 +100,18 @@ public class IAMDevPreprocessor : IGlobalPreProcessor
 {
     public Task PreProcessAsync(IPreProcessorContext context, CancellationToken ct)
     {
-        return Task.CompletedTask; //this is dev for skipping authorization
+        // Dev/bypass skips EVALUATION only, not the context build-up: the request-side guards
+        // (issue #34 story #10) read the AccessControl envelope (the provider attaches
+        // RequiredPermission/ResourcePath from this stashed typed request), so dev stashes
+        // exactly like the enforcing preprocessor above. Without this, bypass-mode contexts
+        // degrade to "no permission metadata" and every envelope-gated guard would fail-open
+        // or lock out the admin path.
+        if (context.Request is not null)
+        {
+            context.HttpContext.Items["__FastEndpoints_Request__"] = context.Request;
+        }
+
+        return Task.CompletedTask; // dev for skipping authorization
     }
 }
 
