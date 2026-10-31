@@ -17,8 +17,8 @@
 
 | Step | Summary | Status | Commit | QA gate |
 |------|---------|--------|--------|---------|
-| 0 | Copy plan to `spec-34/plans/`, commit | `[ ] Not started` | — | — |
-| 1 | Audit table entity + write path (drop last-transition columns from aggregate) | `[ ] Not started` | — | — |
+| 0 | Copy plan to `spec-34/plans/`, commit | `[x] Done` | 7ef486ac | — |
+| 1 | Audit table entity + write path (drop last-transition columns from aggregate) | `[x] Done` | 31211003 | Unit: 272 passed; build green (Courses+API); integration coverage authored (docker unavailable locally — §6 #3) |
 | 2 | Aggregate cleanup (no transition plumbing, spelling, guards intact) | `[ ] Not started` | — | — |
 | 3 | Story #9 read path from audit table | `[ ] Not started` | — | — |
 | 4 | Story #10 `IPreRequestHandler` actor guards | `[ ] Not started` | — | — |
@@ -347,6 +347,9 @@ ON CONFLICT ("CourseId") DO UPDATE SET
 | # | Step | Deviation | Rationale | Author |
 |---|------|-----------|-----------|--------|
 | 1 | — | none yet (plan authored) | — | design session |
+| 2 | 1 | `Deactivate` was aggregate-event-less (comment + tests pinned "no events"), yet step 1 requires a `Deactivated` audit row from the §3.1 in-process event handler. Raised a domain-ONLY `EnrollmentDeactivatedDomainEvent` as the audit writer's sole trigger; the module bus stays silent for deactivation (Payments revocation flow keeps its identity — no integration event added). | Plan §3.1 designates the DomainEventHandler as THE writer and lists `Deactivated` as an audit kind, but no transition event existed to write from; this is the minimal mechanism inside the decided design, not a variant of it. | executor (step 1) |
+| 3 | 1 | The Suspended/Resumed/Expired/Deactivated domain events now carry `FromStatus` + `ActorId` (new `IEnrollmentTransitionEvent` seam). Aggregate emits them from the captured previous status. | Plan step-1 task says audit Metadata captures From/To/Actor, but no event carried them and the only available source (`LastStatusChangedBy`) is deleted in step 2 — so the payload must ride the in-process events. To-status derivable from EventKind; From must be supplied. | executor (step 1) |
+| 4 | 1 | The step-1 integration QA gate ("exactly one row per transition, same transaction") could not be EXECUTED locally: no docker daemon → Testcontainers harness unrunnable in this worktree. New integration coverage was authored and compiles (`Lifecycle_Transitions_Should_StageExactlyOneAuditRowPerTransition`); execution deferred to CI. Transaction-atomicity is structural: UnitOfWork publishes notification handlers BEFORE its single SaveChangesAsync (AlphaZero.Shared/Infrastructure/UnitOfWork.cs), the audit writer stages on the same scoped AppDbContext. | Environmental constraint, not a design branch. | executor (step 1) |
 
 ## §7. Final gate checklist
 
