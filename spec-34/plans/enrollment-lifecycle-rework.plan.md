@@ -20,7 +20,7 @@
 | 0 | Copy plan to `spec-34/plans/`, commit | `[x] Done` | 7ef486ac | — |
 | 1 | Audit table entity + write path (drop last-transition columns from aggregate) | `[x] Done` | 31211003 | Unit: 272 passed; build green (Courses+API); integration coverage authored (docker unavailable locally — §6 #3) |
 | 2 | Aggregate cleanup (no transition plumbing, spelling, guards intact) | `[x] Done` | f83c710c | Unit: 272 passed (updated matrix); build green (Courses+API+integration) |
-| 3 | Story #9 read path from audit table | `[ ] Not started` | — | — |
+| 3 | Story #9 read path from audit table | `[x] Done` | 1f3ab20e | Unit: 272 passed; build green; latest-entry fetch rides the house correlated-subquery convention (`docs/QueryArchitecture.md`) |
 | 4 | Story #10 `IPreRequestHandler` actor guards | `[ ] Not started` | — | — |
 | 5 | Shared access-ticket signer/verifier | `[ ] Not started` | — | — |
 | 6 | Identity: window operator + `IOperationEvaluator` | `[ ] Not started` | — | — |
