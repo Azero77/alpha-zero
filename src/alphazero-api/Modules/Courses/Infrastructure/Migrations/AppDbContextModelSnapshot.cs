@@ -391,6 +391,40 @@ namespace AlphaZero.Modules.Courses.Infrastructure.Modules.Courses.Infrastructur
                     b.ToTable("Subjects", "Courses");
                 });
 
+            modelBuilder.Entity("AlphaZero.Modules.Courses.Domain.Audits.EnrollmentAuditEntry", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("ActorId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("EventKind")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Metadata")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<DateTime>("OccurredOn")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("SubjectId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId");
+
+                    b.HasIndex("SubjectId", "OccurredOn");
+
+                    b.ToTable("EnrollmentAuditEntries", "Courses");
+                });
+
             modelBuilder.Entity("AlphaZero.Modules.Courses.Infrastructure.CourseAnalytics", b =>
                 {
                     b.Property<Guid>("CourseId")

@@ -11,6 +11,10 @@ using AlphaZero.Modules.Courses.Presentation.Enrollments.Enroll;
 using AlphaZero.Modules.Courses.Presentation.Enrollments.Get;
 using AlphaZero.Modules.Courses.Presentation.Subjects.Create;
 using AlphaZero.Shared.Domain;
+using AlphaZero.Modules.Courses.Domain.Audits;
+using AlphaZero.Modules.Courses.Infrastructure.Persistance;
+using AlphaZero.Shared.Infrastructure;
+using AlphaZero.Shared.Application;
 using Autofac;
 using Courses.Tests.Integration.Abstractions;
 using FluentAssertions;
@@ -182,6 +186,82 @@ public class EnrollmentLifecycleEndpointTests : BaseIntegrationTest
         response.StatusCode.Should().Be(HttpStatusCode.Conflict);
         var body = await response.Content.ReadAsStringAsync();
         body.Should().Contain("Enrollment.InvalidTransition");
+    }
+
+    // ------------------------------------------------------------------
+    // Audit trail (rework §3.1, step 1): every lifecycle transition stages exactly one
+    // EnrollmentAuditEntries row, in the same save transaction as the aggregate mutation
+    // (idempotent repeats stage nothing).
+    // ------------------------------------------------------------------
+
+    [Fact]
+    public async Task Lifecycle_Transitions_Should_StageExactlyOneAuditRowPerTransition()
+    {
+        // Arrange: enroll → the only pre-transition state is Active
+        var tenantId = Guid.NewGuid();
+        var courseId = await CreatePublishedCourse(tenantId);
+        var studentId = Guid.NewGuid();
+
+        SetTenant(tenantId);
+        var enrollResp = await Client.PostAsJsonAsync("/courses/enroll", new EnrollInCourseRequest { StudentId = studentId, CourseId = courseId });
+        var enrollmentId = (await enrollResp.Content.ReadFromJsonAsync<EnrollInCourseResponse>())!.EnrollmentId;
+
+        // Act 1: moderator suspends via HTTP (admin actor — story #10 envelope)
+        var suspend = await Client.PatchAsJsonAsync($"/courses/enrollments/{enrollmentId}/suspend", new { Reason = "billing dispute" });
+        suspend.StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+        // Idempotent duplicate suspend (story #4): must NOT stage a second row
+        var reSuspend = await Client.PatchAsJsonAsync($"/courses/enrollments/{enrollmentId}/suspend", new { Reason = "billing dispute" });
+        reSuspend.StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+        // Assert: exactly one Suspended row, atomically with the aggregate save that moved it
+        var suspendedRows = await AuditRowsFor(enrollmentId);
+        suspendedRows.Where(r => r.EventKind == EnrollmentAuditEventKind.Suspended).Should().HaveCount(1);
+        var suspendedRow = suspendedRows.Single(r => r.EventKind == EnrollmentAuditEventKind.Suspended);
+        suspendedRow.SubjectId.Should().Be(enrollmentId);
+        suspendedRow.TenantId.Should().Be(tenantId);
+        suspendedRow.ActorId.Should().NotBeNull(); // the request's acting principal fired this
+        suspendedRow.Metadata["From"].Should().Be(nameof(EnrollmentStatus.Active));
+        suspendedRow.Metadata["To"].Should().Be(nameof(EnrollmentStatus.Suspended));
+        suspendedRow.Metadata["cause"].Should().Be("billing dispute");
+
+        // Act 2: reactivate
+        var reactivate = await Client.PatchAsJsonAsync($"/courses/enrollments/{enrollmentId}/reactivate", new { });
+        reactivate.StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+        var resumedRow = (await AuditRowsFor(enrollmentId)).Single(r => r.EventKind == EnrollmentAuditEventKind.Resumed);
+        resumedRow.ActorId.Should().NotBeNull();
+        resumedRow.Metadata["From"].Should().Be(nameof(EnrollmentStatus.Suspended));
+        resumedRow.Metadata["To"].Should().Be(nameof(EnrollmentStatus.Active));
+
+        // Act 3: deactivate outside a request (revocation-saga shape) — through the module's own
+        // container so the domain event flows through the in-process audit writer, the same
+        // UnitOfWork path a saga consumer takes. Nothing goes on the module bus for deactivation.
+        var coursesModule = Factory.Services.GetRequiredService<AlphaZero.Modules.Courses.Presentation.CoursesModule>();
+        using var moduleScope = coursesModule.CreateScope();
+        var db = moduleScope.Resolve<AppDbContext>();
+        var enrollment = await db.Enrollments.FirstAsync(e => e.Id == enrollmentId);
+        enrollment.Deactivate().IsError.Should().BeFalse();
+        var unitOfWork = moduleScope.Resolve<IUnitOfWork>();
+        await unitOfWork.SaveChangesAsync(CancellationToken.None);
+
+        var deactivatedRow = (await AuditRowsFor(enrollmentId)).Single(r => r.EventKind == EnrollmentAuditEventKind.Deactivated);
+        deactivatedRow.ActorId.Should().BeNull(); // saga context — no acting principal
+        deactivatedRow.Metadata["From"].Should().Be(nameof(EnrollmentStatus.Active));
+        deactivatedRow.Metadata["To"].Should().Be(nameof(EnrollmentStatus.Inactive));
+    }
+
+    private async Task<IReadOnlyList<AlphaZero.Modules.Courses.Domain.Audits.EnrollmentAuditEntry>> AuditRowsFor(Guid enrollmentId)
+    {
+        IReadOnlyList<AlphaZero.Modules.Courses.Domain.Audits.EnrollmentAuditEntry> rows = null!;
+        await ExecuteDbContextAsync(async db =>
+        {
+            rows = await db.EnrollmentAuditEntries
+                .Where(r => r.SubjectId == enrollmentId)
+                .OrderBy(r => r.OccurredOn)
+                .ToListAsync();
+        });
+        return rows;
     }
 
     // ------------------------------------------------------------------

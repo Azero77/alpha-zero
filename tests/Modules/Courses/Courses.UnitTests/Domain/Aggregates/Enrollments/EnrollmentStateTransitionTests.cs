@@ -64,7 +64,8 @@ public class EnrollmentStateTransitionTests
         enrollment.Status.Should().Be(EnrollmentStatus.Suspended);
         enrollment.LastStatusChangedBy.Should().Be(operatorId);
         enrollment.LastStatusChangedOn.Should().BeOnOrAfter(before).And.BeOnOrBefore(after);
-        enrollment.DomainEvents.OfType<EnrollmentSuspendedDomainEvent>().Should().ContainSingle();
+        enrollment.DomainEvents.OfType<EnrollmentSuspendedDomainEvent>().Should().ContainSingle()
+            .Which.FromStatus.Should().Be(EnrollmentStatus.Active);
     }
 
     [Fact]
@@ -78,7 +79,15 @@ public class EnrollmentStateTransitionTests
         result.IsError.Should().BeFalse();
         enrollment.Status.Should().Be(EnrollmentStatus.Inactive);
         enrollment.LastStatusChangedBy.Should().Be(operatorId);
-        enrollment.DomainEvents.Should().BeEmpty(); // deactivation stays event-less (revocation flow identity)
+
+        // Audit-only domain event (issue #34 §3.1): deactivation raises the EnrollmentDeactivated
+        // event for the in-process audit writer but keeps its integration-event-less identity —
+        // no bus-bound lifecycle event is raised for it.
+        var emitted = enrollment.DomainEvents.OfType<EnrollmentDeactivatedDomainEvent>().Should().ContainSingle().Subject;
+        emitted.FromStatus.Should().Be(EnrollmentStatus.Active);
+        emitted.ActorId.Should().Be(operatorId);
+        enrollment.DomainEvents.Where(e => e is EnrollmentSuspendedDomainEvent or EnrollmentResumedDomainEvent or EnrollmentExpiredDomainEvent)
+            .Should().BeEmpty();
     }
 
     [Fact]
@@ -92,7 +101,8 @@ public class EnrollmentStateTransitionTests
         result.IsError.Should().BeFalse();
         enrollment.Status.Should().Be(EnrollmentStatus.Active);
         enrollment.LastStatusChangedBy.Should().Be(operatorId);
-        enrollment.DomainEvents.OfType<EnrollmentResumedDomainEvent>().Should().ContainSingle();
+        enrollment.DomainEvents.OfType<EnrollmentResumedDomainEvent>().Should().ContainSingle()
+            .Which.FromStatus.Should().Be(EnrollmentStatus.Inactive);
     }
 
     [Theory]
@@ -121,7 +131,8 @@ public class EnrollmentStateTransitionTests
         enrollment.Status.Should().Be(EnrollmentStatus.Expired);
         enrollment.LastStatusChangedOn.Should().BeCloseTo(now, TimeSpan.FromSeconds(1));
         enrollment.LastStatusChangedBy.Should().BeNull(); // automated trigger records no actor
-        enrollment.DomainEvents.OfType<EnrollmentExpiredDomainEvent>().Should().ContainSingle();
+        enrollment.DomainEvents.OfType<EnrollmentExpiredDomainEvent>().Should().ContainSingle()
+            .Which.FromStatus.Should().Be(EnrollmentStatus.Active);
     }
 
     [Fact]

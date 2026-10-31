@@ -120,7 +120,9 @@ public class Enrollment : TenantOwnedAggregate
 
     /// <summary>
     /// Active/Suspended/Expired → Inactive. Idempotent from Inactive (no rewrite).
-    /// The deactivation path stays event-less: the Payments revocation flow keeps its identity.
+    /// The deactivation path stays integration-event-less (the Payments revocation flow keeps its
+    /// identity); it raises only the audit-only <see cref="EnrollmentDeactivatedDomainEvent"/> for
+    /// the in-process audit writer (issue #34 §3.1).
     /// </summary>
     public ErrorOr<Success> Deactivate(Guid? operatorId = null)
     {
@@ -130,7 +132,14 @@ public class Enrollment : TenantOwnedAggregate
         if (Status is not (EnrollmentStatus.Active or EnrollmentStatus.Suspended or EnrollmentStatus.Expired))
             return InvalidTransition("Deactivate", Status, EnrollmentStatus.Inactive);
 
+        var previousStatus = Status;
         ApplyTransition(EnrollmentStatus.Inactive, operatorId);
+
+        // Audit-only domain event (issue #34 §3.1): deactivation keeps its event-less integration
+        // identity — no integration event is projected onto the bus for it (the Payments revocation
+        // flow keeps publishing its own saga events). The in-process audit writer is the only
+        // consumer, so the Inactive transition lands an audit row atomically with this mutation.
+        AddDomainEvent(new EnrollmentDeactivatedDomainEvent(Id, StudentId, CourseId, TenantId, previousStatus, operatorId));
         return Result.Success;
     }
 
@@ -146,8 +155,9 @@ public class Enrollment : TenantOwnedAggregate
         if (Status is not EnrollmentStatus.Active)
             return InvalidTransition("Suspend", Status, EnrollmentStatus.Suspended);
 
+        var previousStatus = Status;
         ApplyTransition(EnrollmentStatus.Suspended, operatorId);
-        AddDomainEvent(new EnrollmentSuspendedDomainEvent(Id, StudentId, CourseId, TenantId, reason));
+        AddDomainEvent(new EnrollmentSuspendedDomainEvent(Id, StudentId, CourseId, TenantId, previousStatus, operatorId, reason));
         return Result.Success;
     }
 
@@ -162,8 +172,9 @@ public class Enrollment : TenantOwnedAggregate
         if (Status is not (EnrollmentStatus.Inactive or EnrollmentStatus.Suspended or EnrollmentStatus.Expired))
             return InvalidTransition("Reactivate", Status, EnrollmentStatus.Active);
 
+        var previousStatus = Status;
         ApplyTransition(EnrollmentStatus.Active, operatorId);
-        AddDomainEvent(new EnrollmentResumedDomainEvent(Id, StudentId, CourseId, TenantId));
+        AddDomainEvent(new EnrollmentResumedDomainEvent(Id, StudentId, CourseId, TenantId, previousStatus, operatorId));
         return Result.Success;
     }
 
@@ -179,8 +190,9 @@ public class Enrollment : TenantOwnedAggregate
         if (Status is not (EnrollmentStatus.Active or EnrollmentStatus.Suspended))
             return InvalidTransition("Expire", Status, EnrollmentStatus.Expired);
 
+        var previousStatus = Status;
         ApplyTransition(EnrollmentStatus.Expired, operatorId: null, changedOn: occuredOn);
-        AddDomainEvent(new EnrollmentExpiredDomainEvent(Id, StudentId, CourseId, TenantId));
+        AddDomainEvent(new EnrollmentExpiredDomainEvent(Id, StudentId, CourseId, TenantId, previousStatus));
         return Result.Success;
     }
 
