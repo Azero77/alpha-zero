@@ -23,7 +23,7 @@
 | 3 | Story #9 read path from audit table | `[x] Done` | 1f3ab20e | Unit: 272 passed; build green; latest-entry fetch rides the house correlated-subquery convention (`docs/QueryArchitecture.md`) |
 | 4 | Story #10 `IPreRequestHandler` actor guards | `[x] Done` | b035c03c | Unit: 278 passed (4 new guard tests); builds green; refusal integration test authored (CI-run) |
 | 5 | Shared access-ticket signer/verifier | `[x] Done` | 7d1beada | Unit: 297 passed (round-trip/tamper/expiry/window + config fail-fast); builds green |
-| 6 | Identity: window operator + `IOperationEvaluator` | `[ ] Not started` | — | — |
+| 6 | Identity: window operator + `IOperationEvaluator` | `[x] Done` | b7a6147a | Identity unit: 54 passed (8 operator allow/deny tests); Courses unit: 297 passed; build green |
 | 7 | Identity: `PrincipalExpired` integration event (first one) | `[ ] Not started` | — | — |
 | 8 | Courses consumer: idempotent guarded `MarkExpired` | `[ ] Not started` | — | — |
 | 9 | Per-(course,plan) principal creation + enrollment grant branch | `[ ] Not started` | — | — |
