@@ -1,6 +1,5 @@
 using AlphaZero.Modules.Courses.Application.Repositories;
-using AlphaZero.Modules.Identity.Application;
-using AlphaZero.Modules.Identity.Application.Principals.Commands.EnsureCoursePlanPrincipal;
+using AlphaZero.Modules.Courses.Application.Services;
 using AlphaZero.Shared.Application;
 using ErrorOr;
 using FluentValidation;
@@ -12,8 +11,8 @@ namespace AlphaZero.Modules.Courses.Application.Courses.Commands.Plans;
 /// <summary>
 /// Adds a plan to a course. <see cref="AccessWindowDays"/> non-null makes it a windowed plan:
 /// the enrolling flow then delegates the per-(course, plan) access principal minting to Identity
-/// through <see cref="IIdentityModule"/> (rework §3.2.1, step 9) and stores the returned id on the
-/// plan. Unlimited plans keep the caller-provided principal (unchanged behavior).
+/// through <see cref="ICoursePlanPrincipalService"/> (MassTransit request-response via IBus) and
+/// stores the returned id on the plan. Unlimited plans keep the caller-provided principal (unchanged behavior).
 /// </summary>
 public record AddPlanCommand(Guid CourseId, string Name, Guid? PrincipalId, int? AccessWindowDays = null) : ICommand<Guid>;
 
@@ -31,16 +30,16 @@ public class AddPlanCommandValidator : AbstractValidator<AddPlanCommand>
 public sealed class AddPlanCommandHandler : IRequestHandler<AddPlanCommand, ErrorOr<Guid>>
 {
     private readonly ICourseRepository _courseRepository;
-    private readonly IIdentityModule _identityModule;
+    private readonly ICoursePlanPrincipalService _planPrincipalService;
     private readonly ILogger<AddPlanCommandHandler> _logger;
 
     public AddPlanCommandHandler(
         ICourseRepository courseRepository,
-        IIdentityModule identityModule,
+        ICoursePlanPrincipalService planPrincipalService,
         ILogger<AddPlanCommandHandler> logger)
     {
         _courseRepository = courseRepository;
-        _identityModule = identityModule;
+        _planPrincipalService = planPrincipalService;
         _logger = logger;
     }
 
@@ -58,7 +57,7 @@ public sealed class AddPlanCommandHandler : IRequestHandler<AddPlanCommand, Erro
         Guid planPrincipalId;
         if (request.AccessWindowDays is not null)
         {
-            var mint = await _identityModule.Send(new EnsureCoursePlanPrincipalCommand(request.CourseId, planId), cancellationToken);
+            var mint = await _planPrincipalService.EnsurePlanPrincipalAsync(request.CourseId, planId, course.TenantId, cancellationToken);
             if (mint.IsError) return mint.Errors;
             planPrincipalId = mint.Value;
         }

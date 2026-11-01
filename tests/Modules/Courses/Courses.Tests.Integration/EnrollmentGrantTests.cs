@@ -11,7 +11,6 @@ using AlphaZero.Modules.Courses.Presentation.Courses.Plans.AddPlan;
 using AlphaZero.Modules.Courses.Presentation.Courses.Plans.UpdatePlan;
 using AlphaZero.Modules.Courses.Presentation.Enrollments.Enroll;
 using AlphaZero.Modules.Courses.Presentation.Subjects.Create;
-using AlphaZero.Modules.Identity.Application.Principals.Commands.EnsureCoursePlanPrincipal;
 using AlphaZero.Modules.Identity.Domain.Models;
 using AlphaZero.Modules.Identity.Domain.Models.Principals;
 using AlphaZero.Modules.Identity.Domain.Models.Principals.Policies;

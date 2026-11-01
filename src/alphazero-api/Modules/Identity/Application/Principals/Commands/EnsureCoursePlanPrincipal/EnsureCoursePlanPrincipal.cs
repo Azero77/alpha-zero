@@ -22,7 +22,7 @@ namespace AlphaZero.Modules.Identity.Application.Principals.Commands.EnsureCours
 /// Courses calls this through <see cref="IIdentityModule"/> when a plan carries an access window;
 /// the operation is idempotent by the deterministic (tenant, course, plan) identity.
 /// </summary>
-public record EnsureCoursePlanPrincipalCommand(Guid CourseId, Guid PlanId) : ICommand<Guid>;
+public record EnsureCoursePlanPrincipalCommand(Guid CourseId, Guid PlanId, Guid? TenantId = null) : ICommand<Guid>;
 
 public class EnsureCoursePlanPrincipalCommandValidator : AbstractValidator<EnsureCoursePlanPrincipalCommand>
 {
@@ -57,7 +57,7 @@ public sealed class EnsureCoursePlanPrincipalCommandHandler : IRequestHandler<En
 
     public async Task<ErrorOr<Guid>> Handle(EnsureCoursePlanPrincipalCommand request, CancellationToken cancellationToken)
     {
-        var tenantId = _tenantProvider.GetTenant();
+        var tenantId = request.TenantId ?? _tenantProvider.GetTenant();
         if (tenantId is null) return Error.Unauthorized("Tenant.NotFound", "Tenant not found.");
 
         var facts = new CoursePlanPrincipalFacts(tenantId.Value, request.CourseId, request.PlanId);

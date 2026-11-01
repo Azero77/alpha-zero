@@ -1,8 +1,7 @@
 using AlphaZero.Modules.Courses.Application.Courses.Commands.Plans;
 using AlphaZero.Modules.Courses.Application.Repositories;
+using AlphaZero.Modules.Courses.Application.Services;
 using AlphaZero.Modules.Courses.Domain.Aggregates.Courses;
-using AlphaZero.Modules.Identity.Application;
-using AlphaZero.Modules.Identity.Application.Principals.Commands.EnsureCoursePlanPrincipal;
 using AlphaZero.Shared.Domain;
 using ErrorOr;
 using FluentAssertions;
@@ -14,26 +13,27 @@ namespace AlphaZero.Modules.Courses.UnitTests.Application.Courses;
 
 /// <summary>
 /// Step 9 (§3.2.1): windowed plans delegate the per-(course, plan) principal minting to Identity
-/// (IIdentityModule.Send → EnsureCoursePlanPrincipalCommand); unlimited plans keep the
+/// via ICoursePlanPrincipalService (MassTransit request-response via IBus); unlimited plans keep the
 /// caller-provided principal (unchanged behavior). No inline policies involved (§5 rule 1).
 /// </summary>
 public class AddPlanCommandHandlerTests
 {
     private readonly ICourseRepository _courseRepository;
-    private readonly IIdentityModule _identityModule;
+    private readonly ICoursePlanPrincipalService _planPrincipalService;
     private readonly ILogger<AddPlanCommandHandler> _logger;
     private readonly Course _freshCourse;
 
     private static readonly Guid CourseId = Guid.NewGuid();
+    private static readonly Guid TenantId = Guid.NewGuid();
     private static readonly Guid CallerPrincipalId = Guid.NewGuid();
 
     public AddPlanCommandHandlerTests()
     {
         _courseRepository = Substitute.For<ICourseRepository>();
-        _identityModule = Substitute.For<IIdentityModule>();
+        _planPrincipalService = Substitute.For<ICoursePlanPrincipalService>();
         _logger = Substitute.For<ILogger<AddPlanCommandHandler>>();
 
-        _freshCourse = Course.Create(CourseId, Guid.NewGuid(), "Title", null, Guid.NewGuid()).Value;
+        _freshCourse = Course.Create(CourseId, TenantId, "Title", null, Guid.NewGuid()).Value;
         var builder = Substitute.For<ICourseQueryBuilder>();
         builder.WithPlans(Arg.Any<bool>()).Returns(builder);
         builder.ExecuteAsync(Arg.Any<CancellationToken>()).Returns(_freshCourse);
@@ -45,18 +45,20 @@ public class AddPlanCommandHandlerTests
     {
         // Arrange
         var mintedId = Guid.NewGuid();
-        _identityModule.Send(Arg.Is<EnsureCoursePlanPrincipalCommand>(c => c.CourseId == CourseId), Arg.Any<CancellationToken>())
+        _planPrincipalService.EnsurePlanPrincipalAsync(CourseId, Arg.Any<Guid>(), TenantId, Arg.Any<CancellationToken>())
             .Returns(mintedId);
 
         // Act
-        var result = await new AddPlanCommandHandler(_courseRepository, _identityModule, _logger)
+        var result = await new AddPlanCommandHandler(_courseRepository, _planPrincipalService, _logger)
             .Handle(new AddPlanCommand(CourseId, "Windowed", PrincipalId: null, AccessWindowDays: 30), CancellationToken.None);
 
         // Assert
         result.IsError.Should().BeFalse();
 
-        await _identityModule.Received(1).Send(
-            Arg.Is<EnsureCoursePlanPrincipalCommand>(c => c.CourseId == CourseId && c.PlanId == result.Value),
+        await _planPrincipalService.Received(1).EnsurePlanPrincipalAsync(
+            CourseId,
+            result.Value,
+            TenantId,
             Arg.Any<CancellationToken>());
 
         _freshCourse.Plans.Should().ContainSingle();
@@ -70,12 +72,13 @@ public class AddPlanCommandHandlerTests
     public async Task Handle_Should_NotCallIdentity_AndKeepCallerPrincipal_WhenUnlimited()
     {
         // Act
-        var result = await new AddPlanCommandHandler(_courseRepository, _identityModule, _logger)
+        var result = await new AddPlanCommandHandler(_courseRepository, _planPrincipalService, _logger)
             .Handle(new AddPlanCommand(CourseId, "Unlimited", PrincipalId: CallerPrincipalId), CancellationToken.None);
 
         // Assert — unlimited branch unchanged (no Identity minting)
         result.IsError.Should().BeFalse();
-        await _identityModule.DidNotReceive().Send(Arg.Any<EnsureCoursePlanPrincipalCommand>(), Arg.Any<CancellationToken>());
+        await _planPrincipalService.DidNotReceive().EnsurePlanPrincipalAsync(
+            Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<CancellationToken>());
 
         _freshCourse.Plans.Should().ContainSingle();
         var plan = _freshCourse.Plans.Single();
@@ -87,11 +90,11 @@ public class AddPlanCommandHandlerTests
     public async Task Handle_Should_ReturnError_AndNotAddPlan_WhenMintFails()
     {
         // Arrange — a windowed plan without its principal is invalid (Identity is the authority)
-        _identityModule.Send(Arg.Any<EnsureCoursePlanPrincipalCommand>(), Arg.Any<CancellationToken>())
+        _planPrincipalService.EnsurePlanPrincipalAsync(Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<CancellationToken>())
             .Returns(Error.Unexpected("Principal.MintFailed", "boom"));
 
         // Act
-        var result = await new AddPlanCommandHandler(_courseRepository, _identityModule, _logger)
+        var result = await new AddPlanCommandHandler(_courseRepository, _planPrincipalService, _logger)
             .Handle(new AddPlanCommand(CourseId, "Windowed", PrincipalId: null, AccessWindowDays: 30), CancellationToken.None);
 
         // Assert
@@ -106,11 +109,11 @@ public class AddPlanCommandHandlerTests
     {
         // Arrange — a stale client that still supplies PrincipalId on a windowed plan
         var mintedId = Guid.NewGuid();
-        _identityModule.Send(Arg.Any<EnsureCoursePlanPrincipalCommand>(), Arg.Any<CancellationToken>())
+        _planPrincipalService.EnsurePlanPrincipalAsync(Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<CancellationToken>())
             .Returns(mintedId);
 
         // Act
-        var result = await new AddPlanCommandHandler(_courseRepository, _identityModule, _logger)
+        var result = await new AddPlanCommandHandler(_courseRepository, _planPrincipalService, _logger)
             .Handle(new AddPlanCommand(CourseId, "Windowed", PrincipalId: CallerPrincipalId, AccessWindowDays: 30), CancellationToken.None);
 
         // Assert — the minted principal wins (system-managed, not caller-managed)

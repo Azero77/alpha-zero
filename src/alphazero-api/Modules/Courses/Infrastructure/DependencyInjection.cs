@@ -72,6 +72,7 @@ public static class DependencyInjection
         // aggregate mutation — never via the module bus.
         moduleServices.AddScoped<IEnrollmentAuditRepository, EnrollmentAuditRepository>();
         moduleServices.AddScoped<IAssessmentService, AssessmentService>();
+        moduleServices.AddScoped<ICoursePlanPrincipalService, CoursePlanPrincipalService>();
         moduleServices.AddScoped<IUnitOfWork, UnitOfWork<AppDbContext>>();
         moduleServices.AddTransient<ICourseQueryBuilder, CourseQueryBuilder>();
 
