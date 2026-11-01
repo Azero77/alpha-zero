@@ -128,4 +128,63 @@ public class EnrollStudentFromSagaConsumerTests
             It.Is<EnrollInCourseCommand>(c => c.AccessExpiresOn.HasValue && c.AccessExpiresOn.Value >= DateTime.UtcNow.AddDays(6.9)),
             It.IsAny<CancellationToken>()), Times.Once);
     }
+
+    // ------------------------------------------------------------------
+    // Step 9 (§3.2.2): the enrolling flow stamps the enrollment's grant — windowed plans ride
+    // the per-(course, plan) principal onto the created event; unlimited passes null
+    // (shared student template, unchanged).
+    // ------------------------------------------------------------------
+
+    [Fact]
+    public async Task Consume_Should_CarryPlanPrincipal_WhenPlanCarriesAccessWindow()
+    {
+        // Arrange — windowed plan whose principal is the minted per-(course, plan) principal
+        var courseId = Guid.NewGuid();
+        var planPrincipalId = Guid.NewGuid();
+        var command = new EnrollStudentFromSagaCommand(Guid.NewGuid(), Guid.NewGuid(), courseId, "Standard", ResourceArn.ForCourse(Guid.NewGuid(), courseId));
+        _contextMock.Setup(x => x.Message).Returns(command);
+
+        var course = Course.Create(courseId, Guid.NewGuid(), "Title", null, Guid.NewGuid()).Value;
+        course.AddPlan("Standard", planPrincipalId, accessWindowDays: 30).Value.Should().NotBeNull();
+
+        SetupQuery(course);
+
+        _coursesModuleMock
+            .Setup(x => x.Send<global::ErrorOr.ErrorOr<Guid>>(It.IsAny<EnrollInCourseCommand>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Guid.NewGuid());
+
+        // Act
+        await _consumer.Consume(_contextMock.Object);
+
+        // Assert
+        _coursesModuleMock.Verify(x => x.Send<global::ErrorOr.ErrorOr<Guid>>(
+            It.Is<EnrollInCourseCommand>(c => c.CoursePlanPrincipalId == planPrincipalId),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Consume_Should_CarryNullPrincipal_WhenPlanIsUnlimited()
+    {
+        // Arrange — unlimited plan
+        var courseId = Guid.NewGuid();
+        var command = new EnrollStudentFromSagaCommand(Guid.NewGuid(), Guid.NewGuid(), courseId, "Standard", ResourceArn.ForCourse(Guid.NewGuid(), courseId));
+        _contextMock.Setup(x => x.Message).Returns(command);
+
+        var course = Course.Create(courseId, Guid.NewGuid(), "Title", null, Guid.NewGuid()).Value;
+        course.AddPlan("Standard", Guid.NewGuid()).Value.Should().NotBeNull();
+
+        SetupQuery(course);
+
+        _coursesModuleMock
+            .Setup(x => x.Send<global::ErrorOr.ErrorOr<Guid>>(It.IsAny<EnrollInCourseCommand>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Guid.NewGuid());
+
+        // Act
+        await _consumer.Consume(_contextMock.Object);
+
+        // Assert — null grant ⇒ shared student template in the Identity consumer branch
+        _coursesModuleMock.Verify(x => x.Send<global::ErrorOr.ErrorOr<Guid>>(
+            It.Is<EnrollInCourseCommand>(c => c.CoursePlanPrincipalId == (Guid?)null && c.AccessExpiresOn == (DateTime?)null),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
 }

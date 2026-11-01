@@ -33,7 +33,7 @@ public class Enrollment : TenantOwnedAggregate
         // EF
     }
 
-    private Enrollment(Guid id, Guid tenantId, Guid studentId, Guid courseId, DateTime? accessExpiresOn = null) : base(id, tenantId)
+    private Enrollment(Guid id, Guid tenantId, Guid studentId, Guid courseId, DateTime? accessExpiresOn = null, Guid? coursePlanPrincipalId = null) : base(id, tenantId)
     {
         StudentId = studentId;
         CourseId = courseId;
@@ -46,20 +46,22 @@ public class Enrollment : TenantOwnedAggregate
         EnrolledOn = DateTime.UtcNow;
         AccessExpiresOn = accessExpiresOn;
 
-        AddDomainEvent(new EnrollmentCreatedDomainEvent(Id, StudentId, CourseId, TenantId));
+        AddDomainEvent(new EnrollmentCreatedDomainEvent(Id, StudentId, CourseId, TenantId, coursePlanPrincipalId));
     }
 
     /// <summary>
     /// Creates an Active enrollment. <paramref name="accessExpiresOn"/> is derived from the
     /// originating course plan's access window by the enrolling flow (issue #34); plain
     /// self-serve enrollment without a plan passes null (never expires).
+    /// <paramref name="coursePlanPrincipalId"/> rides the created event for the Identity grant
+    /// branch (§3.2.2): the per-(course, plan) principal when enrolling under a windowed plan.
     /// </summary>
-    public static ErrorOr<Enrollment> Create(Guid id, Guid tenantId, Guid studentId, Guid courseId, DateTime? accessExpiresOn = null)
+    public static ErrorOr<Enrollment> Create(Guid id, Guid tenantId, Guid studentId, Guid courseId, DateTime? accessExpiresOn = null, Guid? coursePlanPrincipalId = null)
     {
         if (studentId == Guid.Empty) return Error.Validation("Enrollment.StudentId", "StudentId is required.");
         if (courseId == Guid.Empty) return Error.Validation("Enrollment.CourseId", "CourseId is required.");
 
-        return new Enrollment(id, tenantId, studentId, courseId, accessExpiresOn);
+        return new Enrollment(id, tenantId, studentId, courseId, accessExpiresOn, coursePlanPrincipalId);
     }
 
     /// <param name="activeItemsBitmask">

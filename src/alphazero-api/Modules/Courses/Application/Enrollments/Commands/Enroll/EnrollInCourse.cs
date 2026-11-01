@@ -10,7 +10,11 @@ using Microsoft.Extensions.Logging;
 namespace AlphaZero.Modules.Courses.Application.Enrollments.Commands.Enroll;
 
 /// <param name="AccessExpiresOn">Optional expiry instant derived by the enrolling flow (plan access window, issue #34).</param>
-public record EnrollInCourseCommand(Guid StudentId, Guid CourseId, DateTime? AccessExpiresOn = null) : ICommand<Guid>;
+/// <param name="CoursePlanPrincipalId">
+/// The per-(course, plan) access principal (rework §3.2.2) when enrolling under a windowed plan —
+/// carried onto the created event for the Identity grant branch; null for unlimited enrollments.
+/// </param>
+public record EnrollInCourseCommand(Guid StudentId, Guid CourseId, DateTime? AccessExpiresOn = null, Guid? CoursePlanPrincipalId = null) : ICommand<Guid>;
 
 public class EnrollInCourseCommandValidator : AbstractValidator<EnrollInCourseCommand>
 {
@@ -57,7 +61,13 @@ public sealed class EnrollInCourseCommandHandler : IRequestHandler<EnrollInCours
         if (existingEnrollment is not null) return Error.Conflict("Enrollment.Exists", "Student is already enrolled in this course.");
 
         var enrollmentId = Guid.NewGuid();
-        var enrollmentResult = Enrollment.Create(enrollmentId, tenantId.Value, request.StudentId, request.CourseId, request.AccessExpiresOn);
+        var enrollmentResult = Enrollment.Create(
+            enrollmentId,
+            tenantId.Value,
+            request.StudentId,
+            request.CourseId,
+            request.AccessExpiresOn,
+            request.CoursePlanPrincipalId);
 
         if (enrollmentResult.IsError) return enrollmentResult.Errors;
 

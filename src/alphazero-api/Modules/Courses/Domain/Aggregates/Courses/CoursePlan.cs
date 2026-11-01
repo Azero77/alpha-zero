@@ -22,9 +22,10 @@ public class CoursePlan : Entity
         AccessWindowDays = accessWindowDays;
     }
 
-    public static CoursePlan Create(Guid courseId, string name, Guid principalId, int? accessWindowDays = null)
+    /// <param name="planId">Optional explicit id — the plan-creation flow pre-computes it so the per-(course, plan) principal (§3.2.1) can be minted before the plan aggregates.</param>
+    public static CoursePlan Create(Guid courseId, string name, Guid principalId, int? accessWindowDays = null, Guid? planId = null)
     {
-        return new CoursePlan(Guid.NewGuid(), courseId, name, principalId, accessWindowDays);
+        return new CoursePlan(planId ?? Guid.NewGuid(), courseId, name, principalId, accessWindowDays);
     }
 
     public void Update(string name, Guid principalId, int? accessWindowDays = null)

@@ -56,7 +56,8 @@ public class DomainEventHandler :
             notification.EnrollmentId,
             notification.StudentId,
             notification.CourseId,
-            notification.TenantId
+            notification.TenantId,
+            notification.CoursePlanPrincipalId
         ), cancellationToken);
     }
 

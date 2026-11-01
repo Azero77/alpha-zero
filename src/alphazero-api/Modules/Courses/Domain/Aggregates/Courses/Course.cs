@@ -120,7 +120,7 @@ public class Course : TenantOwnedAggregate, ISoftDeletable
         return Result.Success;
     }
 
-    public ErrorOr<CoursePlan> AddPlan(string name, Guid principalId, int? accessWindowDays = null)
+    public ErrorOr<CoursePlan> AddPlan(string name, Guid principalId, int? accessWindowDays = null, Guid? planId = null)
     {
         var input = ValidatePlan(name, accessWindowDays);
         if (input.IsError) return input.Errors;
@@ -128,7 +128,7 @@ public class Course : TenantOwnedAggregate, ISoftDeletable
         if (_plans.Any(p => string.Equals(p.Name, name, StringComparison.OrdinalIgnoreCase)))
             return Error.Conflict("Course.PlanExists", $"A plan with name '{name}' already exists.");
 
-        var plan = CoursePlan.Create(Id, name, principalId, accessWindowDays);
+        var plan = CoursePlan.Create(Id, name, principalId, accessWindowDays, planId);
         _plans.Add(plan);
         return plan;
     }
