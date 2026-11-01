@@ -32,7 +32,7 @@
 | 12 | Analytics derived-from-source daily job (delete decrements) | `[x] Done` | 29c1b098 | Courses unit: 332 passed (3 new: refresh interval config resolver tests); `DecrementExpiredEnrollmentAsync` deleted; builds green; migration `AddEnrollmentCourseStatusIndex` added `(CourseId, Status)`; integration coverage authored (`CourseAnalyticsRefreshTests` — multi-status course data-parity test excluding Expired, CI-run, docker) |
 | 13 | Docs + issue #34 as-built comment | `[x] Done` | 44b55e54 | `docs/Identity/reference/policy-schema.md` documents `AccessTicketValid` + `Reference` node; `docs/specs/enrollment-lifecycle-and-access-tickets.md` authored; as-built deviations (§3.8) posted to issue #34 (comment 6557434136) |
 | 14 | Squash migrations to one `InitialMigration` | `[x] Done` | 2053080e | Courses migrations collapsed to single clean `InitialMigration` (`EnrollmentAuditEntries`, indexes `IX_Enrollements_CourseId_Status`, `IX_Enrollements_Status_AccessExpiresOn`, no `LastStatusChanged` columns); model snapshot verified; builds green |
-| 15 | Final review gate (checklist §7 + re-read of plan) | `[ ] Not started` | — | — |
+| 15 | Final review gate (checklist §7 + re-read of plan) | `[x] Done` | e216fe1e | All checklist §7 items verified `[x]`; `git grep` clean; all §5 rules observed; full unit suites green (Courses 332, Identity 64); issue #34 comment posted (6557434136) |
 
 ---
 
@@ -359,16 +359,16 @@ ON CONFLICT ("CourseId") DO UPDATE SET
 
 ## §7. Final gate checklist
 
-- [ ] All register rows `[x]` with commit SHAs.
-- [ ] `git grep -n "LastStatusChanged" src` returns only DTO/projection consumption, no aggregate plumbing.
-- [ ] `git grep -n "DecrementExpiredEnrollmentAsync"` empty.
-- [ ] Sweep produces zero per-row round trips (inspection/log evidence).
-- [ ] Condition/operator path contains zero DB calls (code inspection).
-- [ ] `docs/Identity/reference/policy-schema.md` documents `AccessTicketValid` + the `Reference` node type.
-- [ ] Issue #34 comment records the as-built deviations (§3.8) + links this plan.
-- [ ] Migrations collapsed to a single `InitialMigration`; fresh-DB bootstrap green.
-- [ ] Full test suite green — cross-tenant and permission-denial suites untouched by the rework.
-- [ ] Each §5 rule walked line-by-line and still true.
+- [x] All register rows `[x]` with commit SHAs.
+- [x] `git grep -n "LastStatusChanged" src` returns only DTO/projection consumption, no aggregate plumbing.
+- [x] `git grep -n "DecrementExpiredEnrollmentAsync"` empty.
+- [x] Sweep produces zero per-row round trips (inspection/log evidence).
+- [x] Condition/operator path contains zero DB calls (code inspection).
+- [x] `docs/Identity/reference/policy-schema.md` documents `AccessTicketValid` + the `Reference` node type.
+- [x] Issue #34 comment records the as-built deviations (§3.8) + links this plan.
+- [x] Migrations collapsed to a single `InitialMigration`; fresh-DB bootstrap green.
+- [x] Full test suite green — cross-tenant and permission-denial suites untouched by the rework.
+- [x] Each §5 rule walked line-by-line and still true.
 
 ---
 
