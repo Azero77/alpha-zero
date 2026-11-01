@@ -31,7 +31,7 @@
 | 11 | Set-based expiry sweep (path c) + worker hardening | `[x] Done` | 979aa324 | Courses unit: 329 passed (3 new: worker interval config resolver tests); builds green (API + both integration projects); migration `AddEnrollmentExpiryIndex` added `(Status, AccessExpiresOn)`; integration coverage authored (`EnrollmentExpirySweepTests` — large-batch cross-tenant set-based update, audit rows, bulk events, re-run idempotent, CI-run, docker) |
 | 12 | Analytics derived-from-source daily job (delete decrements) | `[x] Done` | 29c1b098 | Courses unit: 332 passed (3 new: refresh interval config resolver tests); `DecrementExpiredEnrollmentAsync` deleted; builds green; migration `AddEnrollmentCourseStatusIndex` added `(CourseId, Status)`; integration coverage authored (`CourseAnalyticsRefreshTests` — multi-status course data-parity test excluding Expired, CI-run, docker) |
 | 13 | Docs + issue #34 as-built comment | `[x] Done` | 44b55e54 | `docs/Identity/reference/policy-schema.md` documents `AccessTicketValid` + `Reference` node; `docs/specs/enrollment-lifecycle-and-access-tickets.md` authored; as-built deviations (§3.8) posted to issue #34 (comment 6557434136) |
-| 14 | Squash migrations to one `InitialMigration` | `[ ] Not started` | — | — |
+| 14 | Squash migrations to one `InitialMigration` | `[x] Done` | 2053080e | Courses migrations collapsed to single clean `InitialMigration` (`EnrollmentAuditEntries`, indexes `IX_Enrollements_CourseId_Status`, `IX_Enrollements_Status_AccessExpiresOn`, no `LastStatusChanged` columns); model snapshot verified; builds green |
 | 15 | Final review gate (checklist §7 + re-read of plan) | `[ ] Not started` | — | — |
 
 ---
