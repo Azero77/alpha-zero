@@ -47,6 +47,9 @@ public static class DependencyInjection
         // AddCoursesPrivateInfrastructure so its IUnitOfWork is unambiguously the Courses one);
         // the worker only bridges host lifecycle → module scope per pass.
         services.AddHostedService<EnrollmentExpiryWorker>();
+
+        // Scheduled daily derived-from-source analytics refresh (issue #34 rework §3.6, step 12).
+        services.AddHostedService<AlphaZero.Modules.Courses.Infrastructure.Analytics.CourseAnalyticsRefreshWorker>();
     }
 
     public static void AddCoursesPrivateInfrastructure(this IServiceCollection moduleServices, IConfiguration configuration)
@@ -97,6 +100,7 @@ public static class DependencyInjection
         // belongs to whichever module registered it globally first). The hosted worker resolves
         // this service through ICoursesModule.CreateScope().
         moduleServices.AddScoped<IEnrollmentExpiryService, EnrollmentExpiryService>();
+        moduleServices.AddScoped<AlphaZero.Modules.Courses.Infrastructure.Analytics.ICourseAnalyticsRefreshService, AlphaZero.Modules.Courses.Infrastructure.Analytics.CourseAnalyticsRefreshService>();
 
         moduleServices.AddValidatorsFromAssembly(typeof(ICoursesApplicationMarker).Assembly);
         moduleServices.AddPreRequestHandlersFromAssembly(typeof(ICoursesApplicationMarker).Assembly);

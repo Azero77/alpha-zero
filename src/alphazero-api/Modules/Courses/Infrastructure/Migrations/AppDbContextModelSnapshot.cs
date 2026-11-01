@@ -345,6 +345,8 @@ namespace AlphaZero.Modules.Courses.Infrastructure.Modules.Courses.Infrastructur
 
                     b.HasIndex("TenantId");
 
+                    b.HasIndex("CourseId", "Status");
+
                     b.HasIndex("Status", "AccessExpiresOn");
 
                     b.HasIndex("StudentId", "CourseId")

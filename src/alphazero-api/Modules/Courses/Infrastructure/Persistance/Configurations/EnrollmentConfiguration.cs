@@ -20,6 +20,7 @@ public class EnrollmentConfiguration : IEntityTypeConfiguration<Enrollment>
         builder.Property(e => e.AccessExpiresOn);
         builder.HasIndex(e => new { e.StudentId, e.CourseId }).IsUnique();
         builder.HasIndex(e => new { e.Status, e.AccessExpiresOn });
+        builder.HasIndex(e => new { e.CourseId, e.Status });
 
         // Complex property, NOT OwnsOne (#32/D3): an owned type is modelled as a separate
         // entity type with its own key and owner FK, so FromSql composition fetched it through a
