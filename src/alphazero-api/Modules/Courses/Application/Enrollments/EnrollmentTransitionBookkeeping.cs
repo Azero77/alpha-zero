@@ -14,6 +14,8 @@ namespace AlphaZero.Modules.Courses.Application.Enrollments;
 /// the helper skips the mark, so EF issues no UPDATE. The per-handler LOG stays with its
 /// handler: each verb has its own payload, message and log level.
 /// </summary>
+
+[Obsolete] //The logic is now in the transition service
 public static class EnrollmentTransitionBookkeeping
 {
     /// <summary>

@@ -2,6 +2,7 @@ using AlphaZero.Modules.Courses.Domain.Aggregates.Enrollments;
 using AlphaZero.Shared.Application;
 using AlphaZero.Shared.Authorization;
 using AlphaZero.Modules.Courses.Application.Repositories;
+using AlphaZero.Modules.Courses.Domain.Services;
 using AlphaZero.Shared.Infrastructure.Repositores;
 using FluentValidation;
 using ErrorOr;
@@ -15,6 +16,7 @@ public record DeactivateEnrollmentCommand(Guid UserId, Guid CourseId) : ICommand
 public sealed class DeactivateEnrollmentCommandHandler(
     IRepository<Enrollment> repository,
     IAuthorizationContextProvider authorizationContextProvider,
+    EnrollmentStatusTransitionService  enrollmentStatusTransitionService,
     ILogger<DeactivateEnrollmentCommandHandler> logger) : IRequestHandler<DeactivateEnrollmentCommand, ErrorOr<Success>>
 {
     public async Task<ErrorOr<Success>> Handle(DeactivateEnrollmentCommand request, CancellationToken cancellationToken)
@@ -25,16 +27,14 @@ public sealed class DeactivateEnrollmentCommandHandler(
         {
             return Error.NotFound("Enrollment.NotFound", "Enrollment not found for this user and course.");
         }
-
-        var (result, _) = repository.Transitioned(enrollment,
-            () => enrollment.Deactivate(EnrollmentTransitionActor.Resolve(authorizationContextProvider)));
+        var user = authorizationContextProvider.Get().IsError ? null : authorizationContextProvider.CurrentAuthorizationContext;
+        
+        var result = await enrollmentStatusTransitionService.Deactivate(enrollment, new EnrollmentStatusTransitionService.EnrollmentChangingStatusMetadata(user?.Id), cancellationToken);
         if (result.IsError) return result.Errors;
 
         // idempotent no-op (Inactive) marks nothing — the helper resolves the change flag; the
         // saga's revocation log stays unconditional (it cares that the request was processed).
 
-        logger.LogWarning("Enrollment {EnrollmentId} for User {UserId} in Course {CourseId} has been DEACTIVATED.",
-            enrollment.Id, request.UserId, request.CourseId);
 
         return Result.Success;
     }
@@ -56,7 +56,8 @@ public class DeactivateEnrollmentByIdCommandValidator : AbstractValidator<Deacti
 
 public sealed class DeactivateEnrollmentByIdCommandHandler(
     IEnrollmentRepository repository,
-    ILogger<DeactivateEnrollmentByIdCommandHandler> logger) : IRequestHandler<DeactivateEnrollmentByIdCommand, ErrorOr<Success>>
+    ILogger<DeactivateEnrollmentByIdCommandHandler> logger,
+    EnrollmentStatusTransitionService enrollmentStatusTransitionService) : IRequestHandler<DeactivateEnrollmentByIdCommand, ErrorOr<Success>>
 {
     public async Task<ErrorOr<Success>> Handle(DeactivateEnrollmentByIdCommand request, CancellationToken cancellationToken)
     {
@@ -72,9 +73,8 @@ public sealed class DeactivateEnrollmentByIdCommandHandler(
             logger.LogInformation("Enrollment {EnrollmentId} is already inactive; deactivation is idempotent.", request.EnrollmentId);
             return Result.Success;
         }
-
-        enrollment.Deactivate();
-        repository.Update(enrollment);
+        var result = await enrollmentStatusTransitionService.Deactivate(enrollment, new EnrollmentStatusTransitionService.EnrollmentChangingStatusMetadata(null), cancellationToken);
+        
 
         logger.LogWarning("Enrollment {EnrollmentId} for User {UserId} in Course {CourseId} has been DEACTIVATED (operator path).",
             enrollment.Id, enrollment.StudentId, enrollment.CourseId);

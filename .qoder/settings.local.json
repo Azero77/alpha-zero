@@ -1,0 +1,42 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls docs/agents/issue-tracker.md 2>/dev/null; ls CODING_STANDARDS.md CONTRIBUTING.md AGENTS.md CLAUDE.md 2>/dev/null; ls docs 2>/dev/null | head -40)",
+      "Bash(gh issue:*)",
+      "Bash(gh api:*)",
+      "Bash(grep -rilE 'coding standard|code standard|style guide|conventions' --include='*.md' docs *.md 2>/dev/null | head -30)",
+      "Bash(ls GLOSSARY.md GLOSSARY-MAP.md 2>/dev/null; ls docs/adr 2>/dev/null; echo '--- runbook headings ---'; grep -nE '^#{1,3} ' docs/agents/per-issue-runbook.md; echo '--- query arch headings ---'; grep -nE '^#{1,3} ' docs/QueryArchitecture.md; echo '--- folder structure headings ---'; grep -nE '^#{1,3} ' docs/FolderStructure.md 2>/dev/null | head -30; echo '--- DAM headings ---'; grep -nE '^#{1,3} ' docs/Architecture-DAM.md 2>/dev/null | head -40)",
+      "Bash(for f in docs/Messaging-Architecture.md docs/Permissions.md docs/ResourceManagement.md; do echo \"=== $f ===\"; grep -nE '^#{1,3} ' \"$f\" 2>/dev/null | head -20; done; echo '=== auth dir ==='; ls docs/Authorization 2>/dev/null)",
+      "Bash({ gh api repos/:owner/:repo/issues/32 --jq '# Issue #32 \\(spec\\)\n## Title\n'\"$\\(gh api repos/:owner/:repo/issues/32 --jq .title\\)\"'\n\n## Body\n'\"$\\(gh api repos/:owner/:repo/issues/32 --jq .body\\)\"'\n\n'; gh api repos/:owner/:repo/issues/32/comments --jq '.[] | \"\\\\n## Comment by \\\\\\(.user.login\\)\\\\n\\\\\\(.body\\)\\\\n\"'; } > /tmp/issue-32-spec.md && wc -l /tmp/issue-32-spec.md)",
+      "Bash({ echo '# Issue #32 spec'; gh api repos/:owner/:repo/issues/32 --jq '\"## \" + .title + \"\\\\n\\\\n\" + .body'; cat /tmp/issue-32-spec.md; } > /tmp/issue-32-full.md && wc -l /tmp/issue-32-full.md && head -5 /tmp/issue-32-full.md)",
+      "Bash(cd /home/azero/.local/share/opencode/worktree/adfa55/spec-32-student-ux && git diff origin/CourseContentManagement...HEAD --stat)",
+      "Bash(cd /home/azero/.local/share/opencode/worktree/adfa55/spec-32-student-ux && git log --oneline -8)",
+      "Bash(cd /home/azero/.local/share/opencode/worktree/adfa55/spec-32-student-ux && git diff origin/CourseContentManagement...HEAD -- 'src/**' 'Modules/**' 'tests/**' | head -2000)",
+      "Bash(cd /home/azero/.local/share/opencode/worktree/adfa55/spec-32-student-ux && git diff origin/CourseContentManagement...HEAD -- '*.cs' ':!*Designer.cs' ':!*AppDbContextModelSnapshot.cs' | head -1200)",
+      "Bash(cd /home/azero/.local/share/opencode/worktree/adfa55/spec-32-student-ux && ls docs && sed -n '1,120p' docs/QueryArchitecture.md)",
+      "Bash(cd /home/azero/.local/share/opencode/worktree/adfa55/spec-32-student-ux && sed -n '120,260p' docs/QueryArchitecture.md)",
+      "Bash(cd /home/azero/.local/share/opencode/worktree/adfa55/spec-32-student-ux && sed -n '1,200p' docs/FolderStructure.md)",
+      "Bash(cd /home/azero/.local/share/opencode/worktree/adfa55/spec-32-student-ux && sed -n '2000,2700p' /home/azero/.qoder/tmp/-home-azero--local-share-opencode-worktree-adfa55-spec-32-student-ux/tool-outputs/session-5b057393-e9f9-457f-b363-8ff863bea99e/baacl019i.output)",
+      "Bash(cd /home/azero/.local/share/opencode/worktree/adfa55/spec-32-student-ux && grep -rn \"class ResourceArn\\\\|record ResourceArn\\\\|HasConversion\" src/alphazero-api/Modules/Courses --include=*.cs | head -50)",
+      "Bash(cd /home/azero/.local/share/opencode/worktree/adfa55/spec-32-student-ux && sed -n '2000,2100p' /home/azero/.qoder/tmp/-home-azero--local-share-opencode-worktree-adfa55-spec-32-student-ux/tool-outputs/session-5b057393-e9f9-457f-b363-8ff863bea99e/baacl019i.output; wc -l /home/azero/.qoder/tmp/-home-azero--local-share-opencode-worktree-adfa55-spec-32-student-ux/tool-outputs/session-5b057393-e9f9-457f-b363-8ff863bea99e/baacl019i.output)",
+      "Bash(cd /home/azero/.local/share/opencode/worktree/adfa55/spec-32-student-ux && git diff origin/CourseContentManagement...HEAD -- '*.cs' ':!*Designer.cs' ':!*AppDbContextModelSnapshot.cs' | sed -n '1200,2400p')",
+      "Bash(cd /home/azero/.local/share/opencode/worktree/adfa55/spec-32-student-ux && grep -rn \"RichText\" --include=*.cs --include=*.md . | head -40)",
+      "Bash(cd /home/azero/.local/share/opencode/worktree/adfa55/spec-32-student-ux && git log --all --oneline --grep=\"RichText\" | head; git log --oneline origin/CourseContentManagement -5)",
+      "Bash(cd /home/azero/.local/share/opencode/worktree/adfa55/spec-32-student-ux && grep -rn \"class ResourceArn\\\\|record ResourceArn\\\\|struct ResourceArn\" -A 40 $\\(grep -rln \"class ResourceArn\\\\|record ResourceArn\\\\|struct ResourceArn\" src --include=*.cs | head -1\\))",
+      "Bash(cd /home/azero/.local/share/opencode/worktree/adfa55/spec-32-student-ux && grep -rn \"class RichText\\\\|record RichText\\\\|struct RichText\" -A 30 $\\(grep -rln \"class RichText\\\\|record RichText\\\\|struct RichText\" src --include=*.cs | head -1\\) && sed -n '10,45p' src/alphazero-api/Modules/Courses/Infrastructure/Persistance/Configurations/CourseOverviewConfiguration.cs)",
+      "Bash(cd /home/azero/.local/share/opencode/worktree/adfa55/spec-32-student-ux && sed -n '1,120p' src/alphazero-api/Modules/Courses/Infrastructure/Queries/CourseQueryService.cs)",
+      "Bash(cd /home/azero/.local/share/opencode/worktree/adfa55/spec-32-student-ux && find src/alphazero-api/Modules/Courses -name \"CourseAsset*.cs\" -o -name \"ResourceArn*.cs\" | head -20 && grep -rn \"class ResourceArn\\\\|record ResourceArn\" src | head)",
+      "Bash(cd /home/azero/.local/share/opencode/worktree/adfa55/spec-32-student-ux && grep -rln \"public.*ResourceArn\" src/alphazero-api --include=*.cs | head -20 && grep -rn \"public.*class ResourceArn\\\\|public.*record ResourceArn\\\\|Value { get\" src/alphazero-api/Shared/Domain/*.cs src/alphazero-api/Shared/**/*.cs 2>/dev/null | head -20)",
+      "Bash(cd /home/azero/.local/share/opencode/worktree/adfa55/spec-32-student-ux && sed -n '1,120p' src/alphazero-api/AlphaZero.Shared/Domain/ResourceArn.cs && sed -n '1,120p' src/alphazero-api/Modules/Courses/Infrastructure/Persistance/Configurations/CourseAssetConfiguration.cs)",
+      "Bash(cd /home/azero/.local/share/opencode/worktree/adfa55/spec-32-student-ux && grep -rn \"class ResourceArn\\\\b\\\\|record ResourceArn\\\\b\\\\|struct ResourceArn\\\\b\" src/alphazero-api --include=*.cs)",
+      "Bash(cd /home/azero/.local/share/opencode/worktree/adfa55/spec-32-student-ux && sed -n '120,330p' src/alphazero-api/Modules/Courses/Infrastructure/Queries/CourseQueryService.cs)",
+      "Bash(cd /home/azero/.local/share/opencode/worktree/adfa55/spec-32-student-ux && grep -rn -i \"silently\\\\|EF projection\\\\|projection.*null\\\\|\\\\.Value.*null\" docs src --include=*.md --include=*.cs | head -30)",
+      "Bash(cd /home/azero/.local/share/opencode/worktree/adfa55/spec-32-student-ux && git show ccc14e33 --stat && git show ccc14e33 -- src/alphazero-api/Modules/Courses/Infrastructure/Queries/CourseQueryService.cs | head -120)",
+      "Bash(cd /home/azero/.local/share/opencode/worktree/adfa55/spec-32-student-ux && sed -n '1,140p' docs/Architecture-DAM.md)",
+      "Bash(docker info >/dev/null 2>&1 && echo docker-up || echo docker-down; which dotnet; dotnet --version 2>/dev/null)",
+      "Bash(cd /home/azero/.local/share/opencode/worktree/adfa55/spec-32-student-ux && cat src/alphazero-api/Modules/Courses/Domain/Events/ItemCompletedDomainEvent.cs src/alphazero-api/Modules/Courses/Domain/Events/EnrollmentCreatedDomainEvent.cs 2>/dev/null; ls src/alphazero-api/Modules/Courses/Domain/Events; echo ----; cat src/alphazero-api/Modules/Courses/IntegrationEvents/ItemCompletedIntegrationEvent.cs 2>/dev/null)",
+      "Bash(cd /home/azero/.local/share/opencode/worktree/adfa55/spec-32-student-ux && sed -n '180,380p' src/alphazero-api/Modules/Courses/Infrastructure/Queries/CourseQueryService.cs)",
+      "Bash(find src/alphazero-api/Modules/Courses -name 'CourseAsset.cs' -o -name 'CourseOverview.cs' | head; echo '=== overview pre-handler ==='; find src/alphazero-api/Modules/Courses -name 'GetCourseOverviewPreRequestHandler.cs' -exec cat {} \\\\;; echo '=== CourseAsset ==='; find src/alphazero-api/Modules/Courses -name 'CourseAsset.cs' -exec cat {} \\\\;)"
+    ]
+  }
+}

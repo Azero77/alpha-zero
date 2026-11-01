@@ -1,6 +1,7 @@
 using AlphaZero.Modules.Courses.Application.Enrollments;
 using AlphaZero.Modules.Courses.Application.Repositories;
 using AlphaZero.Modules.Courses.Domain.Aggregates.Enrollments;
+using AlphaZero.Modules.Courses.Domain.Services;
 using AlphaZero.Shared.Application;
 using AlphaZero.Shared.Authorization;
 using AlphaZero.Shared.Infrastructure.Repositores;
@@ -29,6 +30,7 @@ public class ReactivateEnrollmentCommandValidator : AbstractValidator<Reactivate
 public sealed class ReactivateEnrollmentCommandHandler(
     IEnrollmentRepository repository,
     IAuthorizationContextProvider authorizationContextProvider,
+    EnrollmentStatusTransitionService enrollmentStatusTransitionService,
     ILogger<ReactivateEnrollmentCommandHandler> logger) : IRequestHandler<ReactivateEnrollmentCommand, ErrorOr<Success>>
 {
     public async Task<ErrorOr<Success>> Handle(ReactivateEnrollmentCommand request, CancellationToken cancellationToken)
@@ -39,16 +41,10 @@ public sealed class ReactivateEnrollmentCommandHandler(
             return Error.NotFound("Enrollment.NotFound", "Enrollment not found.");
         }
 
-        var (result, changed) = repository.Transitioned(enrollment,
-            () => enrollment.Reactivate(EnrollmentTransitionActor.Resolve(authorizationContextProvider)));
+        var user = authorizationContextProvider.Get().IsError ? null : authorizationContextProvider.CurrentAuthorizationContext;
+        
+        var result = await enrollmentStatusTransitionService.Deactivate(enrollment, new EnrollmentStatusTransitionService.EnrollmentChangingStatusMetadata(user?.Id), cancellationToken);
         if (result.IsError) return result.Errors;
-
-        if (changed)
-        {
-            logger.LogInformation("Enrollment {EnrollmentId} for Student {StudentId} in Course {CourseId} has been REACTIVATED.",
-                enrollment.Id, enrollment.StudentId, enrollment.CourseId);
-        }
-
         return Result.Success;
     }
 }

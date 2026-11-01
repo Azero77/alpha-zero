@@ -45,8 +45,6 @@ public class Enrollment : TenantOwnedAggregate
         Progress = Progress.Create();
         EnrolledOn = DateTime.UtcNow;
         AccessExpiresOn = accessExpiresOn;
-
-        AddDomainEvent(new EnrollmentCreatedDomainEvent(Id, StudentId, CourseId, TenantId, coursePlanPrincipalId));
     }
 
     /// <summary>
@@ -61,7 +59,9 @@ public class Enrollment : TenantOwnedAggregate
         if (studentId == Guid.Empty) return Error.Validation("Enrollment.StudentId", "StudentId is required.");
         if (courseId == Guid.Empty) return Error.Validation("Enrollment.CourseId", "CourseId is required.");
 
-        return new Enrollment(id, tenantId, studentId, courseId, accessExpiresOn, coursePlanPrincipalId);
+        var result =  new Enrollment(id, tenantId, studentId, courseId, accessExpiresOn, coursePlanPrincipalId);
+        result.AddDomainEvent(new EnrollmentCreatedDomainEvent(id, studentId, courseId, tenantId, coursePlanPrincipalId));
+        return result;
     }
 
     /// <param name="activeItemsBitmask">
@@ -119,7 +119,7 @@ public class Enrollment : TenantOwnedAggregate
     /// identity); it raises only the audit-only <see cref="EnrollmentDeactivatedDomainEvent"/> for
     /// the in-process audit writer (issue #34 §3.1).
     /// </summary>
-    public ErrorOr<Success> Deactivate(Guid? operatorId = null)
+    internal ErrorOr<Success> Deactivate()
     {
         if (Status is EnrollmentStatus.Inactive)
             return Result.Success; // idempotent (story #11 — duplicate-reaction safety for all transitions)
@@ -129,12 +129,13 @@ public class Enrollment : TenantOwnedAggregate
 
         var previousStatus = Status;
         ApplyTransition(EnrollmentStatus.Inactive);
-
         // Audit-only domain event (issue #34 §3.1): deactivation keeps its event-less integration
         // identity — no integration event is projected onto the bus for it (the Payments revocation
         // flow keeps publishing its own saga events). The in-process audit writer is the only
         // consumer, so the Inactive transition lands an audit row atomically with this mutation.
-        AddDomainEvent(new EnrollmentDeactivatedDomainEvent(Id, StudentId, CourseId, TenantId, previousStatus, operatorId));
+        //Domain Events Triggering is handled by the domain service now to ensure handling Operator Id and any other future metadata  
+
+        //AddDomainEvent(new EnrollmentDeactivatedDomainEvent(Id, StudentId, CourseId, TenantId, previousStatus, operatorId));
         return Result.Success;
     }
 
@@ -142,34 +143,28 @@ public class Enrollment : TenantOwnedAggregate
     /// Active → Suspended. Idempotent from Suspended. Only reachable from Active — a revoked or
     /// expired enrollment has no access left to freeze; resolving it is Reactivate's job.
     /// </summary>
-    public ErrorOr<Success> Suspend(Guid? operatorId = null, string? reason = null)
+    internal ErrorOr<Success> Suspend(string? reason = null)
     {
         if (Status is EnrollmentStatus.Suspended)
             return Result.Success;
 
         if (Status is not EnrollmentStatus.Active)
             return InvalidTransition("Suspend", Status, EnrollmentStatus.Suspended);
-
-        var previousStatus = Status;
         ApplyTransition(EnrollmentStatus.Suspended);
-        AddDomainEvent(new EnrollmentSuspendedDomainEvent(Id, StudentId, CourseId, TenantId, previousStatus, operatorId, reason));
         return Result.Success;
     }
 
     /// <summary>
     /// Inactive/Expired/Suspended (and idempotently Active) → Active. Progress is untouched.
     /// </summary>
-    public ErrorOr<Success> Reactivate(Guid? operatorId = null)
+    internal ErrorOr<Success> Reactivate(Guid? operatorId = null)
     {
         if (Status is EnrollmentStatus.Active)
             return Result.Success;
 
         if (Status is not (EnrollmentStatus.Inactive or EnrollmentStatus.Suspended or EnrollmentStatus.Expired))
             return InvalidTransition("Reactivate", Status, EnrollmentStatus.Active);
-
-        var previousStatus = Status;
         ApplyTransition(EnrollmentStatus.Active);
-        AddDomainEvent(new EnrollmentResumedDomainEvent(Id, StudentId, CourseId, TenantId, previousStatus, operatorId));
         return Result.Success;
     }
 

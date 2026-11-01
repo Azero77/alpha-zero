@@ -1,6 +1,7 @@
 using AlphaZero.Modules.Courses.Application.Enrollments;
 using AlphaZero.Modules.Courses.Application.Repositories;
 using AlphaZero.Modules.Courses.Domain.Aggregates.Enrollments;
+using AlphaZero.Modules.Courses.Domain.Services;
 using AlphaZero.Shared.Application;
 using AlphaZero.Shared.Authorization;
 using AlphaZero.Shared.Infrastructure.Repositores;
@@ -29,6 +30,7 @@ public class SuspendEnrollmentCommandValidator : AbstractValidator<SuspendEnroll
 public sealed class SuspendEnrollmentCommandHandler(
     IEnrollmentRepository repository,
     IAuthorizationContextProvider authorizationContextProvider,
+    EnrollmentStatusTransitionService enrollmentStatusTransitionService,
     ILogger<SuspendEnrollmentCommandHandler> logger) : IRequestHandler<SuspendEnrollmentCommand, ErrorOr<Success>>
 {
     public async Task<ErrorOr<Success>> Handle(SuspendEnrollmentCommand request, CancellationToken cancellationToken)
@@ -38,16 +40,11 @@ public sealed class SuspendEnrollmentCommandHandler(
         {
             return Error.NotFound("Enrollment.NotFound", "Enrollment not found.");
         }
+        
+        var user = authorizationContextProvider.Get().IsError ? null : authorizationContextProvider.CurrentAuthorizationContext;
 
-        var (result, changed) = repository.Transitioned(enrollment,
-            () => enrollment.Suspend(EnrollmentTransitionActor.Resolve(authorizationContextProvider), request.Reason));
+        var result = await enrollmentStatusTransitionService.Deactivate(enrollment, new EnrollmentStatusTransitionService.EnrollmentChangingStatusMetadata(user?.Id), cancellationToken);
         if (result.IsError) return result.Errors;
-
-        if (changed)
-        {
-            logger.LogWarning("Enrollment {EnrollmentId} for Student {StudentId} in Course {CourseId} has been SUSPENDED (reason: {Reason}).",
-                enrollment.Id, enrollment.StudentId, enrollment.CourseId, request.Reason ?? "unspecified");
-        }
 
         return Result.Success;
     }

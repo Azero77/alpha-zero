@@ -10,20 +10,6 @@ namespace AlphaZero.Modules.Courses.Application.Enrollments;
 /// </summary>
 public static class EnrollmentTransitionActor
 {
-    public static Guid? Resolve(IAuthorizationContextProvider provider)
-    {
-        try
-        {
-            var contextResult = provider.Get();
-            return contextResult.IsError ? null : contextResult.Value?.Id;
-        }
-        catch
-        {
-            // contexts outside a request (bus consumers, background scans) have no actor
-            return null;
-        }
-    }
-
     /// <summary>
     /// Story #10 gate (§3.5): deactivation/suspension/reactivation may be fired by exactly two
     /// kinds of actor, verified BEFORE the aggregate is loaded:
