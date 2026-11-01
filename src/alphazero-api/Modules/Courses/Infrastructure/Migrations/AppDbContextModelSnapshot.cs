@@ -11,7 +11,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
-namespace AlphaZero.Modules.Courses.Infrastructure.Modules.Courses.Infrastructure.Migrations
+namespace AlphaZero.Modules.Courses.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
     partial class AppDbContextModelSnapshot : ModelSnapshot

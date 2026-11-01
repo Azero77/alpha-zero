@@ -6,10 +6,10 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
-namespace AlphaZero.Modules.Courses.Infrastructure.Modules.Courses.Infrastructure.Migrations
+namespace AlphaZero.Modules.Courses.Infrastructure.Migrations
 {
     /// <inheritdoc />
-    public partial class Initial : Migration
+    public partial class InitialMigration : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -132,8 +132,6 @@ namespace AlphaZero.Modules.Courses.Infrastructure.Modules.Courses.Infrastructur
                     Status = table.Column<string>(type: "text", nullable: false),
                     EnrolledOn = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     AccessExpiresOn = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
-                    LastStatusChangedOn = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
-                    LastStatusChangedBy = table.Column<Guid>(type: "uuid", nullable: true),
                     CompletedOn = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
                     ProgressBitmask = table.Column<BitArray>(type: "varbit", nullable: false),
                     TenantId = table.Column<Guid>(type: "uuid", nullable: false)
@@ -141,6 +139,24 @@ namespace AlphaZero.Modules.Courses.Infrastructure.Modules.Courses.Infrastructur
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Enrollements", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "EnrollmentAuditEntries",
+                schema: "Courses",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    SubjectId = table.Column<Guid>(type: "uuid", nullable: false),
+                    EventKind = table.Column<string>(type: "text", nullable: false),
+                    ActorId = table.Column<Guid>(type: "uuid", nullable: true),
+                    OccurredOn = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    Metadata = table.Column<string>(type: "jsonb", nullable: false),
+                    TenantId = table.Column<Guid>(type: "uuid", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_EnrollmentAuditEntries", x => x.Id);
                 });
 
             migrationBuilder.CreateTable(
@@ -483,6 +499,18 @@ namespace AlphaZero.Modules.Courses.Infrastructure.Modules.Courses.Infrastructur
                 column: "CurriculumItemId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_Enrollements_CourseId_Status",
+                schema: "Courses",
+                table: "Enrollements",
+                columns: new[] { "CourseId", "Status" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Enrollements_Status_AccessExpiresOn",
+                schema: "Courses",
+                table: "Enrollements",
+                columns: new[] { "Status", "AccessExpiresOn" });
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Enrollements_StudentId_CourseId",
                 schema: "Courses",
                 table: "Enrollements",
@@ -493,6 +521,18 @@ namespace AlphaZero.Modules.Courses.Infrastructure.Modules.Courses.Infrastructur
                 name: "IX_Enrollements_TenantId",
                 schema: "Courses",
                 table: "Enrollements",
+                column: "TenantId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_EnrollmentAuditEntries_SubjectId_OccurredOn",
+                schema: "Courses",
+                table: "EnrollmentAuditEntries",
+                columns: new[] { "SubjectId", "OccurredOn" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_EnrollmentAuditEntries_TenantId",
+                schema: "Courses",
+                table: "EnrollmentAuditEntries",
                 column: "TenantId");
 
             migrationBuilder.CreateIndex(
@@ -577,6 +617,10 @@ namespace AlphaZero.Modules.Courses.Infrastructure.Modules.Courses.Infrastructur
 
             migrationBuilder.DropTable(
                 name: "Enrollements",
+                schema: "Courses");
+
+            migrationBuilder.DropTable(
+                name: "EnrollmentAuditEntries",
                 schema: "Courses");
 
             migrationBuilder.DropTable(

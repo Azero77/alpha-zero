@@ -15,8 +15,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace AlphaZero.Modules.Courses.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20261101110733_AddEnrollmentExpiryIndex")]
-    partial class AddEnrollmentExpiryIndex
+    [Migration("20261101114505_InitialMigration")]
+    partial class InitialMigration
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -347,6 +347,8 @@ namespace AlphaZero.Modules.Courses.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("TenantId");
+
+                    b.HasIndex("CourseId", "Status");
 
                     b.HasIndex("Status", "AccessExpiresOn");
 
