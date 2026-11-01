@@ -20,6 +20,17 @@ public class EnrollmentRepository : BaseRepository<AppDbContext, Enrollment>, IE
     }
 
     /// <summary>
+    /// Issue #34 step 8: (student, course) resolution for the PrincipalExpired lazy mark. The
+    /// aggregate loads change-tracked for the guarded transition; the tenant filter on
+    /// Enrollments scopes both columns to the ambient tenant.
+    /// </summary>
+    public async Task<Enrollment?> GetByStudentAndCourseAsync(Guid studentId, Guid courseId, CancellationToken cancellationToken = default)
+    {
+        return await _context.Enrollments
+            .FirstOrDefaultAsync(e => e.StudentId == studentId && e.CourseId == courseId, cancellationToken);
+    }
+
+    /// <summary>
     /// Pessimistic row-level lock (#32/D3): acquires a Postgres FOR UPDATE lock on the
     /// enrollment row so concurrent completions serialise at the database level — no
     /// application-side retry, no ChangeTracker detach/re-read surgery.

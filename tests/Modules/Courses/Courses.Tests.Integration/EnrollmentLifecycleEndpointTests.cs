@@ -434,4 +434,46 @@ public class EnrollmentLifecycleEndpointTests : BaseIntegrationTest
         // Assert: existence is masked, not leaked
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
+
+    // ------------------------------------------------------------------
+    // Step 8 (§3.4 path a): the PrincipalExpired lazy mark — duplicate events mark ONCE
+    // (storm-safety), a cross-tenant dispatch resolves to nothing, and each mark ride the
+    // §3.1 audit/integration-event flow.
+    // ------------------------------------------------------------------
+
+    [Fact]
+    public async Task PrincipalExpired_Mark_Should_RunExactlyOnce_AcrossDuplicateDispatches_AndRejectCrossTenant()
+    {
+        var tenantId = Guid.NewGuid();
+        var courseId = await CreatePublishedCourse(tenantId);
+        var (enrollmentId, studentId) = await SeedDueEnrollment(tenantId, courseId); // Active, window already elapsed
+
+        var coursesModule = Factory.Services.GetRequiredService<AlphaZero.Modules.Courses.Presentation.CoursesModule>();
+        SetTenant(tenantId);
+
+        // Act: the same (UserId, CourseId) dispatched repeatedly — like duplicate PrincipalExpired
+        // evaluations while marking is pending (§2 R2-Q5)
+        var first = await coursesModule.Send(new AlphaZero.Modules.Courses.Application.Enrollments.Commands.MarkExpiredFromPrincipal.MarkEnrollmentExpiredFromPrincipalCommand(studentId, courseId));
+        first.IsError.Should().BeFalse();
+
+        var duplicate = await coursesModule.Send(new AlphaZero.Modules.Courses.Application.Enrollments.Commands.MarkExpiredFromPrincipal.MarkEnrollmentExpiredFromPrincipalCommand(studentId, courseId));
+        duplicate.IsError.Should().BeFalse(); // cheap success — the storm-safety contract
+
+        // ...and the SAME pair resolved from a FOREIGN tenant (a forged/stale event): masked,
+        // not leaked, and it must not intercept the aggregate state.
+        SetTenant(Guid.NewGuid());
+        var crossTenant = await coursesModule.Send(new AlphaZero.Modules.Courses.Application.Enrollments.Commands.MarkExpiredFromPrincipal.MarkEnrollmentExpiredFromPrincipalCommand(studentId, courseId));
+        crossTenant.IsError.Should().BeTrue("a cross-tenant (UserId, CourseId) must not resolve");
+        crossTenant.FirstError!.Code.Should().Be("Enrollment.NotFound");
+
+        // State: Expired; the mark ran once — exactly ONE Expired audit row written.
+        AlphaZero.Modules.Courses.Domain.Aggregates.Enrollments.Enrollment? state = null!;
+        await ExecuteDbContextAsync(async db =>
+            state = await db.Enrollments.AsNoTracking().FirstAsync(e => e.Id == enrollmentId));
+        state!.Status.Should().Be(AlphaZero.Modules.Courses.Domain.Aggregates.Enrollments.EnrollmentStatus.Expired);
+
+        var rows = await AuditRowsFor(enrollmentId);
+        rows.Count(r => r.EventKind == AlphaZero.Modules.Courses.Domain.Audits.EnrollmentAuditEventKind.Expired)
+            .Should().Be(1, "duplicate PrincipalExpired evaluations must not write additional audit rows");
+    }
 }
