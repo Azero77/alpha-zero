@@ -1,19 +1,23 @@
-using AlphaZero.Modules.Courses.Domain.Aggregates.Enrollments;
-using AlphaZero.Shared.Application;
-using AlphaZero.Shared.Infrastructure.Database;
+using System.Data;
+using System.Data.Common;
+using AlphaZero.Modules.Courses.Infrastructure.Persistance;
+using AlphaZero.Modules.Courses.IntegrationEvents;
+using MassTransit;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace AlphaZero.Modules.Courses.Infrastructure.Expiry;
 
 /// <summary>
-/// One expiry scan pass (issue #34 stories #5/#6): loads a batch of enrollments whose plan access
-/// window has passed and drives them through the aggregate's guarded MarkExpired so the expiry
-/// domain event rides the module's normal domain-event → outbox → integration-event path.
-/// Tenant query filter is bypassed for the scan (enrollments of all tenants age equally);
-/// entity payloads carry their own TenantId.
+/// Set-based expiry sweep (issue #34 rework §3.4(c), step 11): replaces the legacy per-row aggregate
+/// scan with a single atomic set-based PostgreSQL UPDATE that transitions due Active enrollments to
+/// Expired, inserts the corresponding audit rows in EnrollmentAuditEntries in the same statement,
+/// and bulk-publishes EnrollmentExpiredIntegrationEvents from the RETURNING projection.
+///
+/// Aggregate discipline is intentionally short-circuited here by explicit architectural decision
+/// (§3.4(c)): no aggregate loads, no per-row analytics writes, zero N+1 round trips.
 /// </summary>
 public interface IEnrollmentExpiryService
 {
@@ -21,10 +25,10 @@ public interface IEnrollmentExpiryService
 }
 
 public class EnrollmentExpiryService(
-    IServiceScopeFactory scopeFactory,
+    AppDbContext context,
+    IPublishEndpoint publishEndpoint,
     ILogger<EnrollmentExpiryService> logger) : IEnrollmentExpiryService
 {
-    public const int BatchSize = 200;
     public const string IntervalSecondsConfigKey = "Enrollment:ExpiryIntervalSeconds";
 
     public static int ResolveIntervalSeconds(IConfiguration configuration)
@@ -36,107 +40,86 @@ public class EnrollmentExpiryService(
 
     public async Task<int> ExpireDueEnrollmentsAsync(CancellationToken cancellationToken)
     {
-        var expiredCount = 0;
-
-        while (!cancellationToken.IsCancellationRequested)
-        {
-            using var scope = scopeFactory.CreateScope();
-            var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
-            var context = scope.ServiceProvider.GetRequiredService<Persistance.AppDbContext>();
-
-            var batch = await LoadDueBatchAsync(context, cancellationToken);
-            if (batch.Count == 0)
-                break;
-
-            foreach (var enrollment in batch)
-            {
-                var result = enrollment.MarkExpired();
-                if (result.IsError)
-                {
-                    logger.LogWarning("Skipping enrollment {EnrollmentId} during expiry: {Errors}",
-                        enrollment.Id, string.Join(", ", result.Errors.Select(e => e.Description)));
-                    continue;
-                }
-                unitOfWork.TrackEntity(enrollment);
-                expiredCount++;
-            }
-
-            // UnitOfWork publishes the domain events (→ integration events via the module's
-            // event handler) and persists the transition in one step.
-            await unitOfWork.SaveChangesAsync(cancellationToken);
-
-            // Story #6: expired students stop counting in active-course analytics (running
-            // counters) while staying in the roster. Failure here must not block the scan —
-            // analytics may self-heal on the next completion event; re-runs clamp at zero.
-            await AdjustAnalyticsForExpiredAsync(context, batch, cancellationToken);
-            if (batch.Count < BatchSize)
-                break;
-        }
-
-        if (expiredCount > 0)
-            logger.LogInformation("Enrollment expiry pass marked {Count} enrollment(s) as Expired.", expiredCount);
-
-        return expiredCount;
-    }
-
-    internal static async Task<List<Enrollment>> LoadDueBatchAsync(
-        Persistance.AppDbContext context, CancellationToken cancellationToken)
-    {
         var now = DateTime.UtcNow;
 
-        return await context.Enrollments
-            .IgnoreQueryFilters([DbContstants.TenantFilter])
-            .Where(e => e.AccessExpiresOn != null && e.AccessExpiresOn <= now)
-            .Where(e => e.Status == EnrollmentStatus.Active || e.Status == EnrollmentStatus.Suspended)
-            .OrderBy(e => e.AccessExpiresOn)
-            .Take(BatchSize)
-            .ToListAsync(cancellationToken);
-    }
-
-    private async Task AdjustAnalyticsForExpiredAsync(
-        Persistance.AppDbContext context, IReadOnlyList<Enrollment> batch, CancellationToken cancellationToken)
-    {
-        var analyticsRepository = new Repositories.CourseAnalyticsRepository(context);
-
-        foreach (var enrollment in batch)
+        var connection = context.Database.GetDbConnection();
+        if (connection.State != ConnectionState.Open)
         {
-            if (enrollment.Status != EnrollmentStatus.Expired)
-                continue; // skipped by the domain guard this pass
+            await connection.OpenAsync(cancellationToken);
+        }
 
-            // Counts are never persisted (#32): derive the course's active-items mask and let
-            // ProgressCalculation single-source both the completed indexes and the percentage.
-            var courseMask = context.Courses
-                .IgnoreQueryFilters([DbContstants.SoftDeleteFilter])
-                .Where(c => c.Id == enrollment.CourseId)
-                .Select(c => c.ActiveItemsBitmask)
-                .FirstOrDefault();
-            if (courseMask is null)
-                continue; // course unreadable — nothing attributable is on the counters
+        await using var command = connection.CreateCommand();
+        if (context.Database.CurrentTransaction is not null)
+        {
+            command.Transaction = context.Database.CurrentTransaction.GetDbTransaction();
+        }
 
-            var completedIndexes = new List<int>();
-            // Both arrays are indexed by position, so only positions that exist in BOTH masks
-            // can count (the progress mask grows lazily as items are completed, #32).
-            var sharedLength = Math.Min(enrollment.Progress.Bitmask.Length, courseMask.Length);
-            for (var i = 0; i < sharedLength; i++)
+        command.CommandText = """
+            WITH updated AS (
+                UPDATE "Courses"."Enrollements"
+                SET "Status" = 'Expired'
+                WHERE "Status" = 'Active'
+                  AND "AccessExpiresOn" IS NOT NULL
+                  AND "AccessExpiresOn" <= @now
+                RETURNING "Id", "TenantId", "StudentId", "CourseId"
+            ),
+            audited AS (
+                INSERT INTO "Courses"."EnrollmentAuditEntries"
+                    ("Id", "TenantId", "SubjectId", "EventKind", "ActorId", "OccurredOn", "Metadata")
+                SELECT
+                    gen_random_uuid(),
+                    u."TenantId",
+                    u."Id",
+                    'Expired',
+                    NULL,
+                    @now,
+                    '{"From":"Active","To":"Expired"}'::jsonb
+                FROM updated u
+            )
+            SELECT u."Id", u."TenantId", u."StudentId", u."CourseId"
+            FROM updated u;
+            """;
+
+        var nowParam = command.CreateParameter();
+        nowParam.ParameterName = "now";
+        nowParam.Value = now;
+        command.Parameters.Add(nowParam);
+
+        var expired = new List<ExpiredEnrollmentRow>();
+        await using (var reader = await command.ExecuteReaderAsync(cancellationToken))
+        {
+            while (await reader.ReadAsync(cancellationToken))
             {
-                if (enrollment.Progress.Bitmask[i] && courseMask[i])
-                    completedIndexes.Add(i);
-            }
-
-            var completionPercentage =
-                ProgressCalculation.CompletionPercentage(enrollment.Progress.Bitmask, courseMask);
-
-            try
-            {
-                await analyticsRepository.DecrementExpiredEnrollmentAsync(
-                    enrollment.CourseId, completionPercentage, completedIndexes, cancellationToken);
-            }
-            catch (Exception ex)
-            {
-                logger.LogWarning(ex,
-                    "Failed to exclude expired enrollment {EnrollmentId} from course {CourseId} analytics; counters may drift until the next expiry pass.",
-                    enrollment.Id, enrollment.CourseId);
+                expired.Add(new ExpiredEnrollmentRow(
+                    reader.GetGuid(0),
+                    reader.GetGuid(1),
+                    reader.GetGuid(2),
+                    reader.GetGuid(3)));
             }
         }
+
+        if (expired.Count == 0)
+        {
+            return 0;
+        }
+
+        foreach (var row in expired)
+        {
+            await publishEndpoint.Publish(new EnrollmentExpiredIntegrationEvent(
+                row.Id,
+                row.StudentId,
+                row.CourseId,
+                row.TenantId), cancellationToken);
+        }
+
+        await context.SaveChangesAsync(cancellationToken);
+
+        logger.LogInformation(
+            "Enrollment expiry sweep marked {Count} enrollment(s) as Expired in a single set-based pass.",
+            expired.Count);
+
+        return expired.Count;
     }
+
+    private sealed record ExpiredEnrollmentRow(Guid Id, Guid TenantId, Guid StudentId, Guid CourseId);
 }
