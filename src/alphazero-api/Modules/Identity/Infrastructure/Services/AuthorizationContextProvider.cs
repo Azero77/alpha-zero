@@ -19,6 +19,11 @@ namespace AlphaZero.Modules.Identity.Infrastructure.Services
     { 
         public AuthorizationContext? CurrentAuthorizationContext { get; private set; }
 
+        public void SetExplicitContext(AuthorizationContext context)
+        {
+            CurrentAuthorizationContext = context;
+        }
+
         public ErrorOr<AuthorizationContext?> Get(CancellationToken token = default)
         {
             if (CurrentAuthorizationContext is not null)

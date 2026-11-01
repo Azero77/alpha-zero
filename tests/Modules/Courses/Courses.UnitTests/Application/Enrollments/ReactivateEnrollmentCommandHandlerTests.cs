@@ -1,10 +1,11 @@
 using System.Collections;
 using AlphaZero.Modules.Courses.Application.Enrollments.Commands.Reactivate;
-using AlphaZero.Modules.Courses.Application.Repositories;
 using AlphaZero.Modules.Courses.Domain.Aggregates.Enrollments;
+using AlphaZero.Modules.Courses.Domain.Services;
 using AlphaZero.Shared.Authorization;
 using ErrorOr;
 using FluentAssertions;
+using MediatR;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
 using Xunit;
@@ -17,11 +18,13 @@ public class ReactivateEnrollmentCommandHandlerTests
     private static readonly Guid TenantId = Guid.NewGuid();
 
     private readonly IEnrollmentRepository _repository = Substitute.For<IEnrollmentRepository>();
+    private readonly IPublisher _publisher = Substitute.For<IPublisher>();
     private readonly ReactivateEnrollmentCommandHandler _handler;
 
     public ReactivateEnrollmentCommandHandlerTests()
     {
-        _handler = new ReactivateEnrollmentCommandHandler(_repository, Substitute.For<IAuthorizationContextProvider>(), Substitute.For<ILogger<ReactivateEnrollmentCommandHandler>>());
+        var transitionService = new EnrollmentStatusTransitionService(_publisher, _repository, Substitute.For<ILogger<EnrollmentStatusTransitionService>>());
+        _handler = new ReactivateEnrollmentCommandHandler(_repository, Substitute.For<IAuthorizationContextProvider>(), transitionService, Substitute.For<ILogger<ReactivateEnrollmentCommandHandler>>());
     }
 
     private static EnrollmentAggregate CreateEnrollment()

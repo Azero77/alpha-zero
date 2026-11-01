@@ -1,8 +1,9 @@
 using AlphaZero.Modules.Courses.Application.Enrollments.Commands.Deactivate;
-using AlphaZero.Modules.Courses.Application.Repositories;
 using AlphaZero.Modules.Courses.Domain.Aggregates.Enrollments;
+using AlphaZero.Modules.Courses.Domain.Services;
 using ErrorOr;
 using FluentAssertions;
+using MediatR;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
 using Xunit;
@@ -15,12 +16,14 @@ public class DeactivateEnrollmentByIdCommandHandlerTests
     private static readonly Guid TenantId = Guid.NewGuid();
 
     private readonly IEnrollmentRepository _repository = Substitute.For<IEnrollmentRepository>();
+    private readonly IPublisher _publisher = Substitute.For<IPublisher>();
     private readonly ILogger<DeactivateEnrollmentByIdCommandHandler> _logger = Substitute.For<ILogger<DeactivateEnrollmentByIdCommandHandler>>();
     private readonly DeactivateEnrollmentByIdCommandHandler _handler;
 
     public DeactivateEnrollmentByIdCommandHandlerTests()
     {
-        _handler = new DeactivateEnrollmentByIdCommandHandler(_repository, _logger);
+        var transitionService = new EnrollmentStatusTransitionService(_publisher, _repository, Substitute.For<ILogger<EnrollmentStatusTransitionService>>());
+        _handler = new DeactivateEnrollmentByIdCommandHandler(_repository, _logger, transitionService);
     }
 
     private static EnrollmentAggregate CreateEnrollment()

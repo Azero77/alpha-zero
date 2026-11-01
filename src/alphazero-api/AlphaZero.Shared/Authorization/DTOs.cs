@@ -119,7 +119,8 @@ public enum AuthenticationMethod
 {
     Principal,
     TenantUser,
-    GlobalUser
+    GlobalUser,
+    System
 }
 
 public record ClaimDTO(string Key, string Value);

@@ -1,6 +1,7 @@
 using AlphaZero.Modules.Courses.Application.Courses.Commands.Assets;
 using AlphaZero.Modules.Courses.Application.Courses.Commands.SyncResourceMetadata;
 using AlphaZero.Modules.Courses.Application.Repositories;
+using AlphaZero.Modules.Courses.Domain.Aggregates.Enrollments;
 using AlphaZero.Modules.Courses.Application.Services;
 using AlphaZero.Modules.Courses.Domain.Aggregates.Courses;
 using AlphaZero.Modules.Courses.Infrastructure.Authorization;
@@ -77,6 +78,7 @@ public static class DependencyInjection
         // Domain Services
         moduleServices.AddScoped<AlphaZero.Modules.Courses.Domain.Services.CourseReadinessService>();
         moduleServices.AddScoped<AlphaZero.Modules.Courses.Domain.Services.CoursePublishingService>();
+        moduleServices.AddScoped<AlphaZero.Modules.Courses.Domain.Services.EnrollmentStatusTransitionService>();
 
         // Asset Readiness Strategies
         moduleServices.AddScoped<ICourseAssetReadinessStrategy, VideoAssetReadinessStrategy>();

@@ -13,7 +13,7 @@ namespace AlphaZero.Modules.Courses.Application.Enrollments.Commands;
 /// Story #10 actor guards (rework plan §3.5/§4 step 4): one pre-request guard per lifecycle
 /// command. They run at the very front of the MediatR pipeline — BEFORE the aggregate is loaded —
 /// and admit exactly the two allowed actor kinds:
-/// 1. Payments revocation saga: transport-claimed automation (see EnrollmentTransitionAutomation);
+/// 1. Payments revocation saga: authorized system service identity (SystemServiceAuthorizationContext);
 /// 2. tenant-admin/syt: a call that passed an access-controlled endpoint (AccessControl envelope).
 /// Registration is by assembly scan (AddPreRequestHandlersFromAssembly) + the open
 /// PreRequestBehavior already on the module pipeline.

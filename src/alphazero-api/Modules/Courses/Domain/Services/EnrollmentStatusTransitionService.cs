@@ -20,7 +20,7 @@ namespace AlphaZero.Modules.Courses.Domain.Services
             var result = enrollment.Suspend(reason);
             if (!result.IsError)
             {
-                await publisher.Publish(new EnrollmentDeactivatedDomainEvent(enrollment.Id, enrollment.StudentId, enrollment.CourseId, enrollment.TenantId, prevStatus, metadata.operatorId),token);
+                await publisher.Publish(new EnrollmentSuspendedDomainEvent(enrollment.Id, enrollment.StudentId, enrollment.CourseId, enrollment.TenantId, prevStatus, metadata.operatorId, reason), token);
                 repository.Update(enrollment);
                 logger.LogWarning("Enrollment {EnrollmentId} for Student {StudentId} in Course {CourseId} has been SUSPENDED (reason: {Reason}).",
                     enrollment.Id, enrollment.StudentId, enrollment.CourseId, reason ?? "unspecified");
@@ -39,7 +39,7 @@ namespace AlphaZero.Modules.Courses.Domain.Services
             var result  = enrollment.Deactivate();
             if (!result.IsError)
             {
-                await publisher.Publish(new EnrollmentDeactivatedDomainEvent(enrollment.Id, enrollment.StudentId, enrollment.CourseId, enrollment.TenantId, prevStatus, metadata.operatorId),token);
+                await publisher.Publish(new EnrollmentDeactivatedDomainEvent(enrollment.Id, enrollment.StudentId, enrollment.CourseId, enrollment.TenantId, prevStatus, metadata.operatorId), token);
                 repository.Update(enrollment);
                 
                 logger.LogWarning("Enrollment {EnrollmentId} for User {UserId} in Course {CourseId} has been DEACTIVATED.",
@@ -53,7 +53,7 @@ namespace AlphaZero.Modules.Courses.Domain.Services
             var prevStatus = enrollment.Status;
         
             if (prevStatus == EnrollmentStatus.Active) return Result.Success;
-            var result  = enrollment.Deactivate();
+            var result  = enrollment.Reactivate();
             if (!result.IsError)
             {
                 await publisher.Publish(new EnrollmentResumedDomainEvent(enrollment.Id, enrollment.StudentId, enrollment.CourseId, enrollment.TenantId, prevStatus, metadata.operatorId),token);

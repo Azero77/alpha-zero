@@ -43,7 +43,7 @@ public sealed class ReactivateEnrollmentCommandHandler(
 
         var user = authorizationContextProvider.Get().IsError ? null : authorizationContextProvider.CurrentAuthorizationContext;
         
-        var result = await enrollmentStatusTransitionService.Deactivate(enrollment, new EnrollmentStatusTransitionService.EnrollmentChangingStatusMetadata(user?.Id), cancellationToken);
+        var result = await enrollmentStatusTransitionService.Reactivate(enrollment, new EnrollmentStatusTransitionService.EnrollmentChangingStatusMetadata(user?.Id), cancellationToken);
         if (result.IsError) return result.Errors;
         return Result.Success;
     }

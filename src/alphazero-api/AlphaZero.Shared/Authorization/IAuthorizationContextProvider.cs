@@ -8,5 +8,6 @@ namespace AlphaZero.Shared.Authorization
     {
         AuthorizationContext? CurrentAuthorizationContext { get; }
         ErrorOr<AuthorizationContext?> Get(CancellationToken token = default);
+        void SetExplicitContext(AuthorizationContext context);
     }
 }

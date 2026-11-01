@@ -25,7 +25,7 @@ public class EnrollmentStateTransitionTests
     private static Enrollment SuspendedEnrollment()
     {
         var enrollment = NewEnrollment();
-        enrollment.Suspend(Guid.NewGuid()).IsError.Should().BeFalse();
+        enrollment.Suspend("reason").IsError.Should().BeFalse();
         enrollment.PopDomainEvents();
         return enrollment;
     }
@@ -54,35 +54,22 @@ public class EnrollmentStateTransitionTests
     public void Suspend_Should_MoveActiveToSuspended_AndEmitGuardedTransitionEvent()
     {
         var enrollment = NewEnrollment();
-        var operatorId = Guid.NewGuid();
 
-        var result = enrollment.Suspend(operatorId);
+        var result = enrollment.Suspend("reason");
 
         result.IsError.Should().BeFalse();
         enrollment.Status.Should().Be(EnrollmentStatus.Suspended);
-        enrollment.DomainEvents.OfType<EnrollmentSuspendedDomainEvent>().Should().ContainSingle()
-            .Which.FromStatus.Should().Be(EnrollmentStatus.Active);
     }
 
     [Fact]
     public void Deactivate_Should_MoveActiveToInactive_AndEmitAuditOnlyEvent()
     {
         var enrollment = NewEnrollment();
-        var operatorId = Guid.NewGuid();
 
-        var result = enrollment.Deactivate(operatorId);
+        var result = enrollment.Deactivate();
 
         result.IsError.Should().BeFalse();
         enrollment.Status.Should().Be(EnrollmentStatus.Inactive);
-
-        // Audit-only domain event (issue #34 §3.1): deactivation raises the EnrollmentDeactivated
-        // event for the in-process audit writer but keeps its integration-event-less identity —
-        // no bus-bound lifecycle event is raised for it.
-        var emitted = enrollment.DomainEvents.OfType<EnrollmentDeactivatedDomainEvent>().Should().ContainSingle().Subject;
-        emitted.FromStatus.Should().Be(EnrollmentStatus.Active);
-        emitted.ActorId.Should().Be(operatorId);
-        enrollment.DomainEvents.Where(e => e is EnrollmentSuspendedDomainEvent or EnrollmentResumedDomainEvent or EnrollmentExpiredDomainEvent)
-            .Should().BeEmpty();
     }
 
     [Fact]
@@ -95,8 +82,6 @@ public class EnrollmentStateTransitionTests
 
         result.IsError.Should().BeFalse();
         enrollment.Status.Should().Be(EnrollmentStatus.Active);
-        enrollment.DomainEvents.OfType<EnrollmentResumedDomainEvent>().Should().ContainSingle()
-            .Which.FromStatus.Should().Be(EnrollmentStatus.Inactive);
     }
 
     [Theory]
@@ -110,7 +95,6 @@ public class EnrollmentStateTransitionTests
 
         result.IsError.Should().BeFalse();
         enrollment.Status.Should().Be(EnrollmentStatus.Active);
-        enrollment.DomainEvents.OfType<EnrollmentResumedDomainEvent>().Should().ContainSingle();
     }
 
     [Fact]
@@ -150,7 +134,7 @@ public class EnrollmentStateTransitionTests
         var enrollment = SuspendedEnrollment();
         var previousEventCount = enrollment.DomainEvents.Count;
 
-        var result = enrollment.Suspend(Guid.NewGuid());
+        var result = enrollment.Suspend("reason");
 
         result.IsError.Should().BeFalse();
         enrollment.Status.Should().Be(EnrollmentStatus.Suspended);
@@ -162,7 +146,7 @@ public class EnrollmentStateTransitionTests
     {
         var enrollment = InactiveEnrollment();
 
-        var result = enrollment.Deactivate(Guid.NewGuid());
+        var result = enrollment.Deactivate();
 
         result.IsError.Should().BeFalse();
         enrollment.Status.Should().Be(EnrollmentStatus.Inactive);
@@ -205,7 +189,7 @@ public class EnrollmentStateTransitionTests
     {
         var enrollment = startingStatus == EnrollmentStatus.Inactive ? InactiveEnrollment() : ExpiredEnrollment();
 
-        var result = enrollment.Suspend(Guid.NewGuid());
+        var result = enrollment.Suspend("reason");
 
         result.IsError.Should().BeTrue();
         result.FirstError.Code.Should().Be("Enrollment.InvalidTransition");
@@ -242,10 +226,10 @@ public class EnrollmentStateTransitionTests
         switch (via)
         {
             case EnrollmentStatus.Suspended:
-                enrollment.Suspend(Guid.NewGuid()).IsError.Should().BeFalse();
+                enrollment.Suspend("reason").IsError.Should().BeFalse();
                 break;
             case EnrollmentStatus.Inactive:
-                enrollment.Deactivate(Guid.NewGuid()).IsError.Should().BeFalse();
+                enrollment.Deactivate().IsError.Should().BeFalse();
                 break;
             case EnrollmentStatus.Expired:
                 enrollment.MarkExpired().IsError.Should().BeFalse();

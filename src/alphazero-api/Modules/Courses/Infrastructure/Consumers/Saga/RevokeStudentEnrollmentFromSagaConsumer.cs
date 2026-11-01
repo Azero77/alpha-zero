@@ -1,6 +1,7 @@
 using AlphaZero.Modules.Courses.Application.Enrollments;
 using AlphaZero.Modules.Courses.Application.Enrollments.Commands.Deactivate;
 using AlphaZero.Modules.Courses.IntegrationEvents;
+using AlphaZero.Shared.Authorization;
 using MassTransit;
 using Microsoft.Extensions.Logging;
 
@@ -12,12 +13,13 @@ public class RevokeStudentEnrollmentFromSagaConsumer(ICoursesModule coursesModul
     {
         var command = new DeactivateEnrollmentCommand(context.Message.UserId, context.Message.CourseId);
 
-        // Story #10 (§3.5): the saga is one of two allowed actor kinds for enrollment
-        // deactivation, and it must CLAIM its transport origin — the consumer's module dispatch
-        // has no HTTP actor context, which otherwise looks identical to a rogue in-process send
-        // (the story-#10 guard refuses those before the aggregate is loaded).
-        using var _ = EnrollmentTransitionAutomation.ClaimSagaTransport();
-        var result = await coursesModule.Send(command);
+        // Story #10 (§3.5): the saga is an authorized system machine identity in IAM.
+        // We pass the SystemServiceAuthorizationContext explicitly to the module dispatch,
+        // seeding the child lifetime scope with honest actor credentials (no AsyncLocal).
+        var systemContext = SystemServiceAuthorizationContext.Create(
+            EnrollmentTransitionActor.RevocationSagaServiceName,
+            EnrollmentPermissions.Deactivate);
+        var result = await coursesModule.Send(command, systemContext, context.CancellationToken);
 
         if (result.IsError)
         {

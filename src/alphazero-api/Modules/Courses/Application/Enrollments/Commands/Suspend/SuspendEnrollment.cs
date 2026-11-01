@@ -43,7 +43,7 @@ public sealed class SuspendEnrollmentCommandHandler(
         
         var user = authorizationContextProvider.Get().IsError ? null : authorizationContextProvider.CurrentAuthorizationContext;
 
-        var result = await enrollmentStatusTransitionService.Deactivate(enrollment, new EnrollmentStatusTransitionService.EnrollmentChangingStatusMetadata(user?.Id), cancellationToken);
+        var result = await enrollmentStatusTransitionService.Suspend(enrollment, new EnrollmentStatusTransitionService.EnrollmentChangingStatusMetadata(user?.Id), request.Reason, cancellationToken);
         if (result.IsError) return result.Errors;
 
         return Result.Success;

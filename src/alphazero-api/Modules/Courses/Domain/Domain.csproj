@@ -12,6 +12,7 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="Courses.UnitTests" />
+    <InternalsVisibleTo Include="Courses.Tests.Integration" />
   </ItemGroup>
 
 </Project>

@@ -7,21 +7,15 @@ namespace AlphaZero.Modules.Courses.UnitTests.Application.Enrollments;
 
 /// <summary>
 /// Story #10 actor gate (§3.5): exactly two actor kinds may fire enrollment lifecycle
-/// transitions — the transport-claimed revocation saga and an AccessControl'enveloped
-/// tenant-admin actor — and the gate must run BEFORE any aggregate load. Every other shape
-/// (null context with no claim, authenticated context with no envelope) fails closed.
+/// transitions — the authorized Payments revocation saga (SystemServiceAuthorizationContext)
+/// and a tenant-admin actor — and the gate must run BEFORE any aggregate load. Every other shape
+/// (null context, unauthorized system service, authenticated context with no envelope/admin role) fails closed.
 /// </summary>
 public class EnrollmentTransitionActorGuardTests
 {
     [Fact]
-    public void EnsureCanFire_Should_RefuseRogueInProcessSend_WhenNoContextAndNoClaim()
+    public void EnsureCanFire_Should_RefuseRogueInProcessSend_WhenNoContext()
     {
-        // The saga-claim state can only leak into this test from another test that set it and
-        // failed to dispose; start clean by wrapping explicitly.
-        using (EnrollmentTransitionAutomation.ClaimSagaTransport())
-        { }
-        EnrollmentTransitionAutomation.HasTransportClaim().Should().BeFalse();
-
         var result = EnrollmentTransitionActor.EnsureCanFire(null);
 
         result.IsError.Should().BeTrue();
@@ -30,24 +24,41 @@ public class EnrollmentTransitionActorGuardTests
     }
 
     [Fact]
-    public async Task EnsureCanFire_Should_AdmitTransportClaimedDispatch_ThenStopLeaking()
+    public void EnsureCanFire_Should_AdmitAuthorizedPaymentsRevocationSaga()
     {
-        // Simulate the saga shape, INCLUDING the async boundary: the consumer sets the claim,
-        // dispatches (coursesModule.Send creates a fresh scope + awaits below), and disposes.
-        Task<bool> LaterDispatch() => Task.FromResult(EnrollmentTransitionAutomation.HasTransportClaim());
+        var context = SystemServiceAuthorizationContext.Create(
+            EnrollmentTransitionActor.RevocationSagaServiceName,
+            EnrollmentPermissions.Deactivate);
 
-        bool claimedInside;
-        using (EnrollmentTransitionAutomation.ClaimSagaTransport())
-        {
-            claimedInside = await LaterDispatch();
-        }
+        var result = EnrollmentTransitionActor.EnsureCanFire(context);
 
-        claimedInside.Should().BeTrue("AsyncLocal flows into the awaited pipeline");
-        EnrollmentTransitionAutomation.HasTransportClaim().Should().BeFalse("the claim must not leak past its using block");
+        result.IsError.Should().BeFalse();
+    }
 
-        var after = EnrollmentTransitionActor.EnsureCanFire(null);
-        after.IsError.Should().BeTrue();
-        after.FirstError.Code.Should().Be("Enrollment.TransitionUnauthorized");
+    [Fact]
+    public void EnsureCanFire_Should_RefuseUnauthorizedSystemService()
+    {
+        var context = SystemServiceAuthorizationContext.Create(
+            "SomeOther.UnauthorizedService",
+            EnrollmentPermissions.Deactivate);
+
+        var result = EnrollmentTransitionActor.EnsureCanFire(context);
+
+        result.IsError.Should().BeTrue();
+        result.FirstError.Code.Should().Be("Enrollment.TransitionUnauthorized");
+    }
+
+    [Fact]
+    public void EnsureCanFire_Should_RefuseAuthorizedSystemService_WithWrongPermission()
+    {
+        var context = SystemServiceAuthorizationContext.Create(
+            EnrollmentTransitionActor.RevocationSagaServiceName,
+            "courses:SomeOtherAction");
+
+        var result = EnrollmentTransitionActor.EnsureCanFire(context);
+
+        result.IsError.Should().BeTrue();
+        result.FirstError.Code.Should().Be("Enrollment.TransitionUnauthorized");
     }
 
     [Fact]

@@ -1,4 +1,5 @@
 using AlphaZero.Modules.Courses.Application.Repositories;
+using AlphaZero.Modules.Courses.Domain.Aggregates.Enrollments;
 using AlphaZero.Shared.Application;
 using ErrorOr;
 using MediatR;

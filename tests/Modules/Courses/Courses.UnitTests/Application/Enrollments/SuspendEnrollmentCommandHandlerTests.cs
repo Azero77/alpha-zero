@@ -1,9 +1,10 @@
 using AlphaZero.Modules.Courses.Application.Enrollments.Commands.Suspend;
-using AlphaZero.Modules.Courses.Application.Repositories;
 using AlphaZero.Modules.Courses.Domain.Aggregates.Enrollments;
+using AlphaZero.Modules.Courses.Domain.Services;
 using AlphaZero.Shared.Authorization;
 using ErrorOr;
 using FluentAssertions;
+using MediatR;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
 using Xunit;
@@ -16,6 +17,7 @@ public class SuspendEnrollmentCommandHandlerTests
     private static readonly Guid TenantId = Guid.NewGuid();
 
     private readonly IEnrollmentRepository _repository = Substitute.For<IEnrollmentRepository>();
+    private readonly IPublisher _publisher = Substitute.For<IPublisher>();
 
     private static EnrollmentAggregate CreateEnrollment()
     {
@@ -29,8 +31,8 @@ public class SuspendEnrollmentCommandHandlerTests
         var enrollment = CreateEnrollment();
         _repository.GetByIdAsync(enrollment.Id, Arg.Any<CancellationToken>()).Returns(enrollment);
 
-        var repository = _repository;
-        var handler = new SuspendEnrollmentCommandHandler(repository, Substitute.For<IAuthorizationContextProvider>(), Substitute.For<ILogger<SuspendEnrollmentCommandHandler>>());
+        var transitionService = new EnrollmentStatusTransitionService(_publisher, _repository, Substitute.For<ILogger<EnrollmentStatusTransitionService>>());
+        var handler = new SuspendEnrollmentCommandHandler(_repository, Substitute.For<IAuthorizationContextProvider>(), transitionService, Substitute.For<ILogger<SuspendEnrollmentCommandHandler>>());
 
         // Act
         var result = await handler.Handle(new SuspendEnrollmentCommand(enrollment.Id, Reason: "billing dispute"), CancellationToken.None);
@@ -46,7 +48,8 @@ public class SuspendEnrollmentCommandHandlerTests
     {
         // Arrange
         _repository.GetByIdAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>()).Returns((EnrollmentAggregate?)null);
-        var handler = new SuspendEnrollmentCommandHandler(_repository, Substitute.For<IAuthorizationContextProvider>(), Substitute.For<ILogger<SuspendEnrollmentCommandHandler>>());
+        var transitionService = new EnrollmentStatusTransitionService(_publisher, _repository, Substitute.For<ILogger<EnrollmentStatusTransitionService>>());
+        var handler = new SuspendEnrollmentCommandHandler(_repository, Substitute.For<IAuthorizationContextProvider>(), transitionService, Substitute.For<ILogger<SuspendEnrollmentCommandHandler>>());
 
         // Act
         var result = await handler.Handle(new SuspendEnrollmentCommand(Guid.NewGuid(), null), CancellationToken.None);

@@ -2,6 +2,7 @@ using AlphaZero.Modules.Courses.Application.Enrollments.Commands.Deactivate;
 using AlphaZero.Modules.Courses.Infrastructure.Consumers.Saga;
 using AlphaZero.Modules.Courses.IntegrationEvents;
 using AlphaZero.Shared.Application;
+using AlphaZero.Shared.Authorization;
 using ErrorOr;
 using FluentAssertions;
 using MassTransit;
@@ -39,7 +40,7 @@ public class RevokeStudentEnrollmentFromSagaConsumerTests
         var command = NewCommand();
         _contextMock.Setup(x => x.Message).Returns(command);
         _coursesModuleMock
-            .Setup(x => x.Send(It.IsAny<DeactivateEnrollmentCommand>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.Send(It.IsAny<DeactivateEnrollmentCommand>(), It.IsAny<AuthorizationContext>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(ErrorOr.Result.Success);
 
         // Act
@@ -58,7 +59,7 @@ public class RevokeStudentEnrollmentFromSagaConsumerTests
         var command = NewCommand();
         _contextMock.Setup(x => x.Message).Returns(command);
         _coursesModuleMock
-            .Setup(x => x.Send(It.IsAny<DeactivateEnrollmentCommand>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.Send(It.IsAny<DeactivateEnrollmentCommand>(), It.IsAny<AuthorizationContext>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(ErrorOr.Error.Conflict("Enrollment.InvalidTransition", "blocked"));
 
         // Act
@@ -76,7 +77,7 @@ public class RevokeStudentEnrollmentFromSagaConsumerTests
         var command = NewCommand();
         _contextMock.Setup(x => x.Message).Returns(command);
         _coursesModuleMock
-            .Setup(x => x.Send(It.IsAny<DeactivateEnrollmentCommand>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.Send(It.IsAny<DeactivateEnrollmentCommand>(), It.IsAny<AuthorizationContext>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(ErrorOr.Error.NotFound("Enrollment.NotFound", "not found"));
 
         // Act

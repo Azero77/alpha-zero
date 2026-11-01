@@ -10,41 +10,48 @@ namespace AlphaZero.Modules.Courses.Application.Enrollments;
 /// </summary>
 public static class EnrollmentTransitionActor
 {
+    public const string RevocationSagaServiceName = "Payments.RevocationSaga";
+
     /// <summary>
     /// Story #10 gate (§3.5): deactivation/suspension/reactivation may be fired by exactly two
     /// kinds of actor, verified BEFORE the aggregate is loaded:
-    /// 1. the Payments revocation saga — bus automation, which claims its transport origin
-    ///    explicitly (<see cref="EnrollmentTransitionAutomation"/>); and
-    /// 2. a tenant-admin/syt actor arriving through the AccessControl envelope (the FastEndpoints
-    ///    edge attached the resource permission and IAM evaluated it).
-    /// Everything else — rogue in-process sends with no HTTP context, or authenticated calls that
-    /// never passed an AccessControl'd endpoint — fails closed before any state transition can
-    /// happen. The error surfaces as 409/403 at the HTTP boundary (behavior pipeline).
+    /// 1. the Payments revocation saga — authorized IAM machine identity (<see cref="SystemServiceAuthorizationContext"/>);
+    /// 2. a tenant-admin actor arriving through IAM (either an explicit Principal or evaluated at the AccessControl'd edge).
+    /// Everything else — rogue in-process sends with no context or unauthorized services — fails closed.
     /// </summary>
     public static ErrorOr<Success> EnsureCanFire(AuthorizationContext? context)
     {
         if (context is null)
         {
-            if (EnrollmentTransitionAutomation.HasTransportClaim())
-            {
-                return Result.Success; // transport-claimed automation (revocation saga)
-            }
-
             return Error.Forbidden(
                 "Enrollment.TransitionUnauthorized",
                 "Enrollment lifecycle transitions can only be fired by the payments revocation saga or a tenant-admin actor.");
         }
+        // 1. Authorized System / Machine identity (Payments revocation saga)
+        if (context is SystemServiceAuthorizationContext systemCtx)
+        {
+            if (string.Equals(systemCtx.ServiceName, RevocationSagaServiceName, StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(systemCtx.RequiredPermission, EnrollmentPermissions.Deactivate, StringComparison.OrdinalIgnoreCase))
+            {
+                return Result.Success;
+            }
 
+            return Error.Forbidden(
+                "Enrollment.TransitionUnauthorized",
+                $"System service '{systemCtx.ServiceName}' with permission '{systemCtx.RequiredPermission}' is not authorized to fire enrollment transitions.");
+        }
+
+        // 2. Request that passed an AccessControl endpoint evaluated at the edge
         var accessControlled = !string.IsNullOrWhiteSpace(context.RequiredPermission)
             && !string.IsNullOrWhiteSpace(context.ResourcePath);
 
         if (accessControlled)
         {
-            return Result.Success; // tenant-admin/syt: evaluated at the AccessControl'd edge
+            return Result.Success;
         }
 
         return Error.Forbidden(
             "Enrollment.TransitionUnauthorized",
-            "Enrollment lifecycle transitions require the AccessControl envelope (an authenticated call that did not pass an access-controlled endpoint may not fire them).");
+            "Enrollment lifecycle transitions require a valid tenant-admin actor or authorized system service.");
     }
 }
