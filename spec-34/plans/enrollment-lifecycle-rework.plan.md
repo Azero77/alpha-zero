@@ -27,7 +27,7 @@
 | 7 | Identity: `PrincipalExpired` integration event (first one) | `[x] Done` | 71e88142 | Identity unit: 58 passed (4 publish-shape tests); builds green; publish-observer integration test authored (CI-run, docker) |
 | 8 | Courses consumer: idempotent guarded `MarkExpired` | `[x] Done` | 80736064 | Courses unit: 306 passed (9 new: handler mark/no-op + consumer plumbing); builds green; duplicate/cross-tenant integration test authored (CI-run) |
 | 9 | Per-(course,plan) principal creation + enrollment grant branch | `[x] Done` | 96e27e75 | Identity unit: 64 passed (4 Ensure handler + 2 consumer branch tests); Courses unit: 317 passed (2 saga grant + 4 AddPlan + 5 UpdatePlan tests); builds green (API + both integration projects); integration coverage authored (`EnrollmentGrantTests` — windowed/unlimited/legacy-gains-window, CI-run, docker) |
-| 10 | Courses mint endpoint (stateful gate, lazy expiry path b) | `[ ] Not started` | — | — |
+| 10 | Courses mint endpoint (stateful gate, lazy expiry path b) | `[x] Done` | 8a2ad9bf | Courses unit: 326 passed (9 new: happy mint, unlimited, lazy-mark path b, suspended/expired/inactive conflicts, not-found, tenant-required); builds green (API + both integration projects); integration coverage authored (`AccessTicketMintEndpointTests` — CI-run, docker) |
 | 11 | Set-based expiry sweep (path c) + worker hardening | `[ ] Not started` | — | — |
 | 12 | Analytics derived-from-source daily job (delete decrements) | `[ ] Not started` | — | — |
 | 13 | Docs + issue #34 as-built comment | `[ ] Not started` | — | — |
