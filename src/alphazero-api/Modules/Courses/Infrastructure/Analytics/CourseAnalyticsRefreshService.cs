@@ -40,7 +40,12 @@ public class CourseAnalyticsRefreshService(
         }
 
         // §3.6 derived-from-source SQL: single set-based UPSERT aggregating all non-expired
-        // enrollments (Status != 'Expired' — note R3-Q5: counts every enrollment except expired).
+        // enrollments (Status != 'Expired' — note R3-Q5: counts every enrollment except expired;
+        // 'Expired' is the SQL literal of EnrollmentStatus.Expired — keep them in sync).
+        // Table name "Enrollements" is the schema-pinned legacy spelling (#31) — do not fix.
+        // ItemCompletions semantics (deliberate, per review): bit positions are bounded by the
+        // course's CURRENT active mask, so completions of later-deactivated items drop out on
+        // the next refresh — derived-from-source by design (docs/specs/enrollment-lifecycle-and-access-tickets.md §5).
         command.CommandText = """
             WITH enrollment_items AS (
                 SELECT
@@ -125,7 +130,7 @@ public class CourseAnalyticsRefreshService(
             """;
 
         var affected = await command.ExecuteNonQueryAsync(cancellationToken);
-
+        
         logger.LogInformation("Refreshed derived course analytics for all courses ({AffectedRows} rows affected).", affected);
 
         return affected;

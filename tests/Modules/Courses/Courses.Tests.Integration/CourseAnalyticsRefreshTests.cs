@@ -11,6 +11,7 @@ using AlphaZero.Modules.Courses.Presentation.Courses.Get;
 using AlphaZero.Modules.Courses.Presentation.Courses.Pool;
 using AlphaZero.Modules.Courses.Presentation.Enrollments.Enroll;
 using AlphaZero.Modules.Courses.Presentation.Subjects.Create;
+using AlphaZero.Modules.Courses.Infrastructure;
 using AlphaZero.Shared.Domain;
 using Autofac;
 using Courses.Tests.Integration.Abstractions;
@@ -151,5 +152,56 @@ public class CourseAnalyticsRefreshTests : BaseIntegrationTest
         // Item 1: Student 2 + Student 3 = 2 completions
         analyticsDto.ItemCompletionRates.Should().Contain(new ItemCompletionDto(0, 2, 66.67));
         analyticsDto.ItemCompletionRates.Should().Contain(new ItemCompletionDto(1, 2, 66.67));
+    }
+
+    [Fact]
+    public async Task Refresh_Should_OverwriteDriftedRows_ConvergingOnDerivedTruth()
+    {
+        // Arrange: course with 1 non-expired enrollment (item 0 completed → 50%),
+        // plus a zero-enrollment course. Both get deliberately drifted/stale rows —
+        // simulating residue from the deleted legacy increment consumers
+        // (step 12 QA gate: refresh must be the single source of truth; issue #34 §5).
+        var tenantId = Guid.NewGuid();
+        var courseId = await CreatePublishedCourse(tenantId);
+        var emptyCourseId = await CreatePublishedCourse(tenantId); // published, zero enrollments
+
+        var student1 = Guid.NewGuid();
+        await EnrollAndComplete(tenantId, courseId, student1, 0);
+
+        var drifted1 = CourseAnalytics.Create(courseId);
+        DbContext.CourseAnalytics.Add(drifted1); // placeholder so upsert path is UPDATE
+        var drifted2 = CourseAnalytics.Create(emptyCourseId);
+        DbContext.CourseAnalytics.Add(drifted2);
+        await DbContext.SaveChangesAsync();
+
+        // Inject drift directly (bypasses the deleted repository's semantics).
+        await DbContext.CourseAnalytics
+            .Where(a => a.CourseId == courseId || a.CourseId == emptyCourseId)
+            .ExecuteUpdateAsync(s => s
+                .SetProperty(a => a.TotalEnrollments, 999)
+                .SetProperty(a => a.SumOfCompletionPercentages, 123.45));
+        await DbContext.CourseAnalytics.Entry(drifted1).ReloadAsync();
+        await DbContext.CourseAnalytics.Entry(drifted2).ReloadAsync();
+
+        // Act
+        var coursesModule = Factory.Services.GetRequiredService<CoursesModule>();
+        using (var moduleScope = coursesModule.CreateScope())
+        {
+            var refreshService = moduleScope.Resolve<ICourseAnalyticsRefreshService>();
+            await refreshService.RefreshAnalyticsAsync(CancellationToken.None);
+        }
+
+        // Assert: derived truth, not drift (endpoint = query service = same rows)
+        SetTenant(tenantId);
+
+        var analytics = await Client.GetFromJsonAsync<CourseAnalyticsDto>($"/courses/{courseId}/analytics");
+        analytics!.TotalEnrollments.Should().Be(1);
+        analytics.AverageCompletionPercentage.Should().Be(50.0);
+        analytics.ItemCompletionRates.Should().Contain(new ItemCompletionDto(0, 1, 100.0));
+
+        var emptyAnalytics = await Client.GetFromJsonAsync<CourseAnalyticsDto>($"/courses/{emptyCourseId}/analytics");
+        emptyAnalytics!.TotalEnrollments.Should().Be(0);
+        emptyAnalytics.AverageCompletionPercentage.Should().Be(0);
+        emptyAnalytics.ItemCompletionRates.Should().BeEmpty();
     }
 }

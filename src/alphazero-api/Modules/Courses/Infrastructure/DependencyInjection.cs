@@ -65,7 +65,6 @@ public static class DependencyInjection
         moduleServices.AddScoped<ISubjectRepository, SubjectRepository>();
         moduleServices.Decorate<ISubjectRepository, CachingSubjectRepositoryDecorator>();
         moduleServices.AddScoped<IEnrollmentRepository, EnrollmentRepository>();
-        moduleServices.AddScoped<ICourseAnalyticsRepository, CourseAnalyticsRepository>();
 
         // Enrollment lifecycle audit (issue #34 §3.1): the write path stays in-process via the
         // DomainEventHandler, staging rows on the SAME scoped context/UnitOfWork save as the

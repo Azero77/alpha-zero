@@ -15,6 +15,7 @@ using AlphaZero.Modules.Identity.Domain.Models;
 using AlphaZero.Modules.Identity.Domain.Models.Principals;
 using AlphaZero.Modules.Identity.Domain.Models.Principals.Policies;
 using AlphaZero.Modules.Identity.Presentation;
+using AlphaZero.Modules.Identity.Application.Principals.Commands.EnsureCoursePlanPrincipal;
 
 namespace Courses.Tests.Integration;
 
