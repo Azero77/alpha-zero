@@ -464,6 +464,7 @@ public class CoursesCacheTests : BaseIntegrationTest
         for (var i = 0; i < 100; i++)
         {
             state = await ExecuteDbContextAsync(async db => await db.CourseAssets
+                .AsNoTracking()
                 .IgnoreQueryFilters()
                 .Where(a => a.Id == videoId)
                 .Select(a => (CourseAssetState?)a.State)

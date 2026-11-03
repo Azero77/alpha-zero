@@ -84,8 +84,12 @@ public class CourseAnalyticsTests : BaseIntegrationTest
             lastResp = await Client.GetAsync($"/courses/{courseId}/analytics");
             if (lastResp.IsSuccessStatusCode)
             {
-                analytics1 = await lastResp.Content.ReadFromJsonAsync<CourseAnalyticsDto>();
-                break;
+                var temp = await lastResp.Content.ReadFromJsonAsync<CourseAnalyticsDto>();
+                if (temp != null && temp.TotalEnrollments == 1)
+                {
+                    analytics1 = temp;
+                    break;
+                }
             }
         }
 

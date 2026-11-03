@@ -272,6 +272,7 @@ public class CourseSagaStatePersistenceTests
         {
             base.OnModelCreating(modelBuilder);
             modelBuilder.Entity<AlphaZero.Modules.Courses.Domain.Aggregates.Enrollments.Enrollment>().Ignore(e => e.Progress);
+            modelBuilder.Entity<AlphaZero.Modules.Courses.Domain.Aggregates.Courses.Course>().Ignore(c => c.ActiveItemsBitmask);
         }
     }
 

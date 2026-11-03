@@ -22,12 +22,6 @@ public abstract class SagaHarnessTestBase<TMachine, TInstance> : IAsyncLifetime
     static SagaHarnessTestBase()
     {
         SagaTestConventions.EnsureMapped();
-
-        // The in-memory transport round-trips messages through the MassTransit System.Text.Json
-        // serializer; ResourceArn is an immutable value object with private constructors, so it
-        // needs a custom converter (mirrors Modules/Identity/Infrastructure/Serialization/Converters.cs).
-        MassTransit.Serialization.SystemTextJsonMessageSerializer.Options.Converters.Add(
-            new TestResourceArnJsonConverter());
     }
 
     public SagaHarnessTestBase() { }
@@ -88,6 +82,15 @@ public static class SagaTestConventions
     {
         if (System.Threading.Interlocked.Exchange(ref _mapped, 1) == 1)
             return;
+
+        // The in-memory transport round-trips messages through the MassTransit System.Text.Json
+        // serializer; ResourceArn is an immutable value object with private constructors, so it
+        // needs a custom converter (mirrors Modules/Identity/Infrastructure/Serialization/Converters.cs).
+        if (!MassTransit.Serialization.SystemTextJsonMessageSerializer.Options.IsReadOnly)
+        {
+            MassTransit.Serialization.SystemTextJsonMessageSerializer.Options.Converters.Add(
+                new TestResourceArnJsonConverter());
+        }
 
         EndpointConvention.Map<EnrollStudentFromSagaCommand>(new Uri("loopback://localhost/EnrollForwarder"));
         EndpointConvention.Map<AssignStudentRoleFromSagaCommand>(new Uri("loopback://localhost/AssignRoleForwarder"));

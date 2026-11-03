@@ -32,7 +32,7 @@ public class LibraryModule : AppModule
     {
         configuration.AddEntityFrameworkOutbox<AlphaZero.Modules.Library.Infrastructure.Persistance.AppDbContext>(o =>
         {
-            o.UsePostgres();
+            o.UsePostgres(false);
             o.UseBusOutbox();
             o.QueryDelay = TimeSpan.FromMinutes(5);
             o.DuplicateDetectionWindow = TimeSpan.FromMinutes(30);

@@ -3,6 +3,7 @@ using AlphaZero.Modules.Courses.Application.Repositories;
 using AlphaZero.Modules.Courses.Domain.Aggregates.Enrollments;
 using AlphaZero.Shared.Application;
 using ErrorOr;
+using FluentValidation;
 using MediatR;
 using Microsoft.Extensions.Logging;
 
@@ -16,6 +17,15 @@ namespace AlphaZero.Modules.Courses.Application.Enrollments.Commands.MarkExpired
 /// writer and the 1:1 <c>EnrollmentExpired</c> integration event all live per §3.1/§3.4(a)).
 /// </summary>
 public sealed record MarkEnrollmentExpiredFromPrincipalCommand(Guid UserId, Guid CourseId) : ICommand<Success>;
+
+public class MarkEnrollmentExpiredFromPrincipalCommandValidator : AbstractValidator<MarkEnrollmentExpiredFromPrincipalCommand>
+{
+    public MarkEnrollmentExpiredFromPrincipalCommandValidator()
+    {
+        RuleFor(x => x.UserId).NotEmpty();
+        RuleFor(x => x.CourseId).NotEmpty();
+    }
+}
 
 public sealed class MarkEnrollmentExpiredFromPrincipalCommandHandler(
     IEnrollmentRepository repository,

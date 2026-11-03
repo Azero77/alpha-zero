@@ -116,7 +116,7 @@ public class PlanCommandHandlerTests
         SetupQuery(course.Id, course);
         var mintedPrincipalId = Guid.NewGuid();
         _planPrincipalService
-            .EnsureCoursePlanPrincipalAsync(course.TenantId, course.Id, Arg.Any<Guid>(), Arg.Any<CancellationToken>())
+            .EnsurePlanPrincipalAsync(course.Id, Arg.Any<Guid>(), course.TenantId, Arg.Any<CancellationToken>())
             .Returns(mintedPrincipalId);
 
         var command = new AddPlanCommand(course.Id, "30-Day Pass", null, AccessWindowDays: 30);
@@ -195,11 +195,11 @@ public class PlanCommandHandlerTests
     {
         // Arrange
         var course = NewCourse(Guid.NewGuid());
-        var plan = course.AddPlan("Standard", Guid.NewGuid()).Value;
+        var plan = course.AddPlan("Standard", Guid.Empty).Value;
         SetupQuery(course.Id, course);
         var mintedPrincipalId = Guid.NewGuid();
         _planPrincipalService
-            .EnsureCoursePlanPrincipalAsync(course.TenantId, course.Id, plan.Id, Arg.Any<CancellationToken>())
+            .EnsurePlanPrincipalAsync(course.Id, plan.Id, course.TenantId, Arg.Any<CancellationToken>())
             .Returns(mintedPrincipalId);
         var command = new UpdatePlanCommand(course.Id, plan.Id, "Standard 60d", null, AccessWindowDays: 60);
 

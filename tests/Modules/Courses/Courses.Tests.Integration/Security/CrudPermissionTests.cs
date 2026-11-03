@@ -27,9 +27,23 @@ namespace Courses.Tests.Integration.Security;
 /// evaluator for a controllable fake. Used to prove the module's AccessControl requirement wiring
 /// (permission action + resource ARN) on the new CRUD endpoints' permission-denial path.
 /// </summary>
+[Collection("Integration")]
 public class CrudSecurityApiFactory : ApiFactory
 {
     public FakePolicyEvaluatorService Evaluator { get; } = new();
+
+    protected override bool OwnsDatabase => false;
+
+    /// <summary>
+    /// Points this host at the primary factory's shared Postgres container. Must run before the
+    /// first CreateClient() (host build) so the security host migrates the same database.
+    /// </summary>
+    public void UseSharedDatabase(ApiFactory primary)
+    {
+        var connectionString = primary.DbConnectionString;
+        Environment.SetEnvironmentVariable("ConnectionStrings__alphazerodb", connectionString);
+        Environment.SetEnvironmentVariable("DatabaseSettings__ConnectionString", connectionString);
+    }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
@@ -51,14 +65,16 @@ public class FakePolicyEvaluatorService : IPolicyEvaluatorService
         Task.FromResult(ResultToReturn);
 }
 
+[Collection("Integration")]
 public class CrudPermissionTests : IClassFixture<CrudSecurityApiFactory>, IDisposable
 {
     private readonly CrudSecurityApiFactory _factory;
     private readonly HttpClient _client;
 
-    public CrudPermissionTests(CrudSecurityApiFactory factory)
+    public CrudPermissionTests(CrudSecurityApiFactory factory, ApiFactory primaryFactory)
     {
         _factory = factory;
+        _factory.UseSharedDatabase(primaryFactory);
         _client = factory.CreateClient();
     }
 

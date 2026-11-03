@@ -2,6 +2,7 @@ using AlphaZero.Modules.Courses.Infrastructure.Persistance;
 using AlphaZero.Shared.Infrastructure.Tenats;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Npgsql;
 using Respawn;
 using Xunit;
 
@@ -10,11 +11,13 @@ namespace Courses.Tests.Integration.Abstractions;
 [Collection("Integration")]
 public abstract class BaseIntegrationTest : IAsyncLifetime
 {
+    private static Respawner? _respawner;
+    private static readonly SemaphoreSlim _respawnerLock = new(1, 1);
+
     private readonly IServiceScope _scope;
     protected readonly ApiFactory Factory;
     protected readonly HttpClient Client;
     protected readonly AppDbContext DbContext;
-    private Respawner _respawner = null!;
 
     protected BaseIntegrationTest(ApiFactory factory)
     {
@@ -26,20 +29,43 @@ public abstract class BaseIntegrationTest : IAsyncLifetime
 
     public async Task InitializeAsync()
     {
-        // We'll initialize Respawner once or here? 
-        // Respawn needs a DB connection. Since we use Testcontainers, the container is shared.
-        // The DbContext already points to it.
-        
-        var connection = DbContext.Database.GetDbConnection();
-        await connection.OpenAsync();
-        
-        _respawner = await Respawner.CreateAsync(connection, new RespawnerOptions
+        if (_respawner == null)
         {
-            DbAdapter = DbAdapter.Postgres,
-            SchemasToInclude = [AppDbContext.Schema]
-        });
+            await _respawnerLock.WaitAsync();
+            try
+            {
+                if (_respawner == null)
+                {
+                    await using var initConn = new NpgsqlConnection(Factory.DbConnectionString);
+                    await initConn.OpenAsync();
+                    _respawner = await Respawner.CreateAsync(initConn, new RespawnerOptions
+                    {
+                        DbAdapter = DbAdapter.Postgres,
+                        SchemasToInclude = [AppDbContext.Schema]
+                    });
+                }
+            }
+            finally
+            {
+                _respawnerLock.Release();
+            }
+        }
 
-        await _respawner.ResetAsync(connection);
+        const int maxRetries = 5;
+        for (var attempt = 1; attempt <= maxRetries; attempt++)
+        {
+            try
+            {
+                await using var connection = new NpgsqlConnection(Factory.DbConnectionString);
+                await connection.OpenAsync();
+                await _respawner.ResetAsync(connection);
+                break;
+            }
+            catch (PostgresException ex) when (ex.SqlState == "40P01" && attempt < maxRetries)
+            {
+                await Task.Delay(100 * attempt);
+            }
+        }
     }
 
     public Task DisposeAsync()

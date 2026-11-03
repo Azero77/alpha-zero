@@ -155,7 +155,7 @@ public class DeactivateEnrollmentCommandHandlerTests
     {
         _enrollmentRepository = Substitute.For<IEnrollmentRepository>();
         _authorizationContextProvider = Substitute.For<IAuthorizationContextProvider>();
-        _authorizationContextProvider.Get(Arg.Any<CancellationToken>()).Returns(ErrorOr<AuthorizationContext?>.From((AuthorizationContext?)null));
+        _authorizationContextProvider.Get(Arg.Any<CancellationToken>()).Returns(Error.Unauthorized());
         _publisher = Substitute.For<IPublisher>();
         var transitionLogger = Substitute.For<ILogger<EnrollmentStatusTransitionService>>();
         _transitionService = new EnrollmentStatusTransitionService(_publisher, _enrollmentRepository, transitionLogger);
