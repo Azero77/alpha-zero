@@ -33,6 +33,16 @@ public class TenantUser : AggregateRoot, IDomainTenantOwned
         return new TenantUser(Guid.NewGuid(), tenantId, identityId, name);
     }
 
+    /// <summary>
+    /// For persistence and cache rehydration only. Devices are loaded separately.
+    /// </summary>
+    public static TenantUser Hydrate(Guid id, Guid tenantId, string identityId, string name, Guid? mainDeviceId, DateTime? lastMainDeviceSwitchDate)
+        => new(id, tenantId, identityId, name)
+        {
+            MainDeviceId = mainDeviceId,
+            LastMainDeviceSwitchDate = lastMainDeviceSwitchDate
+        };
+
     public ErrorOr<Success> RegisterDevice(string deviceName, DevicePlatform platform, string publicKey, DateTime now)
     {
         if (_devices.Any(d => d.PublicKey == publicKey))

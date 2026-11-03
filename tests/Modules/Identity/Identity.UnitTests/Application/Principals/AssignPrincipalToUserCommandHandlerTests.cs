@@ -44,8 +44,8 @@ public class AssignPrincipalToUserCommandHandlerTests
     {
         // Arrange
         _tenantProvider.GetTenant().Returns(TenantId);
-        _assignmentRepository.Any(Arg.Any<Expression<Func<TenantUserPrincipalAssignment, bool>>>(), Arg.Any<CancellationToken>())
-            .Returns(false);
+        _assignmentRepository.Get(Arg.Any<Expression<Func<TenantUserPrincipalAssignment, bool>>>(), Arg.Any<CancellationToken>())
+            .Returns(new List<TenantUserPrincipalAssignment>());
 
         var user = TenantUser.Create(TenantId, "sub", "Ali").Value;
         var principal = Principal.Create(PrincipalId, "role", "hash", "Role", PrincipalType.Role, null, TenantId).Value;
@@ -74,8 +74,8 @@ public class AssignPrincipalToUserCommandHandlerTests
         var principal = Principal.Create(PrincipalId, "role", "hash", "Role", PrincipalType.Role, null, TenantId).Value;
         var assignment = TenantUserPrincipalAssignment.Create(TenantId, user, principal, ResourceArn, DateTime.UtcNow).Value;
 
-        _assignmentRepository.GetFirst(Arg.Any<Expression<Func<TenantUserPrincipalAssignment, bool>>>(), Arg.Any<CancellationToken>())
-            .Returns(assignment);
+        _assignmentRepository.Get(Arg.Any<Expression<Func<TenantUserPrincipalAssignment, bool>>>(), Arg.Any<CancellationToken>())
+            .Returns(new List<TenantUserPrincipalAssignment> { assignment });
 
         var command = new AssignPrincipalToUserCommand(UserId, PrincipalId, ResourceArn);
 
@@ -96,8 +96,8 @@ public class AssignPrincipalToUserCommandHandlerTests
         var customTenantId = Guid.NewGuid();
         var arnWithTenant = $"az:course:{customTenantId}:course/101";
 
-        _assignmentRepository.GetFirst(Arg.Any<Expression<Func<TenantUserPrincipalAssignment, bool>>>(), Arg.Any<CancellationToken>())
-            .Returns((TenantUserPrincipalAssignment?)null);
+        _assignmentRepository.Get(Arg.Any<Expression<Func<TenantUserPrincipalAssignment, bool>>>(), Arg.Any<CancellationToken>())
+            .Returns(new List<TenantUserPrincipalAssignment>());
 
         var user = TenantUser.Create(customTenantId, "sub", "Ali").Value;
         var principal = Principal.Create(PrincipalId, "role", "hash", "Role", PrincipalType.Role, null, customTenantId).Value;

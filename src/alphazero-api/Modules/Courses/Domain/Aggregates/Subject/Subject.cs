@@ -27,4 +27,35 @@ public class Subject : TenantOwnedAggregate, ISoftDeletable
         return new Subject(id, tenantId,name, description);
     }
 
+    public ErrorOr<Success> Update(string name, string? description)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            return Error.Validation("Subject.Validation", "no name is provided");
+        }
+
+        Name = name;
+        Description = description;
+        return Result.Success;
+    }
+
+    public ErrorOr<Success> Delete()
+    {
+        if (IsDeleted)
+            return Error.Conflict("Subject.IsDeleted", "Subject is already deleted.");
+
+        IsDeleted = true;
+        OnDeleted = DateTime.UtcNow;
+        return Result.Success;
+    }
+
+    public ErrorOr<Success> Restore()
+    {
+        if (!IsDeleted)
+            return Error.Failure("Subject.IsDeleted", "Subject is not deleted.");
+
+        IsDeleted = false;
+        OnDeleted = null;
+        return Result.Success;
+    }
 }

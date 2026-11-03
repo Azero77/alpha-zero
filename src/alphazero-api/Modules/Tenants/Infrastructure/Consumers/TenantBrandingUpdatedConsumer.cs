@@ -1,7 +1,7 @@
 using AlphaZero.Modules.Tenants.Domain;
+using AlphaZero.Shared.Infrastructure.Caching;
 using MassTransit;
 using MediatR;
-using Microsoft.Extensions.Caching.Hybrid;
 using Microsoft.Extensions.Logging;
 
 namespace AlphaZero.Modules.Tenants.Infrastructure.Consumers;
@@ -10,12 +10,12 @@ public class TenantBrandingUpdatedConsumer :
     IConsumer<TenantBrandingUpdatedDomainEvent>,
     INotificationHandler<TenantBrandingUpdatedDomainEvent>
 {
-    private readonly HybridCache? _cache;
+    private readonly ICachingService? _cache;
     private readonly ILogger<TenantBrandingUpdatedConsumer> _logger;
 
     public TenantBrandingUpdatedConsumer(
         ILogger<TenantBrandingUpdatedConsumer> logger,
-        HybridCache? cache = null)
+        ICachingService? cache = null)
     {
         _logger = logger;
         _cache = cache;
@@ -41,9 +41,17 @@ public class TenantBrandingUpdatedConsumer :
         {
             try
             {
-                await _cache.RemoveAsync($"tenant:subdomain:{normalizedSubdomain}", cancellationToken);
-                await _cache.RemoveByTagAsync($"tenant-{normalizedSubdomain}", cancellationToken);
+                await _cache.RemoveAsync(
+                    CacheKey.Create("tenant:subdomain", normalizedSubdomain),
+                    cancellationToken);
+                await _cache.RemoveByTagAsync(
+                    CacheTag.Create("tenant-branding", normalizedSubdomain),
+                    cancellationToken);
                 _logger.LogInformation("Removed cache entries for tenant {Subdomain}", normalizedSubdomain);
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
             }
             catch (Exception ex)
             {

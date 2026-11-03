@@ -81,6 +81,11 @@ public class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
                 opts.AddInterceptors(sp.GetRequiredService<AlphaZero.Shared.Infrastructure.SoftDelete.SoftDeleteInterceptor>());
                 opts.ConfigureWarnings(w => w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
             });
+
+            // Ensure IPublishEndpoint publishes to in-memory IBus rather than external SQS bus in
+            // tests — RecordingPublishObserver captures Identity's first cross-module event
+            // (PrincipalExpired, issue #34 step 7) for publish assertions.
+            services.AddScoped<MassTransit.IPublishEndpoint>(sp => sp.GetRequiredService<MassTransit.IBus>());
         });
     }
 

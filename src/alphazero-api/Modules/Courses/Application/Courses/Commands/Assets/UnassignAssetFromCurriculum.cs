@@ -1,6 +1,7 @@
 using AlphaZero.Modules.Courses.Application.Repositories;
 using AlphaZero.Shared.Application;
 using ErrorOr;
+using FluentValidation;
 using MediatR;
 
 namespace AlphaZero.Modules.Courses.Application.Courses.Commands.Assets;
@@ -9,6 +10,15 @@ public record UnassignAssetFromCurriculumCommand(
     Guid CourseId,
     Guid ItemId
 ) : ICommand<Success>;
+
+public class UnassignAssetFromCurriculumCommandValidator : AbstractValidator<UnassignAssetFromCurriculumCommand>
+{
+    public UnassignAssetFromCurriculumCommandValidator()
+    {
+        RuleFor(x => x.CourseId).NotEmpty();
+        RuleFor(x => x.ItemId).NotEmpty();
+    }
+}
 
 public sealed class UnassignAssetFromCurriculumCommandHandler 
     : IRequestHandler<UnassignAssetFromCurriculumCommand, ErrorOr<Success>>
@@ -27,15 +37,13 @@ public sealed class UnassignAssetFromCurriculumCommandHandler
             .ExecuteAsync(ct);
         if (course is null) return Error.NotFound("Course.NotFound");
 
-        var section = course.Sections.FirstOrDefault(s => s.Items.Any(i => i.Id == request.ItemId));
+        var section = course.Sections.FirstOrDefault(s => s.Items.Any(i => i.Id == request.ItemId && !i.IsDeleted) && !s.IsDeleted);
         if (section is null)
             return Error.NotFound("Section.NotFound", "No section contains this item.");
 
-        var item = section.Items.FirstOrDefault(i => i.Id == request.ItemId);
-        if (item is null)
-            return Error.NotFound("CurriculumItem.NotFound");
-
-        var removeResult = section.RemoveItem(request.ItemId);
+        // Single domain operation: captures the BitIndex, soft-deletes the item and raises
+        // CurriculumItemDeletedDomainEvent so the mask bit is deactivated in the same transaction.
+        var removeResult = course.RemoveItem(section.Id, request.ItemId);
         if (removeResult.IsError)
             return removeResult.Errors;
 

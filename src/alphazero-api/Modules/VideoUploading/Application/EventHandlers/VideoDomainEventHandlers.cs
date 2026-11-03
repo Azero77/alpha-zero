@@ -25,6 +25,7 @@ public class VideoDomainEventHandlers :
     {
         var integrationEvent = new VideoMetadataChangedIntegrationEvent(
             notification.VideoId,
+            notification.TenantId,
             notification.Title,
             notification.Description);
 

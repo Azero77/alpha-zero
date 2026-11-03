@@ -235,21 +235,13 @@ public sealed class CourseSectionItemHandlers :
         if (course is null)
             return Error.NotFound("Course.NotFound", "Course not found.");
 
-        var section = course.Sections.FirstOrDefault(s => s.Id == request.SectionId && !s.IsDeleted);
-        if (section is null)
-            return Error.NotFound("Course.Section", "Section not found.");
-
         var (resources, parseWarnings) = CurriculumResourceParser.Parse(request.MainType, request.Content);
         LogParseWarnings(parseWarnings, "create");
 
-        var bitIndex = course.AllocateNextBitIndex();
-        var mainType = CurriculumItem.ParseMainType(request.MainType);
-        var itemResult = section.AddItem(
-            Guid.NewGuid(),
-            request.Title,
-            mainType,
-            bitIndex,
-            resources);
+        // Creation is a single domain operation: it allocates the stable BitIndex, attaches the
+        // item to the section, and raises CurriculumItemAddedDomainEvent so the active-mask
+        // update commits atomically with the curriculum change.
+        var itemResult = course.AddItem(request.SectionId, request.Title, CurriculumItem.ParseMainType(request.MainType), resources);
 
         if (itemResult.IsError)
             return itemResult.Errors;
@@ -305,15 +297,11 @@ public sealed class CourseSectionItemHandlers :
         if (course is null)
             return Error.NotFound("Course.NotFound", "Course not found.");
 
-        var section = course.Sections.FirstOrDefault(s => s.Id == request.SectionId && !s.IsDeleted);
-        if (section is null)
-            return Error.NotFound("Course.Section", "Section not found.");
-
-        var item = section.Items.FirstOrDefault(i => i.Id == request.ItemId && !i.IsDeleted);
-        if (item is null)
-            return Error.NotFound("CurriculumItem.NotFound", "Item not found.");
-
-        var removeResult = section.RemoveItem(request.ItemId);
+        // Removal is a single domain operation: it captures the BitIndex BEFORE the item is
+        // soft-deleted and raises CurriculumItemDeletedDomainEvent so the position is
+        // deactivated on the course mask in the same transaction (no index shifts, no
+        // enrollment updates).
+        var removeResult = course.RemoveItem(request.SectionId, request.ItemId);
         if (removeResult.IsError)
             return removeResult.Errors;
 

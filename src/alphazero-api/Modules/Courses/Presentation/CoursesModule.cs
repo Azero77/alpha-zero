@@ -51,7 +51,7 @@ public class CoursesModule : AppModule, ICoursesModule
 
         configuration.AddEntityFrameworkOutbox<AppDbContext>(o =>
         {
-            o.UsePostgres();
+            o.UsePostgres(false);
             o.UseBusOutbox();
             o.QueryDelay = TimeSpan.FromMinutes(5);
             o.DuplicateDetectionWindow = TimeSpan.FromMinutes(30);

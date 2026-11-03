@@ -1,6 +1,7 @@
 using AlphaZero.Shared.Application;
 using AlphaZero.Shared.Authorization;
 using AlphaZero.Shared.Infrastructure;
+using AlphaZero.Shared.Infrastructure.Messaging;
 using Autofac;
 using Autofac.Extensions.DependencyInjection;
 using FastEndpoints;
@@ -252,7 +253,15 @@ public class Program
             x.AddDelayedMessageScheduler();
             x.UsingInMemory((context, cfg) =>
             {
+                var hostSettings = context.GetService<MassTransitHostSettings>();
+                var baseUri = hostSettings?.BaseAddress ?? context.GetService<IConfiguration>()?["MassTransit:BaseAddress"];
+                if (!string.IsNullOrEmpty(baseUri))
+                {
+                    cfg.Host(new Uri(baseUri));
+                }
                 cfg.UseDelayedMessageScheduler();
+                cfg.UseConsumeFilter(typeof(TenantConsumeFilter<>), context);
+                cfg.UsePublishFilter(typeof(TenantPublishFilter<>), context);
                 cfg.ConfigureEndpoints(context);
             });
 
@@ -267,7 +276,7 @@ public class Program
         {
             x.AddEntityFrameworkOutbox<AlphaZero.Modules.VideoUploading.Infrastructure.Persistance.AppDbContext>(o =>
             {
-                o.UsePostgres();
+                o.UsePostgres(false);
                 o.UseBusOutbox(c => c.DisableDeliveryService());
                 o.QueryDelay = TimeSpan.FromMinutes(5);
                 o.DuplicateDetectionWindow = TimeSpan.FromMinutes(30);
@@ -282,6 +291,8 @@ public class Program
             {
                 var hostRegion = region;
                 cfg.Host(hostRegion, h => { });
+                cfg.UseConsumeFilter(typeof(TenantConsumeFilter<>), context);
+                cfg.UsePublishFilter(typeof(TenantPublishFilter<>), context);
                 cfg.ConfigureEndpoints(context);
             });
 

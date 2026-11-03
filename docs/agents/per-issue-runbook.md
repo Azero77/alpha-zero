@@ -21,8 +21,9 @@ Issue-specific deltas (§3) override the generic text where they differ.
 You are the implementation owner for exactly one issue in this repo:
 
   ISSUE: ⟨n⟩
-  BRANCH: spec/⟨n⟩-⟨slug⟩        (derived from the issue title; created from current main, or from
-                                  main + any upstream branch if the issue body says it builds on one)
+  BRANCH: spec/⟨n⟩-⟨slug⟩        (derived from the issue title; created from current
+                                  CourseContentManagement — the integration branch — or from that
+                                  branch + any upstream if the issue body names one)
 
 Do all of this in this one conversation, in this order. Do not wait for me to confirm routine steps;
 ask only if the spec itself is ambiguous or contradicts the code you find.
@@ -75,7 +76,9 @@ ask only if the spec itself is ambiguous or contradicts the code you find.
      accidental module-wide renames outside what the issue sanctions).
 
 7. SHIP:
-   - git push to the branch, open a PR closing the issue:
+   - git push to the branch, open a PR **targeting `CourseContentManagement` — never `main`**,
+     closing the issue (main stays frozen until the whole spec chain lands; a maintainer will
+     make one release PR from `CourseContentManagement` to `main` at the end):
      body: "Closes #⟨n⟩" first line; then a one-line summary, then test-evidence bullet list
      (tests added, acceptance from issue's Testing Decisions each individually addressable).
    - Do NOT merge unless the repo convention here (docs/agents) allows it; if the merge isn't
@@ -133,7 +136,7 @@ agent stops at PR and the orchestrator/me merges.
 | **#30** Maintenance | The v2-report §2-B list (this is the delete list); every file named | Everything here is **subtractive** — deletions are the spec; "prove it's dead" is real work: grep + zero-reference + full-suite-green. Ticket-secret fail-fast touches shared code (out-of-Courses) — allowed in this issue only for the playback signer composition point |
 | **#31** Rename | MassTransit message URN conventions; EF configuration class names; every route string with the typo; `videos` module references to Courses' events | **Recon first, then a decision comment:** investigate the message URN pin path, post your pin strategy in the issue comment BEFORE renaming; in-flight message compat is acceptance; the deploy window / alias route requirement is spec'd — never rename + change payload shapes in the same PR; harmless reconciliation of route aliases OK |
 | **#32** Student UX | Existing `GetCourseOverview` pre-request visibility family and its tests; `GetStudentDashboard`; course plans; issue report P1 items 7/8 | **Do not modify existing list/detail endpoints** shape or auth; the new endpoints must not regress anonymous/published visibility rules spoofed by test evidence; completion event idempotency test is acceptance; do NOT touch playback URLs inside the view (spec puts resource identity in a renamed field only) |
-| **#33** Cache | Sibling modules' cache wiring precedent (Identity/VideoUploading/Tenants); shared HybridCache + decorator; issue report P2 item 20 | Conservative default = don't cache; explicit landing zone only (catalog / view / subject-list); mutation-eviction wiring is part of the same PR as the cached reads (never reads without evictions); tenant key isolation asserted |
+| **#33** Cache | Sibling modules' cache wiring precedent (now through the shared `AlphaZero.Shared` `ICachingService` seam); Courses `CACHING.md`; issue report P2 item 20 | Conservative default = don't cache; landing zone = staff + student catalog, staff/public course view, overview, readiness companion, subject listing; tenant-scoped keys carry no caller paging/search/sort values (non-default requests bypass); persistence-driven tag eviction lands in the same PR as the cached reads (never reads without evictions); tenant key isolation asserted; L1-only until the distributed-invalidation TODO is taken |
 | **#34** Lifecycle | `Enrollment.cs` + `EnrollmentStatus.cs` guards; issue report P2 13/14; spec #29's deactivate endpoint (wired or PR'd) | **Transition matrix table** single source, in the spec; new events wire-pinned same as #31 (no in-flight breakage); scheduler/jitter for expiry: investigate module precedent (implementer's call) — no new cron/lambda deployment artifact |
 | **#35** Hardening | All sibling specs' landing zones (that's the real test-target list); issue report §10 test-gap list; per-command validator pattern | No new features — only validators + tests; a fix may fall out (e.g. reorder id-set bug) but scope-tracked separately in the issue comment; saga tests use TauHing/chost MassTransit conventions from `EnrollStudentFromSagaConsumerTests`/`MetadataConsumerTests` precedents; tests for #31-linked behaviors exist only if #31 marked "done" (else write them against current spellings) |
 
@@ -150,8 +153,9 @@ otherwise follow §2.2's slice/test-first sequence manually.
 
 - Launch in any order that the native dependencies permit — GitHub's `blocked_by` count (shown
   earlier) is the live gate: an agent's issue must show `blocked_by: 0` to start.
-- One conversation per issue, one branch per issue; merge normalizes to `main` (or per the repo's
-  episodic-flow integration branch, per `docs/agents/issue-tracker.md` conventions).
+- One conversation per issue, one branch per issue; every issue's PR targets
+  **`CourseContentManagement`** (the integration branch). `main` is frozen for the duration of
+  the chain; when the last issue merges, one release PR takes `CourseContentManagement` → `main`.
 - Merge order = dependency order: #30 → #31 → {#29, #35, then #32 (+#34)} → #33.
 - If a spec's acceptance needs an upstream one (#33 evictions of #29's new mutations, for example),
   verify the blocker's merge landed before opening the downstream; that is what the edge prevents.

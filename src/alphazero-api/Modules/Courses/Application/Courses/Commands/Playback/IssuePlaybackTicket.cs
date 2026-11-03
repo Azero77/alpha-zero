@@ -1,11 +1,12 @@
 using AlphaZero.Modules.Courses.Application.Repositories;
 using AlphaZero.Modules.Courses.Domain.Aggregates.Courses;
-using AlphaZero.Modules.Courses.Domain.Aggregates.Enrollements;
+using AlphaZero.Modules.Courses.Domain.Aggregates.Enrollments;
 using AlphaZero.Shared.Application;
 using AlphaZero.Shared.Authorization;
 using AlphaZero.Shared.Infrastructure.Tenats;
 using AlphaZero.Shared.Security;
 using ErrorOr;
+using FluentValidation;
 using MediatR;
 using Microsoft.Extensions.Logging;
 using Namotion.Reflection;
@@ -15,6 +16,15 @@ namespace AlphaZero.Modules.Courses.Application.Courses.Commands.Playback;
 public record IssuePlaybackTicketCommand(
     Guid CourseId,
     Guid CurriculumResourceId) : ICommand<IssuePlaybackTicketResult>;
+
+public class IssuePlaybackTicketCommandValidator : AbstractValidator<IssuePlaybackTicketCommand>
+{
+    public IssuePlaybackTicketCommandValidator()
+    {
+        RuleFor(x => x.CourseId).NotEmpty();
+        RuleFor(x => x.CurriculumResourceId).NotEmpty();
+    }
+}
 
 public record IssuePlaybackTicketResult(
     string Ticket,
@@ -49,7 +59,7 @@ public sealed class IssuePlaybackTicketCommandHandler : IRequestHandler<IssuePla
     public async Task<ErrorOr<IssuePlaybackTicketResult>> Handle(
         IssuePlaybackTicketCommand request, CancellationToken cancellationToken)
     {
-        //No need to use Enrollement , because Policy Evaluator just needs a permission to course:view in this course to access the content,
+        //No need to use Enrollment , because Policy Evaluator just needs a permission to course:view in this course to access the content,
 
         var authContext = _authorizationContextProvider.Get();
 

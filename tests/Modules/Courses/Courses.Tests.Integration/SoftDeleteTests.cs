@@ -30,8 +30,17 @@ public class SoftDeleteTests : BaseIntegrationTest
         var courseId = (await courseResp.Content.ReadFromJsonAsync<CreateCourseResponse>())!.Id;
 
         await Client.PostAsJsonAsync($"/courses/{courseId}/sections", new AddSectionRequest { Title = "S1" });
-        var courseData = await Client.GetFromJsonAsync<CourseResponse>($"/courses/{courseId}");
-        var sectionId = courseData!.Sections.First().Id;
+        // Read the section id straight from the database — reading it through GET /courses/{id}
+        // would fill the now-cached course view, which bypasses command-driven eviction and
+        // would serve this deliberate (command-less) DbContext soft-delete afterwards.
+        var sectionId = default(Guid);
+        await ExecuteDbContextAsync(async db =>
+        {
+            sectionId = await db.Set<AlphaZero.Modules.Courses.Domain.Aggregates.Courses.CourseSection>()
+                .Where(s => s.CourseId == courseId && !s.IsDeleted)
+                .Select(s => s.Id)
+                .FirstAsync();
+        });
 
         return (courseId, sectionId, subjectId);
     }

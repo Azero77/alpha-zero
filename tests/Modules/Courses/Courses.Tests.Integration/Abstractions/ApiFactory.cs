@@ -21,6 +21,14 @@ public class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
         Environment.SetEnvironmentVariable("Testing:BypassIAM", "true");
     }
 
+    /// <summary>
+    /// Connection string of this factory's test database. Secondary hosts (e.g. the IAM-enforcing
+    /// security factory) reuse it via InitializeSharedDatabaseAsync instead of starting a second
+    /// container — a second container plus the process-global connection env vars caused mid-run
+    /// 57P01 connection terminations across the main factory's tests.
+    /// </summary>
+    public string DbConnectionString => _dbContainer.GetConnectionString();
+
     private readonly PostgreSqlContainer _dbContainer = new PostgreSqlBuilder()
         .WithImage("postgres:16.1-alpine3.19")
         .WithDatabase("alphazero_courses_test")
@@ -29,14 +37,26 @@ public class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
         .Build();
 
     public WireMockServer MockServer { get; private set; } = null!;
+    private readonly string _busBaseAddress = $"loopback://alphazero-{Guid.NewGuid():N}/";
 
-    public async Task InitializeAsync()
+    /// <summary>
+    /// Whether this factory owns (starts/stops) a dedicated Postgres container. Secondary factories
+    /// (e.g. the IAM-enforcing security factory) share the primary factory's database instead — a
+    /// second container plus the process-global connection env vars caused mid-run 57P01
+    /// connection terminations across the main factory's tests.
+    /// </summary>
+    protected virtual bool OwnsDatabase => true;
+
+    public virtual async Task InitializeAsync()
     {
-        await _dbContainer.StartAsync();
+        if (OwnsDatabase)
+        {
+            await _dbContainer.StartAsync();
 
-        // Use environment variables to override settings BEFORE builder.Build() is called in Program.cs
-        Environment.SetEnvironmentVariable("ConnectionStrings__alphazerodb", _dbContainer.GetConnectionString());
-        Environment.SetEnvironmentVariable("DatabaseSettings__ConnectionString", _dbContainer.GetConnectionString());
+            // Use environment variables to override settings BEFORE builder.Build() is called in Program.cs
+            Environment.SetEnvironmentVariable("ConnectionStrings__alphazerodb", _dbContainer.GetConnectionString());
+            Environment.SetEnvironmentVariable("DatabaseSettings__ConnectionString", _dbContainer.GetConnectionString());
+        }
 
         MockServer = WireMockServer.Start();
     }
@@ -44,6 +64,12 @@ public class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Development");
+        builder.UseSetting("MassTransit:BaseAddress", _busBaseAddress);
+        // Analytics counters are derived-from-source via the CourseAnalyticsRefreshWorker, which
+        // waits the configured interval between passes (default: a full day). Lifecycle tests poll
+        // the analytics endpoint within seconds of a mutation, so refresh every second in the
+        // test host (the worker refreshes immediately at startup, then every 1s).
+        builder.UseSetting("Analytics:RefreshIntervalSeconds", "1");
         builder.ConfigureTestServices(services =>
         {
             services.AddAuthentication(options =>
@@ -55,10 +81,21 @@ public class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
             services.AddAuthorizationBuilder()
                 .SetDefaultPolicy(new Microsoft.AspNetCore.Authorization.AuthorizationPolicyBuilder("TestScheme").RequireAuthenticatedUser().Build());
 
-            // Replace Tenant Provider
+            // Replace Tenant Provider. The anonymous opt-out path (#32/D4) runs the REAL
+            // HttpTenantProvider so claim/header precedence (D2) is exercised end-to-end;
+            // every other request keeps the static TestTenantProvider — existing tests
+            // are unchanged.
             services.RemoveAll<ITenantProvider>();
             services.AddHttpContextAccessor();
-            services.AddScoped<ITenantProvider, TestTenantProvider>();
+            services.AddScoped<TestTenantProvider>();
+            services.AddScoped<HttpTenantProvider>();
+            services.AddScoped<ITenantProvider>(sp =>
+            {
+                var httpContext = sp.GetRequiredService<IHttpContextAccessor>().HttpContext;
+                return httpContext?.Request.Headers.ContainsKey("X-Test-Anonymous") == true
+                    ? (ITenantProvider)sp.GetRequiredService<HttpTenantProvider>()
+                    : sp.GetRequiredService<TestTenantProvider>();
+            });
 
             // Bypass IAM evaluation for integration tests when Testing:BypassIAM is set
             if (Environment.GetEnvironmentVariable("Testing:BypassIAM") == "true")
@@ -78,14 +115,21 @@ public class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
                 DocumentProcessingFailedQueue = new Aspire.Shared.SQSQueueSettings { QueueUrl = "https://sqs.mock/mock-queue-doc-failed" }
             });
 
-            // Ensure IPublishEndpoint publishes to in-memory IBus rather than external SQS bus in tests
+            // Ensure IPublishEndpoint publishes to in-memory IBus rather than external SQS bus in tests.
+            // RecordingPublishObserver captures module-published payloads for lifecycle-event assertions (#34).
             services.AddScoped<MassTransit.IPublishEndpoint>(sp => sp.GetRequiredService<MassTransit.IBus>());
+
+            // Isolate in-memory bus per WebApplicationFactory instance so secondary hosts don't collide or stop the shared broker
+            services.AddSingleton(new AlphaZero.Shared.Infrastructure.Messaging.MassTransitHostSettings { BaseAddress = _busBaseAddress });
         });
     }
 
-    public new async Task DisposeAsync()
+    public virtual async Task DisposeAsync()
     {
-        await _dbContainer.StopAsync();
+        if (OwnsDatabase)
+        {
+            await _dbContainer.StopAsync();
+        }
         MockServer.Stop();
     }
 }
@@ -93,6 +137,7 @@ public class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
 public class TestTenantProvider : ITenantProvider
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly IAmbientTenantContext _ambientTenant;
     private static readonly AsyncLocal<Guid?> _asyncLocalTenantId = new();
     private static Guid? _fallbackTenantId;
 
@@ -116,9 +161,10 @@ public class TestTenantProvider : ITenantProvider
         }
     }
 
-    public TestTenantProvider(IHttpContextAccessor httpContextAccessor)
+    public TestTenantProvider(IHttpContextAccessor httpContextAccessor, IAmbientTenantContext ambientTenant)
     {
         _httpContextAccessor = httpContextAccessor;
+        _ambientTenant = ambientTenant;
     }
 
     public Guid? GetTenant()
@@ -131,6 +177,11 @@ public class TestTenantProvider : ITenantProvider
                 return tenantId;
             }
         }
+
+        // Consumers have no HTTP context; the consume filter sets this. It must win over the
+        // static fallback so a genuinely tenant-less bus scope is observable in tests.
+        if (_ambientTenant.TenantId is { } ambientTenantId)
+            return ambientTenantId;
 
         return CurrentTenantId ?? StaticTenantId;
     }

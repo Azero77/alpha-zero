@@ -1,8 +1,7 @@
 ﻿using AlphaZero.Modules.Identity.Infrastructure.Persistance;
+using AlphaZero.Modules.Identity.Infrastructure.Repositories;
 using AlphaZero.Shared.Authorization;
-using Autofac.Core;
-using Microsoft.Extensions.Caching.Hybrid;
-using Microsoft.Extensions.Caching.Memory;
+using AlphaZero.Shared.Infrastructure.Caching;
 
 
 public class PublicKeyProvider(AppDbContext context) : IPublicKeyProvider
@@ -22,31 +21,39 @@ public class PublicKeyProvider(AppDbContext context) : IPublicKeyProvider
 }
 
 
-public class CachePublicKeyProvider(HybridCache cache, 
-    PublicKeyProvider decorated,
-    IMemoryCache   assignmentCache) : IPublicKeyProvider
+public class CachePublicKeyProvider(
+    ICachingService cache,
+    PublicKeyProvider decorated) : IPublicKeyProvider
 {
+    private static readonly CachePolicy Policy = new(TimeSpan.FromHours(24));
+
     public async Task<string?> GetPublicKeyAsync(string deviceId, CancellationToken token = default)
     {
+        if (!Guid.TryParse(deviceId, out var parsedDeviceId))
+            return null;
+
         return await cache.GetOrCreateAsync<string?>(
-            $"device_pubkey:{deviceId}",
-            async token => await decorated.GetPublicKeyAsync(deviceId),
-            new HybridCacheEntryOptions { Expiration = TimeSpan.FromHours(24) }
-        );
+            IdentityCacheKeys.DevicePublicKey(parsedDeviceId.ToString("N")),
+            Policy,
+            [],
+            cachedToken => decorated.GetPublicKeyAsync(parsedDeviceId.ToString(), cachedToken),
+            token);
     }
 
     public async Task SetNewDevicePublicKey(string tenantUserId, string deviceId, string publicKey, CancellationToken token = default)
     {
-        await cache.SetAsync(
-           $"device_pubkey:{deviceId}",
-           publicKey,
-           new HybridCacheEntryOptions { Expiration = TimeSpan.FromHours(24) },
-           cancellationToken: token
-       );
+        // Reads normalise the device id to "N"; write the same shape or the entry is never hit.
+        if (Guid.TryParse(deviceId, out var parsedDeviceId))
+        {
+            await cache.SetAsync(
+                IdentityCacheKeys.DevicePublicKey(parsedDeviceId.ToString("N")),
+                publicKey,
+                Policy,
+                [],
+                token);
+        }
 
-
-        // Also invalidate the user's assignments cache because MainDeviceId might have changed
-        assignmentCache.Remove($"user_assignments:{tenantUserId}");
-
+        // MainDeviceId might have changed, so the user's assignment view must be re-read.
+        await cache.RemoveAsync(IdentityCacheKeys.UserAssignments(tenantUserId), token);
     }
 }

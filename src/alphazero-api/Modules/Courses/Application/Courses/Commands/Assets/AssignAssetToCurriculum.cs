@@ -3,6 +3,7 @@ using AlphaZero.Modules.Courses.Domain.Aggregates.Courses;
 using AlphaZero.Shared.Application;
 using AlphaZero.Shared.Infrastructure.Repositores;
 using ErrorOr;
+using FluentValidation;
 using MediatR;
 using System.Text.Json;
 
@@ -15,6 +16,17 @@ public record AssignAssetToCurriculumCommand(
     string Title,
     JsonElement? Metadata = null
 ) : ICommand<Guid>;
+
+public class AssignAssetToCurriculumCommandValidator : AbstractValidator<AssignAssetToCurriculumCommand>
+{
+    public AssignAssetToCurriculumCommandValidator()
+    {
+        RuleFor(x => x.CourseId).NotEmpty();
+        RuleFor(x => x.SectionId).NotEmpty();
+        RuleFor(x => x.AssetId).NotEmpty();
+        RuleFor(x => x.Title).NotEmpty().MaximumLength(256);
+    }
+}
 
 public sealed class AssignAssetToCurriculumCommandHandler 
     : IRequestHandler<AssignAssetToCurriculumCommand, ErrorOr<Guid>>
@@ -70,13 +82,9 @@ public sealed class AssignAssetToCurriculumCommandHandler
             _ => ResourceType.Article
         };
 
-        var bitIndex = course.AllocateNextBitIndex();
-        var itemResult = section.AddItem(
-            Guid.NewGuid(),
-            request.Title,
-            mainType,
-            bitIndex,
-            new[] { resource });
+        // Single domain operation: BitIndex allocation + item addition + CurriculumItemAddedDomainEvent
+        // (the active-mask bit for the new position is activated in the same transaction).
+        var itemResult = course.AddItem(request.SectionId, request.Title, mainType, new[] { resource });
 
         if (itemResult.IsError)
             return itemResult.Errors;

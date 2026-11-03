@@ -8,6 +8,7 @@
 
 	<ItemGroup>
 		<ProjectReference Include="..\..\..\AlphaZero.Shared\AlphaZero.Shared.csproj" />
+		<ProjectReference Include="..\IntegrationEvents\IntegrationEvents.csproj" />
 	</ItemGroup>
 
   <ItemGroup>
