@@ -1,5 +1,7 @@
-using AlphaZero.Modules.Courses.Application.Enrollements.Commands.Deactivate;
+using AlphaZero.Modules.Courses.Application.Enrollments;
+using AlphaZero.Modules.Courses.Application.Enrollments.Commands.Deactivate;
 using AlphaZero.Modules.Courses.IntegrationEvents;
+using AlphaZero.Shared.Authorization;
 using MassTransit;
 using Microsoft.Extensions.Logging;
 
@@ -10,7 +12,14 @@ public class RevokeStudentEnrollmentFromSagaConsumer(ICoursesModule coursesModul
     public async Task Consume(ConsumeContext<RevokeStudentEnrollmentFromSagaCommand> context)
     {
         var command = new DeactivateEnrollmentCommand(context.Message.UserId, context.Message.CourseId);
-        var result = await coursesModule.Send(command);
+
+        // Story #10 (§3.5): the saga is an authorized system machine identity in IAM.
+        // We pass the SystemServiceAuthorizationContext explicitly to the module dispatch,
+        // seeding the child lifetime scope with honest actor credentials (no AsyncLocal).
+        var systemContext = SystemServiceAuthorizationContext.Create(
+            EnrollmentTransitionActor.RevocationSagaServiceName,
+            EnrollmentPermissions.Deactivate);
+        var result = await coursesModule.Send(command, systemContext, context.CancellationToken);
 
         if (result.IsError)
         {

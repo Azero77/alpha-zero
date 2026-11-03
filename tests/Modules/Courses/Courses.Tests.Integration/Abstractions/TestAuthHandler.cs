@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using System.Text.Encodings.Web;
+using AlphaZero.Shared.Authorization;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -18,16 +19,30 @@ public class TestAuthHandler : AuthenticationHandler<AuthenticationSchemeOptions
 
     protected override Task<AuthenticateResult> HandleAuthenticateAsync()
     {
-        // X-Test-User-Id pins a stable user identity across calls (token/sub/identity_id);
-        // requests without the header get a random per-request identity.
-        var headerHasUser = Context.Request.Headers.TryGetValue("X-Test-User-Id", out var userId);
-        var effectiveUserId = headerHasUser ? userId.First().ToString() : Guid.NewGuid().ToString();
+        // Anonymous opt-out (#32/D4): a request carrying `X-Test-Anonymous` runs through the
+        // host with NO identity — this is the only way the anonymous catalog/view paths and
+        // the real HttpTenantProvider claim/header precedence are exercised end-to-end.
+        if (Context.Request.Headers.ContainsKey("X-Test-Anonymous"))
+        {
+            return Task.FromResult(AuthenticateResult.NoResult());
+        }
+
+        // Default: random user ids per request. `X-Test-User-Id` pins the caller identity
+        // (sub/NameIdentifier) — the first sub claim wins in AuthorizationContextProvider,
+        // so the pinned claims must REPLACE the defaults, not be appended.
+        var userId = Guid.NewGuid().ToString();
+        if (Context.Request.Headers.TryGetValue("X-Test-User-Id", out var pinnedUserId))
+        {
+            userId = pinnedUserId.ToString();
+        }
 
         var claims = new List<Claim>
         {
-            new Claim(ClaimTypes.NameIdentifier, effectiveUserId),
-            new Claim("sub", effectiveUserId),
-            new Claim("identity_id", effectiveUserId),
+            new Claim(ClaimTypes.NameIdentifier, userId),
+            new Claim("sub", userId),
+            // ToTenantUserDTO() hard-nulls without identity_id (ClaimsExtensions.cs) —
+            // access/playback-ticket mint endpoints resolve the caller through it (spec-34).
+            new Claim(CustomClaimTypes.IdentityId, "test-identity"),
             new Claim("name", "Test User"),
             new Claim("auth_method", "TenantUser"),
             new Claim("sid", Guid.NewGuid().ToString())

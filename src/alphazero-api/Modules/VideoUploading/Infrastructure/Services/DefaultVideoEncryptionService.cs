@@ -2,6 +2,7 @@ using AlphaZero.Modules.VideoUploading.Application;
 using AlphaZero.Modules.VideoUploading.Application.Services;
 using AlphaZero.Modules.VideoUploading.Domain.Models;
 using AlphaZero.Modules.VideoUploading.Infrastructure.Persistance;
+using AlphaZero.Shared.Infrastructure.Caching;
 using ErrorOr;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Cryptography;
@@ -11,7 +12,6 @@ using Amazon.SimpleSystemsManagement;
 using Amazon.SimpleSystemsManagement.Model;
 using Aspire.Shared;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
-using Microsoft.Extensions.Caching.Hybrid;
 using Microsoft.Extensions.Logging;
 
 namespace AlphaZero.Modules.VideoUploading.Infrastructure.Services;
@@ -22,15 +22,20 @@ public class DefaultVideoEncryptionService(
     Microsoft.Extensions.Configuration.IConfiguration configuration,
     IAmazonSimpleSystemsManagement ssmClient,
     AWSResources awsResources,
-    HybridCache cache) : IVideoEncryptionService
+    ICachingService cache) : IVideoEncryptionService
 {
+    private static readonly CachePolicy MasterKeyPolicy = new(TimeSpan.FromMinutes(10));
+    private static readonly CacheKey MasterKeyKey = CacheKey.Create("ssm", "master-clear-key");
+
     public async Task<ErrorOr<byte[]>> GetClearKeyAsync(Guid videoId, CancellationToken ct = default)
     {
         var parameterName = awsResources.MasterClearKeyParameter 
             ?? "/AlphaZero/VideoPipeline/MasterClearKey";
 
         var masterSecret = await cache.GetOrCreateAsync(
-            "ssm:master-clear-key",
+            MasterKeyKey,
+            MasterKeyPolicy,
+            [],
             async cancel =>
             {
                 var response = await ssmClient.GetParameterAsync(new GetParameterRequest
@@ -39,7 +44,7 @@ public class DefaultVideoEncryptionService(
                     WithDecryption = true
                 }, cancel);
                 return response.Parameter.Value;
-            }, cancellationToken: ct);
+            }, ct);
 
         if (string.IsNullOrEmpty(masterSecret))
             return Error.Failure("Encryption.KeyMissing", "Master ClearKey not found.");

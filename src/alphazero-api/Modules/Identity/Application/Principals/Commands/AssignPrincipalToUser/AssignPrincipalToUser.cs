@@ -4,7 +4,6 @@ using AlphaZero.Modules.Identity.Domain.Repositories;
 using AlphaZero.Shared.Application;
 using AlphaZero.Shared.Infrastructure.Repositores;
 using AlphaZero.Shared.Infrastructure.Tenats;
-using Microsoft.Extensions.Caching.Hybrid;
 using ErrorOr;
 using FluentValidation;
 using MediatR;
@@ -72,12 +71,17 @@ public sealed class AssignPrincipalToUserCommandHandler : IRequestHandler<Assign
 
         var normalizedArn = request.ResourceArn.ToLowerInvariant();
 
-        // Check for existing assignment to ensure idempotency and prevent unique index violation
-        var existingAssignment = await _assignmentRepository.GetFirst(
-            a => a.TenantUser.Id == request.TenantUserId && 
-                 a.Principal.Id == request.PrincipalId && 
-                 a.Resource.Value == normalizedArn, 
+        // Check for existing assignment to ensure idempotency and prevent unique index violation.
+        // MAPPED-COLUMNS + in-memory ARN match: traversing .TenantUser makes the tenant-filtered
+        // nav JOIN untranslatable, `.Resource.Value` member access on the converted ARN property is
+        // untranslatable, and value-object equality (ErrorOr) is untranslatable — so narrow in SQL
+        // on TenantUserId/PrincipalId (bounded rows: one per resource scope) and match the ARN
+        // client-side, mirroring the existing GetActiveAssignment discipline.
+        var candidates = await _assignmentRepository.Get(
+            a => a.TenantUserId == request.TenantUserId && a.PrincipalId == request.PrincipalId,
             cancellationToken);
+
+        var existingAssignment = candidates.FirstOrDefault(c => c.Resource.Value == normalizedArn);
 
         if (existingAssignment is not null)
         {

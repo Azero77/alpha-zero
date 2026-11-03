@@ -1,5 +1,6 @@
 using AlphaZero.Modules.Courses.Application.Courses.Commands.Plans;
 using AlphaZero.Modules.Courses.Application.Repositories;
+using AlphaZero.Modules.Courses.Application.Services;
 using AlphaZero.Modules.Courses.Domain.Aggregates.Courses;
 using ErrorOr;
 using FluentAssertions;
@@ -16,6 +17,7 @@ namespace AlphaZero.Modules.Courses.UnitTests.Application.Courses;
 public class PlanCommandHandlerTests
 {
     private readonly ICourseRepository _courseRepository;
+    private readonly ICoursePlanPrincipalService _planPrincipalService;
     private readonly ILogger<AddPlanCommandHandler> _addLogger;
     private readonly ILogger<UpdatePlanCommandHandler> _updateLogger;
     private readonly ILogger<RemovePlanCommandHandler> _removeLogger;
@@ -26,11 +28,12 @@ public class PlanCommandHandlerTests
     public PlanCommandHandlerTests()
     {
         _courseRepository = Substitute.For<ICourseRepository>();
+        _planPrincipalService = Substitute.For<ICoursePlanPrincipalService>();
         _addLogger = Substitute.For<ILogger<AddPlanCommandHandler>>();
         _updateLogger = Substitute.For<ILogger<UpdatePlanCommandHandler>>();
         _removeLogger = Substitute.For<ILogger<RemovePlanCommandHandler>>();
-        _addHandler = new AddPlanCommandHandler(_courseRepository, _addLogger);
-        _updateHandler = new UpdatePlanCommandHandler(_courseRepository, _updateLogger);
+        _addHandler = new AddPlanCommandHandler(_courseRepository, _planPrincipalService, _addLogger);
+        _updateHandler = new UpdatePlanCommandHandler(_courseRepository, _planPrincipalService, _updateLogger);
         _removeHandler = new RemovePlanCommandHandler(_courseRepository, _removeLogger);
     }
 
@@ -105,6 +108,32 @@ public class PlanCommandHandlerTests
         _courseRepository.DidNotReceiveWithAnyArgs().Update(default!);
     }
 
+    [Fact]
+    public async Task AddPlan_Should_MintPrincipal_AndAddPlan_WhenWindowedPlan()
+    {
+        // Arrange
+        var course = NewCourse(Guid.NewGuid());
+        SetupQuery(course.Id, course);
+        var mintedPrincipalId = Guid.NewGuid();
+        _planPrincipalService
+            .EnsureCoursePlanPrincipalAsync(course.TenantId, course.Id, Arg.Any<Guid>(), Arg.Any<CancellationToken>())
+            .Returns(mintedPrincipalId);
+
+        var command = new AddPlanCommand(course.Id, "30-Day Pass", null, AccessWindowDays: 30);
+
+        // Act
+        var result = await _addHandler.Handle(command, CancellationToken.None);
+
+        // Assert
+        result.IsError.Should().BeFalse();
+        var plan = course.Plans.Should().ContainSingle().Subject;
+        result.Value.Should().Be(plan.Id);
+        plan.Name.Should().Be("30-Day Pass");
+        plan.PrincipalId.Should().Be(mintedPrincipalId);
+        plan.AccessWindowDays.Should().Be(30);
+        _courseRepository.Received(1).Update(course);
+    }
+
     // ---- UpdatePlan ----
 
     [Fact]
@@ -159,6 +188,30 @@ public class PlanCommandHandlerTests
         plan.Name.Should().Be("Premium");
         plan.PrincipalId.Should().Be(principalId);
         course.Plans.Should().ContainSingle();
+    }
+
+    [Fact]
+    public async Task UpdatePlan_Should_MintPrincipal_WhenTransitioningToWindowedPlan()
+    {
+        // Arrange
+        var course = NewCourse(Guid.NewGuid());
+        var plan = course.AddPlan("Standard", Guid.NewGuid()).Value;
+        SetupQuery(course.Id, course);
+        var mintedPrincipalId = Guid.NewGuid();
+        _planPrincipalService
+            .EnsureCoursePlanPrincipalAsync(course.TenantId, course.Id, plan.Id, Arg.Any<CancellationToken>())
+            .Returns(mintedPrincipalId);
+        var command = new UpdatePlanCommand(course.Id, plan.Id, "Standard 60d", null, AccessWindowDays: 60);
+
+        // Act
+        var result = await _updateHandler.Handle(command, CancellationToken.None);
+
+        // Assert
+        result.IsError.Should().BeFalse();
+        plan.Name.Should().Be("Standard 60d");
+        plan.PrincipalId.Should().Be(mintedPrincipalId);
+        plan.AccessWindowDays.Should().Be(60);
+        _courseRepository.Received(1).Update(course);
     }
 
     // ---- RemovePlan ----

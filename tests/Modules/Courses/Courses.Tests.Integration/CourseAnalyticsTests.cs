@@ -1,13 +1,13 @@
 using System.Net;
 using System.Net.Http.Json;
 using AlphaZero.Modules.Courses.Application.Analytics.Queries.GetCourseAnalytics;
-using AlphaZero.Modules.Courses.Application.Enrollements.Queries.GetEnrollement;
+using AlphaZero.Modules.Courses.Application.Enrollments.Queries.GetEnrollment;
 using AlphaZero.Modules.Courses.Presentation.Courses.AddSection;
 using AlphaZero.Modules.Courses.Presentation.Courses.Create;
 using AlphaZero.Modules.Courses.Presentation.Courses.Get;
 using AlphaZero.Modules.Courses.Presentation.Courses.Plans.AddPlan;
 using AlphaZero.Modules.Courses.Presentation.Courses.Pool;
-using AlphaZero.Modules.Courses.Presentation.Enrollements.Enroll;
+using AlphaZero.Modules.Courses.Presentation.Enrollments.Enroll;
 using AlphaZero.Modules.Courses.Presentation.Subjects.Create;
 using AlphaZero.Shared.Domain;
 using AlphaZero.Shared.Queries;
@@ -99,7 +99,7 @@ public class CourseAnalyticsTests : BaseIntegrationTest
         var enroll2Resp = await Client.PostAsJsonAsync("/courses/enroll", new EnrollInCourseRequest { StudentId = student2Id, CourseId = courseId });
         var enrollment2Id = (await enroll2Resp.Content.ReadFromJsonAsync<EnrollInCourseResponse>())!.EnrollmentId;
 
-        await Client.PostAsJsonAsync($"/courses/enrollements/{enrollment2Id}/complete", new { BitIndex = 0 });
+        await Client.PostAsJsonAsync($"/courses/enrollments/{enrollment2Id}/complete", new { BitIndex = 0 });
         
         // Wait a bit for MassTransit
         CourseAnalyticsDto? analytics2 = null;
@@ -146,7 +146,7 @@ public class CourseAnalyticsTests : BaseIntegrationTest
         var enroll2Resp = await Client.PostAsJsonAsync("/courses/enroll", new EnrollInCourseRequest { StudentId = student2Id, CourseId = courseId });
         var enrollment2Id = (await enroll2Resp.Content.ReadFromJsonAsync<EnrollInCourseResponse>())!.EnrollmentId;
 
-        await Client.PostAsJsonAsync($"/courses/enrollements/{enrollment1Id}/complete", new { BitIndex = 0 });
+        await Client.PostAsJsonAsync($"/courses/enrollments/{enrollment1Id}/complete", new { BitIndex = 0 });
 
         // Wait a bit
         await Task.Delay(500);

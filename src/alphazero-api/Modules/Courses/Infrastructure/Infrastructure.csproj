@@ -7,6 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="Courses.UnitTests" />
     <PackageReference Include="AWS.Messaging" />
     <PackageReference Include="AWS.Messaging.Telemetry.OpenTelemetry" />
     <PackageReference Include="AWSSDK.MediaConvert" />
@@ -29,6 +30,7 @@
 	<ItemGroup>
 		<ProjectReference Include="..\..\..\AlphaZero.Shared\AlphaZero.Shared.csproj" />
 		<ProjectReference Include="..\..\..\aspire\Aspire.Shared\Aspire.Shared.csproj" />
+		<ProjectReference Include="..\..\Identity\IntegrationEvents\IntegrationEvents.csproj" />
 		<ProjectReference Include="..\..\Assessments\IntegrationEvents\IntegrationEvents.csproj" />
 		<ProjectReference Include="..\..\Documents\IntegrationEvents\IntegrationEvents.csproj" />
 		<ProjectReference Include="..\..\Library\IntegrationEvents\IntegrationEvents.csproj" />

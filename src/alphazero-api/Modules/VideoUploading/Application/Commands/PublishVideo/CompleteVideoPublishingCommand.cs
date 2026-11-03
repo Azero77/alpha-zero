@@ -80,6 +80,7 @@ public class VideoPublishedDomainEventHandlerPublishIntegrationEvent(IPublishEnd
         // Notify other modules
         await moduleBus.Publish(new VideoPublishedIntegrationEvent(
             notification.VideoId,
+            notification.TenantId,
             video.PlaybackUrl!), cancellationToken);
     }
 }

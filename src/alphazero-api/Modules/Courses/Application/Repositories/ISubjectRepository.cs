@@ -5,4 +5,5 @@ namespace AlphaZero.Modules.Courses.Application.Repositories;
 
 public interface ISubjectRepository : IRepository<Subject>
 {
+    Task<Subject?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
 }

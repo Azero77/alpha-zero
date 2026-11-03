@@ -258,7 +258,7 @@ public class CourseSagaStatePersistenceTests
         new DbContextOptionsBuilder<AppDbContext>().UseInMemoryDatabase(dbName).Options;
 
     /// <summary>
-    /// The EF in-memory provider cannot map the Enrollement.Progress bitmask (BitArray is
+    /// The EF in-memory provider cannot map the Enrollment.Progress bitmask (BitArray is
     /// only mapped on Postgres as varbit), so it is excluded; saga state rows never touch it.
     /// </summary>
     private sealed class SagaStateTestDbContext : AppDbContext
@@ -271,7 +271,7 @@ public class CourseSagaStatePersistenceTests
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
-            modelBuilder.Entity<AlphaZero.Modules.Courses.Domain.Aggregates.Enrollements.Enrollement>().Ignore(e => e.Progress);
+            modelBuilder.Entity<AlphaZero.Modules.Courses.Domain.Aggregates.Enrollments.Enrollment>().Ignore(e => e.Progress);
         }
     }
 

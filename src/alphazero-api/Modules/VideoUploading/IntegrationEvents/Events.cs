@@ -45,6 +45,7 @@ public record VideoCdnSyncCompletedEvent(Guid VideoId, string RelativeUrl);
 // PHASE 5: FINALIZATION
 public record VideoPublishedIntegrationEvent(
     Guid VideoId, 
+    Guid TenantId,
     string RelativeUrl);
 
 public record GetVideoMetadataRequest(Guid VideoId);
@@ -59,7 +60,7 @@ public record VideoMetadataResponse(
 
 public record VideoMetaDataNotFoundResponse(Guid VideoId);
 
-public record VideoProcessingFailedEvent(Guid VideoId, string Reason);
+public record VideoProcessingFailedEvent(Guid VideoId, Guid TenantId, string Reason);
 
 // LIFECYCLE
 public record VideoDeletedFromS3Event(string Key);
@@ -68,5 +69,6 @@ public record VideoMetadataUpdatedEvent(string Key);
 // METADATA SYNC
 public record VideoMetadataChangedIntegrationEvent(
     Guid VideoId,
+    Guid TenantId,
     string Title,
     string? Description);

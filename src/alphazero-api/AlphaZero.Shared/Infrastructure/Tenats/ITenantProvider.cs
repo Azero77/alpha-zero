@@ -1,3 +1,4 @@
+using AlphaZero.Shared.Domain;
 using Microsoft.AspNetCore.Http;
 using System.Security.Claims;
 
@@ -16,39 +17,54 @@ public class FakeTenantProvider : ITenantProvider
 public class HttpTenantProvider : ITenantProvider
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly IAmbientTenantContext _ambientTenant;
     private const string TenantClaim = "tid";
     private const string TenantIdHeader = "X-TenantId";
 
     private Guid? _cachedTenantId = null;
 
-    public HttpTenantProvider(IHttpContextAccessor httpContextAccessor)
+    public HttpTenantProvider(IHttpContextAccessor httpContextAccessor, IAmbientTenantContext ambientTenant)
     {
         _httpContextAccessor = httpContextAccessor;
+        _ambientTenant = ambientTenant;
     }
 
     public Guid? GetTenant()
     {
         if (_cachedTenantId is not null)
             return _cachedTenantId;
-        Claim? claim = _httpContextAccessor?.HttpContext?.User?.FindFirst(TenantClaim);
-        if (claim is null || !Guid.TryParse(claim.Value,out Guid tenantIdFromClaim))
-            return null;
+
+        // Tenant precedence (#32/D2):
+        //   1. A parseable, non-empty `tid` claim is the tenant authority — the token wins,
+        //      even if a header disagrees (the old mismatch→null voiding branch is gone).
+        //   2. A claim that is absent, empty, or Guid.Empty (a global principal, which is
+        //      NOT a tenant identity) defers to the X-TenantId header. This is also what
+        //      lets anonymous callers resolve a tenant for the catalog/view surfaces.
+        //   3. No usable claim and no parseable header → null: fail closed (empty results /
+        //      404 masks), never a guessed tenant.
+        var claim = _httpContextAccessor?.HttpContext?.User?.FindFirst(TenantClaim);
+        if (claim is not null && Guid.TryParse(claim.Value, out var tenantIdFromClaim) && tenantIdFromClaim != ResourceArn.GlobalTenantGuid)
+        {
+            _cachedTenantId = tenantIdFromClaim;
+            return tenantIdFromClaim;
+        }
 
         var tenantIdFromHeaderString = _httpContextAccessor?.HttpContext?.Request?.Headers[TenantIdHeader].FirstOrDefault();
-        Guid.TryParse(tenantIdFromHeaderString, out Guid tenantIdFromHeader);
-        //this happens when a global principal tries to reach a resource in a specific tenant, we don't care about the global tenantID (which is empty)
-        //we care about the tenantID from the header, which is the one that matters for the resource being accessed
-        //if the resource was global , then we read from the claim as usual , and the Tenant Provider would only call the specific resources for this
-        if (tenantIdFromClaim == Guid.Empty && tenantIdFromHeader != Guid.Empty)
+        if (Guid.TryParse(tenantIdFromHeaderString, out var tenantIdFromHeader) && tenantIdFromHeader != ResourceArn.GlobalTenantGuid)
         {
             _cachedTenantId = tenantIdFromHeader;
             return tenantIdFromHeader;
         }
 
-        if (tenantIdFromClaim != tenantIdFromHeader)
-            return null;
-        _cachedTenantId = tenantIdFromClaim;
-        return tenantIdFromClaim;
+        // Message consumers and background work have no HTTP context; the consume filter
+        // publishes the message tenant through the ambient context before handlers run.
+        if (_ambientTenant.TenantId is { } tenantIdFromAmbient)
+        {
+            _cachedTenantId = tenantIdFromAmbient;
+            return tenantIdFromAmbient;
+        }
+
+        return null;
     }
 
 }

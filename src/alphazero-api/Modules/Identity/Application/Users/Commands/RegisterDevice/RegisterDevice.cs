@@ -6,7 +6,6 @@ using AlphaZero.Shared.Domain;
 using AlphaZero.Shared.Infrastructure.Repositores;
 using ErrorOr;
 using MediatR;
-using Microsoft.Extensions.Caching.Hybrid;
 
 using FluentValidation;
 

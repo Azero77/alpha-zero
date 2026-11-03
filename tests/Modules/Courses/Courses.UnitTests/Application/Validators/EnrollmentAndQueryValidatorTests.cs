@@ -4,11 +4,12 @@ using AlphaZero.Modules.Courses.Application.Courses.Queries;
 using AlphaZero.Modules.Courses.Application.Courses.Queries.GetCourse;
 using AlphaZero.Modules.Courses.Application.Courses.Queries.GetCourseOverview;
 using AlphaZero.Modules.Courses.Application.Courses.Queries.ListCourses;
-using AlphaZero.Modules.Courses.Application.Enrollements.Commands.CompleteItem;
-using AlphaZero.Modules.Courses.Application.Enrollements.Commands.Deactivate;
-using AlphaZero.Modules.Courses.Application.Enrollements.Queries.GetEnrollement;
-using AlphaZero.Modules.Courses.Application.Enrollements.Queries.GetStudentDashboard;
-using AlphaZero.Modules.Courses.Application.Enrollements.Queries.GetStudentEnrollments;
+using AlphaZero.Modules.Courses.Application.Enrollments.Commands.CompleteItem;
+using AlphaZero.Modules.Courses.Application.Enrollments.Commands.Deactivate;
+using AlphaZero.Modules.Courses.Application.Enrollments.Commands.MarkExpiredFromPrincipal;
+using AlphaZero.Modules.Courses.Application.Enrollments.Queries.GetEnrollment;
+using AlphaZero.Modules.Courses.Application.Enrollments.Queries.GetStudentDashboard;
+using AlphaZero.Modules.Courses.Application.Enrollments.Queries.GetStudentEnrollments;
 using AlphaZero.Modules.Courses.Application.Subjects.Queries.GetSubject;
 using AlphaZero.Modules.Courses.Application.Subjects.Queries.ListSubjects;
 using FluentAssertions;
@@ -20,6 +21,7 @@ public class EnrollmentCommandValidatorTests
 {
     private readonly CompleteItemCommandValidator _completeValidator = new();
     private readonly DeactivateEnrollmentCommandValidator _deactivateValidator = new();
+    private readonly MarkEnrollmentExpiredFromPrincipalCommandValidator _markExpiredValidator = new();
 
     [Fact]
     public async Task CompleteItem_Should_Fail_WhenEnrollmentIdEmpty()
@@ -52,6 +54,20 @@ public class EnrollmentCommandValidatorTests
     public async Task Deactivate_Should_Pass_WhenValid()
         => (await _deactivateValidator.ValidateAsync(new DeactivateEnrollmentCommand(Guid.NewGuid(), Guid.NewGuid())))
             .IsValid.Should().BeTrue();
+
+    [Fact]
+    public async Task MarkEnrollmentExpired_Should_Fail_WhenUserIdOrCourseIdEmpty()
+    {
+        (await _markExpiredValidator.ValidateAsync(new MarkEnrollmentExpiredFromPrincipalCommand(Guid.Empty, Guid.NewGuid())))
+            .IsValid.Should().BeFalse();
+        (await _markExpiredValidator.ValidateAsync(new MarkEnrollmentExpiredFromPrincipalCommand(Guid.NewGuid(), Guid.Empty)))
+            .IsValid.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task MarkEnrollmentExpired_Should_Pass_WhenValid()
+        => (await _markExpiredValidator.ValidateAsync(new MarkEnrollmentExpiredFromPrincipalCommand(Guid.NewGuid(), Guid.NewGuid())))
+            .IsValid.Should().BeTrue();
 }
 
 public class QueryValidatorTests
@@ -62,7 +78,7 @@ public class QueryValidatorTests
         (await new GetCourseQueryValidator().ValidateAsync(new GetCourseQuery(Guid.Empty))).IsValid.Should().BeFalse();
         (await new GetCourseOverviewQueryValidator().ValidateAsync(new GetCourseOverviewQuery(Guid.Empty))).IsValid.Should().BeFalse();
         (await new GetCoursePoolQueryValidator().ValidateAsync(new GetCoursePoolQuery(Guid.Empty))).IsValid.Should().BeFalse();
-        (await new GetEnrollementQueryValidator().ValidateAsync(new GetEnrollementQuery(Guid.Empty))).IsValid.Should().BeFalse();
+        (await new GetEnrollmentQueryValidator().ValidateAsync(new GetEnrollmentQuery(Guid.Empty))).IsValid.Should().BeFalse();
         (await new GetStudentDashboardQueryValidator().ValidateAsync(new GetStudentDashboardQuery(Guid.Empty))).IsValid.Should().BeFalse();
         (await new GetCourseAnalyticsQueryValidator().ValidateAsync(new GetCourseAnalyticsQuery(Guid.Empty))).IsValid.Should().BeFalse();
         (await new ListStudentProgressQueryValidator().ValidateAsync(new ListStudentProgressQuery(Guid.Empty, 1, 10))).IsValid.Should().BeFalse();
@@ -77,7 +93,7 @@ public class QueryValidatorTests
         (await new GetCourseQueryValidator().ValidateAsync(new GetCourseQuery(Guid.NewGuid()))).IsValid.Should().BeTrue();
         (await new GetCourseOverviewQueryValidator().ValidateAsync(new GetCourseOverviewQuery(Guid.NewGuid()))).IsValid.Should().BeTrue();
         (await new GetCoursePoolQueryValidator().ValidateAsync(new GetCoursePoolQuery(Guid.NewGuid()))).IsValid.Should().BeTrue();
-        (await new GetEnrollementQueryValidator().ValidateAsync(new GetEnrollementQuery(Guid.NewGuid()))).IsValid.Should().BeTrue();
+        (await new GetEnrollmentQueryValidator().ValidateAsync(new GetEnrollmentQuery(Guid.NewGuid()))).IsValid.Should().BeTrue();
         (await new GetStudentDashboardQueryValidator().ValidateAsync(new GetStudentDashboardQuery(Guid.NewGuid()))).IsValid.Should().BeTrue();
         (await new GetCourseAnalyticsQueryValidator().ValidateAsync(new GetCourseAnalyticsQuery(Guid.NewGuid()))).IsValid.Should().BeTrue();
         (await new ListStudentProgressQueryValidator().ValidateAsync(new ListStudentProgressQuery(Guid.NewGuid(), 1, 10))).IsValid.Should().BeTrue();

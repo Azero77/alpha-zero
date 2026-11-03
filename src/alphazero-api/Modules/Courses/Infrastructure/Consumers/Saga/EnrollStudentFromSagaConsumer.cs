@@ -1,4 +1,4 @@
-using AlphaZero.Modules.Courses.Application.Enrollements.Commands.Enroll;
+using AlphaZero.Modules.Courses.Application.Enrollments.Commands.Enroll;
 using AlphaZero.Modules.Courses.Application.Repositories;
 using AlphaZero.Modules.Courses.IntegrationEvents;
 using MassTransit;
@@ -28,7 +28,13 @@ public class EnrollStudentFromSagaConsumer(ICoursesModule coursesModule, ICourse
             return;
         }
 
-        var command = new EnrollInCourseCommand(context.Message.UserId, context.Message.CourseId);
+        var command = new EnrollInCourseCommand(
+            context.Message.UserId,
+            context.Message.CourseId,
+            plan.AccessWindowDays is int windowDays ? DateTime.UtcNow.AddDays(windowDays) : null,
+            // Grant data (rework §3.2.2): windowed enrollments ride the per-(course, plan) principal
+            // (§3.2.1) — unlimited enrollments pass null and keep the shared student template.
+            plan.AccessWindowDays is not null ? plan.PrincipalId : null);
         var result = await coursesModule.Send(command);
 
         if (result.IsError)

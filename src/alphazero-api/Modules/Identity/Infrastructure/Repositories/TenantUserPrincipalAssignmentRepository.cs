@@ -30,13 +30,15 @@ public class TenantUserPrincipalAssignmentRepository : BaseRepository<AppDbConte
         //because course/math101 is contained inside the requested arn it will evaluate to true because the video is contained inside the course
         //if multiple assignments to the same user for the requested resource was found, we will get the latest one for it
         if(resourceArn is null)
-            return await _context.TenantPrincipalAssignments.FirstOrDefaultAsync(s => s.TenantUser.Id == tenantUserId, token);
+            return await _context.TenantPrincipalAssignments.FirstOrDefaultAsync(s => s.TenantUserId == tenantUserId, token);
 
         var path = ResourceArn.Create(resourceArn).Value.ResourcePath;
+        // Predicate filters on the mapped TenantUserId column — traversing .TenantUser here makes
+        // the tenant-query-filtered nav JOIN untranslatable (spec-34 grant-consumer fault).
         var assignmentsForUser = await _context.TenantPrincipalAssignments
             .AsNoTracking()
             .Include(s => s.TenantUser)
-            .Where(t => t.TenantUser.Id == tenantUserId)
+            .Where(t => t.TenantUserId == tenantUserId)
             .ToListAsync(token);
 
         
@@ -60,7 +62,7 @@ public class TenantUserPrincipalAssignmentRepository : BaseRepository<AppDbConte
         var assignments = await _context.TenantPrincipalAssignments
             .AsNoTracking()
             .Include(s => s.TenantUser)
-            .Where(t => t.TenantUser.Id == tenantUserId)
+            .Where(t => t.TenantUserId == tenantUserId)
             .ToListAsync(token);
 
         foreach(var assignment in assignments)

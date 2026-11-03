@@ -5,7 +5,6 @@ using AlphaZero.Modules.Identity.Domain.Repositories;
 using AlphaZero.Shared.Authorization;
 using AlphaZero.Shared.Domain;
 using AlphaZero.Shared.Infrastructure.Repositores;
-using Microsoft.Extensions.Caching.Hybrid;
 using ErrorOr;
 
 namespace AlphaZero.Modules.Identity.Domain.Services;

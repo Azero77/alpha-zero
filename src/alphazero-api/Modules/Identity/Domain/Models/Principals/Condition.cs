@@ -22,7 +22,8 @@ public enum Operator
     Bool,
     In,
     NotIn,
-    IsMainDevice
+    IsMainDevice,
+    AccessTicketValid
 }
 
 public enum ConditionType

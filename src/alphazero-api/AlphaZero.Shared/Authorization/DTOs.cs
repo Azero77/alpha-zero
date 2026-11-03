@@ -100,16 +100,18 @@ public class IAMDevPreprocessor : IGlobalPreProcessor
 {
     public Task PreProcessAsync(IPreProcessorContext context, CancellationToken ct)
     {
-        // Dev mode skips authorization evaluation, but the bound request DTO must still be
-        // staged for AuthorizationContextProvider.Get (it reads __FastEndpoints_Request__ to
-        // resolve AccessControl resource ARNs). Skipping this store makes every AccessControl
-        // endpoint fail with an InvalidCastException in Development/test environments.
+        // Dev/bypass skips EVALUATION only, not the context build-up: the request-side guards
+        // (issue #34 story #10) read the AccessControl envelope (the provider attaches
+        // RequiredPermission/ResourcePath from this stashed typed request), so dev stashes
+        // exactly like the enforcing preprocessor above. Without this, bypass-mode contexts
+        // degrade to "no permission metadata" and every envelope-gated guard would fail-open
+        // or lock out the admin path.
         if (context.Request is not null)
         {
             context.HttpContext.Items["__FastEndpoints_Request__"] = context.Request;
         }
 
-        return Task.CompletedTask;
+        return Task.CompletedTask; // dev for skipping authorization
     }
 }
 
@@ -117,7 +119,8 @@ public enum AuthenticationMethod
 {
     Principal,
     TenantUser,
-    GlobalUser
+    GlobalUser,
+    System
 }
 
 public record ClaimDTO(string Key, string Value);

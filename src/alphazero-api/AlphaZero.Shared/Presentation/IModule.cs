@@ -1,4 +1,5 @@
 using AlphaZero.Shared.Application;
+using AlphaZero.Shared.Authorization;
 using Autofac;
 using Autofac.Core;
 using Autofac.Extensions.DependencyInjection;
@@ -17,7 +18,11 @@ public interface IModule
 
     Task<TResponse> Send<TResponse>(IRequest<TResponse> request, CancellationToken cancellationToken = default);
 
+    Task<TResponse> Send<TResponse>(IRequest<TResponse> request, AuthorizationContext? callerContext, CancellationToken cancellationToken = default);
+
     Task Send(IRequest request, CancellationToken cancellationToken = default);
+
+    Task Send(IRequest request, AuthorizationContext? callerContext, CancellationToken cancellationToken = default);
 
     void RegisterPrivate(IServiceCollection services, ContainerBuilder builder);
     void RegisterGlobal(IServiceCollection services);
@@ -69,21 +74,39 @@ public abstract class AppModule : Module, IModule
 
     public virtual async Task<TResponse> Send<TRequest, TResponse>(IRequest<TResponse> request, CancellationToken cancellationToken = default) where TRequest : IRequest<TResponse>
     {
-        using var requestScope = CreateScope();
-        var mediatr = requestScope.Resolve<IMediator>();
-        return await mediatr.Send(request, cancellationToken);
+        return await Send(request, (AuthorizationContext?)null, cancellationToken);
     }
 
     public virtual async Task<TResponse> Send<TResponse>(IRequest<TResponse> request, CancellationToken cancellationToken = default)
     {
+        return await Send(request, (AuthorizationContext?)null, cancellationToken);
+    }
+
+    public virtual async Task<TResponse> Send<TResponse>(IRequest<TResponse> request, AuthorizationContext? callerContext, CancellationToken cancellationToken = default)
+    {
         using var requestScope = CreateScope();
+        if (callerContext is not null)
+        {
+            var authProvider = requestScope.ResolveOptional<IAuthorizationContextProvider>();
+            authProvider?.SetExplicitContext(callerContext);
+        }
         var mediatr = requestScope.Resolve<IMediator>();
         return await mediatr.Send(request, cancellationToken);
     }
 
     public virtual async Task Send(IRequest request, CancellationToken cancellationToken = default)
     {
+        await Send(request, (AuthorizationContext?)null, cancellationToken);
+    }
+
+    public virtual async Task Send(IRequest request, AuthorizationContext? callerContext, CancellationToken cancellationToken = default)
+    {
         using var requestScope = CreateScope();
+        if (callerContext is not null)
+        {
+            var authProvider = requestScope.ResolveOptional<IAuthorizationContextProvider>();
+            authProvider?.SetExplicitContext(callerContext);
+        }
         var mediatr = requestScope.Resolve<IMediator>();
         await mediatr.Send(request, cancellationToken);
     }
