@@ -1,6 +1,7 @@
 using AlphaZero.Modules.Courses.Application.Courses.Commands.AccessTickets;
 using AlphaZero.Modules.Courses.Application.Repositories;
 using AlphaZero.Modules.Courses.Domain.Aggregates.Enrollments;
+using AlphaZero.Shared.Application;
 using AlphaZero.Shared.Authorization;
 using AlphaZero.Shared.Infrastructure.Tenats;
 using AlphaZero.Shared.Security;
@@ -21,6 +22,7 @@ public class IssueAccessTicketCommandHandlerTests
     private readonly IAccessTicketSigner _ticketSigner;
     private readonly IOptions<AccessTicketSettings> _options;
     private readonly IAuthorizationContextProvider _authorizationContextProvider;
+    private readonly IUnitOfWork _unitOfWork;
     private readonly IssueAccessTicketCommandHandler _handler;
 
     private readonly Guid _tenantId = Guid.NewGuid();
@@ -34,6 +36,7 @@ public class IssueAccessTicketCommandHandlerTests
         _ticketSigner = Substitute.For<IAccessTicketSigner>();
         _options = Options.Create(new AccessTicketSettings { TtlSeconds = 7200, Secret = "test-secret-at-least-32-chars-long-for-hmac!" });
         _authorizationContextProvider = Substitute.For<IAuthorizationContextProvider>();
+        _unitOfWork = Substitute.For<IUnitOfWork>();
 
         _tenantProvider.GetTenant().Returns(_tenantId);
 
@@ -51,6 +54,7 @@ public class IssueAccessTicketCommandHandlerTests
             _ticketSigner,
             _options,
             _authorizationContextProvider,
+            _unitOfWork,
             Substitute.For<ILogger<IssueAccessTicketCommandHandler>>());
     }
 
@@ -122,6 +126,9 @@ public class IssueAccessTicketCommandHandlerTests
         result.FirstError.Code.Should().Be("Enrollment.AccessWindowElapsed");
         enrollment.Status.Should().Be(EnrollmentStatus.Expired);
         _enrollmentRepository.Received(1).Update(enrollment);
+        // The shared UnitOfWork decorator skips SaveChangesAsync on error results — the lazy-expired
+        // mark must therefore be committed explicitly by the handler (spec-34 Fix B / §3.4 path b).
+        await _unitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
         _ticketSigner.DidNotReceiveWithAnyArgs().GenerateTicket(default, default, default, default, default, default);
     }
 

@@ -95,7 +95,8 @@ public class AccessTicketMintEndpointTests : BaseIntegrationTest
         Client.DefaultRequestHeaders.Add("X-Test-User-Id", studentId.ToString());
 
         var enrollResp = await Client.PostAsJsonAsync("/courses/enroll", new EnrollInCourseRequest { StudentId = studentId, CourseId = courseId });
-        enrollResp.StatusCode.Should().Be(HttpStatusCode.OK);
+        // EnrollInCourse is a 201 Created contract (Send.CreatedAtAsync) — assert the contract
+        enrollResp.StatusCode.Should().Be(HttpStatusCode.Created);
 
         var mintResp = await Client.PostAsJsonAsync($"/courses/{courseId}/access-tickets", new { });
 

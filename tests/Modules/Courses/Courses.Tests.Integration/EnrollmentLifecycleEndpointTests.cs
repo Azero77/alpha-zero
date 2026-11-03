@@ -241,7 +241,18 @@ public class EnrollmentLifecycleEndpointTests : BaseIntegrationTest
         using var moduleScope = coursesModule.CreateScope();
         var db = moduleScope.Resolve<AppDbContext>();
         var enrollment = await db.Enrollments.FirstAsync(e => e.Id == enrollmentId);
-        enrollment.Deactivate().IsError.Should().BeFalse();
+
+        // The audit row is staged by the DomainEventHandler when the EnrollmentDeactivatedDomainEvent
+        // is published — and ONLY the EnrollmentStatusTransitionService publishes it (the aggregate's
+        // own Deactivate() is deliberately event-silent; saga-shaped production callers all go
+        // through this service, which is exactly the path being exercised).
+        var transitionService = moduleScope.Resolve<AlphaZero.Modules.Courses.Domain.Services.EnrollmentStatusTransitionService>();
+        var deactivate = await transitionService.Deactivate(
+            enrollment,
+            new AlphaZero.Modules.Courses.Domain.Services.EnrollmentStatusTransitionService.EnrollmentChangingStatusMetadata(null),
+            CancellationToken.None);
+        deactivate.IsError.Should().BeFalse();
+
         var unitOfWork = moduleScope.Resolve<IUnitOfWork>();
         await unitOfWork.SaveChangesAsync(CancellationToken.None);
 
@@ -256,7 +267,10 @@ public class EnrollmentLifecycleEndpointTests : BaseIntegrationTest
         IReadOnlyList<AlphaZero.Modules.Courses.Domain.Audits.EnrollmentAuditEntry> rows = null!;
         await ExecuteDbContextAsync(async db =>
         {
+            // IgnoreQueryFilters: some callers verify audit rows while acting under a foreign
+            // tenant (cross-tenant denial tests) — the EF tenant filter must not hide them.
             rows = await db.EnrollmentAuditEntries
+                .IgnoreQueryFilters()
                 .Where(r => r.SubjectId == enrollmentId)
                 .OrderBy(r => r.OccurredOn)
                 .ToListAsync();
@@ -469,7 +483,7 @@ public class EnrollmentLifecycleEndpointTests : BaseIntegrationTest
         // State: Expired; the mark ran once — exactly ONE Expired audit row written.
         AlphaZero.Modules.Courses.Domain.Aggregates.Enrollments.Enrollment? state = null!;
         await ExecuteDbContextAsync(async db =>
-            state = await db.Enrollments.AsNoTracking().FirstAsync(e => e.Id == enrollmentId));
+            state = await db.Enrollments.IgnoreQueryFilters().AsNoTracking().FirstAsync(e => e.Id == enrollmentId));
         state!.Status.Should().Be(AlphaZero.Modules.Courses.Domain.Aggregates.Enrollments.EnrollmentStatus.Expired);
 
         var rows = await AuditRowsFor(enrollmentId);

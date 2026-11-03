@@ -63,6 +63,11 @@ public class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Development");
+        // Analytics counters are derived-from-source via the CourseAnalyticsRefreshWorker, which
+        // waits the configured interval between passes (default: a full day). Lifecycle tests poll
+        // the analytics endpoint within seconds of a mutation, so refresh every second in the
+        // test host (the worker refreshes immediately at startup, then every 1s).
+        builder.UseSetting("Analytics:RefreshIntervalSeconds", "1");
         builder.ConfigureTestServices(services =>
         {
             services.AddAuthentication(options =>

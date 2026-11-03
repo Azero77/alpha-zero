@@ -227,12 +227,19 @@ public class EnrollmentGrantTests : BaseIntegrationTest
 
         SetTenant(tenantId);
 
-        var callerPrincipalId = Guid.NewGuid();
-        var addPlanResp = await Client.PostAsJsonAsync($"/courses/{courseId}/plans",
-            new AddPlanRequest { CourseId = courseId, Name = "Standard", PrincipalId = callerPrincipalId });
-        var planId = (await addPlanResp.Content.ReadFromJsonAsync<AddPlanResponse>())!.PlanId;
+        // Seed a PRINCIPAL-LESS plan at the aggregate level — the pre-step-9 legacy shape that
+        // UpdatePlan mints for. The HTTP contract cannot create one directly (the AddPlan
+        // validator requires a caller PrincipalId for unlimited plans, and windowed plans mint).
+        var planId = Guid.NewGuid();
+        await ExecuteDbContextAsync(async db =>
+        {
+            var course = await db.Courses.Include(c => c.Plans).FirstAsync(c => c.Id == courseId);
+            course.AddPlan("Standard", Guid.Empty, planId: planId).IsError.Should().BeFalse();
+            await db.SaveChangesAsync();
+        });
 
-        // Act: the plan gains a window (future-only edit per §3.2.5)
+        // Act: the plan gains a window (future-only edit per §3.2.5) — §3.2.1: UpdatePlan mints
+        // ONLY for newly-windowed principal-less plans (validated by UpdatePlanCommandHandlerTests).
         SetTenant(tenantId);
         var updateResp = await Client.PutAsJsonAsync($"/courses/{courseId}/plans/{planId}",
             new UpdatePlanRequest { CourseId = courseId, PlanId = planId, Name = "Standard", AccessWindowDays = 7 });

@@ -18,6 +18,7 @@ using Courses.Tests.Integration.Abstractions;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+
 using Xunit;
 
 namespace Courses.Tests.Integration;
@@ -168,20 +169,20 @@ public class CourseAnalyticsRefreshTests : BaseIntegrationTest
         var student1 = Guid.NewGuid();
         await EnrollAndComplete(tenantId, courseId, student1, 0);
 
-        var drifted1 = CourseAnalytics.Create(courseId);
-        DbContext.CourseAnalytics.Add(drifted1); // placeholder so upsert path is UPDATE
-        var drifted2 = CourseAnalytics.Create(emptyCourseId);
-        DbContext.CourseAnalytics.Add(drifted2);
-        await DbContext.SaveChangesAsync();
-
-        // Inject drift directly (bypasses the deleted repository's semantics).
-        await DbContext.CourseAnalytics
-            .Where(a => a.CourseId == courseId || a.CourseId == emptyCourseId)
-            .ExecuteUpdateAsync(s => s
-                .SetProperty(a => a.TotalEnrollments, 999)
-                .SetProperty(a => a.SumOfCompletionPercentages, 123.45));
-        await DbContext.CourseAnalytics.Entry(drifted1).ReloadAsync();
-        await DbContext.CourseAnalytics.Entry(drifted2).ReloadAsync();
+        // Drift injection is an ATOMIC SQL upsert: the test host's 1s background refresh worker
+        // seeds a CourseAnalytics row for every course between our enroll and this write, so a
+        // plain EF INSERT races it and dies on 23505 duplicate-PK. ON CONFLICT survives either
+        // pass order and leaves the drift in place for the manual refresh below.
+        // NOTE: ExecuteSqlRawAsync formats the string with {0}/{1} placeholders — the empty-jsonb
+        // literal braces are doubled ({{ }}) to survive that formatting.
+        await DbContext.Database.ExecuteSqlRawAsync(
+            @"INSERT INTO ""Courses"".""CourseAnalytics"" (""CourseId"", ""TotalEnrollments"", ""SumOfCompletionPercentages"", ""ItemCompletions"")
+              VALUES ({0}::uuid, 999, 123.45, '{{}}'::jsonb), ({1}::uuid, 999, 123.45, '{{}}'::jsonb)
+              ON CONFLICT (""CourseId"") DO UPDATE SET
+                  ""TotalEnrollments"" = 999,
+                  ""SumOfCompletionPercentages"" = 123.45,
+                  ""ItemCompletions"" = '{{}}'::jsonb",
+            courseId, emptyCourseId);
 
         // Act
         var coursesModule = Factory.Services.GetRequiredService<CoursesModule>();

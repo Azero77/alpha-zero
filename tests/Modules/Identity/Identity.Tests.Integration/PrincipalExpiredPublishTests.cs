@@ -28,12 +28,28 @@ public class PrincipalExpiredPublishTests(ApiFactory factory) : BaseIntegrationT
     public async Task ExpiredWindowEvaluation_ShouldRaisePrincipalExpired_Publish()
     {
         // Arrange: a ticket whose ACCESS WINDOW has elapsed (ticket-exp itself still fresh),
-        // minted under the host's configured AccessTicket:Secret (dev default in tests).
+        // minted under the host's configured AccessTicket:Secret (dev default in tests). The
+        // ticket MUST be bound to the same actor/tenant as the AuthorizationContext — §3.3
+        // evaluates actor binding BEFORE the window check, so a foreign ticket denies with
+        // AccessTicketForeign and never reaches the lazy-expiry signal under test.
         var signer = new AccessTicketSigner(
             Options.Create(new AccessTicketSettings { Secret = "dev-access-ticket-secret-alphazero-default-change-in-prod-min32!" }));
+
+        var context = new PrincipalUserAuthorizationContext
+        {
+            Id = Guid.NewGuid(),
+            PrincipalId = Guid.NewGuid(),
+            Username = "student",
+            AuthenticationMethod = "Principal",
+            TenantId = Guid.NewGuid(),
+            RequiredPermission = "video:Stream",
+            ResourcePath = "courses/course-1",
+            ResourceType = "Courses"
+        };
+
         var ticket = signer.GenerateTicket(
-            tenantId: Guid.NewGuid(),
-            userId: Guid.NewGuid(),
+            tenantId: context.TenantId!.Value,
+            userId: context.Id,
             enrollmentId: Guid.NewGuid(),
             windowStart: DateTimeOffset.UtcNow.AddDays(-90),
             windowEnd: DateTimeOffset.UtcNow.AddDays(-1));
@@ -49,18 +65,6 @@ public class PrincipalExpiredPublishTests(ApiFactory factory) : BaseIntegrationT
             signer,
             Resolve<IPublishEndpoint>(),
             Microsoft.Extensions.Logging.Abstractions.NullLogger<AccessTicketValidOperationEvaluator>.Instance);
-
-        var context = new PrincipalUserAuthorizationContext
-        {
-            Id = Guid.NewGuid(),
-            PrincipalId = Guid.NewGuid(),
-            Username = "student",
-            AuthenticationMethod = "Principal",
-            TenantId = Guid.NewGuid(),
-            RequiredPermission = "video:Stream",
-            ResourcePath = "courses/course-1",
-            ResourceType = "Courses"
-        };
 
         // Act: observe publishes on the module bus while the evaluation hits the closed window.
         var bus = Resolve<IBus>();

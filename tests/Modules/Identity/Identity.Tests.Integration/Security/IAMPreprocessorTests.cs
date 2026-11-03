@@ -33,6 +33,9 @@ public class SecurityApiFactory : ApiFactory
         // Production-like environments fail fast at startup without a playback-ticket secret
         // (shared Cloudflare config validation), so a production-like fixture must carry one.
         builder.UseSetting("Cloudflare:PlaybackTicketSecret", "iam-test-prod-secret-min-32-chars-long!!!");
+        // Production-like fixtures fail fast at startup without the access-ticket secret too
+        // (shared AccessTicket:Secret validation, spec-34 §3.2.3) — seed both dedicated secrets.
+        builder.UseSetting("AccessTicket:Secret", "iam-test-prod-access-secret-min-32-chars!");
         
         builder.ConfigureTestServices(services =>
         {
