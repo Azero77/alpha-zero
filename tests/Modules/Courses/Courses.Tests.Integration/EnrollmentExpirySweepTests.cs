@@ -92,7 +92,7 @@ public class EnrollmentExpirySweepTests : BaseIntegrationTest
         var futureTime = DateTime.UtcNow.AddDays(7);
         var setExpiresProp = typeof(EnrollmentAggregate).GetProperty(nameof(EnrollmentAggregate.AccessExpiresOn));
 
-        var allEnrollments = await DbContext.Enrollments.ToListAsync();
+        var allEnrollments = await DbContext.Enrollments.IgnoreQueryFilters().ToListAsync();
         foreach (var e in allEnrollments)
         {
             if (dueEnrollmentIds.Contains(e.Id))
@@ -124,6 +124,7 @@ public class EnrollmentExpirySweepTests : BaseIntegrationTest
 
         // Assert: all due enrollments are now Expired in the DB
         var reloadedDue = await DbContext.Enrollments
+            .IgnoreQueryFilters()
             .AsNoTracking()
             .Where(e => dueEnrollmentIds.Contains(e.Id))
             .ToListAsync();
@@ -131,13 +132,14 @@ public class EnrollmentExpirySweepTests : BaseIntegrationTest
         reloadedDue.Should().OnlyContain(e => e.Status == EnrollmentStatus.Expired);
 
         // Assert: non-due enrollments are untouched (Active)
-        var reloadedFuture = await DbContext.Enrollments.AsNoTracking().FirstAsync(e => e.Id == futureEnrollmentId);
+        var reloadedFuture = await DbContext.Enrollments.IgnoreQueryFilters().AsNoTracking().FirstAsync(e => e.Id == futureEnrollmentId);
         reloadedFuture.Status.Should().Be(EnrollmentStatus.Active);
-        var reloadedUnlimited = await DbContext.Enrollments.AsNoTracking().FirstAsync(e => e.Id == unlimitedEnrollmentId);
+        var reloadedUnlimited = await DbContext.Enrollments.IgnoreQueryFilters().AsNoTracking().FirstAsync(e => e.Id == unlimitedEnrollmentId);
         reloadedUnlimited.Status.Should().Be(EnrollmentStatus.Active);
 
         // Assert: audit rows were inserted set-based
         var auditRows = await DbContext.EnrollmentAuditEntries
+            .IgnoreQueryFilters()
             .AsNoTracking()
             .Where(a => dueEnrollmentIds.Contains(a.SubjectId))
             .ToListAsync();

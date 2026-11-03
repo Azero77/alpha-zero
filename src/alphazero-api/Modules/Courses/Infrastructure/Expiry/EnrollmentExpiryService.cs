@@ -38,87 +38,95 @@ public class EnrollmentExpiryService(
         return 3600;
     }
 
+    private const string SweepSql = """
+        WITH updated AS (
+            UPDATE "Courses"."Enrollements"
+            SET "Status" = 'Expired'
+            WHERE "Status" = 'Active'
+              AND "AccessExpiresOn" IS NOT NULL
+              AND "AccessExpiresOn" <= @now
+            RETURNING "Id", "TenantId", "StudentId", "CourseId"
+        ),
+        audited AS (
+            INSERT INTO "Courses"."EnrollmentAuditEntries"
+                ("Id", "TenantId", "SubjectId", "EventKind", "ActorId", "OccurredOn", "Metadata")
+            SELECT
+                gen_random_uuid(),
+                u."TenantId",
+                u."Id",
+                'Expired',
+                NULL,
+                @now,
+                '{"From":"Active","To":"Expired"}'::jsonb
+            FROM updated u
+        )
+        SELECT u."Id", u."TenantId", u."StudentId", u."CourseId"
+        FROM updated u;
+        """;
+
     public async Task<int> ExpireDueEnrollmentsAsync(CancellationToken cancellationToken)
     {
-        var now = DateTime.UtcNow;
-
-        var connection = context.Database.GetDbConnection();
-        if (connection.State != ConnectionState.Open)
+        var strategy = context.Database.CreateExecutionStrategy();
+        return await strategy.ExecuteAsync(async () =>
         {
-            await connection.OpenAsync(cancellationToken);
-        }
+            var now = DateTime.UtcNow;
 
-        await using var command = connection.CreateCommand();
-        if (context.Database.CurrentTransaction is not null)
-        {
-            command.Transaction = context.Database.CurrentTransaction.GetDbTransaction();
-        }
+            await context.Database.OpenConnectionAsync(cancellationToken);
+            var connection = context.Database.GetDbConnection();
 
-        command.CommandText = """
-            WITH updated AS (
-                UPDATE "Courses"."Enrollements"
-                SET "Status" = 'Expired'
-                WHERE "Status" = 'Active'
-                  AND "AccessExpiresOn" IS NOT NULL
-                  AND "AccessExpiresOn" <= @now
-                RETURNING "Id", "TenantId", "StudentId", "CourseId"
-            ),
-            audited AS (
-                INSERT INTO "Courses"."EnrollmentAuditEntries"
-                    ("Id", "TenantId", "SubjectId", "EventKind", "ActorId", "OccurredOn", "Metadata")
-                SELECT
-                    gen_random_uuid(),
-                    u."TenantId",
-                    u."Id",
-                    'Expired',
-                    NULL,
-                    @now,
-                    '{"From":"Active","To":"Expired"}'::jsonb
-                FROM updated u
-            )
-            SELECT u."Id", u."TenantId", u."StudentId", u."CourseId"
-            FROM updated u;
-            """;
-
-        var nowParam = command.CreateParameter();
-        nowParam.ParameterName = "now";
-        nowParam.Value = now;
-        command.Parameters.Add(nowParam);
-
-        var expired = new List<ExpiredEnrollmentRow>();
-        await using (var reader = await command.ExecuteReaderAsync(cancellationToken))
-        {
-            while (await reader.ReadAsync(cancellationToken))
+            await using var command = connection.CreateCommand();
+            if (context.Database.CurrentTransaction is not null)
             {
-                expired.Add(new ExpiredEnrollmentRow(
-                    reader.GetGuid(0),
-                    reader.GetGuid(1),
-                    reader.GetGuid(2),
-                    reader.GetGuid(3)));
+                command.Transaction = context.Database.CurrentTransaction.GetDbTransaction();
             }
-        }
 
-        if (expired.Count == 0)
-        {
-            return 0;
-        }
+            command.CommandText = SweepSql;
 
-        foreach (var row in expired)
-        {
-            await publishEndpoint.Publish(new EnrollmentExpiredIntegrationEvent(
-                row.Id,
-                row.StudentId,
-                row.CourseId,
-                row.TenantId), cancellationToken);
-        }
+            var nowParam = command.CreateParameter();
+            nowParam.ParameterName = "now";
+            nowParam.Value = now;
+            command.Parameters.Add(nowParam);
 
-        await context.SaveChangesAsync(cancellationToken);
+            var expired = new List<ExpiredEnrollmentRow>();
+            await using (var reader = await command.ExecuteReaderAsync(cancellationToken))
+            {
+                var idOrd = reader.GetOrdinal("Id");
+                var tenantOrd = reader.GetOrdinal("TenantId");
+                var studentOrd = reader.GetOrdinal("StudentId");
+                var courseOrd = reader.GetOrdinal("CourseId");
 
-        logger.LogInformation(
-            "Enrollment expiry sweep marked {Count} enrollment(s) as Expired in a single set-based pass.",
-            expired.Count);
+                while (await reader.ReadAsync(cancellationToken))
+                {
+                    expired.Add(new ExpiredEnrollmentRow(
+                        reader.GetGuid(idOrd),
+                        reader.GetGuid(tenantOrd),
+                        reader.GetGuid(studentOrd),
+                        reader.GetGuid(courseOrd)));
+                }
+            }
 
-        return expired.Count;
+            if (expired.Count == 0)
+            {
+                return 0;
+            }
+
+            foreach (var row in expired)
+            {
+                await publishEndpoint.Publish(new EnrollmentExpiredIntegrationEvent(
+                    row.Id,
+                    row.StudentId,
+                    row.CourseId,
+                    row.TenantId), cancellationToken);
+            }
+
+            await context.SaveChangesAsync(cancellationToken);
+
+            logger.LogInformation(
+                "Enrollment expiry sweep marked {Count} enrollment(s) as Expired in a single set-based pass.",
+                expired.Count);
+
+            return expired.Count;
+        });
     }
 
     private sealed record ExpiredEnrollmentRow(Guid Id, Guid TenantId, Guid StudentId, Guid CourseId);
