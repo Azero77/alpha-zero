@@ -26,7 +26,7 @@ public class CourseCompletedDomainEventHandlerTests
     {
         // Arrange
         var moduleBus = Substitute.For<IPublishEndpoint>();
-        var handler = new DomainEventHandler(moduleBus);
+        var handler = new DomainEventHandler(moduleBus, Substitute.For<AlphaZero.Modules.Courses.Application.Repositories.IEnrollmentAuditRepository>());
         var domainEvent = CreateEvent();
 
         // Act

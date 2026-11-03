@@ -12,6 +12,7 @@ public class TenantUserPrincipalAssignment : AggregateRoot, IDomainTenantOwned
     {
         TenantId = tenantId;
         TenantUser = tenantUser;
+        TenantUserId = tenantUser.Id;
         Principal = principal;
         PrincipalId = principal.Id;
         Resource = arn;
@@ -26,6 +27,15 @@ public class TenantUserPrincipalAssignment : AggregateRoot, IDomainTenantOwned
 
     public Guid TenantId { get; private set; }
 
+    /// <summary>
+    /// Mapped FK column ("TenantUserId"). Filtering assignments must use THIS column, never the
+    /// <see cref="TenantUser"/> navigation: the tenant query filter (TenantOwnedEntityConfiguration)
+    /// applies to both sides of the navigation JOIN, and EF Core cannot translate that join inside
+    /// a FirstOrDefault predicate ("could not be translated") — which faulted the
+    /// EnrollmentCreatedIntegrationEventConsumer grant path. Same class of defect as the unmapped
+    /// Principal navigation (query by PrincipalId column).
+    /// </summary>
+    public Guid TenantUserId { get; private set; }
     public TenantUser TenantUser { get; private set; } = null!;
     public Principal Principal { get; private set; } = null!;
     public Guid PrincipalId { get; private set; }

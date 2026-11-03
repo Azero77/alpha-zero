@@ -19,7 +19,9 @@ public record EnrollmentResponse(
     int ActiveItemsCount,
     double CompletionPercentage,
     DateTime EnrolledOn,
-    Guid TenantId);
+    Guid TenantId,
+    DateTime? LastStatusChangedOn = null,
+    Guid? LastStatusChangedBy = null);
 
 public class GetEnrollmentSummary : Summary<GetEnrollmentEndpoint>
 {
@@ -72,7 +74,9 @@ public class GetEnrollmentEndpoint : Endpoint<GetEnrollmentRequest, EnrollmentRe
             enrollment.ActiveItemsCount,
             enrollment.CompletionPercentage,
             enrollment.EnrolledOn,
-            enrollment.TenantId);
+            enrollment.TenantId,
+            enrollment.LastStatusChangedOn,
+            enrollment.LastStatusChangedBy);
 
         await Send.OkAsync(response, ct);
     }

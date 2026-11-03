@@ -83,7 +83,7 @@ The "magical moment" is delivered via a comprehensive developer guide containing
 - [x] Automated architecture tests (NetArchTest) check CQRS and dependency rules
 - [x] Integration tests selectively added for complex query projections
 - [x] Prohibit concrete repository class DI resolution (register interfaces only)
-- [x] Banned `IgnoreQueryFilters` in Query Services to protect multi-tenant boundaries
+- [x] Banned `IgnoreQueryFilters` in Query Services to protect multi-tenant boundaries (single documented exception: the student-support dashboard's cross-tenant read, per [ADR-0001](adr/0001-dashboard-cross-tenant-enrollment-read.md))
 - [x] Apply `AsSplitQuery()` for all nested collection projections (2+ levels deep)
 
 ---

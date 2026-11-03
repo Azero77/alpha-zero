@@ -176,6 +176,9 @@ namespace AlphaZero.Modules.Courses.Infrastructure.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
 
+                    b.Property<int?>("AccessWindowDays")
+                        .HasColumnType("integer");
+
                     b.Property<Guid>("CourseId")
                         .HasColumnType("uuid");
 
@@ -306,6 +309,9 @@ namespace AlphaZero.Modules.Courses.Infrastructure.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
 
+                    b.Property<DateTime?>("AccessExpiresOn")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<DateTime?>("CompletedOn")
                         .HasColumnType("timestamp with time zone");
 
@@ -338,6 +344,10 @@ namespace AlphaZero.Modules.Courses.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("TenantId");
+
+                    b.HasIndex("CourseId", "Status");
+
+                    b.HasIndex("Status", "AccessExpiresOn");
 
                     b.HasIndex("StudentId", "CourseId")
                         .IsUnique();
@@ -377,6 +387,40 @@ namespace AlphaZero.Modules.Courses.Infrastructure.Migrations
                         .HasFilter("\"IsDeleted\" = FALSE");
 
                     b.ToTable("Subjects", "Courses");
+                });
+
+            modelBuilder.Entity("AlphaZero.Modules.Courses.Domain.Audits.EnrollmentAuditEntry", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("ActorId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("EventKind")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Metadata")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<DateTime>("OccurredOn")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("SubjectId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId");
+
+                    b.HasIndex("SubjectId", "OccurredOn");
+
+                    b.ToTable("EnrollmentAuditEntries", "Courses");
                 });
 
             modelBuilder.Entity("AlphaZero.Modules.Courses.Infrastructure.CourseAnalytics", b =>

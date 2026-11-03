@@ -120,23 +120,23 @@ public class Course : TenantOwnedAggregate, ISoftDeletable
         return Result.Success;
     }
 
-    public ErrorOr<CoursePlan> AddPlan(string name, Guid principalId)
+    public ErrorOr<CoursePlan> AddPlan(string name, Guid principalId, int? accessWindowDays = null, Guid? planId = null)
     {
-        if (string.IsNullOrWhiteSpace(name))
-            return Error.Validation("Course.PlanName", "Plan name is required.");
-        
+        var input = ValidatePlan(name, accessWindowDays);
+        if (input.IsError) return input.Errors;
+
         if (_plans.Any(p => string.Equals(p.Name, name, StringComparison.OrdinalIgnoreCase)))
             return Error.Conflict("Course.PlanExists", $"A plan with name '{name}' already exists.");
 
-        var plan = CoursePlan.Create(Id, name, principalId);
+        var plan = CoursePlan.Create(Id, name, principalId, accessWindowDays, planId);
         _plans.Add(plan);
         return plan;
     }
 
-    public ErrorOr<Success> UpdatePlan(Guid planId, string name, Guid principalId)
+    public ErrorOr<Success> UpdatePlan(Guid planId, string name, Guid principalId, int? accessWindowDays = null)
     {
-        if (string.IsNullOrWhiteSpace(name))
-            return Error.Validation("Course.PlanName", "Plan name is required.");
+        var input = ValidatePlan(name, accessWindowDays);
+        if (input.IsError) return input.Errors;
 
         var plan = _plans.FirstOrDefault(p => p.Id == planId);
         if (plan == null) return Error.NotFound("Course.Plan", "Plan not found.");
@@ -144,7 +144,22 @@ public class Course : TenantOwnedAggregate, ISoftDeletable
         if (_plans.Any(p => p.Id != planId && string.Equals(p.Name, name, StringComparison.OrdinalIgnoreCase)))
             return Error.Conflict("Course.PlanExists", $"A plan with name '{name}' already exists.");
 
-        plan.Update(name, principalId);
+        plan.Update(name, principalId, accessWindowDays);
+        return Result.Success;
+    }
+
+    /// <summary>
+    /// Shared plan-input validation (review smell #8): AddPlan and UpdatePlan carried the same
+    /// name/window checks twice — one definition here, same error codes both ways.
+    /// </summary>
+    private static ErrorOr<Success> ValidatePlan(string name, int? accessWindowDays)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+            return Error.Validation("Course.PlanName", "Plan name is required.");
+
+        if (accessWindowDays is < 1)
+            return Error.Validation("Course.PlanAccessWindow", "Access window must be at least 1 day.");
+
         return Result.Success;
     }
 

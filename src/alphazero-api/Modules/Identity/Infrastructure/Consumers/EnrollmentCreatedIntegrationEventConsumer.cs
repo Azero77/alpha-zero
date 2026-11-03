@@ -33,9 +33,15 @@ public class EnrollmentCreatedIntegrationEventConsumer : IConsumer<EnrollmentCre
 
         var courseArn = ResourceArn.ForCourse(tenantId, msg.CourseId).ToString();
 
+        // Grant branch (issue #34 rework §3.2.2, step 9): enrollments created under a windowed plan
+        // ride the per-(course, plan) principal in the payload; empty/null keeps the shared student
+        // template — unlimited access is unchanged. Same AssignPrincipalToUserCommand either way.
+        var isWindowed = msg.CoursePlanPrincipalId is Guid planPrincipalId && planPrincipalId != Guid.Empty;
+        var principalId = isWindowed ? msg.CoursePlanPrincipalId!.Value : StudentPrincipalTemplateId;
+
         var command = new AssignPrincipalToUserCommand(
             msg.StudentId,
-            StudentPrincipalTemplateId,
+            principalId,
             courseArn);
 
         var result = await _identityModule.Send(command, context.CancellationToken);
@@ -43,13 +49,15 @@ public class EnrollmentCreatedIntegrationEventConsumer : IConsumer<EnrollmentCre
         if (result.IsError)
         {
             _logger.LogError(
-                "Failed to assign Student principal to User {UserId} for Course {CourseArn}. Error: {Errors}",
-                msg.StudentId, courseArn, string.Join(", ", result.Errors.Select(e => e.Description)));
+                "Failed to assign {PrincipalKind} principal {PrincipalId} to User {UserId} for Course {CourseArn}. Error: {Errors}",
+                isWindowed ? "course-plan" : "Student template",
+                principalId, msg.StudentId, courseArn, string.Join(", ", result.Errors.Select(e => e.Description)));
             return;
         }
 
         _logger.LogInformation(
-            "Assigned Student principal {PrincipalId} to User {UserId} for Course {CourseArn}.",
-            StudentPrincipalTemplateId, msg.StudentId, courseArn);
+            "Assigned {PrincipalKind} principal {PrincipalId} to User {UserId} for Course {CourseArn}.",
+            isWindowed ? "course-plan" : "Student template",
+            principalId, msg.StudentId, courseArn);
     }
 }

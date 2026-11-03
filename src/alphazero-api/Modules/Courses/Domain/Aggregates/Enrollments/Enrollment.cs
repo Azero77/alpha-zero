@@ -14,6 +14,13 @@ public class Enrollment : TenantOwnedAggregate
     public DateTime EnrolledOn { get; private set; }
 
     /// <summary>
+    /// Optional expiry instant (issue #34 stories #5/#6): staleness edge for enrollments whose
+    /// originating course plan carries an access window. Null = never expires automatically.
+    /// Frozen at enroll by intent ("they bought 30 days") — plan edits are future-only (§3.2.5).
+    /// </summary>
+    public DateTime? AccessExpiresOn { get; private set; }
+
+    /// <summary>
     /// Set exactly once when a completion attempt flips the course to
     /// "all active items complete" (#32). Persists the completion transition so
     /// re-completions and progress recomputations after a section deletion never re-raise
@@ -26,7 +33,7 @@ public class Enrollment : TenantOwnedAggregate
         // EF
     }
 
-    private Enrollment(Guid id, Guid tenantId, Guid studentId, Guid courseId) : base(id, tenantId)
+    private Enrollment(Guid id, Guid tenantId, Guid studentId, Guid courseId, DateTime? accessExpiresOn = null, Guid? coursePlanPrincipalId = null) : base(id, tenantId)
     {
         StudentId = studentId;
         CourseId = courseId;
@@ -37,16 +44,24 @@ public class Enrollment : TenantOwnedAggregate
         // and grow lazily as items are completed — adding curriculum items never touches enrollments.
         Progress = Progress.Create();
         EnrolledOn = DateTime.UtcNow;
-
-        AddDomainEvent(new EnrollmentCreatedDomainEvent(Id, StudentId, CourseId, TenantId));
+        AccessExpiresOn = accessExpiresOn;
     }
 
-    public static ErrorOr<Enrollment> Create(Guid id, Guid tenantId, Guid studentId, Guid courseId)
+    /// <summary>
+    /// Creates an Active enrollment. <paramref name="accessExpiresOn"/> is derived from the
+    /// originating course plan's access window by the enrolling flow (issue #34); plain
+    /// self-serve enrollment without a plan passes null (never expires).
+    /// <paramref name="coursePlanPrincipalId"/> rides the created event for the Identity grant
+    /// branch (§3.2.2): the per-(course, plan) principal when enrolling under a windowed plan.
+    /// </summary>
+    public static ErrorOr<Enrollment> Create(Guid id, Guid tenantId, Guid studentId, Guid courseId, DateTime? accessExpiresOn = null, Guid? coursePlanPrincipalId = null)
     {
         if (studentId == Guid.Empty) return Error.Validation("Enrollment.StudentId", "StudentId is required.");
         if (courseId == Guid.Empty) return Error.Validation("Enrollment.CourseId", "CourseId is required.");
 
-        return new Enrollment(id, tenantId, studentId, courseId);
+        var result =  new Enrollment(id, tenantId, studentId, courseId, accessExpiresOn, coursePlanPrincipalId);
+        result.AddDomainEvent(new EnrollmentCreatedDomainEvent(id, studentId, courseId, tenantId, coursePlanPrincipalId));
+        return result;
     }
 
     /// <param name="activeItemsBitmask">
@@ -93,6 +108,95 @@ public class Enrollment : TenantOwnedAggregate
         return Result.Success;
     }
 
-    public void Deactivate() => Status = EnrollmentStatus.Inactive;
-    public void Activate() => Status = EnrollmentStatus.Active;
+    // ------------------------------------------------------------------
+    // Lifecycle transitions (issue #34) — the reachable states are exactly the
+    // matrix pinned in the plan comment on the issue.
+    // ------------------------------------------------------------------
+
+    /// <summary>
+    /// Active/Suspended/Expired → Inactive. Idempotent from Inactive (no rewrite).
+    /// The deactivation path stays integration-event-less (the Payments revocation flow keeps its
+    /// identity); it raises only the audit-only <see cref="EnrollmentDeactivatedDomainEvent"/> for
+    /// the in-process audit writer (issue #34 §3.1).
+    /// </summary>
+    internal ErrorOr<Success> Deactivate()
+    {
+        if (Status is EnrollmentStatus.Inactive)
+            return Result.Success; // idempotent (story #11 — duplicate-reaction safety for all transitions)
+
+        if (Status is not (EnrollmentStatus.Active or EnrollmentStatus.Suspended or EnrollmentStatus.Expired))
+            return InvalidTransition("Deactivate", Status, EnrollmentStatus.Inactive);
+
+        var previousStatus = Status;
+        ApplyTransition(EnrollmentStatus.Inactive);
+        // Audit-only domain event (issue #34 §3.1): deactivation keeps its event-less integration
+        // identity — no integration event is projected onto the bus for it (the Payments revocation
+        // flow keeps publishing its own saga events). The in-process audit writer is the only
+        // consumer, so the Inactive transition lands an audit row atomically with this mutation.
+        //Domain Events Triggering is handled by the domain service now to ensure handling Operator Id and any other future metadata  
+
+        //AddDomainEvent(new EnrollmentDeactivatedDomainEvent(Id, StudentId, CourseId, TenantId, previousStatus, operatorId));
+        return Result.Success;
+    }
+
+    /// <summary>
+    /// Active → Suspended. Idempotent from Suspended. Only reachable from Active — a revoked or
+    /// expired enrollment has no access left to freeze; resolving it is Reactivate's job.
+    /// </summary>
+    internal ErrorOr<Success> Suspend(string? reason = null)
+    {
+        if (Status is EnrollmentStatus.Suspended)
+            return Result.Success;
+
+        if (Status is not EnrollmentStatus.Active)
+            return InvalidTransition("Suspend", Status, EnrollmentStatus.Suspended);
+        ApplyTransition(EnrollmentStatus.Suspended);
+        return Result.Success;
+    }
+
+    /// <summary>
+    /// Inactive/Expired/Suspended (and idempotently Active) → Active. Progress is untouched.
+    /// </summary>
+    internal ErrorOr<Success> Reactivate(Guid? operatorId = null)
+    {
+        if (Status is EnrollmentStatus.Active)
+            return Result.Success;
+
+        if (Status is not (EnrollmentStatus.Inactive or EnrollmentStatus.Suspended or EnrollmentStatus.Expired))
+            return InvalidTransition("Reactivate", Status, EnrollmentStatus.Active);
+        ApplyTransition(EnrollmentStatus.Active);
+        return Result.Success;
+    }
+
+    /// <summary>
+    /// Automated expiry (issues #34 stories #5/#6): Active/Suspended → Expired, idempotent from
+    /// Expired. Not reachable from Inactive — nothing is on the clock once access is revoked.
+    /// The aggregate owns the clock (same discipline as EnrolledOn/CompletedOn) — the sweep and
+    /// the lazy-mint path both mean "expired at evaluation time".
+    /// </summary>
+    public ErrorOr<Success> MarkExpired()
+    {
+        if (Status is EnrollmentStatus.Expired)
+            return Result.Success;
+
+        if (Status is not (EnrollmentStatus.Active or EnrollmentStatus.Suspended))
+            return InvalidTransition("Expire", Status, EnrollmentStatus.Expired);
+
+        var previousStatus = Status;
+        ApplyTransition(EnrollmentStatus.Expired);
+        AddDomainEvent(new EnrollmentExpiredDomainEvent(Id, StudentId, CourseId, TenantId, previousStatus));
+        return Result.Success;
+    }
+
+    private void ApplyTransition(EnrollmentStatus target)
+    {
+        // Transition metadata (who/when) lives in the enrollment audit trail (issue #34 §3.1),
+        // carried by the domain events — the aggregate carries no read-boundary plumbing.
+        Status = target;
+    }
+
+    private static Error InvalidTransition(string transition, EnrollmentStatus from, EnrollmentStatus to) =>
+        Error.Conflict(
+            "Enrollment.InvalidTransition",
+            $"Enrollment is in state '{from}' and cannot be transitioned by '{transition}' to '{to}'.");
 }

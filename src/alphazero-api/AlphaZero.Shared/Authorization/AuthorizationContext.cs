@@ -50,3 +50,22 @@ public record PrincipalUserAuthorizationContext : AuthorizationContext
     public bool IsGlobal { get; init; }
     public string? PrincipalScope { get; init; }
 }
+
+public record SystemServiceAuthorizationContext : AuthorizationContext
+{
+    public required string ServiceName { get; init; }
+
+    public static SystemServiceAuthorizationContext Create(
+        string serviceName,
+        string requiredPermission,
+        string resourcePath = "*",
+        Guid? tenantId = null) => new()
+    {
+        Id = Guid.Empty,
+        TenantId = tenantId,
+        ServiceName = serviceName,
+        AuthenticationMethod = "System",
+        RequiredPermission = requiredPermission,
+        ResourcePath = resourcePath
+    };
+}

@@ -74,6 +74,20 @@ public static class DependencyInjection
         services.AddSingleton<AlphaZero.Shared.Security.ICloudflareCookieSigner, AlphaZero.Shared.Infrastructure.Security.CloudflareCookieSigner>();
         services.AddSingleton<AlphaZero.Shared.Security.IPlaybackTicketSigner, AlphaZero.Shared.Infrastructure.Security.PlaybackTicketSigner>();
 
+        // 6. Course Access-Window Ticketing (#34, §3.2.3): dedicated secret, shared signer
+        services.Configure<AlphaZero.Shared.Security.AccessTicketSettings>(configuration.GetSection(AlphaZero.Shared.Security.AccessTicketSettings.SectionName));
+        var accessTicketSecret = configuration.GetSection(AlphaZero.Shared.Security.AccessTicketSettings.SectionName)[nameof(AlphaZero.Shared.Security.AccessTicketSettings.Secret)];
+        if (string.IsNullOrWhiteSpace(accessTicketSecret) && !environment.IsDevelopment())
+        {
+            // Fail fast: a missing access-ticket secret must never silently degrade to the dev
+            // constant (forgeable access windows). Development keeps the dev default; production
+            // requires an explicit secret.
+            throw new InvalidOperationException(
+                $"Missing required configuration '{AlphaZero.Shared.Security.AccessTicketSettings.SectionName}:{nameof(AlphaZero.Shared.Security.AccessTicketSettings.Secret)}'. " +
+                "Access tickets cannot be minted securely without an explicit secret in non-development environments.");
+        }
+        services.AddSingleton<AlphaZero.Shared.Security.IAccessTicketSigner, AlphaZero.Shared.Infrastructure.Security.AccessTicketSigner>();
+
         services.AddMediatR(cfg =>
         {
             cfg.RegisterServicesFromAssembly(typeof(DependencyInjection).Assembly);

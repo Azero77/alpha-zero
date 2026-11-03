@@ -11,7 +11,12 @@ public record AddPlanRequest
 {
     public Guid CourseId { get; init; }
     public string Name { get; init; } = default!;
-    public Guid PrincipalId { get; init; }
+
+    /// <summary>Caller-provided principal for UNLIMITED plans. Windowed plans mint their own per-(course, plan) principal via Identity (issue #34 §3.2.1) and ignore this field.</summary>
+    public Guid? PrincipalId { get; init; }
+
+    /// <summary>Optional access window in days; enrollments via this plan expire automatically after it (issue #34).</summary>
+    public int? AccessWindowDays { get; init; }
 }
 
 public record AddPlanResponse(Guid PlanId);
@@ -23,7 +28,7 @@ public class AddPlanSummary : Summary<AddPlanEndpoint>
         Summary = "Adds an access plan to a course";
         Description = "Creates a new plan option for accessing the course.";
         Response<AddPlanResponse>(200, "Plan added successfully");
-        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(400, "Validation failure (CourseId, Name, PrincipalId empty or Course.PlanName)");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(400, "Validation failure (CourseId, Name empty, or PrincipalId empty for unlimited plans, or Course.PlanName / Course.PlanAccessWindow)");
         Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(401, "Unauthorized");
         Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(403, "Forbidden (Missing courses:Edit permission)");
         Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(404, "Course not found (Course.NotFound)");
@@ -49,7 +54,7 @@ public class AddPlanEndpoint : Endpoint<AddPlanRequest, AddPlanResponse>
 
     public override async Task HandleAsync(AddPlanRequest req, CancellationToken ct)
     {
-        var command = new AddPlanCommand(req.CourseId, req.Name, req.PrincipalId);
+        var command = new AddPlanCommand(req.CourseId, req.Name, req.PrincipalId, req.AccessWindowDays);
         var result = await _module.Send(command, ct);
 
         if (result.IsError)

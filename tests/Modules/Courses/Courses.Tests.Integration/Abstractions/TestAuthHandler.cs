@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using System.Text.Encodings.Web;
+using AlphaZero.Shared.Authorization;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -39,6 +40,9 @@ public class TestAuthHandler : AuthenticationHandler<AuthenticationSchemeOptions
         {
             new Claim(ClaimTypes.NameIdentifier, userId),
             new Claim("sub", userId),
+            // ToTenantUserDTO() hard-nulls without identity_id (ClaimsExtensions.cs) —
+            // access/playback-ticket mint endpoints resolve the caller through it (spec-34).
+            new Claim(CustomClaimTypes.IdentityId, "test-identity"),
             new Claim("auth_method", "TenantUser"),
             new Claim("sid", Guid.NewGuid().ToString())
         };

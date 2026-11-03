@@ -15,7 +15,9 @@ public record EnrollmentDto(
     int ActiveItemsCount,
     double CompletionPercentage,
     DateTime EnrolledOn,
-    Guid TenantId);
+    Guid TenantId,
+    DateTime? LastStatusChangedOn = null,
+    Guid? LastStatusChangedBy = null);
 
 public record GetEnrollmentQuery(Guid EnrollmentId) : IRequest<ErrorOr<EnrollmentDto>>;
 

@@ -17,6 +17,9 @@ public interface IEnrollmentQueryService
     /// <summary>Support listing (GET /courses/enrollments): all statuses of one student, paged, tenant-scoped.</summary>
     Task<PagedResult<EnrollmentDto>> ListStudentEnrollmentsAsync(Guid studentId, int page, int perPage, CancellationToken cancellationToken = default);
 
+    /// <summary>Spec-34 roster read path: tenant-pinned listing of every status for one student (explicit tenant argument, no paging).</summary>
+    Task<List<EnrollmentDto>> GetStudentEnrollmentsForTenantAsync(Guid studentId, Guid tenantId, CancellationToken cancellationToken = default);
+
     /// <summary>Analytics listing (GET /courses/{CourseId}/students): enrollments of one course, paged, tenant-scoped.</summary>
     Task<PagedResult<EnrollmentDto>> ListCourseEnrollmentsAsync(Guid courseId, int page, int perPage, CancellationToken cancellationToken = default);
 

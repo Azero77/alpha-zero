@@ -12,7 +12,12 @@ public record UpdatePlanRequest
     public Guid CourseId { get; init; }
     public Guid PlanId { get; init; }
     public string Name { get; init; } = default!;
-    public Guid PrincipalId { get; init; }
+
+    /// <summary>Caller-provided principal for UNLIMITED plans; omitted keeps the existing one. Windowed plans own their per-(course, plan) principal (issue #34 §3.2.1) — this field is ignored.</summary>
+    public Guid? PrincipalId { get; init; }
+
+    /// <summary>Optional access window in days; enrollments via this plan expire automatically after it (issue #34). Omitting/null clears the window (unlimited access).</summary>
+    public int? AccessWindowDays { get; init; }
 }
 
 public class UpdatePlanSummary : Summary<UpdatePlanEndpoint>
@@ -22,7 +27,7 @@ public class UpdatePlanSummary : Summary<UpdatePlanEndpoint>
         Summary = "Updates an access plan for a course";
         Description = "Updates the plan name or associated principal for accessing the course.";
         Response(204, "Plan updated successfully");
-        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(400, "Validation failure (CourseId, PlanId, Name, PrincipalId empty or Course.PlanName)");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(400, "Validation failure (CourseId, PlanId, Name empty or Course.PlanName / Course.PlanAccessWindow)");
         Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(401, "Unauthorized");
         Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(403, "Forbidden (Missing courses:Edit permission)");
         Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(404, "Not found (Course.NotFound, Course.Plan)");
@@ -48,7 +53,7 @@ public class UpdatePlanEndpoint : Endpoint<UpdatePlanRequest>
 
     public override async Task HandleAsync(UpdatePlanRequest req, CancellationToken ct)
     {
-        var command = new UpdatePlanCommand(req.CourseId, req.PlanId, req.Name, req.PrincipalId);
+        var command = new UpdatePlanCommand(req.CourseId, req.PlanId, req.Name, req.PrincipalId, req.AccessWindowDays);
         var result = await _module.Send(command, ct);
 
         if (result.IsError)

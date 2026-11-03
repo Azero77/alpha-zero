@@ -79,4 +79,52 @@ public class EnrollmentCreatedIntegrationEventConsumerTests
             c.PrincipalId == StudentPrincipalTemplateId &&
             c.ResourceArn == expectedArn), Arg.Any<CancellationToken>());
     }
+
+    // ------------------------------------------------------------------
+    // Step 9 (§3.2.2): the grant BRANCH — windowed enrollments ride the per-(course, plan)
+    // principal carried by the event; empty keeps the shared template (unlimited, unchanged).
+    // ------------------------------------------------------------------
+
+    [Fact]
+    public async Task Consume_ShouldAssignPerCoursePlanPrincipal_WhenEventCarriesIt()
+    {
+        // Arrange — a windowed-plan enrollment: the per-(course, plan) principal rides the event
+        var planPrincipalId = Guid.NewGuid();
+        var context = Substitute.For<ConsumeContext<EnrollmentCreatedIntegrationEvent>>();
+        context.Message.Returns(new EnrollmentCreatedIntegrationEvent(EnrollmentId, StudentId, CourseId, TenantId, CoursePlanPrincipalId: planPrincipalId));
+
+        _identityModule.Send(Arg.Any<AssignPrincipalToUserCommand>(), Arg.Any<CancellationToken>())
+            .Returns(Guid.NewGuid());
+
+        // Act
+        await _consumer.Consume(context);
+
+        // Assert
+        var expectedArn = $"az:course:{TenantId}:course/{CourseId}";
+        await _identityModule.Received(1).Send(Arg.Is<AssignPrincipalToUserCommand>(c =>
+            c.TenantUserId == StudentId &&
+            c.PrincipalId == planPrincipalId &&
+            c.ResourceArn == expectedArn), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Consume_ShouldTreatEmptyPlanPrincipalAsUnlimited_TemplateAssignment()
+    {
+        // Arrange — an unlimited enrollment whose payload carries a sentinel-empty id
+        var context = Substitute.For<ConsumeContext<EnrollmentCreatedIntegrationEvent>>();
+        context.Message.Returns(new EnrollmentCreatedIntegrationEvent(EnrollmentId, StudentId, CourseId, TenantId, CoursePlanPrincipalId: Guid.Empty));
+
+        _identityModule.Send(Arg.Any<AssignPrincipalToUserCommand>(), Arg.Any<CancellationToken>())
+            .Returns(Guid.NewGuid());
+
+        // Act
+        await _consumer.Consume(context);
+
+        // Assert
+        var expectedArn = $"az:course:{TenantId}:course/{CourseId}";
+        await _identityModule.Received(1).Send(Arg.Is<AssignPrincipalToUserCommand>(c =>
+            c.TenantUserId == StudentId &&
+            c.PrincipalId == StudentPrincipalTemplateId &&
+            c.ResourceArn == expectedArn), Arg.Any<CancellationToken>());
+    }
 }
