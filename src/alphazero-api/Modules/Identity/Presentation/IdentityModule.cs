@@ -36,7 +36,7 @@ public class IdentityModule : AppModule, IIdentityModule
     {
         configuration.AddEntityFrameworkOutbox<AlphaZero.Modules.Identity.Infrastructure.Persistance.AppDbContext>(o =>
         {
-            o.UsePostgres();
+            o.UsePostgres(false);
             o.UseBusOutbox();
             o.QueryDelay = TimeSpan.FromMinutes(5);
             o.DuplicateDetectionWindow = TimeSpan.FromMinutes(30);

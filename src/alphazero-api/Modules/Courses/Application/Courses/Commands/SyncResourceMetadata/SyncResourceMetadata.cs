@@ -3,6 +3,7 @@ using AlphaZero.Shared.Application;
 using AlphaZero.Shared.Domain;
 using AlphaZero.Shared.Infrastructure.Repositores;
 using ErrorOr;
+using FluentValidation;
 using MediatR;
 using Microsoft.Extensions.Logging;
 using System.Text.Json;
@@ -10,6 +11,17 @@ using System.Text.Json;
 namespace AlphaZero.Modules.Courses.Application.Courses.Commands.SyncResourceMetadata;
 
 public record SyncResourceMetadataCommand(Guid ResourceId, JsonElement Metadata) : ICommand<Success>;
+
+public class SyncResourceMetadataCommandValidator : AbstractValidator<SyncResourceMetadataCommand>
+{
+    public SyncResourceMetadataCommandValidator()
+    {
+        RuleFor(x => x.ResourceId).NotEmpty();
+        RuleFor(x => x.Metadata)
+            .Must(m => m.ValueKind == JsonValueKind.Object)
+            .WithMessage("Metadata must be a JSON object.");
+    }
+}
 
 public sealed class SyncResourceMetadataCommandHandler : IRequestHandler<SyncResourceMetadataCommand, ErrorOr<Success>>
 {

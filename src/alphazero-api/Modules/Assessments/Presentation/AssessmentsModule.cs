@@ -34,7 +34,7 @@ public class AssessmentsModule : AppModule, IAssessmentsModule
     {
         configuration.AddEntityFrameworkOutbox<AlphaZero.Modules.Assessments.Infrastructure.Persistance.AppDbContext>(o =>
         {
-            o.UsePostgres();
+            o.UsePostgres(false);
             o.UseBusOutbox();
             o.QueryDelay = TimeSpan.FromMinutes(5);
             o.DuplicateDetectionWindow = TimeSpan.FromMinutes(30);

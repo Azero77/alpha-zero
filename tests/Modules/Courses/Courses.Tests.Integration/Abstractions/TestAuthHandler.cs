@@ -43,6 +43,7 @@ public class TestAuthHandler : AuthenticationHandler<AuthenticationSchemeOptions
             // ToTenantUserDTO() hard-nulls without identity_id (ClaimsExtensions.cs) —
             // access/playback-ticket mint endpoints resolve the caller through it (spec-34).
             new Claim(CustomClaimTypes.IdentityId, "test-identity"),
+            new Claim("name", "Test User"),
             new Claim("auth_method", "TenantUser"),
             new Claim("sid", Guid.NewGuid().ToString())
         };

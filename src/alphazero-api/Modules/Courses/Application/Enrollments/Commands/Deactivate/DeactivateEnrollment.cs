@@ -13,6 +13,15 @@ namespace AlphaZero.Modules.Courses.Application.Enrollments.Commands.Deactivate;
 
 public record DeactivateEnrollmentCommand(Guid UserId, Guid CourseId) : ICommand<Success>;
 
+public class DeactivateEnrollmentCommandValidator : AbstractValidator<DeactivateEnrollmentCommand>
+{
+    public DeactivateEnrollmentCommandValidator()
+    {
+        RuleFor(x => x.UserId).NotEmpty();
+        RuleFor(x => x.CourseId).NotEmpty();
+    }
+}
+
 public sealed class DeactivateEnrollmentCommandHandler(
     IRepository<Enrollment> repository,
     IAuthorizationContextProvider authorizationContextProvider,

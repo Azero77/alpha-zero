@@ -37,6 +37,7 @@ public class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
         .Build();
 
     public WireMockServer MockServer { get; private set; } = null!;
+    private readonly string _busBaseAddress = $"loopback://alphazero-{Guid.NewGuid():N}/";
 
     /// <summary>
     /// Whether this factory owns (starts/stops) a dedicated Postgres container. Secondary factories
@@ -63,6 +64,7 @@ public class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Development");
+        builder.UseSetting("MassTransit:BaseAddress", _busBaseAddress);
         // Analytics counters are derived-from-source via the CourseAnalyticsRefreshWorker, which
         // waits the configured interval between passes (default: a full day). Lifecycle tests poll
         // the analytics endpoint within seconds of a mutation, so refresh every second in the
@@ -116,6 +118,9 @@ public class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
             // Ensure IPublishEndpoint publishes to in-memory IBus rather than external SQS bus in tests.
             // RecordingPublishObserver captures module-published payloads for lifecycle-event assertions (#34).
             services.AddScoped<MassTransit.IPublishEndpoint>(sp => sp.GetRequiredService<MassTransit.IBus>());
+
+            // Isolate in-memory bus per WebApplicationFactory instance so secondary hosts don't collide or stop the shared broker
+            services.AddSingleton(new AlphaZero.Shared.Infrastructure.Messaging.MassTransitHostSettings { BaseAddress = _busBaseAddress });
         });
     }
 

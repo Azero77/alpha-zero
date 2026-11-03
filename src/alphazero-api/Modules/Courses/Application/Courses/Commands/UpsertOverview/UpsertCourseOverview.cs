@@ -1,4 +1,5 @@
 using ErrorOr;
+using FluentValidation;
 using MediatR;
 using AlphaZero.Modules.Courses.Domain.Aggregates.Courses;
 using AlphaZero.Modules.Courses.Application.Repositories;
@@ -13,6 +14,15 @@ public record UpsertCourseOverviewCommand(
     string DescriptionContent,
     string? TargetAudienceContent,
     string? LearningObjectivesContent) : ICommand<Success>;
+
+public class UpsertCourseOverviewCommandValidator : AbstractValidator<UpsertCourseOverviewCommand>
+{
+    public UpsertCourseOverviewCommandValidator()
+    {
+        RuleFor(x => x.CourseId).NotEmpty();
+        RuleFor(x => x.DescriptionContent).NotEmpty();
+    }
+}
 
 public class UpsertCourseOverviewCommandHandler : IRequestHandler<UpsertCourseOverviewCommand, ErrorOr<Success>>
 {

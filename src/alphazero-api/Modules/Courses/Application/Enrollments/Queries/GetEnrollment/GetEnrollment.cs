@@ -1,5 +1,6 @@
 using AlphaZero.Modules.Courses.Application.Queries;
 using ErrorOr;
+using FluentValidation;
 using MediatR;
 
 namespace AlphaZero.Modules.Courses.Application.Enrollments.Queries.GetEnrollment;
@@ -20,6 +21,14 @@ public record EnrollmentDto(
     Guid? LastStatusChangedBy = null);
 
 public record GetEnrollmentQuery(Guid EnrollmentId) : IRequest<ErrorOr<EnrollmentDto>>;
+
+public class GetEnrollmentQueryValidator : AbstractValidator<GetEnrollmentQuery>
+{
+    public GetEnrollmentQueryValidator()
+    {
+        RuleFor(x => x.EnrollmentId).NotEmpty();
+    }
+}
 
 public sealed class GetEnrollmentQueryHandler : IRequestHandler<GetEnrollmentQuery, ErrorOr<EnrollmentDto>>
 {

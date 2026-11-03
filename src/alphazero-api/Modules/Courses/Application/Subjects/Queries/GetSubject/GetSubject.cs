@@ -1,5 +1,6 @@
 using AlphaZero.Modules.Courses.Application.Queries;
 using ErrorOr;
+using FluentValidation;
 using MediatR;
 
 namespace AlphaZero.Modules.Courses.Application.Subjects.Queries.GetSubject;
@@ -7,6 +8,11 @@ namespace AlphaZero.Modules.Courses.Application.Subjects.Queries.GetSubject;
 public record SubjectDto(Guid Id, string Name, string? Description);
 
 public record GetSubjectQuery(Guid SubjectId) : IRequest<ErrorOr<SubjectDto>>;
+
+public class GetSubjectQueryValidator : AbstractValidator<GetSubjectQuery>
+{
+    public GetSubjectQueryValidator() => RuleFor(x => x.SubjectId).NotEmpty();
+}
 
 public sealed class GetSubjectQueryHandler : IRequestHandler<GetSubjectQuery, ErrorOr<SubjectDto>>
 {

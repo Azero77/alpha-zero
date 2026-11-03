@@ -1,11 +1,17 @@
 using AlphaZero.Modules.Courses.Application.Queries;
 using AlphaZero.Shared.Application;
 using ErrorOr;
+using FluentValidation;
 using MediatR;
 
 namespace AlphaZero.Modules.Courses.Application.Courses.Queries;
 
 public record GetCoursePoolQuery(Guid CourseId, bool IncludeAssigned = false) : IQuery<List<CourseAssetDto>>;
+
+public class GetCoursePoolQueryValidator : AbstractValidator<GetCoursePoolQuery>
+{
+    public GetCoursePoolQueryValidator() => RuleFor(x => x.CourseId).NotEmpty();
+}
 
 public record CourseAssetDto(
     Guid Id,

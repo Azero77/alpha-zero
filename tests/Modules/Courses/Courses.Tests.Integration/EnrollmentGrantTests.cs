@@ -108,7 +108,8 @@ public class EnrollmentGrantTests : BaseIntegrationTest
         // minted by Identity and stored on the plan (§3.2.1). Managed → managed, no inline policies.
         var addPlanResp = await Client.PostAsJsonAsync($"/courses/{courseId}/plans",
             new AddPlanRequest { CourseId = courseId, Name = "Limited", AccessWindowDays = 14 });
-        addPlanResp.StatusCode.Should().Be(HttpStatusCode.OK);
+        var addBody = await addPlanResp.Content.ReadAsStringAsync();
+        addPlanResp.StatusCode.Should().Be(HttpStatusCode.OK, because: addBody);
         var planId = (await addPlanResp.Content.ReadFromJsonAsync<AddPlanResponse>())!.PlanId;
 
         var facts = new CoursePlanPrincipalFacts(tenantId, courseId, planId);
@@ -243,7 +244,8 @@ public class EnrollmentGrantTests : BaseIntegrationTest
         SetTenant(tenantId);
         var updateResp = await Client.PutAsJsonAsync($"/courses/{courseId}/plans/{planId}",
             new UpdatePlanRequest { CourseId = courseId, PlanId = planId, Name = "Standard", AccessWindowDays = 7 });
-        updateResp.StatusCode.Should().Be(HttpStatusCode.NoContent);
+        var updateBody = await updateResp.Content.ReadAsStringAsync();
+        updateResp.StatusCode.Should().Be(HttpStatusCode.NoContent, because: updateBody);
 
         var facts = new CoursePlanPrincipalFacts(tenantId, courseId, planId);
         var minted = await WaitForAsync(async () =>
