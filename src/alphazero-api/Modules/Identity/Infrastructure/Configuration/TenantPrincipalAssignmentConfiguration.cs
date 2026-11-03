@@ -13,9 +13,12 @@ public class TenantUserPrincipalAssignmentConfiguration : IEntityTypeConfigurati
         builder.ToTable("TenantPrincipalAssignments");
         builder.HasKey(a => a.Id);
 
+        // Real CLR FK property (TenantUserId on the domain model) — a shadow FK is not queryable
+        // from LINQ predicates, forcing navigation traversal that EF cannot translate under
+        // query filters (see TenantUserId comment).
         builder.HasOne(a => a.TenantUser)
             .WithMany()
-            .HasForeignKey("TenantUserId")
+            .HasForeignKey(a => a.TenantUserId)
             .OnDelete(DeleteBehavior.Cascade);
 
         // Map to PrincipalDataModel via the PrincipalId property on the Domain model

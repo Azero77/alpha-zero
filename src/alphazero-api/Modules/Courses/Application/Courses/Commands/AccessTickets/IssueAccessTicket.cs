@@ -36,6 +36,7 @@ public sealed class IssueAccessTicketCommandHandler : IRequestHandler<IssueAcces
     private readonly IAccessTicketSigner _ticketSigner;
     private readonly IOptions<AccessTicketSettings> _options;
     private readonly IAuthorizationContextProvider _authorizationContextProvider;
+    private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<IssueAccessTicketCommandHandler>? _logger;
 
     public IssueAccessTicketCommandHandler(
@@ -44,6 +45,7 @@ public sealed class IssueAccessTicketCommandHandler : IRequestHandler<IssueAcces
         IAccessTicketSigner ticketSigner,
         IOptions<AccessTicketSettings> options,
         IAuthorizationContextProvider authorizationContextProvider,
+        IUnitOfWork unitOfWork,
         ILogger<IssueAccessTicketCommandHandler>? logger = null)
     {
         _enrollmentRepository = enrollmentRepository;
@@ -51,6 +53,7 @@ public sealed class IssueAccessTicketCommandHandler : IRequestHandler<IssueAcces
         _ticketSigner = ticketSigner;
         _options = options;
         _authorizationContextProvider = authorizationContextProvider;
+        _unitOfWork = unitOfWork;
         _logger = logger;
     }
 
@@ -100,6 +103,11 @@ public sealed class IssueAccessTicketCommandHandler : IRequestHandler<IssueAcces
                 {
                     return markResult.Errors;
                 }
+
+                // Path b lazy expiry must persist DESPITE this request returning 409: the shared
+                // UnitOfWork decorator only saves when the handler result is non-error, so commit
+                // the Expired transition (and its staged audit row) explicitly here (§3.4).
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
             }
 
             return Error.Conflict("Enrollment.AccessWindowElapsed",

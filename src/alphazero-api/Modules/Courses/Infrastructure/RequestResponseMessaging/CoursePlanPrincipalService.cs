@@ -13,14 +13,11 @@ public class CoursePlanPrincipalService : ICoursePlanPrincipalService
 {
     private readonly IRequestClient<EnsureCoursePlanPrincipalRequest> _requestClient;
 
+    // Single 1-param constructor: two equal-length constructors are ambiguous to Autofac's
+    // (greedy) constructor selection and a DI resolve of AddPlanCommandHandler 500s (spec-34).
     public CoursePlanPrincipalService(IBus moduleBus)
-        : this(moduleBus.CreateRequestClient<EnsureCoursePlanPrincipalRequest>())
     {
-    }
-
-    public CoursePlanPrincipalService(IRequestClient<EnsureCoursePlanPrincipalRequest> requestClient)
-    {
-        _requestClient = requestClient;
+        _requestClient = moduleBus.CreateRequestClient<EnsureCoursePlanPrincipalRequest>();
     }
 
     public async Task<ErrorOr<Guid>> EnsurePlanPrincipalAsync(
