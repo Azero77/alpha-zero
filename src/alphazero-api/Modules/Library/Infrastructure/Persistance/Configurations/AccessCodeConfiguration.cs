@@ -41,5 +41,9 @@ public class AccessCodeConfiguration : IEntityTypeConfiguration<AccessCode>
 
         builder.Property(x => x.TenantId).IsRequired();
         builder.HasIndex(x => x.TenantId);
+
+        builder.Property(x => x.VoidedReason)
+            .IsRequired(false)
+            .HasMaxLength(512);
     }
 }

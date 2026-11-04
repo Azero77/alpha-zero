@@ -70,4 +70,67 @@ public class AccessCodeTests
         accessCode.Status.Should().Be(AccessCodeStatus.Voided);
         accessCode.DomainEvents.Should().ContainSingle(e => e is AccessCodeVoidedDomainEvent);
     }
+
+    [Fact]
+    public void Void_Should_PersistReasonOnAggregate()
+    {
+        // Arrange
+        var accessCode = AccessCode.Mint("hash", TenantId, null, "strategy", TargetResource, Metadata);
+
+        // Act
+        var result = accessCode.Void("Damaged in transit");
+
+        // Assert
+        result.IsError.Should().BeFalse();
+        accessCode.Status.Should().Be(AccessCodeStatus.Voided);
+        accessCode.VoidedReason.Should().Be("Damaged in transit");
+    }
+
+    [Fact]
+    public void Void_Should_CarryReasonInDomainEvent_WhenPreviouslyRedeemed()
+    {
+        // Arrange
+        var accessCode = AccessCode.Mint("hash", TenantId, null, "strategy", TargetResource, Metadata);
+        accessCode.Redeem(Guid.NewGuid());
+
+        // Act
+        accessCode.Void("Theft");
+
+        // Assert
+        var @event = accessCode.DomainEvents.Should().ContainSingle(e => e is AccessCodeVoidedDomainEvent)
+            .Subject as AccessCodeVoidedDomainEvent;
+        @event!.Reason.Should().Be("Theft");
+    }
+
+    [Fact]
+    public void Void_Should_RejectEmptyReason_WithValidationError()
+    {
+        // Arrange
+        var accessCode = AccessCode.Mint("hash", TenantId, null, "strategy", TargetResource, Metadata);
+
+        // Act
+        var result = accessCode.Void("   ");
+
+        // Assert
+        result.IsError.Should().BeTrue();
+        result.FirstError.Code.Should().Be("AccessCode.EmptyReason");
+        accessCode.Status.Should().Be(AccessCodeStatus.Minted);
+        accessCode.VoidedReason.Should().BeNull();
+    }
+
+    [Fact]
+    public void ReVoid_Should_Conflict_AndKeepOriginalReason()
+    {
+        // Arrange
+        var accessCode = AccessCode.Mint("hash", TenantId, null, "strategy", TargetResource, Metadata);
+        accessCode.Void("Stolen");
+
+        // Act
+        var result = accessCode.Void("Different reason");
+
+        // Assert
+        result.IsError.Should().BeTrue();
+        result.FirstError.Code.Should().Be("AccessCode.AlreadyVoided");
+        accessCode.VoidedReason.Should().Be("Stolen");
+    }
 }

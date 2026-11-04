@@ -18,12 +18,10 @@ public class RedemptionAuditLogRepository : IRedemptionAuditLogRepository
         => await _context.RedemptionAuditLogs.AddAsync(log, ct);
 
     public async Task<PagedResult<RedemptionAuditLog>> GetPagedAsync(
-        Guid? libraryId, DateOnly? from, DateOnly? to, int page, int pageSize, CancellationToken ct = default)
+        Guid libraryId, DateOnly? from, DateOnly? to, int page, int pageSize, CancellationToken ct = default)
     {
-        var query = _context.RedemptionAuditLogs.AsNoTracking();
-
-        if (libraryId.HasValue)
-            query = query.Where(x => x.LibraryId == libraryId);
+        var query = _context.RedemptionAuditLogs.AsNoTracking()
+            .Where(x => x.LibraryId == libraryId);
 
         if (from.HasValue)
         {

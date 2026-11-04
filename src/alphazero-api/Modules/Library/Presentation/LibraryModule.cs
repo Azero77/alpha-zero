@@ -3,7 +3,6 @@ using AlphaZero.Shared.Application;
 using AlphaZero.Shared.Presentation;
 using Autofac;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 
 using MassTransit;
 using AlphaZero.Shared.Infrastructure;
@@ -12,20 +11,31 @@ namespace AlphaZero.Modules.Library.Presentation;
 
 public class LibraryModule : AppModule
 {
+    // The module must never run with degraded persistence wiring: without its
+    // persistence configuration the explosion would otherwise be deferred to the
+    // first request. Configuration is null exactly when the application wiring
+    // fails to pass it in - abort module startup, naming the missing section.
+    private void ThrowIfConfigurationMissing(string registrationStage)
+    {
+        if (Configuration is null)
+        {
+            throw new InvalidOperationException(
+                $"The Library module cannot start: persistence configuration is missing " +
+                $"(configuration section \"DatabaseSettings\" was not resolved for the module, {registrationStage}). " +
+                "No module may run with degraded persistence wiring.");
+        }
+    }
+
     public override void RegisterGlobal(IServiceCollection globalServices)
     {
-        if (Configuration is not null)
-            globalServices.AddLibraryGlobalInfrastructure(Configuration);
-        else
-            _logger?.LogWarning("Configuration is null in Library Module");
+        ThrowIfConfigurationMissing(nameof(RegisterGlobal));
+        globalServices.AddLibraryGlobalInfrastructure(Configuration!);
     }
 
     public override void RegisterPrivate(IServiceCollection moduleServices, ContainerBuilder builder)
     {
-        if (Configuration is not null)
-            moduleServices.AddLibraryPrivateInfrastructure(Configuration);
-        else
-            _logger?.LogWarning("Configuration is null in Library Module (Private)");
+        ThrowIfConfigurationMissing(nameof(RegisterPrivate));
+        moduleServices.AddLibraryPrivateInfrastructure(Configuration!);
     }
 
     public override void ConfigureModuleBus(IBusRegistrationConfigurator configuration)

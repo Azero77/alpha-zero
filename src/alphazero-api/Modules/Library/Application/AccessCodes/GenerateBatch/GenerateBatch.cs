@@ -12,12 +12,15 @@ using System.Text.Json;
 
 namespace AlphaZero.Modules.Library.Application.AccessCodes.GenerateBatch;
 
+public record GenerateBatchResult(Guid BatchId, int GeneratedCount, List<string> Codes);
+
 public record GenerateBatchCommand(
     Guid LibraryId,
     int Quantity,
     string StrategyId,
     string TargetResourceArn,
-    Dictionary<string, object> Metadata) : ICommand<List<string>>;
+    decimal FaceValue,
+    Dictionary<string, object> Metadata) : ICommand<GenerateBatchResult>;
 
 public class GenerateBatchCommandValidator : AbstractValidator<GenerateBatchCommand>
 {
@@ -27,10 +30,11 @@ public class GenerateBatchCommandValidator : AbstractValidator<GenerateBatchComm
         RuleFor(x => x.Quantity).GreaterThan(0).LessThanOrEqualTo(1000);
         RuleFor(x => x.StrategyId).NotEmpty();
         RuleFor(x => x.TargetResourceArn).NotEmpty();
+        RuleFor(x => x.FaceValue).GreaterThan(0).LessThanOrEqualTo(1000);
     }
 }
 
-public sealed class GenerateBatchCommandHandler : IRequestHandler<GenerateBatchCommand, ErrorOr<List<string>>>
+public sealed class GenerateBatchCommandHandler : IRequestHandler<GenerateBatchCommand, ErrorOr<GenerateBatchResult>>
 {
     private readonly IAccessCodeRepository _accessCodeRepository;
     private readonly ILibraryRepository _libraryRepository;
@@ -52,7 +56,7 @@ public sealed class GenerateBatchCommandHandler : IRequestHandler<GenerateBatchC
         _logger = logger;
     }
 
-    public async Task<ErrorOr<List<string>>> Handle(GenerateBatchCommand request, CancellationToken cancellationToken)
+    public async Task<ErrorOr<GenerateBatchResult>> Handle(GenerateBatchCommand request, CancellationToken cancellationToken)
     {
         var tenantId = _tenantProvider.GetTenant();
         if (tenantId is null) return Error.Unauthorized("Tenant.NotFound", "Tenant not found.");
@@ -76,7 +80,11 @@ public sealed class GenerateBatchCommandHandler : IRequestHandler<GenerateBatchC
 
         var batchId = Guid.NewGuid();
         var generatedCodes = new List<string>();
-        var jsonMetadata = JsonDocument.Parse(JsonSerializer.Serialize(request.Metadata));
+        var metadata = new Dictionary<string, object>(request.Metadata ?? new())
+        {
+            ["FaceValue"] = request.FaceValue
+        };
+        var jsonMetadata = JsonDocument.Parse(JsonSerializer.Serialize(metadata));
 
         for (int i = 0; i < request.Quantity; i++)
         {
@@ -99,7 +107,7 @@ public sealed class GenerateBatchCommandHandler : IRequestHandler<GenerateBatchC
         _logger.LogInformation("Generated {Quantity} access codes for Library {LibraryId} in Tenant {TenantId}. Batch: {BatchId}",
             request.Quantity, request.LibraryId, tenantId.Value, batchId);
 
-        return generatedCodes;
+        return new GenerateBatchResult(batchId, generatedCodes.Count, generatedCodes);
     }
 }
 

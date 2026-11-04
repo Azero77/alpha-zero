@@ -17,6 +17,7 @@ public class AccessCode : AggregateRoot, IDomainTenantOwned
     public DateTime CreatedAt { get; private set; }
     public DateTime? RedeemedAt { get; private set; }
     public Guid? RedeemedByUserId { get; private set; }
+    public string? VoidedReason { get; private set; }
 
     private AccessCode() { }
 
@@ -97,6 +98,11 @@ public class AccessCode : AggregateRoot, IDomainTenantOwned
 
     public ErrorOr<Success> Void(string reason)
     {
+        if (string.IsNullOrWhiteSpace(reason))
+        {
+            return Error.Validation("AccessCode.EmptyReason", "A void reason is required.");
+        }
+
         if (Status == AccessCodeStatus.Voided)
         {
             return Error.Conflict("AccessCode.AlreadyVoided", "Code is already voided.");
@@ -104,20 +110,22 @@ public class AccessCode : AggregateRoot, IDomainTenantOwned
 
         var oldStatus = Status;
         Status = AccessCodeStatus.Voided;
+        VoidedReason = reason;
 
         // If it was already redeemed, we must trigger a revocation event
         if (oldStatus == AccessCodeStatus.Redeemed && RedeemedByUserId.HasValue)
         {
-            AddDomainEvent(new AccessCodeVoidedDomainEvent(Id, RedeemedByUserId.Value, TargetResourceArn));
+            AddDomainEvent(new AccessCodeVoidedDomainEvent(Id, RedeemedByUserId.Value, TargetResourceArn, reason));
         }
 
         return Result.Success;
     }
 }
 
-public class AccessCodeVoidedDomainEvent(Guid AccessCodeId, Guid UserId, ResourceArn Resource) : DomainEvent()
+public class AccessCodeVoidedDomainEvent(Guid AccessCodeId, Guid UserId, ResourceArn Resource, string Reason) : DomainEvent()
 {
     public Guid AccessCodeId { get; } = AccessCodeId;
     public Guid UserId { get; } = UserId;
     public ResourceArn Resource { get; } = Resource;
+    public string Reason { get; } = Reason;
 }

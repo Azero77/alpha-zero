@@ -48,14 +48,16 @@ public class GenerateBatchCommandHandlerTests
         _libraryRepository.GetById(LibraryId).Returns(library);
         _passwordHasher.HashPassword(Arg.Any<string>()).Returns("hashed");
 
-        var command = new GenerateBatchCommand(LibraryId, 5, "enroll-course", resourceArn, new());
+        var command = new GenerateBatchCommand(LibraryId, 5, "enroll-course", resourceArn, 50m, new());
 
         // Act
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
         result.IsError.Should().BeFalse();
-        result.Value.Should().HaveCount(5);
+        result.Value.BatchId.Should().NotBeEmpty();
+        result.Value.GeneratedCount.Should().Be(5);
+        result.Value.Codes.Should().HaveCount(5);
         _accessCodeRepository.Received(5).Add(Arg.Any<AccessCode>());
     }
 
@@ -69,7 +71,7 @@ public class GenerateBatchCommandHandlerTests
         _tenantProvider.GetTenant().Returns(TenantId);
         _libraryRepository.GetById(LibraryId).Returns(library);
 
-        var command = new GenerateBatchCommand(LibraryId, 5, "enroll-course", resourceArn, new());
+        var command = new GenerateBatchCommand(LibraryId, 5, "enroll-course", resourceArn, 50m, new());
 
         // Act
         var result = await _handler.Handle(command, CancellationToken.None);

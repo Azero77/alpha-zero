@@ -47,9 +47,11 @@ public static class DependencyInjection
 
         services.AddScoped<IUnitOfWork, UnitOfWork<AppDbContext>>();
 
-        // Register MediatR handlers from the Application assembly
+        // Register MediatR handlers and validators from the Application assembly
         var applicationAssembly = typeof(AlphaZero.Modules.Library.Application.RedeemCode.RedeemCodeCommand).Assembly;
         
+        services.AddValidatorsFromAssembly(applicationAssembly);
+
         services.AddMediatR(opts =>
         {
             opts.RegisterServicesFromAssembly(applicationAssembly);

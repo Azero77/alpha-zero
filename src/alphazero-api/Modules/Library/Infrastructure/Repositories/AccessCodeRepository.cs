@@ -19,9 +19,16 @@ public class AccessCodeRepository : BaseRepository<AppDbContext, AccessCode>, IA
             .ExecuteUpdateAsync(setter => setter.SetProperty(s => s.Status, AccessCodeStatus.Distributed), cancellationToken);
     }
 
+    public async Task<bool> BatchExistsAsync(Guid batchId, CancellationToken cancellationToken = default)
+    {
+        return await _context.Set<AccessCode>()
+            .AnyAsync(x => x.BatchId == batchId, cancellationToken);
+    }
+
     public async Task<AccessCode?> GetByHashAsync(string codeHash, CancellationToken cancellationToken = default)
     {
         return await _context.AccessCodes
+            .IgnoreQueryFilters()
             .FirstOrDefaultAsync(x => x.CodeHash == codeHash, cancellationToken);
     }
 }

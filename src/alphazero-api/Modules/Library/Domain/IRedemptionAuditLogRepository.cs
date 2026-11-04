@@ -8,7 +8,7 @@ public interface IRedemptionAuditLogRepository
     Task AddAsync(RedemptionAuditLog log, CancellationToken ct = default);
     
     Task<PagedResult<RedemptionAuditLog>> GetPagedAsync(
-        Guid? libraryId,
+        Guid libraryId,
         DateOnly? from,
         DateOnly? to,
         int page,
