@@ -86,11 +86,51 @@ public class RedeemCodeCommandHandlerTests
     }
 
     [Fact]
+    public async Task Handle_Should_ReturnUnauthorized_WhenUserNotAuthenticated_EvenWithForeignTenantCode()
+    {
+        // Arrange: code exists in another tenant, but caller is not authenticated
+        var accessCode = AccessCode.Mint("h", TenantId, null, "s", ResourceArn.Create("az:course:tenant:course/101").Value, JsonDocument.Parse("{}"));
+        _passwordHasher.HashPassword(Arg.Any<string>()).Returns("h");
+        _repository.GetByHashAsync("h", Arg.Any<CancellationToken>()).Returns(accessCode);
+        _currentUserRepository.GetCurrentUser().Returns((TenantUserDTO?)null);
+        _tenantProvider.GetTenant().Returns(Guid.NewGuid()); // Foreign tenant
+
+        var command = new RedeemCodeCommand("C");
+
+        // Act
+        var result = await _handler.Handle(command, CancellationToken.None);
+
+        // Assert: 401 Unauthorized precedes 404 and 403
+        result.IsError.Should().BeTrue();
+        result.FirstError.Code.Should().Be("User.Unauthenticated");
+    }
+
+    [Fact]
+    public async Task Handle_Should_ReturnNotFound_WhenCodeDoesNotExist_ForAuthenticatedUser()
+    {
+        // Arrange
+        _passwordHasher.HashPassword(Arg.Any<string>()).Returns("missing");
+        _repository.GetByHashAsync("missing", Arg.Any<CancellationToken>()).Returns((AccessCode?)null);
+        _currentUserRepository.GetCurrentUser().Returns(new TenantUserDTO(UserId, Guid.NewGuid().ToString(), "User"));
+        _tenantProvider.GetTenant().Returns(TenantId);
+
+        var command = new RedeemCodeCommand("MISSING");
+
+        // Act
+        var result = await _handler.Handle(command, CancellationToken.None);
+
+        // Assert: 404 Not Found precedes 403
+        result.IsError.Should().BeTrue();
+        result.FirstError.Code.Should().Be("AccessCode.NotFound");
+    }
+
+    [Fact]
     public async Task Handle_Should_ReturnForbidden_WhenTenantMismatch()
     {
         // Arrange
         var accessCode = AccessCode.Mint("h", TenantId, null, "s", ResourceArn.Create("az:course:tenant:course/101").Value, JsonDocument.Parse("{}"));
         _repository.GetByHashAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(accessCode);
+        _currentUserRepository.GetCurrentUser().Returns(new TenantUserDTO(UserId, Guid.NewGuid().ToString(), "User"));
         _tenantProvider.GetTenant().Returns(Guid.NewGuid()); // Different tenant
 
         var command = new RedeemCodeCommand("C");

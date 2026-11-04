@@ -33,7 +33,9 @@ This document outlines the exhaustive integration test suite for the Library Mod
 | Scenario | Goal | Expected Result |
 | :--- | :--- | :--- |
 | **Redeem Valid Code** | E2E Check. | Code status `Redeemed`; `RedeemedByUserId` set; Strategy executed. |
-| **Redeem Mismatched Tenant** | Security check. | Code for Academy A cannot be used by a user in Academy B. |
+| **Redeem Unauthenticated (Precedence)** | Security / info-leak check. | Unauthenticated caller returns `401 Unauthorized` (`User.Unauthenticated`) even for cross-tenant code (401 → 404 → 403 precedence). |
+| **Redeem Non-Existent Code** | Existence check. | Authenticated caller returns `404 Not Found` (`AccessCode.NotFound`). |
+| **Redeem Mismatched Tenant** | Multi-tenancy check. | Authenticated user in Academy B attempting to redeem code for Academy A returns `403 Forbidden` (`AccessCode.TenantMismatch`). |
 | **Redeem Voided/Used Code** | Fraud check. | Error `Conflict` returned; double-spending prevented. |
 
 ## 🏛️ 5. Strategy Execution (Cross-Module)

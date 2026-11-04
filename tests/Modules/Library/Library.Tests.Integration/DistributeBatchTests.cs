@@ -50,6 +50,7 @@ public class DistributeBatchTests(ApiFactory factory) : BaseIntegrationTest(fact
                 LibraryId = libraryId,
                 Quantity = 3,
                 TargetResourceArn = courseArn,
+                FaceValue = 50m
             });
         genRes.EnsureSuccessStatusCode();
 
@@ -73,5 +74,48 @@ public class DistributeBatchTests(ApiFactory factory) : BaseIntegrationTest(fact
             .ToListAsync();
         codesInDb.Should().HaveCount(3);
         codesInDb.Should().OnlyContain(x => x.Status == AlphaZero.Modules.Library.Domain.AccessCodeStatus.Distributed);
+    }
+
+    [Fact]
+    public async Task DistributeBatch_Should_Return409Conflict_WhenBatchAlreadyDistributed()
+    {
+        // Arrange: mint and distribute a batch once
+        var tenantId = Guid.NewGuid();
+        SetTenant(tenantId);
+        var courseArn = $"az:course:{tenantId}:course/distribute-409-test";
+
+        var libRes = await Client.PostAsJsonAsync("/library/libraries",
+            new CreateLibraryRequest { Name = "Distribute 409 Lib", Address = "Add", ContactNumber = "123" });
+        var libraryId = (await libRes.Content.ReadFromJsonAsync<CreateLibraryResponse>())!.Id;
+
+        await Client.PostAsJsonAsync($"/library/libraries/{libraryId}/resources",
+            new AuthorizeResourceRequest { Id = libraryId, ResourceArn = courseArn });
+
+        var genRes = await Client.PostAsJsonAsync($"/library/libraries/{libraryId}/access-codes/generate",
+            new AlphaZero.Modules.Library.Presentation.Endpoints.AccessCodes.GenerateBatch.GenerateBatchRequest
+            {
+                LibraryId = libraryId,
+                Quantity = 2,
+                TargetResourceArn = courseArn,
+                FaceValue = 50m
+            });
+        genRes.EnsureSuccessStatusCode();
+
+        var batchId = (await DbContext.AccessCodes
+            .IgnoreQueryFilters()
+            .AsNoTracking()
+            .FirstAsync(x => x.TenantId == tenantId)).BatchId!.Value;
+
+        var firstDistributeRes = await Client.PostAsJsonAsync($"/library/access-codes/batches/{batchId}/distribute", new { });
+        firstDistributeRes.StatusCode.Should().Be(System.Net.HttpStatusCode.NoContent);
+
+        // Act: attempt to distribute the exact same batch a second time
+        var secondDistributeRes = await Client.PostAsJsonAsync($"/library/access-codes/batches/{batchId}/distribute", new { });
+
+        // Assert: 409 Conflict with AccessCode.InvalidStatus
+        secondDistributeRes.StatusCode.Should().Be(System.Net.HttpStatusCode.Conflict);
+        var bodyText = await secondDistributeRes.Content.ReadAsStringAsync();
+        var body = JsonDocument.Parse(bodyText);
+        body.RootElement.GetProperty("title").GetString().Should().Be("AccessCode.InvalidStatus");
     }
 }

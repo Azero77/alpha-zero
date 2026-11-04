@@ -11,10 +11,12 @@ using System.Text.Json;
 
 namespace AlphaZero.Modules.Library.Application.AccessCodes.GenerateAdminCode;
 
+public record GenerateAdminCodeResult(Guid CodeId, string PlainTextCode);
+
 public record GenerateAdminCodeCommand(
     string TargetResourceArn,
     string StrategyId = "enroll-course",
-    Dictionary<string, object>? Metadata = null) : ICommand<string>;
+    Dictionary<string, object>? Metadata = null) : ICommand<GenerateAdminCodeResult>;
 
 public class GenerateAdminCodeCommandValidator : AbstractValidator<GenerateAdminCodeCommand>
 {
@@ -29,9 +31,9 @@ public sealed class GenerateAdminCodeCommandHandler(
     IAccessCodeRepository accessCodeRepository,
     ITenantProvider tenantProvider,
     IPasswordHasher passwordHasher,
-    ILogger<GenerateAdminCodeCommandHandler> logger) : IRequestHandler<GenerateAdminCodeCommand, ErrorOr<string>>
+    ILogger<GenerateAdminCodeCommandHandler> logger) : IRequestHandler<GenerateAdminCodeCommand, ErrorOr<GenerateAdminCodeResult>>
 {
-    public async Task<ErrorOr<string>> Handle(GenerateAdminCodeCommand request, CancellationToken cancellationToken)
+    public async Task<ErrorOr<GenerateAdminCodeResult>> Handle(GenerateAdminCodeCommand request, CancellationToken cancellationToken)
     {
         var tenantId = tenantProvider.GetTenant();
         if (tenantId is null) return Error.Unauthorized("Tenant.NotFound", "Tenant not found.");
@@ -59,6 +61,6 @@ public sealed class GenerateAdminCodeCommandHandler(
         logger.LogInformation("Administrator generated a direct access code for {Target} in Tenant {TenantId}.",
             request.TargetResourceArn, tenantId.Value);
 
-        return rawCode;
+        return new GenerateAdminCodeResult(accessCode.Id, rawCode);
     }
 }

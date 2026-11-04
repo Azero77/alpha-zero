@@ -13,10 +13,11 @@ public record GenerateBatchRequest
     public int Quantity { get; init; }
     public string StrategyId { get; init; } = "enroll-course";
     public string TargetResourceArn { get; init; } = default!;
+    public decimal FaceValue { get; init; }
     public Dictionary<string, object> Metadata { get; init; } = new();
 }
 
-public record GenerateBatchResponse(List<string> Codes);
+public record GenerateBatchResponse(Guid BatchId, int GeneratedCount, List<string> Codes);
 
 public class GenerateBatchSummary : Summary<GenerateBatchEndpoint>
 {
@@ -24,8 +25,8 @@ public class GenerateBatchSummary : Summary<GenerateBatchEndpoint>
     {
         Summary = "Generates a batch of access codes for a library";
         Description = "Generates physical or digital access codes linked to a course/resource for distribution.";
-        Response<GenerateBatchResponse>(200, "Access codes generated successfully");
-        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(400, "Validation failure (Quantity <= 0 or > 1000, StrategyId or TargetResourceArn empty)");
+        Response<GenerateBatchResponse>(201, "Access codes generated successfully");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(400, "Validation failure (Quantity <= 0 or > 1000, FaceValue <= 0 or > 1000, StrategyId or TargetResourceArn empty)");
         Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(401, "Unauthorized (Tenant not found or unauthenticated)");
         Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(403, "Forbidden (Missing library:GenerateCodes or library not authorized for resource)");
         Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(404, "Library not found (Library.NotFound)");
@@ -51,7 +52,7 @@ public class GenerateBatchEndpoint : Endpoint<GenerateBatchRequest, GenerateBatc
 
     public override async Task HandleAsync(GenerateBatchRequest req, CancellationToken ct)
     {
-        var command = new GenerateBatchCommand(req.LibraryId, req.Quantity, req.StrategyId, req.TargetResourceArn, req.Metadata);
+        var command = new GenerateBatchCommand(req.LibraryId, req.Quantity, req.StrategyId, req.TargetResourceArn, req.FaceValue, req.Metadata);
         var result = await _module.Send(command, ct);
 
         if (result.IsError)
@@ -60,6 +61,6 @@ public class GenerateBatchEndpoint : Endpoint<GenerateBatchRequest, GenerateBatc
             return;
         }
 
-        await Send.OkAsync(new GenerateBatchResponse(result.Value), ct);
+        await Send.CreatedAtAsync($"/library/access-codes/batches/{result.Value.BatchId}", responseBody: new GenerateBatchResponse(result.Value.BatchId, result.Value.GeneratedCount, result.Value.Codes), cancellation: ct);
     }
 }

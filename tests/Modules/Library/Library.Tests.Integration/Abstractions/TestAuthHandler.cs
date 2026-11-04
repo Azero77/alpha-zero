@@ -18,6 +18,11 @@ public class TestAuthHandler : AuthenticationHandler<AuthenticationSchemeOptions
 
     protected override Task<AuthenticateResult> HandleAuthenticateAsync()
     {
+        if (Context.Request.Headers.ContainsKey("X-Anonymous"))
+        {
+            return Task.FromResult(AuthenticateResult.NoResult());
+        }
+
         var claims = new List<Claim>
         {
             new Claim(ClaimTypes.NameIdentifier, Guid.NewGuid().ToString()),

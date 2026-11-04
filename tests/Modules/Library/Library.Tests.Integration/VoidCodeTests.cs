@@ -20,7 +20,7 @@ public class VoidCodeTests(ApiFactory factory) : BaseIntegrationTest(factory)
         var genRes = await Client.PostAsJsonAsync("/library/admin/access-codes/generate-single",
             new GenerateAdminCodeRequest { TargetResourceArn = courseArn });
         genRes.EnsureSuccessStatusCode();
-        var rawCode = (await genRes.Content.ReadFromJsonAsync<GenerateAdminCodeResponse>())!.Code;
+        var rawCode = (await genRes.Content.ReadFromJsonAsync<GenerateAdminCodeResponse>())!.PlainTextCode;
 
         // 2. Act: void with a reason
         var voidRes = await Client.PostAsJsonAsync("/library/access-codes/void",
@@ -48,7 +48,7 @@ public class VoidCodeTests(ApiFactory factory) : BaseIntegrationTest(factory)
         var genRes = await Client.PostAsJsonAsync("/library/admin/access-codes/generate-single",
             new GenerateAdminCodeRequest { TargetResourceArn = courseArn });
         genRes.EnsureSuccessStatusCode();
-        var rawCode = (await genRes.Content.ReadFromJsonAsync<GenerateAdminCodeResponse>())!.Code;
+        var rawCode = (await genRes.Content.ReadFromJsonAsync<GenerateAdminCodeResponse>())!.PlainTextCode;
 
         // 2. Act: void without a reason
         var voidRes = await Client.PostAsJsonAsync("/library/access-codes/void",

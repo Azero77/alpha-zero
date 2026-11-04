@@ -40,11 +40,15 @@ public class LibraryTests(ApiFactory factory) : BaseIntegrationTest(factory)
         { 
             LibraryId = libraryId, 
             Quantity = 1, 
-            TargetResourceArn = courseArn 
+            TargetResourceArn = courseArn,
+            FaceValue = 50m
         };
         var genRes = await Client.PostAsJsonAsync($"/library/libraries/{libraryId}/access-codes/generate", genReq);
-        genRes.EnsureSuccessStatusCode();
-        var rawCode = (await genRes.Content.ReadFromJsonAsync<GenerateBatchResponse>())!.Codes[0];
+        genRes.StatusCode.Should().Be(System.Net.HttpStatusCode.Created);
+        var batchResponse = await genRes.Content.ReadFromJsonAsync<GenerateBatchResponse>();
+        batchResponse!.BatchId.Should().NotBeEmpty();
+        batchResponse.GeneratedCount.Should().Be(1);
+        var rawCode = batchResponse.Codes[0];
 
         // 5. Act: Redeem Code
         var redeemReq = new RedeemCodeRequest { RawCode = rawCode };

@@ -38,28 +38,26 @@ public class RedeemCodeCommandHandler : IRequestHandler<RedeemCodeCommand, Error
 
     public async Task<ErrorOr<Success>> Handle(RedeemCodeCommand request, CancellationToken cancellationToken)
     {
-        // 1. Hash the code
+        // 1. Authenticate first (401 per spec)
+        var currentUser = await _currentUserRepository.GetCurrentUser();
+        if (currentUser == null)
+        {
+            return Error.Unauthorized("User.Unauthenticated", "User must be logged in to redeem codes.");
+        }
+
+        // 2. Hash the code and verify existence (404 per spec)
         var hash = _passwordHasher.HashPassword(request.RawCode);
-        
-        // 2. Find the code
         var accessCode = await _repository.GetByHashAsync(hash, cancellationToken);
         if (accessCode == null)
         {
             return Error.NotFound("AccessCode.NotFound", "The provided code is invalid.");
         }
 
-        // 3. Validate Tenant
+        // 3. Validate Tenant match (403 per spec)
         var currentTenantId = _tenantProvider.GetTenant();
         if (accessCode.TenantId != currentTenantId)
         {
              return Error.Forbidden("AccessCode.TenantMismatch", "This code belongs to another academy.");
-        }
-
-        // 4. Get Current User
-        var currentUser = await _currentUserRepository.GetCurrentUser();
-        if (currentUser == null)
-        {
-            return Error.Unauthorized("User.Unauthenticated", "User must be logged in to redeem codes.");
         }
 
         // 🛡️ Natural Idempotency: If this exact student already redeemed this code, safely return Success

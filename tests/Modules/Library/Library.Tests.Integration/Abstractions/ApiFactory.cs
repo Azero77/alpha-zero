@@ -127,13 +127,19 @@ public class BypassPolicyEvaluatorService : AlphaZero.Shared.Authorization.IPoli
         Task.FromResult<ErrorOr.ErrorOr<ErrorOr.Success>>(ErrorOr.Result.Success);
 }
 
-public class TestCurrentTenantUserRepository : ICurrentTenantUserRepository
+public class TestCurrentTenantUserRepository(IHttpContextAccessor? httpContextAccessor = null) : ICurrentTenantUserRepository
 {
     public Guid? MockUserId { get; set; } = Guid.Parse("00000000-0000-0000-0000-000000000001");
     public Guid MockIdentityId { get; set; } = Guid.NewGuid();
 
     public Task<TenantUserDTO?> GetCurrentUser()
     {
+        var context = httpContextAccessor?.HttpContext;
+        if (context != null && (context.Request.Headers.ContainsKey("X-Anonymous") || context.User?.Identity?.IsAuthenticated != true))
+        {
+            return Task.FromResult<TenantUserDTO?>(null);
+        }
+
         if (MockUserId == null) return Task.FromResult<TenantUserDTO?>(null);
 
         return Task.FromResult<TenantUserDTO?>(new TenantUserDTO(
