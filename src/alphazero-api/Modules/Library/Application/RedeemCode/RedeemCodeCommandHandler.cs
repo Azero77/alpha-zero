@@ -81,16 +81,17 @@ public class RedeemCodeCommandHandler : IRequestHandler<RedeemCodeCommand, Error
         var ipAddress = request.IpAddress ?? _authorizationContextProvider?.CurrentAuthorizationContext?.IpAddress;
 
         // 7. Record Audit Log
-        var auditLog = RedemptionAuditLog.Record(
+        var redemptionContext = new RedemptionContext(
             accessCode.TenantId,
             accessCode.LibraryId,
-            accessCode.Id,
             currentUser.UserId,
             accessCode.StrategyId,
             accessCode.TargetResourceArn,
             accessCode.RedeemedAt!.Value,
             ipAddress,
             deviceFingerprint);
+
+        var auditLog = RedemptionAuditLog.Record(redemptionContext, accessCode.Id);
 
         await _auditLogRepository.AddAsync(auditLog, cancellationToken);
 

@@ -43,26 +43,19 @@ public class RedemptionAuditLog : Entity
     }
 
     public static RedemptionAuditLog Record(
-        Guid tenantId,
-        Guid? libraryId,
-        Guid accessCodeId,
-        Guid redeemedByUserId,
-        string strategyId,
-        ResourceArn targetResourceArn,
-        DateTime redeemedAt,
-        string? ipAddress = null,
-        string? deviceFingerprint = null)
+        RedemptionContext context,
+        Guid accessCodeId)
     {
         return new RedemptionAuditLog(
             Guid.NewGuid(),
-            tenantId,
-            libraryId,
+            context.TenantId,
+            context.LibraryId,
             accessCodeId,
-            redeemedByUserId,
-            strategyId,
-            targetResourceArn,
-            redeemedAt,
-            ipAddress,
-            deviceFingerprint);
+            context.RedeemedByUserId,
+            context.StrategyId,
+            context.TargetResourceArn,
+            context.RedeemedAt,
+            context.IpAddress,
+            context.DeviceFingerprint);
     }
 }
