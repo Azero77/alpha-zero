@@ -16,13 +16,9 @@ namespace Library.Tests.Integration.Abstractions;
 
 public class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
 {
-    public ApiFactory()
-    {
-        Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", "Development");
-        Environment.SetEnvironmentVariable("Testing:BypassIAM", "true");
-        Environment.SetEnvironmentVariable("DOTNET_USE_POLLING_FILE_WATCHER", "1");
-    }
-
+    // All test configuration lives on THIS factory instance (host settings / in-memory
+    // configuration) — never on process-global environment state — so parallel test
+    // collections cannot observe each other's configuration.
     private readonly PostgreSqlContainer _dbContainer = new PostgreSqlBuilder()
         .WithImage("postgres:16.1-alpine3.19")
         .WithDatabase("alphazero_library_test")
@@ -33,12 +29,23 @@ public class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
     public async Task InitializeAsync()
     {
         await _dbContainer.StartAsync();
-        Environment.SetEnvironmentVariable("DatabaseSettings__ConnectionString", _dbContainer.GetConnectionString());
     }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Development");
+
+        // Per-instance equivalent of the former DOTNET_USE_POLLING_FILE_WATCHER env var:
+        // disable config file reload so appsettings.json is never re-read mid-test.
+        builder.UseSetting("reloadConfigOnChange", "false");
+
+        // Per-instance configuration replacing the former process-global env vars
+        // (ASPNETCORE_ENVIRONMENT, Testing:BypassIAM, DatabaseSettings__ConnectionString).
+        // UseSetting values survive the minimal-hosting bootstrap and surface in the
+        // app's final IConfiguration; ConfigureAppConfiguration callbacks do not.
+        builder.UseSetting("Testing:BypassIAM", "true");
+        builder.UseSetting("DatabaseSettings:ConnectionString", _dbContainer.GetConnectionString());
+
         builder.ConfigureTestServices(services =>
         {
             services.AddAuthentication(options =>
@@ -57,11 +64,11 @@ public class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
             services.RemoveAll<ICurrentTenantUserRepository>();
             services.AddScoped<ICurrentTenantUserRepository, TestCurrentTenantUserRepository>();
 
-            if (Environment.GetEnvironmentVariable("Testing:BypassIAM") == "true")
-            {
-                services.RemoveAll<AlphaZero.Shared.Authorization.IPolicyEvaluatorService>();
-                services.AddScoped<AlphaZero.Shared.Authorization.IPolicyEvaluatorService, BypassPolicyEvaluatorService>();
-            }
+            // This factory exists only for tests that must bypass IAM; register the bypass
+            // per-instance (the former process-global "Testing:BypassIAM" env var has no
+            // per-instance read available here, and every instance wants it on).
+            services.RemoveAll<AlphaZero.Shared.Authorization.IPolicyEvaluatorService>();
+            services.AddScoped<AlphaZero.Shared.Authorization.IPolicyEvaluatorService, BypassPolicyEvaluatorService>();
 
             // Mock AWSResources so MassTransit SQS consumers can instantiate
             services.AddSingleton(new Aspire.Shared.AWSResources 
