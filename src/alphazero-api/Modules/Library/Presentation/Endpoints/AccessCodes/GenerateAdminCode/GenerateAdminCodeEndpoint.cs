@@ -24,7 +24,7 @@ public class GenerateAdminCodeSummary : Summary<GenerateAdminCodeEndpoint>
         Response<GenerateAdminCodeResponse>(201, "Admin access code generated successfully");
         Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(400, "Validation failure (TargetResourceArn or StrategyId empty)");
         Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(401, "Unauthorized (Tenant not found or unauthenticated)");
-        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(403, "Forbidden (Missing library:Audit permission)");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(403, "Forbidden (Missing library:GenerateCodes permission)");
     }
 }
 
@@ -33,8 +33,8 @@ public class GenerateAdminCodeEndpoint(LibraryModule module) : Endpoint<Generate
     public override void Configure()
     {
         Post("/library/admin/access-codes/generate-single");
-        // Restricted to Administrators/Accountants at the tenant level
-        this.AccessControl("library:Audit", (req, tenantId) => ResourceArn.ForTenant(tenantId));
+        // Restricted to Administrators with code generation permissions at the tenant level
+        this.AccessControl("library:GenerateCodes", (req, tenantId) => ResourceArn.ForTenant(tenantId));
         Description(d => d.WithTags("Library Management"));
         Summary(new GenerateAdminCodeSummary());
     }

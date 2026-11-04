@@ -43,7 +43,7 @@ public class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
         // (ASPNETCORE_ENVIRONMENT, Testing:BypassIAM, DatabaseSettings__ConnectionString).
         // UseSetting values survive the minimal-hosting bootstrap and surface in the
         // app's final IConfiguration; ConfigureAppConfiguration callbacks do not.
-        builder.UseSetting("Testing:BypassIAM", "true");
+        builder.UseSetting("Testing:BypassIAM", "false");
         builder.UseSetting("DatabaseSettings:ConnectionString", _dbContainer.GetConnectionString());
 
         builder.ConfigureTestServices(services =>
