@@ -64,4 +64,31 @@ public class VoidCodeTests(ApiFactory factory) : BaseIntegrationTest(factory)
         codeInDb!.Status.Should().Be(AccessCodeStatus.Minted);
         codeInDb.VoidedReason.Should().BeNull();
     }
+
+    [Fact]
+    public async Task VoidCode_FromDifferentTenant_Should_Return403Forbidden()
+    {
+        // 1. Arrange: mint in tenant A
+        var tenantA = Guid.NewGuid();
+        SetTenant(tenantA);
+        var courseArn = $"az:course:{tenantA}:course/void-tenant-a";
+
+        var genRes = await Client.PostAsJsonAsync("/library/admin/access-codes/generate-single",
+            new GenerateAdminCodeRequest { TargetResourceArn = courseArn });
+        genRes.EnsureSuccessStatusCode();
+        var rawCode = (await genRes.Content.ReadFromJsonAsync<GenerateAdminCodeResponse>())!.PlainTextCode;
+
+        // 2. Act: tenant B attempts to void tenant A's code
+        var tenantB = Guid.NewGuid();
+        SetTenant(tenantB);
+
+        var voidRes = await Client.PostAsJsonAsync("/library/access-codes/void",
+            new { RawCode = rawCode, Reason = "Sabotage" });
+
+        // 3. Assert: 403 Forbidden with AccessCode.TenantMismatch
+        voidRes.StatusCode.Should().Be(System.Net.HttpStatusCode.Forbidden);
+        var problem = await voidRes.Content.ReadFromJsonAsync<Microsoft.AspNetCore.Mvc.ProblemDetails>();
+        problem.Should().NotBeNull();
+        problem!.Title.Should().Be("AccessCode.TenantMismatch");
+    }
 }

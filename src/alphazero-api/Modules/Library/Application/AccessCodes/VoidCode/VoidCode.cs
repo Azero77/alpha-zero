@@ -1,6 +1,7 @@
 using AlphaZero.Modules.Library.Domain;
 using AlphaZero.Shared.Application;
 using AlphaZero.Shared.Domain;
+using AlphaZero.Shared.Infrastructure.Tenats;
 using ErrorOr;
 using FluentValidation;
 using MediatR;
@@ -23,6 +24,7 @@ public sealed class VoidCodeCommandHandler(
     IAccessCodeRepository repository,
     IRedemptionStrategyFactory strategyFactory,
     IPasswordHasher passwordHasher,
+    ITenantProvider tenantProvider,
     ILogger<VoidCodeCommandHandler> logger) : IRequestHandler<VoidCodeCommand, ErrorOr<Success>>
 {
     public async Task<ErrorOr<Success>> Handle(VoidCodeCommand request, CancellationToken cancellationToken)
@@ -33,6 +35,12 @@ public sealed class VoidCodeCommandHandler(
         if (code is null)
         {
             return Error.NotFound("AccessCode.NotFound", "The provided code is invalid.");
+        }
+
+        var currentTenantId = tenantProvider.GetTenant();
+        if (code.TenantId != currentTenantId)
+        {
+            return Error.Forbidden("AccessCode.TenantMismatch", "This code belongs to another academy.");
         }
 
         var wasRedeemed = code.Status == AccessCodeStatus.Redeemed;

@@ -22,7 +22,7 @@ public class VoidCodeSummary : Summary<VoidCodeEndpoint>
         Response(204, "Access code voided successfully");
         Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(400, "Validation failure (RawCode or Reason empty/too long)");
         Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(401, "Unauthorized");
-        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(403, "Forbidden (Missing library:Audit permission)");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(403, "Forbidden (AccessCode.TenantMismatch or missing library:Audit permission)");
         Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(404, "Access code not found (AccessCode.NotFound)");
         Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(409, "Access code already voided (AccessCode.AlreadyVoided)");
     }

@@ -28,6 +28,7 @@ public class AccessCodeRepository : BaseRepository<AppDbContext, AccessCode>, IA
     public async Task<AccessCode?> GetByHashAsync(string codeHash, CancellationToken cancellationToken = default)
     {
         return await _context.AccessCodes
+            .IgnoreQueryFilters()
             .FirstOrDefaultAsync(x => x.CodeHash == codeHash, cancellationToken);
     }
 }
