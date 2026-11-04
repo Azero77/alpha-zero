@@ -29,13 +29,13 @@ public class LibraryModule : AppModule
     public override void RegisterGlobal(IServiceCollection globalServices)
     {
         ThrowIfConfigurationMissing(nameof(RegisterGlobal));
-        globalServices.AddLibraryGlobalInfrastructure(Configuration);
+        globalServices.AddLibraryGlobalInfrastructure(Configuration!);
     }
 
     public override void RegisterPrivate(IServiceCollection moduleServices, ContainerBuilder builder)
     {
         ThrowIfConfigurationMissing(nameof(RegisterPrivate));
-        moduleServices.AddLibraryPrivateInfrastructure(Configuration);
+        moduleServices.AddLibraryPrivateInfrastructure(Configuration!);
     }
 
     public override void ConfigureModuleBus(IBusRegistrationConfigurator configuration)
