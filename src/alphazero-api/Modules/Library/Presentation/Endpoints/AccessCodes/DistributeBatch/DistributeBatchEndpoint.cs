@@ -19,6 +19,7 @@ public class DistributeBatchSummary : Summary<DistributeBatchEndpoint>
         Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(400, "Validation failure (BatchId empty)");
         Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(401, "Unauthorized");
         Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(403, "Forbidden (Missing library:SellCodes permission)");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(404, "Batch not found (Batch.NotFound)");
         Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(409, "Invalid code status (AccessCode.InvalidStatus)");
     }
 }
