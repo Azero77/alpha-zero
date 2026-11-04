@@ -60,7 +60,7 @@ public class GetRedemptionLogsEndpoint : Endpoint<GetRedemptionLogsRequest, Page
 
         if (result.IsError)
         {
-            await this.SendErrorResponseAsync(result.Errors);
+            await this.SendErrorResponseAsync(result.Errors, ct);
             return;
         }
 
