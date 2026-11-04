@@ -52,6 +52,7 @@ public class RedeemCodeCommandHandlerTests
         var hash = "hashed";
         var targetArn = ResourceArn.Create("az:course:tenant:course/101").Value;
         var accessCode = AccessCode.Mint(hash, TenantId, null, "strategy", targetArn, JsonDocument.Parse("{}"));
+        accessCode.Distribute();
 
         _passwordHasher.HashPassword(rawCode).Returns(hash);
         _repository.GetByHashAsync(hash, Arg.Any<CancellationToken>()).Returns(accessCode);
