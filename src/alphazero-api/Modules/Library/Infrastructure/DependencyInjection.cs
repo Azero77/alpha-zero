@@ -38,13 +38,8 @@ public static class DependencyInjection
         services.AddScoped<IAccessCodeRepository, AccessCodeRepository>();
         services.AddScoped<ILibraryRepository, LibraryRepository>();
         services.AddScoped<IRedemptionAuditLogRepository, RedemptionAuditLogRepository>();
-        services.AddScoped<IRedemptionStrategyFactory, StrategyFactory>();
         services.AddScoped<AlphaZero.Modules.Library.Application.Queries.ILibraryQueryService, AlphaZero.Modules.Library.Infrastructure.Queries.LibraryQueryService>();
         services.Decorate<AlphaZero.Modules.Library.Application.Queries.ILibraryQueryService, AlphaZero.Modules.Library.Infrastructure.Caching.CachedLibraryQueryService>();
-        
-        // Register Redemption Strategies (ACLs)
-        services.AddScoped<IRedemptionStrategy, CourseEnrollmentStrategy>();
-        services.AddScoped<IRevocationStrategy, CourseRevocationStrategy>();
 
         services.AddScoped<IUnitOfWork, UnitOfWork<AppDbContext>>();
 

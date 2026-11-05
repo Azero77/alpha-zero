@@ -14,7 +14,6 @@ public class RedeemCodeCommandHandlerTests
 {
     private readonly IAccessCodeRepository _repository;
     private readonly IRedemptionAuditLogRepository _auditLogRepository;
-    private readonly IRedemptionStrategyFactory _strategyFactory;
     private readonly ITenantProvider _tenantProvider;
     private readonly ICurrentTenantUserRepository _currentUserRepository;
     private readonly IPasswordHasher _passwordHasher;
@@ -28,7 +27,6 @@ public class RedeemCodeCommandHandlerTests
     {
         _repository = Substitute.For<IAccessCodeRepository>();
         _auditLogRepository = Substitute.For<IRedemptionAuditLogRepository>();
-        _strategyFactory = Substitute.For<IRedemptionStrategyFactory>();
         _tenantProvider = Substitute.For<ITenantProvider>();
         _currentUserRepository = Substitute.For<ICurrentTenantUserRepository>();
         _passwordHasher = Substitute.For<IPasswordHasher>();
@@ -37,7 +35,6 @@ public class RedeemCodeCommandHandlerTests
         _handler = new RedeemCodeCommandHandler(
             _repository,
             _auditLogRepository,
-            _strategyFactory,
             _tenantProvider,
             _currentUserRepository,
             _passwordHasher,
@@ -68,9 +65,6 @@ public class RedeemCodeCommandHandlerTests
             RequiredPermission=""
         });
 
-        var strategy = Substitute.For<IRedemptionStrategy>();
-        _strategyFactory.GetStrategy("strategy").Returns(strategy);
-
         var command = new RedeemCodeCommand(rawCode);
 
         // Act
@@ -79,7 +73,6 @@ public class RedeemCodeCommandHandlerTests
         // Assert
         result.IsError.Should().BeFalse();
         accessCode.Status.Should().Be(AccessCodeStatus.Redeemed);
-        await strategy.Received(1).ExecuteAsync(UserId, accessCode.Id, targetArn, Arg.Any<JsonElement>());
         await _auditLogRepository.Received(1).AddAsync(
             Arg.Is<RedemptionAuditLog>(log => 
                 log.AccessCodeId == accessCode.Id && 

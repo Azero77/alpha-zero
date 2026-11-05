@@ -12,7 +12,6 @@ public class RedeemCodeCommandHandler : IRequestHandler<RedeemCodeCommand, Error
 {
     private readonly IAccessCodeRepository _repository;
     private readonly IRedemptionAuditLogRepository _auditLogRepository;
-    private readonly IRedemptionStrategyFactory _strategyFactory;
     private readonly ITenantProvider _tenantProvider;
     private readonly ICurrentTenantUserRepository _currentUserRepository;
     private readonly IPasswordHasher _passwordHasher;
@@ -21,7 +20,6 @@ public class RedeemCodeCommandHandler : IRequestHandler<RedeemCodeCommand, Error
     public RedeemCodeCommandHandler(
         IAccessCodeRepository repository,
         IRedemptionAuditLogRepository auditLogRepository,
-        IRedemptionStrategyFactory strategyFactory,
         ITenantProvider tenantProvider,
         ICurrentTenantUserRepository currentUserRepository,
         IPasswordHasher passwordHasher,
@@ -29,7 +27,6 @@ public class RedeemCodeCommandHandler : IRequestHandler<RedeemCodeCommand, Error
     {
         _repository = repository;
         _auditLogRepository = auditLogRepository;
-        _strategyFactory = strategyFactory;
         _tenantProvider = tenantProvider;
         _currentUserRepository = currentUserRepository;
         _passwordHasher = passwordHasher;
@@ -94,10 +91,6 @@ public class RedeemCodeCommandHandler : IRequestHandler<RedeemCodeCommand, Error
         {
             return redeemResult.Errors;
         }
-            
-        // 6. Execute Strategy
-        var strategy = _strategyFactory.GetStrategy(accessCode.StrategyId);
-        await strategy.ExecuteAsync(currentUser.UserId, accessCode.Id, accessCode.TargetResourceArn, accessCode.Metadata.RootElement);
 
         await _auditLogRepository.AddAsync(auditLog, cancellationToken);
 
