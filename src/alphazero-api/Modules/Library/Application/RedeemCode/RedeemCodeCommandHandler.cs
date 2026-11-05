@@ -5,6 +5,7 @@ using AlphaZero.Shared.Infrastructure.Tenats;
 using AlphaZero.Shared.Domain;
 using AlphaZero.Shared.Application;
 using AlphaZero.Shared.Authorization;
+using Microsoft.Extensions.Logging;
 
 namespace AlphaZero.Modules.Library.Application.RedeemCode;
 
@@ -12,28 +13,34 @@ public class RedeemCodeCommandHandler : IRequestHandler<RedeemCodeCommand, Error
 {
     private readonly IAccessCodeRepository _repository;
     private readonly IRedemptionAuditLogRepository _auditLogRepository;
+    private readonly ISaleRecordRepository _saleRecordRepository;
     private readonly IRedemptionStrategyFactory _strategyFactory;
     private readonly ITenantProvider _tenantProvider;
     private readonly ICurrentTenantUserRepository _currentUserRepository;
     private readonly IPasswordHasher _passwordHasher;
     private readonly IAuthorizationContextProvider _authorizationContextProvider;
+    private readonly ILogger<RedeemCodeCommandHandler> _logger;
 
     public RedeemCodeCommandHandler(
         IAccessCodeRepository repository,
         IRedemptionAuditLogRepository auditLogRepository,
+        ISaleRecordRepository saleRecordRepository,
         IRedemptionStrategyFactory strategyFactory,
         ITenantProvider tenantProvider,
         ICurrentTenantUserRepository currentUserRepository,
         IPasswordHasher passwordHasher,
-        IAuthorizationContextProvider authorizationContextProvider)
+        IAuthorizationContextProvider authorizationContextProvider,
+        ILogger<RedeemCodeCommandHandler> logger)
     {
         _repository = repository;
         _auditLogRepository = auditLogRepository;
+        _saleRecordRepository = saleRecordRepository;
         _strategyFactory = strategyFactory;
         _tenantProvider = tenantProvider;
         _currentUserRepository = currentUserRepository;
         _passwordHasher = passwordHasher;
         _authorizationContextProvider = authorizationContextProvider;
+        _logger = logger;
     }
 
     public async Task<ErrorOr<Success>> Handle(RedeemCodeCommand request, CancellationToken cancellationToken)
@@ -76,6 +83,13 @@ public class RedeemCodeCommandHandler : IRequestHandler<RedeemCodeCommand, Error
         if (redeemResult.IsError)
         {
             return redeemResult.Errors;
+        }
+
+        // Fraud check: Lax gate — absence of sale does not block redemption, but raises fraud flag
+        var hasSaleRecord = await _saleRecordRepository.ExistsForCodeAsync(accessCode.Id, cancellationToken);
+        if (!hasSaleRecord)
+        {
+            _logger.LogWarning("Fraud flag: UnsoldRedemption for Access Code {CodeId}. Redeemed without prior sale.", accessCode.Id);
         }
             
         // 6. Execute Strategy

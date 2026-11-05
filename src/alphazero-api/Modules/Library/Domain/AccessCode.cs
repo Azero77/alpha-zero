@@ -124,6 +124,11 @@ public class AccessCode : AggregateRoot, IDomainTenantOwned
         return _state.Distribute(this);
     }
 
+    public ErrorOr<Success> Sell(Guid libraryId, Guid soldByUserId, decimal price, string currency, DateTime? now = null)
+    {
+        return _state.Sell(this, libraryId, soldByUserId, price, currency, now);
+    }
+
     public ErrorOr<Success> Redeem(Guid userId, DateTime? now = null)
     {
         return _state.Redeem(this, userId, now);
@@ -171,6 +176,9 @@ public class AccessCode : AggregateRoot, IDomainTenantOwned
         public virtual ErrorOr<Success> Distribute(AccessCode code)
             => Error.Conflict("AccessCode.InvalidStatus", $"Code in {Status} status cannot be distributed.");
 
+        public virtual ErrorOr<Success> Sell(AccessCode code, Guid libraryId, Guid soldByUserId, decimal price, string currency, DateTime? now)
+            => Error.Conflict("AccessCode.InvalidStatus", $"Code in {Status} status cannot be sold.");
+
         public virtual ErrorOr<Success> Redeem(AccessCode code, Guid userId, DateTime? now)
             => Error.Conflict("AccessCode.InvalidStatus", $"Code cannot be redeemed. Current status: {Status}");
 
@@ -212,6 +220,19 @@ public class AccessCode : AggregateRoot, IDomainTenantOwned
     private sealed class DistributedState : AccessCodeState
     {
         public override AccessCodeStatus Status => AccessCodeStatus.Distributed;
+
+        public override ErrorOr<Success> Sell(AccessCode code, Guid libraryId, Guid soldByUserId, decimal price, string currency, DateTime? now)
+        {
+            var currentTime = now ?? DateTime.UtcNow;
+            if (code.ExpiresAt.HasValue && currentTime >= code.ExpiresAt.Value)
+            {
+                return Error.Conflict("AccessCode.Expired", "This access code has expired.");
+            }
+
+            code.TransitionTo(AccessCodeStatus.Sold, new SoldState());
+            code.AddDomainEvent(new AccessCodeSoldDomainEvent(code.Id, code.TenantId, libraryId, soldByUserId, price, currency, currentTime));
+            return Result.Success;
+        }
 
         public override ErrorOr<Success> Redeem(AccessCode code, Guid userId, DateTime? now)
         {
@@ -335,6 +356,17 @@ public class AccessCodeDistributedDomainEvent(Guid AccessCodeId, Guid? LibraryId
     public Guid? LibraryId { get; } = LibraryId;
     public Guid? BatchId { get; } = BatchId;
     public DateTime DistributedAt { get; } = DistributedAt;
+}
+
+public class AccessCodeSoldDomainEvent(Guid AccessCodeId, Guid TenantId, Guid LibraryId, Guid SoldByUserId, decimal Price, string Currency, DateTime SoldAt) : DomainEvent()
+{
+    public Guid AccessCodeId { get; } = AccessCodeId;
+    public Guid TenantId { get; } = TenantId;
+    public Guid LibraryId { get; } = LibraryId;
+    public Guid SoldByUserId { get; } = SoldByUserId;
+    public decimal Price { get; } = Price;
+    public string Currency { get; } = Currency;
+    public DateTime SoldAt { get; } = SoldAt;
 }
 
 public class AccessCodeRedeemedDomainEvent(Guid AccessCodeId, Guid UserId, ResourceArn Resource, DateTime RedeemedAt) : DomainEvent()

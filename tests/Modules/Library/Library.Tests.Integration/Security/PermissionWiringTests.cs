@@ -106,6 +106,36 @@ public class PermissionWiringTests
     }
 
     [Fact]
+    public async Task SellCode_Worker_Should_Return403Forbidden()
+    {
+        // Arrange
+        var tenantId = Guid.NewGuid();
+        var sellReq = CreateRequest(HttpMethod.Post, "/library/access-codes/sell", "Worker", tenantId,
+            new { RawCode = "ANY-CODE" });
+
+        // Act
+        var response = await _client.SendAsync(sellReq);
+
+        // Assert: Worker has no sell permissions
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    [Fact]
+    public async Task SellCode_Accountant_Should_Return403Forbidden()
+    {
+        // Arrange
+        var tenantId = Guid.NewGuid();
+        var sellReq = CreateRequest(HttpMethod.Post, "/library/access-codes/sell", "Accountant", tenantId,
+            new { RawCode = "ANY-CODE" });
+
+        // Act
+        var response = await _client.SendAsync(sellReq);
+
+        // Assert: Accountant lacks library:SellCodes
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    [Fact]
     public async Task GenerateAdminCode_Worker_Should_Return403Forbidden()
     {
         // Arrange

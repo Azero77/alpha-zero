@@ -177,6 +177,31 @@ public class AccessCodeTests
     }
 
     [Fact]
+    public void Transition_Distributed_To_Sold_Should_Succeed_And_RaiseEvent()
+    {
+        var code = CreateDistributedCode();
+        var libraryId = Guid.NewGuid();
+        var sellerId = Guid.NewGuid();
+        var before = DateTime.UtcNow;
+
+        var result = code.Sell(libraryId, sellerId, 49.99m, "USD");
+
+        result.IsError.Should().BeFalse();
+        code.Status.Should().Be(AccessCodeStatus.Sold);
+        code.ExpectedPreviousStatus.Should().Be(AccessCodeStatus.Distributed);
+
+        var @event = code.DomainEvents.Should().ContainSingle(e => e is AccessCodeSoldDomainEvent)
+            .Subject as AccessCodeSoldDomainEvent;
+        @event!.AccessCodeId.Should().Be(code.Id);
+        @event.TenantId.Should().Be(TenantId);
+        @event.LibraryId.Should().Be(libraryId);
+        @event.SoldByUserId.Should().Be(sellerId);
+        @event.Price.Should().Be(49.99m);
+        @event.Currency.Should().Be("USD");
+        @event.SoldAt.Should().BeOnOrAfter(before);
+    }
+
+    [Fact]
     public void Transition_Sold_To_Redeemed_Should_Succeed_And_RaiseEvent()
     {
         var code = CreateSoldCode();
@@ -331,6 +356,19 @@ public class AccessCodeTests
     #region 3. Illegal Transitions Matrix (Conflict + No Event)
 
     [Fact]
+    public void Minted_Cannot_Sell()
+    {
+        var code = CreateMintedCode();
+
+        var result = code.Sell(Guid.NewGuid(), Guid.NewGuid(), 10m, "USD");
+
+        result.IsError.Should().BeTrue();
+        result.FirstError.Code.Should().Be("AccessCode.InvalidStatus");
+        code.Status.Should().Be(AccessCodeStatus.Minted);
+        code.DomainEvents.Should().BeEmpty();
+    }
+
+    [Fact]
     public void Minted_Cannot_Redeem()
     {
         var code = CreateMintedCode();
@@ -353,6 +391,19 @@ public class AccessCodeTests
         result.IsError.Should().BeTrue();
         result.FirstError.Code.Should().Be("AccessCode.InvalidStatus");
         code.Status.Should().Be(AccessCodeStatus.Distributed);
+        code.DomainEvents.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void Sold_Cannot_Sell()
+    {
+        var code = CreateSoldCode();
+
+        var result = code.Sell(Guid.NewGuid(), Guid.NewGuid(), 10m, "USD");
+
+        result.IsError.Should().BeTrue();
+        result.FirstError.Code.Should().Be("AccessCode.InvalidStatus");
+        code.Status.Should().Be(AccessCodeStatus.Sold);
         code.DomainEvents.Should().BeEmpty();
     }
 
