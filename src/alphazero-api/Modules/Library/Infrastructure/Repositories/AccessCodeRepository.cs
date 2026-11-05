@@ -151,6 +151,35 @@ public class AccessCodeRepository : IAccessCodeRepository
             .AnyAsync(x => x.BatchId == batchId, cancellationToken);
     }
 
+    /// <summary>
+    /// Pessimistic mass-load of due-for-expiry access codes (#59). Acquires Postgres FOR UPDATE
+    /// locks ordered deterministically by Id (documented lock order), across all tenants (the
+    /// sweep runs without a request tenant context). Requires an active ambient EF transaction.
+    /// </summary>
+    public async Task<List<AccessCode>> GetDueForExpiryAsync(DateTime now, CancellationToken cancellationToken = default)
+    {
+        if (_context.Database.CurrentTransaction is null)
+        {
+            throw new InvalidOperationException(
+                "GetDueForExpiryAsync requires an active transaction; FOR UPDATE lock is released at statement end otherwise.");
+        }
+
+        var dataModels = await _context.AccessCodes
+            .FromSqlInterpolated($"""
+                SELECT *
+                FROM "Library"."AccessCodes"
+                WHERE "ExpiresAt" IS NOT NULL
+                  AND "ExpiresAt" <= {now}
+                  AND "Status" IN ('Minted', 'Distributed', 'Sold')
+                ORDER BY "Id"
+                FOR UPDATE
+                """)
+            .IgnoreQueryFilters()
+            .ToListAsync(cancellationToken);
+
+        return dataModels.Select(MapToDomain).ToList();
+    }
+
     public async Task<int> CountBatchAsync(Guid batchId, CancellationToken cancellationToken = default)
     {
         return await _context.AccessCodes

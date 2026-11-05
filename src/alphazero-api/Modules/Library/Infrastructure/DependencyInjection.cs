@@ -30,6 +30,10 @@ public static class DependencyInjection
             opts.AddInterceptors(sp.GetRequiredService<SoftDeleteInterceptor>());
         });
 
+        // Scheduled Library analytics/sweep worker (issue #59, Courses template): sweep expired
+        // codes through the state machine, then refresh the LibraryAnalytics projection.
+        services.AddHostedService<Analytics.LibraryAnalyticsRefreshWorker>();
+
         return services;
     }
 
@@ -42,6 +46,15 @@ public static class DependencyInjection
         services.AddScoped<ILibraryAuditLogRepository, LibraryAuditLogRepository>();
         services.AddScoped<AlphaZero.Modules.Library.Application.Queries.ILibraryQueryService, AlphaZero.Modules.Library.Infrastructure.Queries.LibraryQueryService>();
         services.Decorate<AlphaZero.Modules.Library.Application.Queries.ILibraryQueryService, AlphaZero.Modules.Library.Infrastructure.Caching.CachedLibraryQueryService>();
+        services.AddScoped<AlphaZero.Modules.Library.Application.Analytics.ILibraryAnalyticsQueryService, AlphaZero.Modules.Library.Infrastructure.Queries.LibraryAnalyticsQueryService>();
+        services.Decorate<AlphaZero.Modules.Library.Application.Analytics.ILibraryAnalyticsQueryService, AlphaZero.Modules.Library.Infrastructure.Caching.CachedLibraryAnalyticsQueryService>();
+        services.AddScoped<AlphaZero.Modules.Library.Application.Analytics.IProvisioningStateReadService, AlphaZero.Modules.Library.Infrastructure.CrossModule.BusProvisioningStateService>();
+
+        // Analytics worker services (issue #59): resolved in the module's own container so their
+        // IUnitOfWork / AppDbContext are unambiguously the Library ones; the hosted worker bridges
+        // host lifecycle → module scope per pass (Courses template).
+        services.AddScoped<AlphaZero.Modules.Library.Infrastructure.Analytics.ILibraryAnalyticsRefreshService, AlphaZero.Modules.Library.Infrastructure.Analytics.LibraryAnalyticsRefreshService>();
+        services.AddScoped<AlphaZero.Modules.Library.Infrastructure.Analytics.IAccessCodeExpirySweepService, AlphaZero.Modules.Library.Infrastructure.Analytics.AccessCodeExpirySweepService>();
 
         services.AddScoped<IUnitOfWork, UnitOfWork<AppDbContext>>();
 

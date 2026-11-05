@@ -257,6 +257,60 @@ namespace AlphaZero.Modules.Library.Infrastructure.Migrations
                     b.ToTable("AccessCodes", "Library");
                 });
 
+            modelBuilder.Entity("AlphaZero.Modules.Library.Infrastructure.Models.LibraryAnalytics", b =>
+                {
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("LibraryId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("BatchId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("DistributedCount")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("ExpiredCount")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("MintedCount")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("OutstandingCount")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("RedeemedCount")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("RevenueByPeriod")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<string>("SalesByPeriod")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<int>("SoldCount")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal>("TotalRevenue")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<int>("VoidedAfterSaleCount")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("VoidedCount")
+                        .HasColumnType("integer");
+
+                    b.HasKey("TenantId", "LibraryId", "BatchId");
+
+                    b.HasIndex("TenantId");
+
+                    b.ToTable("LibraryAnalytics", "Library");
+                });
+
             modelBuilder.Entity("MassTransit.EntityFrameworkCoreIntegration.InboxState", b =>
                 {
                     b.Property<long>("Id")
