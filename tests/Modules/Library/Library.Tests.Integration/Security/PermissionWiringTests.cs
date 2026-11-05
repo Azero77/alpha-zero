@@ -236,4 +236,20 @@ public class PermissionWiringTests
         // Assert: AccessControl rejects cross-library access with 403 Forbidden
         response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
+
+    [Fact]
+    public async Task VoidBatch_Worker_Should_Return403Forbidden()
+    {
+        // Arrange: Worker lacks library:SellCodes
+        var tenantId = Guid.NewGuid();
+        var batchId = Guid.NewGuid();
+
+        // Act: Worker attempts batch recall
+        var request = CreateRequest(HttpMethod.Post, $"/library/access-codes/batches/{batchId}/void", "Worker", tenantId,
+            new { BatchId = batchId, Reason = "Worker attempt" });
+        var response = await _client.SendAsync(request);
+
+        // Assert: 403 Forbidden
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
 }

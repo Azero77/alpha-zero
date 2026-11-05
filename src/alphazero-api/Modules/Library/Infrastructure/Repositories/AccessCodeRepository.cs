@@ -151,6 +151,12 @@ public class AccessCodeRepository : IAccessCodeRepository
             .AnyAsync(x => x.BatchId == batchId, cancellationToken);
     }
 
+    public async Task<int> CountBatchAsync(Guid batchId, CancellationToken cancellationToken = default)
+    {
+        return await _context.AccessCodes
+            .CountAsync(x => x.BatchId == batchId, cancellationToken);
+    }
+
     public void IgnoreQueryFilter()
     {
         _ignoreQueryFilters = true;
