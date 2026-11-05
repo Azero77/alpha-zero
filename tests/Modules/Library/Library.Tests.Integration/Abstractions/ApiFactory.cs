@@ -140,10 +140,16 @@ public class TestCurrentTenantUserRepository(IHttpContextAccessor? httpContextAc
             return Task.FromResult<TenantUserDTO?>(null);
         }
 
-        if (MockUserId == null) return Task.FromResult<TenantUserDTO?>(null);
+        var resolvedUserId = MockUserId ?? Guid.Empty;
+        if (context != null && context.Request.Headers.TryGetValue("X-Test-User-Id", out var testUserHeader) && Guid.TryParse(testUserHeader, out var parsedUserId))
+        {
+            resolvedUserId = parsedUserId;
+        }
+
+        if (resolvedUserId == Guid.Empty) return Task.FromResult<TenantUserDTO?>(null);
 
         return Task.FromResult<TenantUserDTO?>(new TenantUserDTO(
-            MockUserId.Value,
+            resolvedUserId,
             MockIdentityId.ToString(),
             "Test Student"));
     }
