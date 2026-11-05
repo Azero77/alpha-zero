@@ -166,7 +166,7 @@ public class AccessCodeTests
         var auditRef = Guid.NewGuid();
         var before = DateTime.UtcNow;
 
-        var result = code.Redeem(userId, auditReference: auditRef);
+        var result = code.Redeem(userId, forensicLogId: auditRef);
 
         result.IsError.Should().BeFalse();
         code.Status.Should().Be(AccessCodeStatus.Redeemed);
