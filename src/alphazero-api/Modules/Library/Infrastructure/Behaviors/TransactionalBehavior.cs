@@ -20,8 +20,8 @@ public class TransactionalBehavior<TRequest, TResponse> : IPipelineBehavior<TReq
     }
 
     public async Task<ErrorOr<TResponse>> Handle(
-        TRequest request, 
-        RequestHandlerDelegate<ErrorOr<TResponse>> next, 
+        TRequest request,
+        RequestHandlerDelegate<ErrorOr<TResponse>> next,
         CancellationToken cancellationToken)
     {
         // Zero overhead for non-transactional commands
