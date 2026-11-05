@@ -1,5 +1,6 @@
 using AlphaZero.Modules.Library.Domain;
 using AlphaZero.Shared.Application;
+using AlphaZero.Shared.Domain;
 using ErrorOr;
 using FluentValidation;
 using MediatR;
@@ -19,7 +20,8 @@ public class DistributeBatchCommandValidator : AbstractValidator<DistributeBatch
 
 public sealed class DistributeBatchCommandHandler(
     IAccessCodeRepository repository,
-    ILogger<DistributeBatchCommandHandler> logger) : IRequestHandler<DistributeBatchCommand, ErrorOr<Success>>
+    ILogger<DistributeBatchCommandHandler> logger,
+    ICurrentTenantUserRepository? currentUserRepository = null) : IRequestHandler<DistributeBatchCommand, ErrorOr<Success>>
 {
     public async Task<ErrorOr<Success>> Handle(DistributeBatchCommand request, CancellationToken cancellationToken)
     {
@@ -50,9 +52,11 @@ public sealed class DistributeBatchCommandHandler(
                 $"No codes in batch '{request.BatchId}' are in Minted status, so none were distributed.");
         }
 
+        var currentUser = currentUserRepository != null ? await currentUserRepository.GetCurrentUser() : null;
+
         foreach (var code in mintedCodes)
         {
-            var distributeResult = code.Distribute();
+            var distributeResult = code.Distribute(currentUser?.UserId);
             if (distributeResult.IsError)
             {
                 return distributeResult.Errors;

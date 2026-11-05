@@ -106,6 +106,36 @@ public class PermissionWiringTests
     }
 
     [Fact]
+    public async Task SellCode_Worker_Should_Return403Forbidden()
+    {
+        // Arrange
+        var tenantId = Guid.NewGuid();
+        var sellReq = CreateRequest(HttpMethod.Post, "/library/access-codes/sell", "Worker", tenantId,
+            new { RawCode = "ANY-CODE" });
+
+        // Act
+        var response = await _client.SendAsync(sellReq);
+
+        // Assert: Worker has no sell permissions
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    [Fact]
+    public async Task SellCode_Accountant_Should_Return403Forbidden()
+    {
+        // Arrange
+        var tenantId = Guid.NewGuid();
+        var sellReq = CreateRequest(HttpMethod.Post, "/library/access-codes/sell", "Accountant", tenantId,
+            new { RawCode = "ANY-CODE" });
+
+        // Act
+        var response = await _client.SendAsync(sellReq);
+
+        // Assert: Accountant lacks library:SellCodes
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    [Fact]
     public async Task GenerateAdminCode_Worker_Should_Return403Forbidden()
     {
         // Arrange
@@ -204,6 +234,22 @@ public class PermissionWiringTests
         var response = await _client.SendAsync(request);
 
         // Assert: AccessControl rejects cross-library access with 403 Forbidden
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    [Fact]
+    public async Task VoidBatch_Worker_Should_Return403Forbidden()
+    {
+        // Arrange: Worker lacks library:SellCodes
+        var tenantId = Guid.NewGuid();
+        var batchId = Guid.NewGuid();
+
+        // Act: Worker attempts batch recall
+        var request = CreateRequest(HttpMethod.Post, $"/library/access-codes/batches/{batchId}/void", "Worker", tenantId,
+            new { BatchId = batchId, Reason = "Worker attempt" });
+        var response = await _client.SendAsync(request);
+
+        // Assert: 403 Forbidden
         response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 }

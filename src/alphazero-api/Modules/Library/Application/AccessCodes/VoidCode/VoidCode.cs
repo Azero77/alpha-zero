@@ -24,7 +24,8 @@ public sealed class VoidCodeCommandHandler(
     IAccessCodeRepository repository,
     IPasswordHasher passwordHasher,
     ITenantProvider tenantProvider,
-    ILogger<VoidCodeCommandHandler> logger) : IRequestHandler<VoidCodeCommand, ErrorOr<Success>>
+    ILogger<VoidCodeCommandHandler> logger,
+    ICurrentTenantUserRepository? currentUserRepository = null) : IRequestHandler<VoidCodeCommand, ErrorOr<Success>>
 {
     public async Task<ErrorOr<Success>> Handle(VoidCodeCommand request, CancellationToken cancellationToken)
     {
@@ -46,7 +47,8 @@ public sealed class VoidCodeCommandHandler(
             return Error.Forbidden("AccessCode.TenantMismatch", "This code belongs to another academy.");
         }
 
-        var result = code.Void(request.Reason);
+        var currentUser = currentUserRepository != null ? await currentUserRepository.GetCurrentUser() : null;
+        var result = code.Void(request.Reason, currentUser?.UserId);
         if (result.IsError) return result.Errors;
 
         var updateResult = await repository.UpdateAsync(code, cancellationToken);

@@ -16,7 +16,7 @@ public record GenerateAdminCodeResult(Guid CodeId, string PlainTextCode);
 public record GenerateAdminCodeCommand(
     string TargetResourceArn,
     string StrategyId = "enroll-course",
-    Dictionary<string, object>? Metadata = null) : ICommand<GenerateAdminCodeResult>;
+    Dictionary<string, object>? Metadata = null) : ICommand<GenerateAdminCodeResult>, ITransactionalCommand;
 
 public class GenerateAdminCodeCommandValidator : AbstractValidator<GenerateAdminCodeCommand>
 {
@@ -31,7 +31,8 @@ public sealed class GenerateAdminCodeCommandHandler(
     IAccessCodeRepository accessCodeRepository,
     ITenantProvider tenantProvider,
     IPasswordHasher passwordHasher,
-    ILogger<GenerateAdminCodeCommandHandler> logger) : IRequestHandler<GenerateAdminCodeCommand, ErrorOr<GenerateAdminCodeResult>>
+    ILogger<GenerateAdminCodeCommandHandler> logger,
+    ICurrentTenantUserRepository? currentUserRepository = null) : IRequestHandler<GenerateAdminCodeCommand, ErrorOr<GenerateAdminCodeResult>>
 {
     public async Task<ErrorOr<GenerateAdminCodeResult>> Handle(GenerateAdminCodeCommand request, CancellationToken cancellationToken)
     {
@@ -48,13 +49,16 @@ public sealed class GenerateAdminCodeCommandHandler(
         var metadata = request.Metadata ?? new Dictionary<string, object>();
         metadata["GeneratedBy"] = "Administrator";
 
+        var currentUser = currentUserRepository != null ? await currentUserRepository.GetCurrentUser() : null;
+
         var accessCode = AccessCode.Mint(
             hash,
             tenantId.Value,
             null, // No Library bound
             request.StrategyId,
             resourceArn.Value,
-            JsonDocument.Parse(JsonSerializer.Serialize(metadata)));
+            JsonDocument.Parse(JsonSerializer.Serialize(metadata)),
+            actorUserId: currentUser?.UserId);
 
         accessCodeRepository.Add(accessCode);
         

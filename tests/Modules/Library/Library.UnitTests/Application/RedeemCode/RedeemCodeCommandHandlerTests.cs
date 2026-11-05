@@ -5,6 +5,7 @@ using AlphaZero.Shared.Domain;
 using AlphaZero.Shared.Infrastructure.Tenats;
 using ErrorOr;
 using FluentAssertions;
+using Microsoft.Extensions.Logging;
 using NSubstitute;
 using System.Text.Json;
 
@@ -14,11 +15,13 @@ public class RedeemCodeCommandHandlerTests
 {
     private readonly IAccessCodeRepository _repository;
     private readonly IRedemptionAuditLogRepository _auditLogRepository;
+    private readonly ISaleRecordRepository _saleRecordRepository;
     private readonly ITenantProvider _tenantProvider;
     private readonly ICurrentTenantUserRepository _currentUserRepository;
     private readonly IPasswordHasher _passwordHasher;
-    private readonly RedeemCodeCommandHandler _handler;
     private readonly IAuthorizationContextProvider _authorizationContextFactory;
+    private readonly ILogger<RedeemCodeCommandHandler> _logger;
+    private readonly RedeemCodeCommandHandler _handler;
 
     private static readonly Guid TenantId = Guid.NewGuid();
     private static readonly Guid UserId = Guid.NewGuid();
@@ -27,18 +30,22 @@ public class RedeemCodeCommandHandlerTests
     {
         _repository = Substitute.For<IAccessCodeRepository>();
         _auditLogRepository = Substitute.For<IRedemptionAuditLogRepository>();
+        _saleRecordRepository = Substitute.For<ISaleRecordRepository>();
         _tenantProvider = Substitute.For<ITenantProvider>();
         _currentUserRepository = Substitute.For<ICurrentTenantUserRepository>();
         _passwordHasher = Substitute.For<IPasswordHasher>();
         _authorizationContextFactory = Substitute.For<IAuthorizationContextProvider>();
+        _logger = Substitute.For<ILogger<RedeemCodeCommandHandler>>();
 
         _handler = new RedeemCodeCommandHandler(
             _repository,
             _auditLogRepository,
+            _saleRecordRepository,
             _tenantProvider,
             _currentUserRepository,
             _passwordHasher,
-            _authorizationContextFactory
+            _authorizationContextFactory,
+            _logger
             );
     }
 

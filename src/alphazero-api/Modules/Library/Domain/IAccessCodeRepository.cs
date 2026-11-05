@@ -6,6 +6,7 @@ namespace AlphaZero.Modules.Library.Domain;
 public interface IAccessCodeRepository : IRepository<AccessCode>
 {
     Task<bool> BatchExistsAsync(Guid batchId, CancellationToken cancellationToken = default);
+    Task<int> CountBatchAsync(Guid batchId, CancellationToken cancellationToken = default);
     Task<AccessCode?> GetByHashAsync(string codeHash, CancellationToken cancellationToken = default);
     Task<AccessCode?> GetByHashForUpdateAsync(string codeHash, CancellationToken cancellationToken = default);
     Task<List<AccessCode>> GetBatchForUpdateAsync(Guid batchId, CancellationToken cancellationToken = default);
