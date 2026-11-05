@@ -174,4 +174,36 @@ public class PermissionWiringTests
         workerRes.StatusCode.Should().Be(HttpStatusCode.Forbidden);
         accountantRes.StatusCode.Should().Be(HttpStatusCode.OK);
     }
+
+    [Fact]
+    public async Task GetLibrary_Worker_Should_Return403Forbidden()
+    {
+        // Arrange
+        var tenantId = Guid.NewGuid();
+        var libraryId = Guid.NewGuid();
+
+        // Act: Worker lacks library:Audit permission
+        var request = CreateRequest(HttpMethod.Get, $"/library/libraries/{libraryId}", "Worker", tenantId);
+        var response = await _client.SendAsync(request);
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    [Fact]
+    public async Task GetLibrary_Manager_ScopedToAnotherLibrary_Should_Return403Forbidden()
+    {
+        // Arrange: Manager scoped to Library A
+        var tenantId = Guid.NewGuid();
+        var libraryA = Guid.NewGuid();
+        var libraryB = Guid.NewGuid();
+
+        // Act: Manager attempts to read Library B
+        var request = CreateRequest(HttpMethod.Get, $"/library/libraries/{libraryB}", "Manager", tenantId);
+        request.Headers.Add("X-Scoped-Library-Id", libraryA.ToString());
+        var response = await _client.SendAsync(request);
+
+        // Assert: AccessControl rejects cross-library access with 403 Forbidden
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
 }

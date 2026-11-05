@@ -5,7 +5,7 @@ namespace AlphaZero.Modules.Library.Domain;
 /// <summary>
 /// Represents an immutable audit record for an access code redemption.
 /// </summary>
-public class RedemptionAuditLog : Entity
+public class RedemptionAuditLog : Entity, IDomainTenantOwned
 {
     public Guid TenantId { get; private set; }
     public Guid? LibraryId { get; private set; }   // null = admin code
