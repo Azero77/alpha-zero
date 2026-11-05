@@ -1,14 +1,16 @@
-using AlphaZero.Modules.Library.Domain;
+using AlphaZero.Modules.Library.Infrastructure.Models;
 using AlphaZero.Shared.Domain;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace AlphaZero.Modules.Library.Infrastructure.Persistance.Configurations;
 
-public class AccessCodeConfiguration : IEntityTypeConfiguration<AccessCode>
+public class AccessCodeDataModelConfiguration : IEntityTypeConfiguration<AccessCodeDataModel>
 {
-    public void Configure(EntityTypeBuilder<AccessCode> builder)
+    public void Configure(EntityTypeBuilder<AccessCodeDataModel> builder)
     {
+        builder.ToTable("AccessCodes", AppDbContext.Schema);
+
         builder.HasKey(x => x.Id);
         builder.Property(x => x.Id).ValueGeneratedNever();
 
@@ -45,5 +47,8 @@ public class AccessCodeConfiguration : IEntityTypeConfiguration<AccessCode>
         builder.Property(x => x.VoidedReason)
             .IsRequired(false)
             .HasMaxLength(512);
+
+        builder.Property(x => x.ExpiresAt)
+            .IsRequired(false);
     }
 }
