@@ -1,4 +1,5 @@
 using AlphaZero.Modules.Library.Domain;
+using AlphaZero.Modules.Library.Infrastructure.Models;
 using AlphaZero.Shared.Infrastructure.Database;
 using AlphaZero.Shared.Infrastructure.Tenats;
 using Microsoft.EntityFrameworkCore;
@@ -17,7 +18,7 @@ public class AppDbContext : DbContext, ITenantDbContext
         _tenantProvider = tenantProvider;
     }
 
-    public DbSet<AccessCode> AccessCodes => Set<AccessCode>();
+    public DbSet<AccessCodeDataModel> AccessCodes => Set<AccessCodeDataModel>();
     public DbSet<Domain.Library> Libraries => Set<Domain.Library>();
     public DbSet<RedemptionAuditLog> RedemptionAuditLogs => Set<RedemptionAuditLog>();
 

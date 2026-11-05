@@ -29,5 +29,17 @@ public enum AccessCodeStatus
     /// The code has been manually revoked by an administrator (e.g., due to theft, non-payment, or error).
     /// </summary>
     [Description("Code has been revoked and is no longer valid.")]
-    Voided = 4
+    Voided = 4,
+
+    /// <summary>
+    /// The code has been physically sold to a student at a library branch.
+    /// </summary>
+    [Description("Code has been sold to a student.")]
+    Sold = 5,
+
+    /// <summary>
+    /// The code has passed its expiration date and is no longer valid for redemption.
+    /// </summary>
+    [Description("Code has expired and is no longer valid.")]
+    Expired = 6
 }

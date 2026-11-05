@@ -38,6 +38,11 @@ public class RedeemCodeCommandHandler : IRequestHandler<RedeemCodeCommand, Error
 
     public async Task<ErrorOr<Success>> Handle(RedeemCodeCommand request, CancellationToken cancellationToken)
     {
+        // Lock ordering discipline (prevents deadlocks between concurrent redeem/void flows):
+        // 1. AccessCode row (via SELECT ... FOR UPDATE)
+        // 2. RedemptionAuditLog row (INSERT)
+        // 3. Audit stream projection (P3b)
+
         // 1. Authenticate first (401 per spec)
         var currentUser = await _currentUserRepository.GetCurrentUser();
         if (currentUser == null)
@@ -45,9 +50,9 @@ public class RedeemCodeCommandHandler : IRequestHandler<RedeemCodeCommand, Error
             return Error.Unauthorized("User.Unauthenticated", "User must be logged in to redeem codes.");
         }
 
-        // 2. Hash the code and verify existence (404 per spec)
+        // 2. Hash the code and verify existence with pessimistic row-level lock (404 per spec)
         var hash = _passwordHasher.HashPassword(request.RawCode);
-        var accessCode = await _repository.GetByHashAsync(hash, cancellationToken);
+        var accessCode = await _repository.GetByHashForUpdateAsync(hash, cancellationToken);
         if (accessCode == null)
         {
             return Error.NotFound("AccessCode.NotFound", "The provided code is invalid.");
@@ -95,7 +100,12 @@ public class RedeemCodeCommandHandler : IRequestHandler<RedeemCodeCommand, Error
 
         await _auditLogRepository.AddAsync(auditLog, cancellationToken);
 
-        _repository.Update(accessCode);
+        var updateResult = await _repository.UpdateAsync(accessCode, cancellationToken);
+        if (updateResult.IsError)
+        {
+            return updateResult.Errors;
+        }
+
         return Result.Success;
     }
 }

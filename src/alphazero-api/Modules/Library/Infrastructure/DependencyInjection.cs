@@ -56,6 +56,7 @@ public static class DependencyInjection
         {
             opts.RegisterServicesFromAssembly(applicationAssembly);
             opts.AddOpenBehavior(typeof(ValidationBehavior<,>));
+            opts.AddOpenBehavior(typeof(AlphaZero.Modules.Library.Infrastructure.Behaviors.TransactionalBehavior<,>));
             opts.AddOpenBehavior(typeof(UnitOfWorkDecoratorCommandHandler<,>));
         });
 

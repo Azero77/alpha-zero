@@ -11,12 +11,15 @@ public class AccessCodeVoidedDomainEventHandler(IPublishEndpoint bus, IClock clo
 {
     public async Task Handle(AccessCodeVoidedDomainEvent notification, CancellationToken cancellationToken)
     {
-        // Notify other modules that this resource access must be revoked
-        await bus.Publish(new AccessCodeRevokedIntegrationEvent(
-            Guid.NewGuid(),
-            notification.AccessCodeId,
-            notification.UserId,
-            notification.Resource,
-            clock.Now));
+        // Only publish revocation integration event if the code was redeemed by a user
+        if (notification.UserId.HasValue)
+        {
+            await bus.Publish(new AccessCodeRevokedIntegrationEvent(
+                Guid.NewGuid(),
+                notification.AccessCodeId,
+                notification.UserId.Value,
+                notification.Resource,
+                clock.Now), cancellationToken);
+        }
     }
 }

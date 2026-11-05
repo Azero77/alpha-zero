@@ -4,6 +4,7 @@ using AlphaZero.Modules.Library.Domain;
 using AlphaZero.Shared.Application;
 using AlphaZero.Shared.Domain;
 using AlphaZero.Shared.Infrastructure.Tenats;
+using ErrorOr;
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
@@ -42,7 +43,7 @@ public class VoidCodeCommandHandlerTests
     {
         // Arrange
         _passwordHasher.HashPassword("RAW-CODE").Returns("hash");
-        _repository.GetByHashAsync("hash", Arg.Any<CancellationToken>()).Returns((AccessCode?)null);
+        _repository.GetByHashForUpdateAsync("hash", Arg.Any<CancellationToken>()).Returns((AccessCode?)null);
         _tenantProvider.GetTenant().Returns(TenantId);
 
         var command = new VoidCodeCommand("RAW-CODE", "Lost");
@@ -65,7 +66,7 @@ public class VoidCodeCommandHandlerTests
         var code = AccessCode.Mint("hash", foreignTenantId, null, "strategy", targetArn, JsonDocument.Parse("{}"));
 
         _passwordHasher.HashPassword("RAW-CODE").Returns("hash");
-        _repository.GetByHashAsync("hash", Arg.Any<CancellationToken>()).Returns(code);
+        _repository.GetByHashForUpdateAsync("hash", Arg.Any<CancellationToken>()).Returns(code);
         _tenantProvider.GetTenant().Returns(TenantId); // Current tenant differs from foreignTenantId
 
         var command = new VoidCodeCommand("RAW-CODE", "Attempted cross-tenant void");
@@ -88,7 +89,8 @@ public class VoidCodeCommandHandlerTests
         var code = AccessCode.Mint("hash", TenantId, null, "strategy", targetArn, JsonDocument.Parse("{}"));
 
         _passwordHasher.HashPassword("RAW-CODE").Returns("hash");
-        _repository.GetByHashAsync("hash", Arg.Any<CancellationToken>()).Returns(code);
+        _repository.GetByHashForUpdateAsync("hash", Arg.Any<CancellationToken>()).Returns(code);
+        _repository.UpdateAsync(code, Arg.Any<CancellationToken>()).Returns(Result.Success);
         _tenantProvider.GetTenant().Returns(TenantId);
 
         var command = new VoidCodeCommand("RAW-CODE", "Damaged card");
@@ -100,6 +102,6 @@ public class VoidCodeCommandHandlerTests
         result.IsError.Should().BeFalse();
         code.Status.Should().Be(AccessCodeStatus.Voided);
         code.VoidedReason.Should().Be("Damaged card");
-        _repository.Received(1).Update(code);
+        await _repository.Received(1).UpdateAsync(code, Arg.Any<CancellationToken>());
     }
 }
