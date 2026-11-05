@@ -228,6 +228,71 @@ public class LibraryAnalyticsSeamTests(ApiFactory factory) : BaseIntegrationTest
     }
 
     [Fact]
+    public async Task SweepExpiredCodesAsync_Should_ReturnZero_AndCommit_WhenNothingIsDue()
+    {
+        // Only a NOT-yet-due code exists: the empty branch must commit cleanly and write nothing.
+        var tenantId = Guid.NewGuid();
+        DbContext.AccessCodes.Add(MakeCode(
+            tenantId, Guid.NewGuid(), Guid.NewGuid(), AccessCodeStatus.Distributed,
+            DateTime.SpecifyKind(DateTime.UtcNow.AddDays(7), DateTimeKind.Utc)));
+        await DbContext.SaveChangesAsync();
+        DbContext.ChangeTracker.Clear();
+
+        var (scope, sweepService) = ResolveFromModule<IAccessCodeExpirySweepService>();
+        using (scope)
+        {
+            (await sweepService.SweepExpiredCodesAsync()).Should().Be(0);
+
+            (await DbContext.AccessCodes.IgnoreQueryFilters()
+                .CountAsync(x => x.TenantId == tenantId && x.Status == AccessCodeStatus.Distributed))
+                .Should().Be(1);
+
+            (await DbContext.LibraryAuditLogs.IgnoreQueryFilters()
+                .CountAsync(x => x.TenantId == tenantId))
+                .Should().Be(0);
+        }
+    }
+
+    [Fact]
+    public async Task RefreshAnalyticsAsync_Should_KeepMultiCurrencyBuckets_WithinOneLibraryRow()
+    {
+        // Pins the documented money semantics: RevenueByPeriod keeps per-currency buckets inside
+        // one (tenant, library, batch) row, while TotalRevenue sums numerically across currencies
+        // without conversion (documented simplification — no FX in P4).
+        var tenantId = Guid.NewGuid();
+        var libraryId = Guid.NewGuid();
+        var batchId = Guid.NewGuid();
+
+        var codeUsd = MakeCode(tenantId, libraryId, batchId, AccessCodeStatus.Sold);
+        var codeEur = MakeCode(tenantId, libraryId, batchId, AccessCodeStatus.Sold);
+
+        DbContext.AccessCodes.AddRange(codeUsd, codeEur);
+        DbContext.SaleRecords.AddRange(
+            SaleRecord.Create(tenantId, libraryId, codeUsd.Id, Guid.NewGuid(), 50.00m, "USD", PrevMonthDay),
+            SaleRecord.Create(tenantId, libraryId, codeEur.Id, Guid.NewGuid(), 45.00m, "EUR", PrevMonthDay));
+        await DbContext.SaveChangesAsync();
+        DbContext.ChangeTracker.Clear();
+
+        var (scope, refreshService) = ResolveFromModule<ILibraryAnalyticsRefreshService>();
+        using (scope)
+        {
+            await refreshService.RefreshAnalyticsAsync();
+
+            var row = await DbContext.LibraryAnalytics
+                .IgnoreQueryFilters()
+                .AsNoTracking()
+                .SingleAsync(x => x.TenantId == tenantId);
+
+            row.SoldCount.Should().Be(2);
+            row.TotalRevenue.Should().Be(95.00m); // plain decimal sum across currencies (no FX)
+            row.RevenueByPeriod[PrevMonthKey].Should().HaveCount(2);
+            row.RevenueByPeriod[PrevMonthKey]["USD"].Should().Be(50.00m);
+            row.RevenueByPeriod[PrevMonthKey]["EUR"].Should().Be(45.00m);
+            row.SalesByPeriod[PrevMonthKey].Should().Be(2);
+        }
+    }
+
+    [Fact]
     public async Task AnalyticsQueryService_Should_EnforceTenantScoping_And_SentinelHandling()
     {
         // Arrange: projection rows for tenant A (partner library + admin sentinel row + a second

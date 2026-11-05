@@ -397,7 +397,8 @@ namespace AlphaZero.Modules.Courses.Infrastructure.Migrations
 
                     b.HasIndex("TenantId");
 
-                    b.HasIndex("TenantId", "AccessCodeId");
+                    b.HasIndex("TenantId", "AccessCodeId")
+                        .IsUnique();
 
                     b.HasIndex("TenantId", "Status");
 

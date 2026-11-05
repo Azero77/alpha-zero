@@ -1,6 +1,7 @@
 using AlphaZero.Modules.Library.Application.AccessCodes.DistributeBatch;
 using AlphaZero.Modules.Library.Domain;
 using AlphaZero.Shared.Domain;
+using AlphaZero.Shared.Infrastructure.Tenats;
 using ErrorOr;
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
@@ -12,6 +13,7 @@ namespace Library.UnitTests.Application.AccessCodes;
 public class DistributeBatchCommandHandlerTests
 {
     private readonly IAccessCodeRepository _accessCodeRepository;
+    private readonly ITenantProvider _tenantProvider;
     private readonly ILogger<DistributeBatchCommandHandler> _logger;
     private readonly DistributeBatchCommandHandler _handler;
 
@@ -23,9 +25,11 @@ public class DistributeBatchCommandHandlerTests
     public DistributeBatchCommandHandlerTests()
     {
         _accessCodeRepository = Substitute.For<IAccessCodeRepository>();
+        _tenantProvider = Substitute.For<ITenantProvider>();
+        _tenantProvider.GetTenant().Returns(TenantId);
         _logger = Substitute.For<ILogger<DistributeBatchCommandHandler>>();
 
-        _handler = new DistributeBatchCommandHandler(_accessCodeRepository, _logger);
+        _handler = new DistributeBatchCommandHandler(_accessCodeRepository, _tenantProvider, _logger);
     }
 
     [Fact]
@@ -36,7 +40,7 @@ public class DistributeBatchCommandHandlerTests
         var code2 = AccessCode.Mint("h2", TenantId, Guid.NewGuid(), "s", TargetResource, Metadata, BatchId);
         var codes = new List<AccessCode> { code1, code2 };
 
-        _accessCodeRepository.GetBatchForUpdateAsync(BatchId, Arg.Any<CancellationToken>())
+        _accessCodeRepository.GetBatchForUpdateAsync(TenantId, BatchId, Arg.Any<CancellationToken>())
             .Returns(codes);
         _accessCodeRepository.UpdateAsync(Arg.Any<AccessCode>(), Arg.Any<CancellationToken>())
             .Returns(Result.Success);
@@ -57,7 +61,7 @@ public class DistributeBatchCommandHandlerTests
     public async Task Handle_Should_ReturnNotFound_WhenBatchDoesNotExist()
     {
         // Arrange
-        _accessCodeRepository.GetBatchForUpdateAsync(BatchId, Arg.Any<CancellationToken>())
+        _accessCodeRepository.GetBatchForUpdateAsync(TenantId, BatchId, Arg.Any<CancellationToken>())
             .Returns(new List<AccessCode>());
         _accessCodeRepository.BatchExistsAsync(BatchId, Arg.Any<CancellationToken>())
             .Returns(false);
@@ -81,7 +85,7 @@ public class DistributeBatchCommandHandlerTests
         code1.Distribute();
         var codes = new List<AccessCode> { code1 };
 
-        _accessCodeRepository.GetBatchForUpdateAsync(BatchId, Arg.Any<CancellationToken>())
+        _accessCodeRepository.GetBatchForUpdateAsync(TenantId, BatchId, Arg.Any<CancellationToken>())
             .Returns(codes);
 
         var command = new DistributeBatchCommand(BatchId);

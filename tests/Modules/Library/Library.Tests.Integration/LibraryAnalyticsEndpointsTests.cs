@@ -73,6 +73,9 @@ public class LibraryAnalyticsEndpointsTests(ApiFactory factory) : BaseIntegratio
     [Fact]
     public async Task Funnel_And_Revenue_Endpoints_Should_ReturnNumbers_AfterLifecycleFlow()
     {
+        // Flow clock captured BEFORE any sale (same UTC month as the eventual bucket: sales
+        // happen seconds later, so a just-crossed month boundary is excluded by construction).
+        var flowStartedUtc = DateTime.UtcNow;
         var (tenantId, libraryId, batches) = await SeedLibraryWithBatchesAsync(quantity: 4, faceValue: 50.00m);
         var batchId = batches[0].BatchId;
 
@@ -133,7 +136,7 @@ public class LibraryAnalyticsEndpointsTests(ApiFactory factory) : BaseIntegratio
         revenue!.TotalRevenue.Should().Be(100.00m);
         revenue.TotalSales.Should().Be(2);
         revenue.Libraries.Should().ContainSingle(l => l.LibraryId == libraryId && l.TotalRevenue == 100.00m);
-        var currentPeriod = DateTime.UtcNow.ToString("yyyy-MM");
+        var currentPeriod = flowStartedUtc.ToString("yyyy-MM");
         var period = revenue.Periods.Should().ContainSingle(p => p.Period == currentPeriod).Subject;
         period.SalesCount.Should().Be(2);
         period.ByCurrency.Should().Contain(c => c.Currency == "USD" && c.Revenue == 100.00m);
@@ -178,6 +181,21 @@ public class LibraryAnalyticsEndpointsTests(ApiFactory factory) : BaseIntegratio
         }
         await DbContext.SaveChangesAsync();
 
+        // Lookback bound (LibraryAnalytics:FraudLookbackDays, default 30): an UnsoldRedemption
+        // entry 45 days back is OUTSIDE the request-time read window — the queue read is
+        // bounded and must not surface history older than the cutoff.
+        DbContext.LibraryAuditLogs.Add(AlphaZero.Modules.Library.Domain.LibraryAuditLog.Create(
+            Guid.NewGuid(),
+            tenantId,
+            libraryId,
+            Guid.NewGuid(),
+            "Redeemed",
+            Guid.NewGuid(),
+            System.Text.Json.JsonDocument.Parse("""{"UserId":"seeded","UnsoldRedemption":true}"""),
+            DateTime.SpecifyKind(DateTime.UtcNow.AddDays(-45), DateTimeKind.Utc)));
+        await DbContext.SaveChangesAsync();
+        DbContext.ChangeTracker.Clear();
+
         var fraudRes = await Client.GetAsync("/library/analytics/fraud-queue");
         fraudRes.StatusCode.Should().Be(HttpStatusCode.OK);
         var flags = await fraudRes.Content.ReadFromJsonAsync<List<FraudFlagDto>>();
@@ -193,14 +211,20 @@ public class LibraryAnalyticsEndpointsTests(ApiFactory factory) : BaseIntegratio
     [Fact]
     public async Task ProvisioningQueue_Should_ReconcileLibraryActivation_WithCoursesProvisioningState()
     {
-        // Arrange: full library flow — sell + redeem a code (activation), then park a
-        // FailedProvisioningRecord for THAT code in Courses (as the #58 consumer does when
-        // provisioning fails). The sibling code is never activated and must not surface.
-        var (tenantId, libraryId, batches) = await SeedLibraryWithBatchesAsync(quantity: 2, faceValue: 50.00m);
+        // Arrange: full library flow — sell + redeem two codes (both activations), then park
+        // provisioning records in Courses: a Failed one for the first code (as the #58 consumer
+        // does when provisioning fails) and a Provisioned one for the second code. The second
+        // code PASSES the activation join but must not surface (status filter) — the two
+        // mechanisms are therefore asserted independently:
+        //   • activation join excludes the never-activated code,
+        //   • status filter excludes the resolved (Provisioned) state.
+        var (tenantId, libraryId, batches) = await SeedLibraryWithBatchesAsync(quantity: 2, faceValue: 50.00m, batchCount: 2);
 
         await Client.PostAsJsonAsync($"/library/access-codes/batches/{batches[0].BatchId}/distribute", new { });
+        await Client.PostAsJsonAsync($"/library/access-codes/batches/{batches[1].BatchId}/distribute", new { });
 
         var redeemingUser = Guid.NewGuid();
+        var redeemingUser2 = Guid.NewGuid();
         Client.DefaultRequestHeaders.Remove("X-Test-User-Id");
         Client.DefaultRequestHeaders.Add("X-Test-User-Id", redeemingUser.ToString());
 
@@ -211,9 +235,25 @@ public class LibraryAnalyticsEndpointsTests(ApiFactory factory) : BaseIntegratio
             new SellCodeRequest { RawCode = activatedRawCode, LibraryId = libraryId })).EnsureSuccessStatusCode();
         (await Client.PostAsJsonAsync("/library/redeem", new RedeemCodeRequest { RawCode = activatedRawCode })).EnsureSuccessStatusCode();
 
+        // Second activation: a DIFFERENT activated code whose provisioning was resolved.
+        Client.DefaultRequestHeaders.Remove("X-Test-User-Id");
+        Client.DefaultRequestHeaders.Add("X-Test-User-Id", redeemingUser2.ToString());
+        var resolvedRawCode = batches[1].RawCodes[0];
+        (await Client.PostAsJsonAsync("/library/access-codes/sell",
+            new SellCodeRequest { RawCode = resolvedRawCode, LibraryId = libraryId })).EnsureSuccessStatusCode();
+        (await Client.PostAsJsonAsync("/library/redeem", new RedeemCodeRequest { RawCode = resolvedRawCode })).EnsureSuccessStatusCode();
+        Client.DefaultRequestHeaders.Remove("X-Test-User-Id");
+        Client.DefaultRequestHeaders.Add("X-Test-User-Id", redeemingUser.ToString());
+
         var activatedAccessCodeId = await DbContext.AccessCodes
             .IgnoreQueryFilters()
             .Where(x => x.RedeemedByUserId == redeemingUser)
+            .Select(x => x.Id)
+            .SingleAsync();
+
+        var resolvedAccessCodeId = await DbContext.AccessCodes
+            .IgnoreQueryFilters()
+            .Where(x => x.RedeemedByUserId == redeemingUser2)
             .Select(x => x.Id)
             .SingleAsync();
 
@@ -239,17 +279,21 @@ public class LibraryAnalyticsEndpointsTests(ApiFactory factory) : BaseIntegratio
                 DateTime.SpecifyKind(DateTime.UtcNow.AddMinutes(-5), DateTimeKind.Utc),
                 DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Utc)));
 
-            // Noise: a Provisioned record for the unactivated code — excluded by the consumer.
+            // Noise (discriminating): a Provisioned record for the SECOND activated code.
+            // The activation join WOULD match this code's id (it was redeemed), so the only
+            // reason it must not surface is the consumer's non-Provisioned status filter.
+            // One row per (TenantId, AccessCodeId) — the unique index forbids parking both a
+            // Failed and a Provisioned row for the same code, mirroring the upsert semantics.
             coursesDb.FailedProvisioningRecords.Add(new FailedProvisioningRecord(
                 Guid.NewGuid(),
                 tenantId,
-                unactivatedAccessCodeId,
-                redeemingUser,
+                resolvedAccessCodeId,
+                redeemingUser2,
                 $"az:course:{tenantId}:course/p4-analytics/plan/standard",
                 "resolved meanwhile",
                 ProvisioningStatus.Provisioned,
                 1,
-                DateTime.SpecifyKind(DateTime.UtcNow.AddMinutes(-5), DateTimeKind.Utc),
+                DateTime.SpecifyKind(DateTime.UtcNow.AddMinutes(-4), DateTimeKind.Utc),
                 DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Utc)));
 
             await coursesDb.SaveChangesAsync();
@@ -261,13 +305,26 @@ public class LibraryAnalyticsEndpointsTests(ApiFactory factory) : BaseIntegratio
         var queue = await response.Content.ReadFromJsonAsync<List<FailedProvisioningDto>>();
 
         // Assert: the failed activation surfaces with Library-side enrichment (owning library,
-        // redeem time); the provisioned/never-activated code does not.
-        var item = queue.Should().ContainSingle(q => q.AccessCodeId == activatedAccessCodeId).Subject;
-        item.Status.Should().Be("Failed");
-        item.UserId.Should().Be(redeemingUser);
-        item.LibraryId.Should().Be(libraryId);
-        item.RedeemedAt.Should().NotBeNull();
-        item.FailureReason.Should().NotBeNullOrEmpty();
+        // redeem time); the resolved (Provisioned) activation never surfaces (status filter) and
+        // the never-activated code does not (activation join).
+        var failedItem = queue.Should()
+            .ContainSingle(q => q.AccessCodeId == activatedAccessCodeId && q.Status == "Failed").Subject;
+        failedItem.UserId.Should().Be(redeemingUser);
+        failedItem.LibraryId.Should().Be(libraryId);
+        failedItem.RedeemedAt.Should().NotBeNull();
+        failedItem.FailureReason.Should().NotBeNullOrEmpty();
+        queue.Should().NotContain(q => q.AccessCodeId == resolvedAccessCodeId);
         queue.Should().NotContain(q => q.AccessCodeId == unactivatedAccessCodeId);
+
+        // Library-scoped read: the endpoint ARN already caps authorization; the query must also
+        // narrow to the requested library only.
+        var scopedResponse = await Client.GetAsync($"/library/analytics/provisioning-queue?libraryId={libraryId}");
+        scopedResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await scopedResponse.Content.ReadFromJsonAsync<List<FailedProvisioningDto>>())
+            .Should().ContainSingle(q => q.AccessCodeId == activatedAccessCodeId);
+
+        var otherLibraryResponse = await Client.GetAsync($"/library/analytics/provisioning-queue?libraryId={Guid.NewGuid()}");
+        otherLibraryResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await otherLibraryResponse.Content.ReadFromJsonAsync<List<FailedProvisioningDto>>()).Should().BeEmpty();
     }
 }

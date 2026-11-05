@@ -31,13 +31,29 @@ public class LibraryAnalyticsQueryService(
     // Fraud velocity threshold: redemptions per library per UTC day above this value raise a
     // flag. Anomalous redemption velocity is a classic resale/staff-skimming signal (issue #59).
     public const string VelocityThresholdConfigKey = "LibraryAnalytics:FraudRedemptionVelocityThreshold";
+    public const int DefaultFraudRedemptionVelocityThreshold = 10;
+
+    // Bounded lookback for all request-time audit-stream reads (fraud + provisioning queue).
+    // The stream is append-only and grows without limit; without a window every request would
+    // scan the tenant's entire history. 30 UTC days covers all realistic fraud/reconciliation
+    // hardening checks while keeping the reads bounded.
+    public const string FraudLookbackDaysConfigKey = "LibraryAnalytics:FraudLookbackDays";
+    public const int DefaultFraudLookbackDays = 30;
 
     private int ResolveVelocityThreshold()
     {
         var raw = configuration[VelocityThresholdConfigKey];
         if (int.TryParse(raw, out var parsed) && parsed > 0)
             return parsed;
-        return 10;
+        return DefaultFraudRedemptionVelocityThreshold;
+    }
+
+    private int ResolveRepositoryLookbackDays()
+    {
+        var raw = configuration[FraudLookbackDaysConfigKey];
+        if (int.TryParse(raw, out var parsed) && parsed > 0)
+            return parsed;
+        return DefaultFraudLookbackDays;
     }
 
     private sealed record ActivatedCodeRef(Guid AccessCodeId, Guid? LibraryId, DateTime OccurredAt);
@@ -196,7 +212,9 @@ public class LibraryAnalyticsQueryService(
 
         var query = context.LibraryAuditLogs
             .AsNoTracking()
-            .Where(x => x.TenantId == tenantId.Value && (x.Action == "Redeemed" || x.Action == "Voided"));
+            .Where(x => x.TenantId == tenantId.Value
+                        && (x.Action == "Redeemed" || x.Action == "Voided")
+                        && x.OccurredAt >= DateTime.UtcNow.AddDays(-ResolveRepositoryLookbackDays()));
 
         if (libraryId.HasValue)
             query = query.Where(x => x.LibraryId == libraryId.Value);
@@ -313,10 +331,13 @@ public class LibraryAnalyticsQueryService(
         if (tenantId is null || tenantId == Guid.Empty)
             return CreateEmptyProvisioningQueue();
 
-        // Activated = Redeemed entries in the audit stream (latest occurrence per code).
+        // Activated = Redeemed entries in the audit stream (latest occurrence per code), bounded
+        // to the same lookback window as the fraud queue so the read cannot grow unbounded.
         var activated = await context.LibraryAuditLogs
             .AsNoTracking()
-            .Where(x => x.TenantId == tenantId.Value && x.Action == "Redeemed")
+            .Where(x => x.TenantId == tenantId.Value
+                        && x.Action == "Redeemed"
+                        && x.OccurredAt >= DateTime.UtcNow.AddDays(-ResolveRepositoryLookbackDays()))
             .Select(x => new ActivatedCodeRef(x.AggregateId, x.LibraryId, x.OccurredAt))
             .ToListAsync(cancellationToken);
 
@@ -324,6 +345,11 @@ public class LibraryAnalyticsQueryService(
             .GroupBy(x => x.AccessCodeId)
             .Select(g => g.OrderByDescending(x => x.OccurredAt).First())
             .ToList();
+
+        // Data minimization: a library-scoped request (Manager ARN) must not drive a tenant-wide
+        // cross-module exchange — narrow the activation set BEFORE the bus round-trip.
+        if (libraryId.HasValue)
+            latestPerCode = latestPerCode.Where(x => x.LibraryId == libraryId.Value).ToList();
 
         if (latestPerCode.Count == 0)
             return CreateEmptyProvisioningQueue();

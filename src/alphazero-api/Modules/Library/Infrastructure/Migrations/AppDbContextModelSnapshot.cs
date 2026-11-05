@@ -95,6 +95,8 @@ namespace AlphaZero.Modules.Library.Infrastructure.Migrations
 
                     b.HasIndex("TenantId");
 
+                    b.HasIndex("TenantId", "Action", "OccurredAt");
+
                     b.HasIndex("TenantId", "LibraryId", "OccurredAt");
 
                     b.ToTable("LibraryAuditLogs", "Library");

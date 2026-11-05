@@ -80,7 +80,7 @@ public class VoidBatchCommandHandlerTests
 
         result.IsError.Should().BeTrue();
         result.FirstError.Code.Should().Be("Batch.OverCap");
-        await _repository.DidNotReceive().GetBatchForUpdateAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>());
+        await _repository.DidNotReceive().GetBatchForUpdateAsync(Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<CancellationToken>());
         await _repository.DidNotReceive().UpdateAsync(Arg.Any<AccessCode>(), Arg.Any<CancellationToken>());
     }
 
@@ -111,7 +111,7 @@ public class VoidBatchCommandHandlerTests
 
         var codes = new List<AccessCode> { mintedCode, distributedCode, soldCode, redeemedCode, alreadyVoidedCode, expiredCode };
         _repository.CountBatchAsync(batchId, Arg.Any<CancellationToken>()).Returns(6);
-        _repository.GetBatchForUpdateAsync(batchId, Arg.Any<CancellationToken>()).Returns(codes);
+        _repository.GetBatchForUpdateAsync(TenantId, batchId, Arg.Any<CancellationToken>()).Returns(codes);
 
         var result = await _handler.Handle(new VoidBatchCommand(batchId, "Compromised inventory"), CancellationToken.None);
 
@@ -139,7 +139,7 @@ public class VoidBatchCommandHandlerTests
 
         var codes = new List<AccessCode> { code1, code2 };
         _repository.CountBatchAsync(batchId, Arg.Any<CancellationToken>()).Returns(2);
-        _repository.GetBatchForUpdateAsync(batchId, Arg.Any<CancellationToken>()).Returns(codes);
+        _repository.GetBatchForUpdateAsync(TenantId, batchId, Arg.Any<CancellationToken>()).Returns(codes);
 
         var result = await _handler.Handle(new VoidBatchCommand(batchId, "Recall 2"), CancellationToken.None);
 
@@ -151,18 +151,27 @@ public class VoidBatchCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_ForeignTenantBatch_Should_ReturnForbidden()
+    public async Task Handle_ForeignTenantBatch_Should_ReturnNotFound_AndNeverLockOrVoid()
     {
+        // The tenant predicate is part of the FOR UPDATE statement (I-TENANT): rows of another
+        // tenant are never locked or read, so a foreign batch reads back as not found. The stub
+        // mirrors exactly what the tenant-scoped SQL guarantees: the tenant filter is passed to
+        // the locking query and no foreign code is ever handed to the handler.
         var batchId = Guid.NewGuid();
-        var foreignTenantId = Guid.NewGuid();
-        var code = AccessCode.Mint("h1", foreignTenantId, LibraryId, "strategy", TargetResource, EmptyMetadata, batchId);
 
-        _repository.CountBatchAsync(batchId, Arg.Any<CancellationToken>()).Returns(1);
-        _repository.GetBatchForUpdateAsync(batchId, Arg.Any<CancellationToken>()).Returns(new List<AccessCode> { code });
+        _repository.CountBatchAsync(batchId, Arg.Any<CancellationToken>()).Returns(0); // tenant-scoped count
+        _repository.BatchExistsAsync(batchId, Arg.Any<CancellationToken>()).Returns(false);
 
         var result = await _handler.Handle(new VoidBatchCommand(batchId, "Compromised"), CancellationToken.None);
 
         result.IsError.Should().BeTrue();
-        result.FirstError.Code.Should().Be("AccessCode.TenantMismatch");
+        result.FirstError.Code.Should().Be("Batch.NotFound");
+
+        // The foreign batch is invisible in every tenant-scoped read, so the handler short-
+        // circuits before any FOR UPDATE statement: cross-tenant rows are never locked, voided,
+        // or even enumerated.
+        await _repository.DidNotReceive().GetBatchForUpdateAsync(
+            Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<CancellationToken>());
+        await _repository.DidNotReceive().UpdateAsync(Arg.Any<AccessCode>(), Arg.Any<CancellationToken>());
     }
 }

@@ -16,13 +16,18 @@ public class BusProvisioningStateService(
     IBus moduleBus,
     ILogger<BusProvisioningStateService> logger) : IProvisioningStateReadService
 {
+    /// <summary>Hard timeout for the cross-module provisioning-state round-trip (a Courses
+    /// outage must not hang the provisioning-queue endpoint; surfaced as 502 via the
+    /// request-response RequestTimeout path).</summary>
+    private static readonly TimeSpan ProvisioningStateRequestTimeout = TimeSpan.FromSeconds(10);
+
     public async Task<IReadOnlyList<FailedProvisioningDto>> GetProvisioningStateAsync(
         Guid tenantId,
         IReadOnlyCollection<Guid> accessCodeIds,
         CancellationToken cancellationToken = default)
     {
         var requestClient = moduleBus.CreateRequestClient<GetAccessCodesProvisioningStateRequest>(
-            TimeSpan.FromSeconds(10));
+            ProvisioningStateRequestTimeout);
 
         var response = await requestClient.GetResponse<AccessCodesProvisioningStateResponse>(
             new GetAccessCodesProvisioningStateRequest(tenantId, accessCodeIds.ToList()),

@@ -35,5 +35,10 @@ public class LibraryAuditLogConfiguration : IEntityTypeConfiguration<LibraryAudi
 
         // Index for querying audit stream by tenant, library, and occurrence date
         builder.HasIndex(x => new { x.TenantId, x.LibraryId, x.OccurredAt });
+
+        // Index for the fraud/provisioning request-time reads (issue #59): both filter on
+        // (TenantId, Action) and order/fold by OccurredAt; the (TenantId, LibraryId, OccurredAt)
+        // index cannot serve the Action predicate and would degrade to a per-tenant stream scan.
+        builder.HasIndex(x => new { x.TenantId, x.Action, x.OccurredAt });
     }
 }

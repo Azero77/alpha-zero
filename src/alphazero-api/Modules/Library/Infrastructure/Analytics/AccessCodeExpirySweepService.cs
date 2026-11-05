@@ -67,6 +67,9 @@ public class AccessCodeExpirySweepService(
                 if (updateResult.IsError)
                 {
                     // Tripwire fired: concurrent modification win detected — defer that code to the next pass.
+                    // Pop the queued Expired event so a phantom audit row is never projected for an
+                    // aggregate whose DB row was not actually transitioned (I-AUDIT/I-STATE).
+                    code.PopDomainEvents();
                     logger.LogWarning(
                         "Expiry sweep defer for code {CodeId}: {Error}",
                         code.Id, string.Join(", ", updateResult.Errors.Select(e => e.Description)));

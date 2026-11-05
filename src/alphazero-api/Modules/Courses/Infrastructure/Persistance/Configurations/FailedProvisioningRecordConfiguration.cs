@@ -33,7 +33,12 @@ public class FailedProvisioningRecordConfiguration : IEntityTypeConfiguration<Fa
         builder.Property(e => e.LastAttemptedAt)
             .IsRequired();
 
-        builder.HasIndex(e => new { e.TenantId, e.AccessCodeId });
+        // Unique per (tenant, code): provisioning state is a per-code fact (created once, then
+        // retried/marked). Unique guard makes the check-then-insert in the activation consumer
+        // race-free under at-least-once redelivery — a duplicate insert fails instead of
+        // creating shadow rows that would keep the code in the Library provisioning queue
+        // forever (see ParkFailedProvisioningAsync conflict handling).
+        builder.HasIndex(e => new { e.TenantId, e.AccessCodeId }).IsUnique();
         builder.HasIndex(e => new { e.TenantId, e.Status });
     }
 }

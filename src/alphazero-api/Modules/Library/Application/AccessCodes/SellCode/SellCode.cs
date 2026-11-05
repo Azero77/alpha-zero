@@ -84,22 +84,30 @@ public sealed class SellCodeCommandHandler : IRequestHandler<SellCodeCommand, Er
             return Error.Forbidden("AccessCode.TenantMismatch", "This code belongs to another academy.");
         }
 
-        // 4. Resolve library id
+        // 4. Resolve library id.
+        // NOTE (auth fix): when the code is UNASSIGNED (LibraryId null — an admin-controlled
+        // code), request.LibraryId is NOT the code's owner; it is merely where the seller
+        // registers the sale. Authorizing the sale against the caller-supplied library ARN would
+        // let a library-scoped caller sell another's unassigned code into their own library.
+        // Such sales therefore require a TENANT-level SellCodes grant; assigned codes keep the
+        // library-level grant on the code's OWNER library.
         var libraryId = accessCode.LibraryId ?? request.LibraryId;
         if (!libraryId.HasValue)
         {
             return Error.Validation("AccessCode.MissingLibrary", "A library must be associated with the access code to record a sale.");
         }
 
-        // 5. Evaluate permission on the library's resource ARN
+        // 5. Evaluate permission on the code's owning scope
         if (_policyEvaluatorService != null)
         {
             var baseContext = _authorizationContextProvider?.CurrentAuthorizationContext ?? new AuthorizationContext
             {
                 AuthenticationMethod = "TenantUser"
             };
-            var libraryArn = ResourceArn.ForLibrary(accessCode.TenantId, libraryId.Value);
-            var authContext = baseContext.ForResource("library:SellCodes", libraryArn);
+            var resourceArn = accessCode.LibraryId.HasValue
+                ? ResourceArn.ForLibrary(accessCode.TenantId, accessCode.LibraryId.Value)
+                : ResourceArn.ForTenant(accessCode.TenantId);
+            var authContext = baseContext.ForResource("library:SellCodes", resourceArn);
 
             var authResult = await _policyEvaluatorService.Authorize(authContext);
             if (authResult.IsError)

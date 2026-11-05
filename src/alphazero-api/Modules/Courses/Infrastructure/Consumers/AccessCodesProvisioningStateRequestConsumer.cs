@@ -22,19 +22,22 @@ public class AccessCodesProvisioningStateRequestConsumer(
     {
         var msg = context.Message;
 
+        // Contract invariant (see GetAccessCodesProvisioningStateRequest): AccessCodeIds must be
+        // non-empty — there is no tenant-wide fallback. An empty list answers empty so no
+        // accidental cross-module data fan-out is possible (Library skips the request anyway).
+        if (msg.AccessCodeIds.Count == 0)
+        {
+            await context.RespondAsync(new AccessCodesProvisioningStateResponse([]));
+            return;
+        }
+
+        var ids = msg.AccessCodeIds.ToList();
         var query = dbContext.FailedProvisioningRecords
             .AsNoTracking()
             .IgnoreQueryFilters()
             .Where(r => r.TenantId == msg.TenantId
-                        && r.Status != ProvisioningStatus.Provisioned);
-
-        // An empty id list means "all non-provisioned records for the tenant"; Library normally
-        // supplies the ids of its activated codes (reconciliation join).
-        if (msg.AccessCodeIds.Count > 0)
-        {
-            var ids = msg.AccessCodeIds.ToList();
-            query = query.Where(r => ids.Contains(r.AccessCodeId));
-        }
+                        && r.Status != ProvisioningStatus.Provisioned
+                        && ids.Contains(r.AccessCodeId));
 
         var records = await query
             .OrderBy(r => r.CreatedAt)

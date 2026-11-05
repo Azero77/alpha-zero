@@ -6,7 +6,7 @@ using Microsoft.Extensions.Logging;
 namespace AlphaZero.Modules.Library.Infrastructure.Analytics;
 
 /// <summary>
-/// Scheduled scheduled job (issue #59, Courses §3.6 template): on each pass it first sweeps
+/// Scheduled job (issue #59, Courses §3.6 template): on each pass it first sweeps
 /// expired access codes through the state machine (guarded path) and then refreshes the
 /// <c>LibraryAnalytics</c> projection with one set-based UPSERT, so expiry is reflected in the
 /// funnel in the same pass. Configurable via <c>LibraryAnalytics:RefreshIntervalSeconds</c>

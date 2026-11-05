@@ -1,6 +1,7 @@
 using AlphaZero.Modules.Library.Domain;
 using AlphaZero.Shared.Application;
 using AlphaZero.Shared.Domain;
+using AlphaZero.Shared.Infrastructure.Tenats;
 using ErrorOr;
 using FluentValidation;
 using MediatR;
@@ -20,16 +21,25 @@ public class DistributeBatchCommandValidator : AbstractValidator<DistributeBatch
 
 public sealed class DistributeBatchCommandHandler(
     IAccessCodeRepository repository,
+    ITenantProvider tenantProvider,
     ILogger<DistributeBatchCommandHandler> logger,
     ICurrentTenantUserRepository? currentUserRepository = null) : IRequestHandler<DistributeBatchCommand, ErrorOr<Success>>
 {
     public async Task<ErrorOr<Success>> Handle(DistributeBatchCommand request, CancellationToken cancellationToken)
     {
+        var tenantId = tenantProvider.GetTenant();
+        if (tenantId is null)
+        {
+            return Error.Unauthorized("Tenant.NotFound", "Tenant not found.");
+        }
+
         // Lock ordering discipline (prevents deadlocks between concurrent flows):
         // 1. AccessCode rows ordered deterministically by Id (via SELECT ... FOR UPDATE)
         // 2. RedemptionAuditLog row (INSERT)
         // 3. Audit stream projection (P3b)
-        var codes = await repository.GetBatchForUpdateAsync(request.BatchId, cancellationToken);
+        // The tenant predicate is part of the locking SQL (I-TENANT): a foreign batch is never
+        // locked, read, or distributeable — it reads back as not found.
+        var codes = await repository.GetBatchForUpdateAsync(tenantId.Value, request.BatchId, cancellationToken);
 
         if (codes.Count == 0)
         {

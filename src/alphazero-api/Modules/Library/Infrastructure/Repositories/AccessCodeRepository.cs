@@ -120,10 +120,12 @@ public class AccessCodeRepository : IAccessCodeRepository
     }
 
     /// <summary>
-    /// Pessimistic row-level lock on an entire batch (#54).
-    /// Acquires Postgres FOR UPDATE locks ordered deterministically by Id to prevent deadlocks.
+    /// Pessimistic row-level lock on an entire batch (#54). Acquires Postgres FOR UPDATE locks
+    /// ordered deterministically by Id to prevent deadlocks. The tenant predicate is part of the
+    /// locking statement: cross-tenant rows are never locked, read, or returned (I-TENANT) —
+    /// an other-tenant batch is indistinguishable from a missing one.
     /// </summary>
-    public async Task<List<AccessCode>> GetBatchForUpdateAsync(Guid batchId, CancellationToken cancellationToken = default)
+    public async Task<List<AccessCode>> GetBatchForUpdateAsync(Guid tenantId, Guid batchId, CancellationToken cancellationToken = default)
     {
         if (_context.Database.CurrentTransaction is null)
         {
@@ -135,7 +137,8 @@ public class AccessCodeRepository : IAccessCodeRepository
             .FromSqlInterpolated($"""
                 SELECT *
                 FROM "Library"."AccessCodes"
-                WHERE "BatchId" = {batchId}
+                WHERE "TenantId" = {tenantId}
+                  AND "BatchId" = {batchId}
                 ORDER BY "Id"
                 FOR UPDATE
                 """)

@@ -81,20 +81,16 @@ public sealed class VoidBatchCommandHandler : IRequestHandler<VoidBatchCommand, 
                 $"Batch contains {totalCount} codes, which exceeds the maximum allowed recall cap of {MaxRecallBatchSize} codes. Zero codes were modified.");
         }
 
-        // 2. Lock ordering discipline: Acquire row locks in deterministic Order By Id FOR UPDATE
-        var codes = await _repository.GetBatchForUpdateAsync(request.BatchId, cancellationToken);
+        // 2. Lock ordering discipline: Acquire row locks in deterministic Order By Id FOR UPDATE.
+        // The tenant predicate is part of the locking SQL (I-TENANT): rows of another tenant are
+        // never locked or read, so a foreign batch is indistinguishable from a missing one.
+        var codes = await _repository.GetBatchForUpdateAsync(tenantId.Value, request.BatchId, cancellationToken);
         if (codes.Count == 0)
         {
             return Error.NotFound("Batch.NotFound", $"Access code batch '{request.BatchId}' does not exist.");
         }
 
-        // 3. Verify Tenant scoping
-        if (codes.Any(c => c.TenantId != tenantId.Value))
-        {
-            return Error.Forbidden("AccessCode.TenantMismatch", "This batch belongs to another academy.");
-        }
-
-        // 4. Evaluate permission if batch is bound to a library
+        // 3. Evaluate permission if batch is bound to a library
         var libraryId = codes.FirstOrDefault(c => c.LibraryId.HasValue)?.LibraryId;
         if (libraryId.HasValue && _policyEvaluatorService != null)
         {
@@ -118,7 +114,7 @@ public sealed class VoidBatchCommandHandler : IRequestHandler<VoidBatchCommand, 
         int skippedCount = 0;
         var voidedCodeIds = new List<Guid>();
 
-        // 5. Iterate each code: void voidable codes, skip terminal codes (Voided/Expired)
+        // 4. Iterate each code: void voidable codes, skip terminal codes (Voided/Expired)
         foreach (var code in codes)
         {
             if (code.Status == AccessCodeStatus.Voided || code.Status == AccessCodeStatus.Expired)

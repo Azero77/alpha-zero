@@ -142,6 +142,9 @@ public class LibraryAnalyticsRefreshService(
             ON rp."TenantId" = f."TenantId" AND rp."LibraryId" = f."LibraryId" AND rp."BatchId" = f."BatchId"
         LEFT JOIN sales_by_period sp
             ON sp."TenantId" = f."TenantId" AND sp."LibraryId" = f."LibraryId" AND sp."BatchId" = f."BatchId"
+        -- Deterministic row order keeps concurrent refreshers (worker on every app instance)
+        -- taking unique-key locks in the same order, avoiding Postgres upsert deadlocks.
+        ORDER BY f."TenantId", f."LibraryId", f."BatchId"
         ON CONFLICT ("TenantId", "LibraryId", "BatchId") DO UPDATE SET
             "MintedCount" = EXCLUDED."MintedCount",
             "DistributedCount" = EXCLUDED."DistributedCount",
