@@ -27,7 +27,9 @@ public class RedemptionAuditLogTests(ApiFactory factory) : BaseIntegrationTest(f
         await Client.PostAsJsonAsync($"/library/libraries/{libraryId}/resources", new AuthorizeResourceRequest { Id = libraryId, ResourceArn = courseArn });
 
         var genRes = await Client.PostAsJsonAsync($"/library/libraries/{libraryId}/access-codes/generate", new GenerateBatchRequest { LibraryId = libraryId, Quantity = 1, TargetResourceArn = courseArn, FaceValue = 50m });
-        var rawCode = (await genRes.Content.ReadFromJsonAsync<GenerateBatchResponse>())!.Codes[0];
+        var genData = await genRes.Content.ReadFromJsonAsync<GenerateBatchResponse>();
+        var rawCode = genData!.Codes[0];
+        await Client.PostAsJsonAsync($"/library/access-codes/batches/{genData.BatchId}/distribute", new { });
 
         // 2. Act: Redeem with IP and Fingerprint
         var redeemReq = new RedeemCodeRequest 
@@ -63,7 +65,9 @@ public class RedemptionAuditLogTests(ApiFactory factory) : BaseIntegrationTest(f
         await Client.PostAsJsonAsync($"/library/libraries/{libraryId}/resources", new AuthorizeResourceRequest { Id = libraryId, ResourceArn = courseArn });
 
         var genRes = await Client.PostAsJsonAsync($"/library/libraries/{libraryId}/access-codes/generate", new GenerateBatchRequest { LibraryId = libraryId, Quantity = 1, TargetResourceArn = courseArn, FaceValue = 50m });
-        var rawCode = (await genRes.Content.ReadFromJsonAsync<GenerateBatchResponse>())!.Codes[0];
+        var genData = await genRes.Content.ReadFromJsonAsync<GenerateBatchResponse>();
+        var rawCode = genData!.Codes[0];
+        await Client.PostAsJsonAsync($"/library/access-codes/batches/{genData.BatchId}/distribute", new { });
 
         await Client.PostAsJsonAsync("/library/redeem", new RedeemCodeRequest { RawCode = rawCode });
 

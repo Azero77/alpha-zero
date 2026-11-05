@@ -3,6 +3,7 @@ using AlphaZero.Modules.Library.Domain;
 using AlphaZero.Shared.Authorization;
 using AlphaZero.Shared.Domain;
 using AlphaZero.Shared.Infrastructure.Tenats;
+using ErrorOr;
 using FluentAssertions;
 using NSubstitute;
 using System.Text.Json;
@@ -55,7 +56,8 @@ public class RedeemCodeCommandHandlerTests
         accessCode.Distribute();
 
         _passwordHasher.HashPassword(rawCode).Returns(hash);
-        _repository.GetByHashAsync(hash, Arg.Any<CancellationToken>()).Returns(accessCode);
+        _repository.GetByHashForUpdateAsync(hash, Arg.Any<CancellationToken>()).Returns(accessCode);
+        _repository.UpdateAsync(accessCode, Arg.Any<CancellationToken>()).Returns(Result.Success);
         _tenantProvider.GetTenant().Returns(TenantId);
         _currentUserRepository.GetCurrentUser().Returns(new TenantUserDTO(UserId, Guid.NewGuid().ToString(),"User"));
         _authorizationContextFactory.CurrentAuthorizationContext.Returns(new AuthorizationContext()
@@ -92,7 +94,7 @@ public class RedeemCodeCommandHandlerTests
         // Arrange: code exists in another tenant, but caller is not authenticated
         var accessCode = AccessCode.Mint("h", TenantId, null, "s", ResourceArn.Create("az:course:tenant:course/101").Value, JsonDocument.Parse("{}"));
         _passwordHasher.HashPassword(Arg.Any<string>()).Returns("h");
-        _repository.GetByHashAsync("h", Arg.Any<CancellationToken>()).Returns(accessCode);
+        _repository.GetByHashForUpdateAsync("h", Arg.Any<CancellationToken>()).Returns(accessCode);
         _currentUserRepository.GetCurrentUser().Returns((TenantUserDTO?)null);
         _tenantProvider.GetTenant().Returns(Guid.NewGuid()); // Foreign tenant
 
@@ -111,7 +113,7 @@ public class RedeemCodeCommandHandlerTests
     {
         // Arrange
         _passwordHasher.HashPassword(Arg.Any<string>()).Returns("missing");
-        _repository.GetByHashAsync("missing", Arg.Any<CancellationToken>()).Returns((AccessCode?)null);
+        _repository.GetByHashForUpdateAsync("missing", Arg.Any<CancellationToken>()).Returns((AccessCode?)null);
         _currentUserRepository.GetCurrentUser().Returns(new TenantUserDTO(UserId, Guid.NewGuid().ToString(), "User"));
         _tenantProvider.GetTenant().Returns(TenantId);
 
@@ -130,7 +132,7 @@ public class RedeemCodeCommandHandlerTests
     {
         // Arrange
         var accessCode = AccessCode.Mint("h", TenantId, null, "s", ResourceArn.Create("az:course:tenant:course/101").Value, JsonDocument.Parse("{}"));
-        _repository.GetByHashAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(accessCode);
+        _repository.GetByHashForUpdateAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(accessCode);
         _currentUserRepository.GetCurrentUser().Returns(new TenantUserDTO(UserId, Guid.NewGuid().ToString(), "User"));
         _tenantProvider.GetTenant().Returns(Guid.NewGuid()); // Different tenant
 

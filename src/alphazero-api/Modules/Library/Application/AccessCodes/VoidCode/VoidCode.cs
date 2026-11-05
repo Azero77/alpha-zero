@@ -9,7 +9,7 @@ using Microsoft.Extensions.Logging;
 
 namespace AlphaZero.Modules.Library.Application.AccessCodes.VoidCode;
 
-public record VoidCodeCommand(string RawCode, string Reason) : ICommand<Success>;
+public record VoidCodeCommand(string RawCode, string Reason) : ICommand<Success>, ITransactionalCommand;
 
 public class VoidCodeCommandValidator : AbstractValidator<VoidCodeCommand>
 {
@@ -29,8 +29,12 @@ public sealed class VoidCodeCommandHandler(
 {
     public async Task<ErrorOr<Success>> Handle(VoidCodeCommand request, CancellationToken cancellationToken)
     {
+        // Lock ordering discipline (prevents deadlocks between concurrent redeem/void flows):
+        // 1. AccessCode row (via SELECT ... FOR UPDATE)
+        // 2. RedemptionAuditLog row (INSERT)
+        // 3. Audit stream projection (P3b)
         var hash = passwordHasher.HashPassword(request.RawCode);
-        var code = await repository.GetByHashAsync(hash, cancellationToken);
+        var code = await repository.GetByHashForUpdateAsync(hash, cancellationToken);
 
         if (code is null)
         {
@@ -57,7 +61,9 @@ public sealed class VoidCodeCommandHandler(
             logger.LogInformation("Triggered revocation strategy '{StrategyId}' for User {UserId}.", code.StrategyId, userId.Value);
         }
 
-        repository.Update(code);
+        var updateResult = await repository.UpdateAsync(code, cancellationToken);
+        if (updateResult.IsError) return updateResult.Errors;
+
         logger.LogWarning("Access Code {CodeId} has been VOIDED. Reason: {Reason}", code.Id, request.Reason);
 
         return Result.Success;

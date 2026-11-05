@@ -1,8 +1,11 @@
 using AlphaZero.Modules.Library.Application.AccessCodes.DistributeBatch;
 using AlphaZero.Modules.Library.Domain;
+using AlphaZero.Shared.Domain;
+using ErrorOr;
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
+using System.Text.Json;
 
 namespace Library.UnitTests.Application.AccessCodes;
 
@@ -13,6 +16,9 @@ public class DistributeBatchCommandHandlerTests
     private readonly DistributeBatchCommandHandler _handler;
 
     private static readonly Guid BatchId = Guid.NewGuid();
+    private static readonly Guid TenantId = Guid.NewGuid();
+    private static readonly ResourceArn TargetResource = ResourceArn.Create("az:course:tenant:course/101").Value;
+    private static readonly JsonDocument Metadata = JsonDocument.Parse("{}");
 
     public DistributeBatchCommandHandlerTests()
     {
@@ -26,8 +32,14 @@ public class DistributeBatchCommandHandlerTests
     public async Task Handle_Should_ReturnSuccess_WhenBatchActuallyUpdated()
     {
         // Arrange
-        _accessCodeRepository.MarkBatchAsDistributedAsync(BatchId, Arg.Any<CancellationToken>())
-            .Returns(3);
+        var code1 = AccessCode.Mint("h1", TenantId, Guid.NewGuid(), "s", TargetResource, Metadata, BatchId);
+        var code2 = AccessCode.Mint("h2", TenantId, Guid.NewGuid(), "s", TargetResource, Metadata, BatchId);
+        var codes = new List<AccessCode> { code1, code2 };
+
+        _accessCodeRepository.GetBatchForUpdateAsync(BatchId, Arg.Any<CancellationToken>())
+            .Returns(codes);
+        _accessCodeRepository.UpdateAsync(Arg.Any<AccessCode>(), Arg.Any<CancellationToken>())
+            .Returns(Result.Success);
 
         var command = new DistributeBatchCommand(BatchId);
 
@@ -36,14 +48,17 @@ public class DistributeBatchCommandHandlerTests
 
         // Assert
         result.IsError.Should().BeFalse();
+        code1.Status.Should().Be(AccessCodeStatus.Distributed);
+        code2.Status.Should().Be(AccessCodeStatus.Distributed);
+        await _accessCodeRepository.Received(2).UpdateAsync(Arg.Any<AccessCode>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
     public async Task Handle_Should_ReturnNotFound_WhenBatchDoesNotExist()
     {
-        // Arrange: the bulk update matched zero rows and the batch does not exist at all
-        _accessCodeRepository.MarkBatchAsDistributedAsync(BatchId, Arg.Any<CancellationToken>())
-            .Returns(0);
+        // Arrange
+        _accessCodeRepository.GetBatchForUpdateAsync(BatchId, Arg.Any<CancellationToken>())
+            .Returns(new List<AccessCode>());
         _accessCodeRepository.BatchExistsAsync(BatchId, Arg.Any<CancellationToken>())
             .Returns(false);
 
@@ -59,13 +74,15 @@ public class DistributeBatchCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_Should_NotReturnSuccess_WhenZeroRowsUpdated()
+    public async Task Handle_Should_ReturnConflict_WhenBatchExists_ButNoCodesInMintedStatus()
     {
-        // Arrange: zero-row update must never surface as success (silent no-op invariant)
-        _accessCodeRepository.MarkBatchAsDistributedAsync(BatchId, Arg.Any<CancellationToken>())
-            .Returns(0);
-        _accessCodeRepository.BatchExistsAsync(BatchId, Arg.Any<CancellationToken>())
-            .Returns(true); // batch exists but nothing was in Minted status
+        // Arrange: batch has codes, but all already Distributed
+        var code1 = AccessCode.Mint("h1", TenantId, Guid.NewGuid(), "s", TargetResource, Metadata, BatchId);
+        code1.Distribute();
+        var codes = new List<AccessCode> { code1 };
+
+        _accessCodeRepository.GetBatchForUpdateAsync(BatchId, Arg.Any<CancellationToken>())
+            .Returns(codes);
 
         var command = new DistributeBatchCommand(BatchId);
 
@@ -75,5 +92,6 @@ public class DistributeBatchCommandHandlerTests
         // Assert
         result.IsError.Should().BeTrue();
         result.FirstError.Type.Should().Be(ErrorOr.ErrorType.Conflict);
+        result.FirstError.Code.Should().Be("AccessCode.InvalidStatus");
     }
 }

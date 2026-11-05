@@ -50,6 +50,10 @@ public class LibraryTests(ApiFactory factory) : BaseIntegrationTest(factory)
         batchResponse.GeneratedCount.Should().Be(1);
         var rawCode = batchResponse.Codes[0];
 
+        // 4b. Act: Distribute Access Code Batch so it becomes redeemable
+        var distributeRes = await Client.PostAsJsonAsync($"/library/access-codes/batches/{batchResponse.BatchId}/distribute", new { });
+        distributeRes.StatusCode.Should().Be(System.Net.HttpStatusCode.NoContent);
+
         // 5. Act: Redeem Code
         var redeemReq = new RedeemCodeRequest { RawCode = rawCode };
         var redeemRes = await Client.PostAsJsonAsync("/library/redeem", redeemReq);
