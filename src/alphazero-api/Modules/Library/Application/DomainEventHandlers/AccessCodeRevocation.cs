@@ -14,12 +14,17 @@ public class AccessCodeVoidedDomainEventHandler(IPublishEndpoint bus, IClock clo
         // Only publish revocation integration event if the code was redeemed by a user
         if (notification.UserId.HasValue)
         {
+            var tenantId = notification.TenantId != Guid.Empty
+                ? notification.TenantId
+                : (Guid.TryParse(notification.Resource.TenantIdString, out var parsedTenantId) ? parsedTenantId : Guid.Empty);
+
             await bus.Publish(new AccessCodeRevokedIntegrationEvent(
                 Guid.NewGuid(),
                 notification.AccessCodeId,
                 notification.UserId.Value,
                 notification.Resource,
-                clock.Now), cancellationToken);
+                clock.Now,
+                tenantId), cancellationToken);
         }
     }
 }

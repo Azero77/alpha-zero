@@ -159,9 +159,10 @@ public class AccessCodeTests
     {
         var code = CreateDistributedCode();
         var userId = Guid.NewGuid();
+        var auditRef = Guid.NewGuid();
         var before = DateTime.UtcNow;
 
-        var result = code.Redeem(userId);
+        var result = code.Redeem(userId, auditReference: auditRef);
 
         result.IsError.Should().BeFalse();
         code.Status.Should().Be(AccessCodeStatus.Redeemed);
@@ -174,6 +175,8 @@ public class AccessCodeTests
         @event!.AccessCodeId.Should().Be(code.Id);
         @event.UserId.Should().Be(userId);
         @event.Resource.Should().Be(TargetResource);
+        @event.TenantId.Should().Be(code.TenantId);
+        @event.AuditReference.Should().Be(auditRef);
     }
 
     [Fact]

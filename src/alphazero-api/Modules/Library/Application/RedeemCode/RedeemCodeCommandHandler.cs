@@ -71,8 +71,25 @@ public class RedeemCodeCommandHandler : IRequestHandler<RedeemCodeCommand, Error
             return Result.Success;
         }
 
-        // 5. Redeem in Domain
-        var redeemResult = accessCode.Redeem(currentUser.UserId);
+        var deviceFingerprint = request.DeviceFingerprint ?? _authorizationContextProvider?.CurrentAuthorizationContext?.DeviceId;
+        var ipAddress = request.IpAddress ?? _authorizationContextProvider?.CurrentAuthorizationContext?.IpAddress;
+        var now = DateTime.UtcNow;
+
+        // Record Forensic Audit Log
+        var redemptionContext = new RedemptionContext(
+            accessCode.TenantId,
+            accessCode.LibraryId,
+            currentUser.UserId,
+            accessCode.StrategyId,
+            accessCode.TargetResourceArn,
+            now,
+            ipAddress,
+            deviceFingerprint);
+
+        var auditLog = RedemptionAuditLog.Record(redemptionContext, accessCode.Id);
+
+        // 5. Redeem in Domain (passes auditLog.Id to event and audit stream)
+        var redeemResult = accessCode.Redeem(currentUser.UserId, now, auditLog.Id);
         if (redeemResult.IsError)
         {
             return redeemResult.Errors;
@@ -80,23 +97,7 @@ public class RedeemCodeCommandHandler : IRequestHandler<RedeemCodeCommand, Error
             
         // 6. Execute Strategy
         var strategy = _strategyFactory.GetStrategy(accessCode.StrategyId);
-        await strategy.ExecuteAsync(currentUser.UserId, accessCode.Id,accessCode.TargetResourceArn, accessCode.Metadata.RootElement);
-
-        var deviceFingerprint = request.DeviceFingerprint ?? _authorizationContextProvider?.CurrentAuthorizationContext?.DeviceId;
-        var ipAddress = request.IpAddress ?? _authorizationContextProvider?.CurrentAuthorizationContext?.IpAddress;
-
-        // 7. Record Audit Log
-        var redemptionContext = new RedemptionContext(
-            accessCode.TenantId,
-            accessCode.LibraryId,
-            currentUser.UserId,
-            accessCode.StrategyId,
-            accessCode.TargetResourceArn,
-            accessCode.RedeemedAt!.Value,
-            ipAddress,
-            deviceFingerprint);
-
-        var auditLog = RedemptionAuditLog.Record(redemptionContext, accessCode.Id);
+        await strategy.ExecuteAsync(currentUser.UserId, accessCode.Id, accessCode.TargetResourceArn, accessCode.Metadata.RootElement);
 
         await _auditLogRepository.AddAsync(auditLog, cancellationToken);
 

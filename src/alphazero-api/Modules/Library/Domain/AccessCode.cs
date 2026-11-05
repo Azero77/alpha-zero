@@ -124,9 +124,9 @@ public class AccessCode : AggregateRoot, IDomainTenantOwned
         return _state.Distribute(this);
     }
 
-    public ErrorOr<Success> Redeem(Guid userId, DateTime? now = null)
+    public ErrorOr<Success> Redeem(Guid userId, DateTime? now = null, Guid? auditReference = null)
     {
-        return _state.Redeem(this, userId, now);
+        return _state.Redeem(this, userId, now, auditReference);
     }
 
     public ErrorOr<Success> Void(string reason)
@@ -171,7 +171,7 @@ public class AccessCode : AggregateRoot, IDomainTenantOwned
         public virtual ErrorOr<Success> Distribute(AccessCode code)
             => Error.Conflict("AccessCode.InvalidStatus", $"Code in {Status} status cannot be distributed.");
 
-        public virtual ErrorOr<Success> Redeem(AccessCode code, Guid userId, DateTime? now)
+        public virtual ErrorOr<Success> Redeem(AccessCode code, Guid userId, DateTime? now, Guid? auditReference = null)
             => Error.Conflict("AccessCode.InvalidStatus", $"Code cannot be redeemed. Current status: {Status}");
 
         public virtual ErrorOr<Success> Void(AccessCode code, string reason)
@@ -196,7 +196,7 @@ public class AccessCode : AggregateRoot, IDomainTenantOwned
         {
             code.VoidedReason = reason;
             code.TransitionTo(AccessCodeStatus.Voided, new VoidedState());
-            code.AddDomainEvent(new AccessCodeVoidedDomainEvent(code.Id, null, code.TargetResourceArn, reason));
+            code.AddDomainEvent(new AccessCodeVoidedDomainEvent(code.Id, null, code.TargetResourceArn, reason, code.TenantId));
             return Result.Success;
         }
 
@@ -213,7 +213,7 @@ public class AccessCode : AggregateRoot, IDomainTenantOwned
     {
         public override AccessCodeStatus Status => AccessCodeStatus.Distributed;
 
-        public override ErrorOr<Success> Redeem(AccessCode code, Guid userId, DateTime? now)
+        public override ErrorOr<Success> Redeem(AccessCode code, Guid userId, DateTime? now, Guid? auditReference = null)
         {
             var currentTime = now ?? DateTime.UtcNow;
             if (code.ExpiresAt.HasValue && currentTime >= code.ExpiresAt.Value)
@@ -224,7 +224,7 @@ public class AccessCode : AggregateRoot, IDomainTenantOwned
             code.RedeemedAt = currentTime;
             code.RedeemedByUserId = userId;
             code.TransitionTo(AccessCodeStatus.Redeemed, new RedeemedState());
-            code.AddDomainEvent(new AccessCodeRedeemedDomainEvent(code.Id, userId, code.TargetResourceArn, currentTime));
+            code.AddDomainEvent(new AccessCodeRedeemedDomainEvent(code.Id, userId, code.TargetResourceArn, currentTime, code.TenantId, auditReference));
             return Result.Success;
         }
 
@@ -232,7 +232,7 @@ public class AccessCode : AggregateRoot, IDomainTenantOwned
         {
             code.VoidedReason = reason;
             code.TransitionTo(AccessCodeStatus.Voided, new VoidedState());
-            code.AddDomainEvent(new AccessCodeVoidedDomainEvent(code.Id, null, code.TargetResourceArn, reason));
+            code.AddDomainEvent(new AccessCodeVoidedDomainEvent(code.Id, null, code.TargetResourceArn, reason, code.TenantId));
             return Result.Success;
         }
 
@@ -249,7 +249,7 @@ public class AccessCode : AggregateRoot, IDomainTenantOwned
     {
         public override AccessCodeStatus Status => AccessCodeStatus.Sold;
 
-        public override ErrorOr<Success> Redeem(AccessCode code, Guid userId, DateTime? now)
+        public override ErrorOr<Success> Redeem(AccessCode code, Guid userId, DateTime? now, Guid? auditReference = null)
         {
             var currentTime = now ?? DateTime.UtcNow;
             if (code.ExpiresAt.HasValue && currentTime >= code.ExpiresAt.Value)
@@ -260,7 +260,7 @@ public class AccessCode : AggregateRoot, IDomainTenantOwned
             code.RedeemedAt = currentTime;
             code.RedeemedByUserId = userId;
             code.TransitionTo(AccessCodeStatus.Redeemed, new RedeemedState());
-            code.AddDomainEvent(new AccessCodeRedeemedDomainEvent(code.Id, userId, code.TargetResourceArn, currentTime));
+            code.AddDomainEvent(new AccessCodeRedeemedDomainEvent(code.Id, userId, code.TargetResourceArn, currentTime, code.TenantId, auditReference));
             return Result.Success;
         }
 
@@ -268,7 +268,7 @@ public class AccessCode : AggregateRoot, IDomainTenantOwned
         {
             code.VoidedReason = reason;
             code.TransitionTo(AccessCodeStatus.Voided, new VoidedState());
-            code.AddDomainEvent(new AccessCodeVoidedDomainEvent(code.Id, null, code.TargetResourceArn, reason));
+            code.AddDomainEvent(new AccessCodeVoidedDomainEvent(code.Id, null, code.TargetResourceArn, reason, code.TenantId));
             return Result.Success;
         }
 
@@ -285,7 +285,7 @@ public class AccessCode : AggregateRoot, IDomainTenantOwned
     {
         public override AccessCodeStatus Status => AccessCodeStatus.Redeemed;
 
-        public override ErrorOr<Success> Redeem(AccessCode code, Guid userId, DateTime? now)
+        public override ErrorOr<Success> Redeem(AccessCode code, Guid userId, DateTime? now, Guid? auditReference = null)
         {
             // Natural Idempotency check: if already redeemed by the same user, succeed without error
             if (code.RedeemedByUserId == userId)
@@ -301,7 +301,7 @@ public class AccessCode : AggregateRoot, IDomainTenantOwned
             code.VoidedReason = reason;
             code.TransitionTo(AccessCodeStatus.Voided, new VoidedState());
             // Redeemed code carries the user ID so access can be revoked
-            code.AddDomainEvent(new AccessCodeVoidedDomainEvent(code.Id, code.RedeemedByUserId, code.TargetResourceArn, reason));
+            code.AddDomainEvent(new AccessCodeVoidedDomainEvent(code.Id, code.RedeemedByUserId, code.TargetResourceArn, reason, code.TenantId));
             return Result.Success;
         }
     }
@@ -320,7 +320,7 @@ public class AccessCode : AggregateRoot, IDomainTenantOwned
     {
         public override AccessCodeStatus Status => AccessCodeStatus.Expired;
 
-        public override ErrorOr<Success> Redeem(AccessCode code, Guid userId, DateTime? now)
+        public override ErrorOr<Success> Redeem(AccessCode code, Guid userId, DateTime? now, Guid? auditReference = null)
         {
             return Error.Conflict("AccessCode.Expired", "This access code has expired.");
         }
@@ -337,20 +337,34 @@ public class AccessCodeDistributedDomainEvent(Guid AccessCodeId, Guid? LibraryId
     public DateTime DistributedAt { get; } = DistributedAt;
 }
 
-public class AccessCodeRedeemedDomainEvent(Guid AccessCodeId, Guid UserId, ResourceArn Resource, DateTime RedeemedAt) : DomainEvent()
+public class AccessCodeRedeemedDomainEvent(
+    Guid AccessCodeId,
+    Guid UserId,
+    ResourceArn Resource,
+    DateTime RedeemedAt,
+    Guid TenantId = default,
+    Guid? AuditReference = null) : DomainEvent()
 {
     public Guid AccessCodeId { get; } = AccessCodeId;
     public Guid UserId { get; } = UserId;
     public ResourceArn Resource { get; } = Resource;
     public DateTime RedeemedAt { get; } = RedeemedAt;
+    public Guid TenantId { get; } = TenantId;
+    public Guid? AuditReference { get; } = AuditReference;
 }
 
-public class AccessCodeVoidedDomainEvent(Guid AccessCodeId, Guid? UserId, ResourceArn Resource, string Reason) : DomainEvent()
+public class AccessCodeVoidedDomainEvent(
+    Guid AccessCodeId,
+    Guid? UserId,
+    ResourceArn Resource,
+    string Reason,
+    Guid TenantId = default) : DomainEvent()
 {
     public Guid AccessCodeId { get; } = AccessCodeId;
     public Guid? UserId { get; } = UserId;
     public ResourceArn Resource { get; } = Resource;
     public string Reason { get; } = Reason;
+    public Guid TenantId { get; } = TenantId;
 }
 
 public class AccessCodeExpiredDomainEvent(Guid AccessCodeId, DateTime ExpiredAt) : DomainEvent()
