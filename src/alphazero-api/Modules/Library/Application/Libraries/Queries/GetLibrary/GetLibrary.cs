@@ -1,5 +1,4 @@
-using AlphaZero.Modules.Library.Domain;
-using AlphaZero.Shared.Infrastructure.Repositores;
+using AlphaZero.Modules.Library.Application.Queries;
 using ErrorOr;
 using MediatR;
 
@@ -9,18 +8,13 @@ public record LibraryDto(Guid Id, string Name, string Address, string ContactNum
 
 public record GetLibraryQuery(Guid Id) : IRequest<ErrorOr<LibraryDto>>;
 
-public sealed class GetLibraryQueryHandler(ILibraryRepository libraryRepository) : IRequestHandler<GetLibraryQuery, ErrorOr<LibraryDto>>
+public sealed class GetLibraryQueryHandler(ILibraryQueryService libraryQueryService) : IRequestHandler<GetLibraryQuery, ErrorOr<LibraryDto>>
 {
     public async Task<ErrorOr<LibraryDto>> Handle(GetLibraryQuery request, CancellationToken cancellationToken)
     {
-        var library = await libraryRepository.GetById(request.Id);
+        var library = await libraryQueryService.GetLibraryByIdAsync(request.Id, cancellationToken);
         if (library is null) return Error.NotFound("Library.NotFound", "Library not found.");
 
-        return new LibraryDto(
-            library.Id, 
-            library.Name, 
-            library.Address, 
-            library.ContactNumber, 
-            library.AllowedResources.Select(r => r.Value).ToList());
+        return library;
     }
 }

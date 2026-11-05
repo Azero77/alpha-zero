@@ -1,6 +1,5 @@
+using AlphaZero.Modules.Library.Application.Queries;
 using AlphaZero.Modules.Library.Application.RedemptionAuditLogs.GetRedemptionLogs;
-using AlphaZero.Modules.Library.Domain;
-using AlphaZero.Shared.Domain;
 using AlphaZero.Shared.Queries;
 using FluentAssertions;
 using NSubstitute;
@@ -10,13 +9,13 @@ namespace Library.UnitTests.Application.RedemptionAuditLogs;
 
 public class GetRedemptionLogsQueryTests
 {
-    private readonly IRedemptionAuditLogRepository _repository = Substitute.For<IRedemptionAuditLogRepository>();
+    private readonly ILibraryQueryService _queryService = Substitute.For<ILibraryQueryService>();
     private readonly GetRedemptionLogsQueryHandler _handler;
     private readonly GetRedemptionLogsQueryValidator _validator = new();
 
     public GetRedemptionLogsQueryTests()
     {
-        _handler = new GetRedemptionLogsQueryHandler(_repository);
+        _handler = new GetRedemptionLogsQueryHandler(_queryService);
     }
 
     [Fact]
@@ -41,16 +40,17 @@ public class GetRedemptionLogsQueryTests
     }
 
     [Fact]
-    public async Task Handler_Should_CallRepositoryAndMapToDtos()
+    public async Task Handler_Should_CallQueryServiceAndReturnDtos()
     {
         // Arrange
-        var tenantId = Guid.NewGuid();
         var libraryId = Guid.NewGuid();
         var accessCodeId = Guid.NewGuid();
         var userId = Guid.NewGuid();
-        var resourceArn = ResourceArn.Create("course", tenantId.ToString(), "math-101").Value;
-        var context = new RedemptionContext(
-            tenantId,
+        var resourceArn = "az:course:tenant:course/math-101";
+
+        var dto = new RedemptionAuditLogDto(
+            Guid.NewGuid(),
+            accessCodeId,
             libraryId,
             userId,
             "course-unlock",
@@ -58,15 +58,14 @@ public class GetRedemptionLogsQueryTests
             DateTime.UtcNow,
             "192.168.1.1",
             "fp-123");
-        var log = RedemptionAuditLog.Record(context, accessCodeId);
 
-        var pagedLogs = new PagedResult<RedemptionAuditLog>(
-            new List<RedemptionAuditLog> { log },
+        var pagedLogs = new PagedResult<RedemptionAuditLogDto>(
+            new List<RedemptionAuditLogDto> { dto },
             TotalCount: 1,
             CurrentPage: 1,
             PageSize: 50);
 
-        _repository.GetPagedAsync(
+        _queryService.GetRedemptionLogsAsync(
             libraryId,
             Arg.Any<DateOnly?>(),
             Arg.Any<DateOnly?>(),
@@ -86,18 +85,10 @@ public class GetRedemptionLogsQueryTests
         pagedResult.TotalCount.Should().Be(1);
         pagedResult.Items.Should().HaveCount(1);
 
-        var dto = pagedResult.Items.First();
-        dto.Id.Should().Be(log.Id);
-        dto.AccessCodeId.Should().Be(accessCodeId);
-        dto.LibraryId.Should().Be(libraryId);
-        dto.RedeemedByUserId.Should().Be(userId);
-        dto.StrategyId.Should().Be("course-unlock");
-        dto.TargetResourceArn.Should().Be(resourceArn.Value);
-        dto.RedeemedAt.Should().Be(log.RedeemedAt);
-        dto.IpAddress.Should().Be("192.168.1.1");
-        dto.DeviceFingerprint.Should().Be("fp-123");
+        var returnedDto = pagedResult.Items.First();
+        returnedDto.Should().BeEquivalentTo(dto);
 
-        await _repository.Received(1).GetPagedAsync(
+        await _queryService.Received(1).GetRedemptionLogsAsync(
             libraryId,
             null,
             null,
