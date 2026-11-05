@@ -70,6 +70,7 @@ public static class DependencyInjection
         // DomainEventHandler, staging rows on the SAME scoped context/UnitOfWork save as the
         // aggregate mutation — never via the module bus.
         moduleServices.AddScoped<IEnrollmentAuditRepository, EnrollmentAuditRepository>();
+        moduleServices.AddScoped<IFailedProvisioningRecordRepository, FailedProvisioningRecordRepository>();
         moduleServices.AddScoped<IAssessmentService, AssessmentService>();
         moduleServices.AddScoped<ICoursePlanPrincipalService, CoursePlanPrincipalService>();
         moduleServices.AddScoped<IUnitOfWork, UnitOfWork<AppDbContext>>();
