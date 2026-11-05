@@ -78,39 +78,41 @@ public class RedeemCodeCommandHandler : IRequestHandler<RedeemCodeCommand, Error
             return Result.Success;
         }
 
-        // 5. Redeem in Domain
-        var redeemResult = accessCode.Redeem(currentUser.UserId);
-        if (redeemResult.IsError)
-        {
-            return redeemResult.Errors;
-        }
-
         // Fraud check: Lax gate — absence of sale does not block redemption, but raises fraud flag
         var hasSaleRecord = await _saleRecordRepository.ExistsForCodeAsync(accessCode.Id, cancellationToken);
-        if (!hasSaleRecord)
+        var isUnsoldRedemption = !hasSaleRecord;
+        if (isUnsoldRedemption)
         {
             _logger.LogWarning("Fraud flag: UnsoldRedemption for Access Code {CodeId}. Redeemed without prior sale.", accessCode.Id);
         }
-            
-        // 6. Execute Strategy
-        var strategy = _strategyFactory.GetStrategy(accessCode.StrategyId);
-        await strategy.ExecuteAsync(currentUser.UserId, accessCode.Id,accessCode.TargetResourceArn, accessCode.Metadata.RootElement);
 
         var deviceFingerprint = request.DeviceFingerprint ?? _authorizationContextProvider?.CurrentAuthorizationContext?.DeviceId;
         var ipAddress = request.IpAddress ?? _authorizationContextProvider?.CurrentAuthorizationContext?.IpAddress;
+        var now = DateTime.UtcNow;
 
-        // 7. Record Audit Log
+        // Record Forensic Audit Log
         var redemptionContext = new RedemptionContext(
             accessCode.TenantId,
             accessCode.LibraryId,
             currentUser.UserId,
             accessCode.StrategyId,
             accessCode.TargetResourceArn,
-            accessCode.RedeemedAt!.Value,
+            now,
             ipAddress,
             deviceFingerprint);
 
         var auditLog = RedemptionAuditLog.Record(redemptionContext, accessCode.Id);
+
+        // 5. Redeem in Domain (passes forensicLogId and unsoldRedemption flag to domain event / audit stream)
+        var redeemResult = accessCode.Redeem(currentUser.UserId, now, forensicLogId: auditLog.Id, isUnsoldRedemption: isUnsoldRedemption);
+        if (redeemResult.IsError)
+        {
+            return redeemResult.Errors;
+        }
+
+        // 6. Execute Strategy
+        var strategy = _strategyFactory.GetStrategy(accessCode.StrategyId);
+        await strategy.ExecuteAsync(currentUser.UserId, accessCode.Id, accessCode.TargetResourceArn, accessCode.Metadata.RootElement);
 
         await _auditLogRepository.AddAsync(auditLog, cancellationToken);
 

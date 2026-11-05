@@ -22,6 +22,7 @@ public class AppDbContext : DbContext, ITenantDbContext
     public DbSet<Domain.Library> Libraries => Set<Domain.Library>();
     public DbSet<RedemptionAuditLog> RedemptionAuditLogs => Set<RedemptionAuditLog>();
     public DbSet<SaleRecord> SaleRecords => Set<SaleRecord>();
+    public DbSet<LibraryAuditLog> LibraryAuditLogs => Set<LibraryAuditLog>();
 
     public Guid? TenantId => _tenantProvider.GetTenant();
 

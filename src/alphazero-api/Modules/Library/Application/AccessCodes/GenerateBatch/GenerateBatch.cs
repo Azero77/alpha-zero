@@ -20,7 +20,7 @@ public record GenerateBatchCommand(
     string StrategyId,
     string TargetResourceArn,
     decimal FaceValue,
-    Dictionary<string, object> Metadata) : ICommand<GenerateBatchResult>;
+    Dictionary<string, object> Metadata) : ICommand<GenerateBatchResult>, ITransactionalCommand;
 
 public class GenerateBatchCommandValidator : AbstractValidator<GenerateBatchCommand>
 {
@@ -41,19 +41,22 @@ public sealed class GenerateBatchCommandHandler : IRequestHandler<GenerateBatchC
     private readonly ITenantProvider _tenantProvider;
     private readonly IPasswordHasher _passwordHasher;
     private readonly ILogger<GenerateBatchCommandHandler> _logger;
+    private readonly ICurrentTenantUserRepository? _currentUserRepository;
 
     public GenerateBatchCommandHandler(
         IAccessCodeRepository accessCodeRepository,
         ILibraryRepository libraryRepository,
         ITenantProvider tenantProvider,
         IPasswordHasher passwordHasher,
-        ILogger<GenerateBatchCommandHandler> logger)
+        ILogger<GenerateBatchCommandHandler> logger,
+        ICurrentTenantUserRepository? currentUserRepository = null)
     {
         _accessCodeRepository = accessCodeRepository;
         _libraryRepository = libraryRepository;
         _tenantProvider = tenantProvider;
         _passwordHasher = passwordHasher;
         _logger = logger;
+        _currentUserRepository = currentUserRepository;
     }
 
     public async Task<ErrorOr<GenerateBatchResult>> Handle(GenerateBatchCommand request, CancellationToken cancellationToken)
@@ -78,6 +81,7 @@ public sealed class GenerateBatchCommandHandler : IRequestHandler<GenerateBatchC
             });
         }
 
+        var currentUser = _currentUserRepository != null ? await _currentUserRepository.GetCurrentUser() : null;
         var batchId = Guid.NewGuid();
         var generatedCodes = new List<string>();
         var metadata = new Dictionary<string, object>(request.Metadata ?? new())
@@ -98,7 +102,8 @@ public sealed class GenerateBatchCommandHandler : IRequestHandler<GenerateBatchC
                 request.StrategyId,
                 resourceArn.Value,
                 jsonMetadata,
-                batchId);
+                batchId,
+                actorUserId: currentUser?.UserId);
 
             _accessCodeRepository.Add(accessCode);
             generatedCodes.Add(rawCode);

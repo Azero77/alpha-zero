@@ -25,7 +25,8 @@ public sealed class VoidCodeCommandHandler(
     IRedemptionStrategyFactory strategyFactory,
     IPasswordHasher passwordHasher,
     ITenantProvider tenantProvider,
-    ILogger<VoidCodeCommandHandler> logger) : IRequestHandler<VoidCodeCommand, ErrorOr<Success>>
+    ILogger<VoidCodeCommandHandler> logger,
+    ICurrentTenantUserRepository? currentUserRepository = null) : IRequestHandler<VoidCodeCommand, ErrorOr<Success>>
 {
     public async Task<ErrorOr<Success>> Handle(VoidCodeCommand request, CancellationToken cancellationToken)
     {
@@ -50,7 +51,8 @@ public sealed class VoidCodeCommandHandler(
         var wasRedeemed = code.Status == AccessCodeStatus.Redeemed;
         var userId = code.RedeemedByUserId;
 
-        var result = code.Void(request.Reason);
+        var currentUser = currentUserRepository != null ? await currentUserRepository.GetCurrentUser() : null;
+        var result = code.Void(request.Reason, currentUser?.UserId);
         if (result.IsError) return result.Errors;
 
         // If it was already redeemed, trigger the revocation strategy

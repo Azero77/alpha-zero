@@ -78,7 +78,11 @@ public class AccessCodeTests
         code.RedeemedByUserId.Should().BeNull();
         code.VoidedReason.Should().BeNull();
         code.ExpiresAt.Should().BeNull();
-        code.DomainEvents.Should().BeEmpty();
+        var mintedEvent = code.DomainEvents.Should().ContainSingle(e => e is AccessCodeMintedDomainEvent)
+            .Subject as AccessCodeMintedDomainEvent;
+        mintedEvent.Should().NotBeNull();
+        mintedEvent!.AggregateId.Should().Be(code.Id);
+        mintedEvent.Action.Should().Be("Minted");
     }
 
     [Fact]
@@ -359,6 +363,7 @@ public class AccessCodeTests
     public void Minted_Cannot_Sell()
     {
         var code = CreateMintedCode();
+        code.PopDomainEvents();
 
         var result = code.Sell(Guid.NewGuid(), Guid.NewGuid(), 10m, "USD");
 
@@ -372,6 +377,7 @@ public class AccessCodeTests
     public void Minted_Cannot_Redeem()
     {
         var code = CreateMintedCode();
+        code.PopDomainEvents();
 
         var result = code.Redeem(Guid.NewGuid());
 
@@ -534,6 +540,7 @@ public class AccessCodeTests
     public void Void_Should_RejectEmptyOrWhitespaceReason_WithValidationError()
     {
         var code = CreateMintedCode();
+        code.PopDomainEvents();
 
         var result = code.Void("   ");
 

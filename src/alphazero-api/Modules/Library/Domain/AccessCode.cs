@@ -70,9 +70,16 @@ public class AccessCode : AggregateRoot, IDomainTenantOwned
         ResourceArn targetResourceArn,
         JsonDocument metadata,
         Guid? batchId = null,
-        DateTime? expiresAt = null)
+        DateTime? expiresAt = null,
+        Guid? actorUserId = null)
     {
-        return new AccessCode(
+        decimal? faceValue = null;
+        if (metadata.RootElement.TryGetProperty("FaceValue", out var fvProp) && fvProp.TryGetDecimal(out var decFv))
+        {
+            faceValue = decFv;
+        }
+
+        var code = new AccessCode(
             Guid.NewGuid(),
             codeHash,
             tenantId,
@@ -84,6 +91,19 @@ public class AccessCode : AggregateRoot, IDomainTenantOwned
             batchId,
             DateTime.UtcNow,
             expiresAt: expiresAt);
+
+        code.AddDomainEvent(new AccessCodeMintedDomainEvent(
+            code.Id,
+            tenantId,
+            libraryId,
+            batchId,
+            actorUserId,
+            strategyId,
+            targetResourceArn,
+            faceValue,
+            code.CreatedAt));
+
+        return code;
     }
 
     public static AccessCode Reconstitute(
@@ -119,9 +139,9 @@ public class AccessCode : AggregateRoot, IDomainTenantOwned
             expiresAt);
     }
 
-    public ErrorOr<Success> Distribute()
+    public ErrorOr<Success> Distribute(Guid? actorUserId = null)
     {
-        return _state.Distribute(this);
+        return _state.Distribute(this, actorUserId);
     }
 
     public ErrorOr<Success> Sell(Guid libraryId, Guid soldByUserId, decimal price, string currency, DateTime? now = null)
@@ -129,19 +149,19 @@ public class AccessCode : AggregateRoot, IDomainTenantOwned
         return _state.Sell(this, libraryId, soldByUserId, price, currency, now);
     }
 
-    public ErrorOr<Success> Redeem(Guid userId, DateTime? now = null)
+    public ErrorOr<Success> Redeem(Guid userId, DateTime? now = null, Guid? forensicLogId = null, bool isUnsoldRedemption = false)
     {
-        return _state.Redeem(this, userId, now);
+        return _state.Redeem(this, userId, now, forensicLogId, isUnsoldRedemption);
     }
 
-    public ErrorOr<Success> Void(string reason)
+    public ErrorOr<Success> Void(string reason, Guid? actorUserId = null)
     {
         if (string.IsNullOrWhiteSpace(reason))
         {
             return Error.Validation("AccessCode.EmptyReason", "A void reason is required.");
         }
 
-        return _state.Void(this, reason);
+        return _state.Void(this, reason, actorUserId);
     }
 
     public ErrorOr<Success> Expire(DateTime? now = null)
@@ -173,16 +193,16 @@ public class AccessCode : AggregateRoot, IDomainTenantOwned
             _ => throw new ArgumentOutOfRangeException(nameof(status), status, "Unknown access code status.")
         };
 
-        public virtual ErrorOr<Success> Distribute(AccessCode code)
+        public virtual ErrorOr<Success> Distribute(AccessCode code, Guid? actorUserId = null)
             => Error.Conflict("AccessCode.InvalidStatus", $"Code in {Status} status cannot be distributed.");
 
         public virtual ErrorOr<Success> Sell(AccessCode code, Guid libraryId, Guid soldByUserId, decimal price, string currency, DateTime? now)
             => Error.Conflict("AccessCode.InvalidStatus", $"Code in {Status} status cannot be sold.");
 
-        public virtual ErrorOr<Success> Redeem(AccessCode code, Guid userId, DateTime? now)
+        public virtual ErrorOr<Success> Redeem(AccessCode code, Guid userId, DateTime? now, Guid? forensicLogId = null, bool isUnsoldRedemption = false)
             => Error.Conflict("AccessCode.InvalidStatus", $"Code cannot be redeemed. Current status: {Status}");
 
-        public virtual ErrorOr<Success> Void(AccessCode code, string reason)
+        public virtual ErrorOr<Success> Void(AccessCode code, string reason, Guid? actorUserId = null)
             => Error.Conflict("AccessCode.InvalidStatus", $"Code in {Status} status cannot be voided.");
 
         public virtual ErrorOr<Success> Expire(AccessCode code, DateTime? now)
@@ -193,18 +213,18 @@ public class AccessCode : AggregateRoot, IDomainTenantOwned
     {
         public override AccessCodeStatus Status => AccessCodeStatus.Minted;
 
-        public override ErrorOr<Success> Distribute(AccessCode code)
+        public override ErrorOr<Success> Distribute(AccessCode code, Guid? actorUserId = null)
         {
             code.TransitionTo(AccessCodeStatus.Distributed, new DistributedState());
-            code.AddDomainEvent(new AccessCodeDistributedDomainEvent(code.Id, code.LibraryId, code.BatchId, DateTime.UtcNow));
+            code.AddDomainEvent(new AccessCodeDistributedDomainEvent(code.Id, code.TenantId, code.LibraryId, code.BatchId, DateTime.UtcNow, actorUserId));
             return Result.Success;
         }
 
-        public override ErrorOr<Success> Void(AccessCode code, string reason)
+        public override ErrorOr<Success> Void(AccessCode code, string reason, Guid? actorUserId = null)
         {
             code.VoidedReason = reason;
             code.TransitionTo(AccessCodeStatus.Voided, new VoidedState());
-            code.AddDomainEvent(new AccessCodeVoidedDomainEvent(code.Id, null, code.TargetResourceArn, reason));
+            code.AddDomainEvent(new AccessCodeVoidedDomainEvent(code.Id, code.TenantId, code.LibraryId, actorUserId, null, code.TargetResourceArn, reason));
             return Result.Success;
         }
 
@@ -212,7 +232,7 @@ public class AccessCode : AggregateRoot, IDomainTenantOwned
         {
             var expiredAt = now ?? DateTime.UtcNow;
             code.TransitionTo(AccessCodeStatus.Expired, new ExpiredState());
-            code.AddDomainEvent(new AccessCodeExpiredDomainEvent(code.Id, expiredAt));
+            code.AddDomainEvent(new AccessCodeExpiredDomainEvent(code.Id, code.TenantId, code.LibraryId, expiredAt));
             return Result.Success;
         }
     }
@@ -234,7 +254,7 @@ public class AccessCode : AggregateRoot, IDomainTenantOwned
             return Result.Success;
         }
 
-        public override ErrorOr<Success> Redeem(AccessCode code, Guid userId, DateTime? now)
+        public override ErrorOr<Success> Redeem(AccessCode code, Guid userId, DateTime? now, Guid? forensicLogId = null, bool isUnsoldRedemption = false)
         {
             var currentTime = now ?? DateTime.UtcNow;
             if (code.ExpiresAt.HasValue && currentTime >= code.ExpiresAt.Value)
@@ -245,15 +265,15 @@ public class AccessCode : AggregateRoot, IDomainTenantOwned
             code.RedeemedAt = currentTime;
             code.RedeemedByUserId = userId;
             code.TransitionTo(AccessCodeStatus.Redeemed, new RedeemedState());
-            code.AddDomainEvent(new AccessCodeRedeemedDomainEvent(code.Id, userId, code.TargetResourceArn, currentTime));
+            code.AddDomainEvent(new AccessCodeRedeemedDomainEvent(code.Id, code.TenantId, code.LibraryId, userId, code.TargetResourceArn, currentTime, forensicLogId, isUnsoldRedemption));
             return Result.Success;
         }
 
-        public override ErrorOr<Success> Void(AccessCode code, string reason)
+        public override ErrorOr<Success> Void(AccessCode code, string reason, Guid? actorUserId = null)
         {
             code.VoidedReason = reason;
             code.TransitionTo(AccessCodeStatus.Voided, new VoidedState());
-            code.AddDomainEvent(new AccessCodeVoidedDomainEvent(code.Id, null, code.TargetResourceArn, reason));
+            code.AddDomainEvent(new AccessCodeVoidedDomainEvent(code.Id, code.TenantId, code.LibraryId, actorUserId, null, code.TargetResourceArn, reason));
             return Result.Success;
         }
 
@@ -261,7 +281,7 @@ public class AccessCode : AggregateRoot, IDomainTenantOwned
         {
             var expiredAt = now ?? DateTime.UtcNow;
             code.TransitionTo(AccessCodeStatus.Expired, new ExpiredState());
-            code.AddDomainEvent(new AccessCodeExpiredDomainEvent(code.Id, expiredAt));
+            code.AddDomainEvent(new AccessCodeExpiredDomainEvent(code.Id, code.TenantId, code.LibraryId, expiredAt));
             return Result.Success;
         }
     }
@@ -270,7 +290,7 @@ public class AccessCode : AggregateRoot, IDomainTenantOwned
     {
         public override AccessCodeStatus Status => AccessCodeStatus.Sold;
 
-        public override ErrorOr<Success> Redeem(AccessCode code, Guid userId, DateTime? now)
+        public override ErrorOr<Success> Redeem(AccessCode code, Guid userId, DateTime? now, Guid? forensicLogId = null, bool isUnsoldRedemption = false)
         {
             var currentTime = now ?? DateTime.UtcNow;
             if (code.ExpiresAt.HasValue && currentTime >= code.ExpiresAt.Value)
@@ -281,15 +301,15 @@ public class AccessCode : AggregateRoot, IDomainTenantOwned
             code.RedeemedAt = currentTime;
             code.RedeemedByUserId = userId;
             code.TransitionTo(AccessCodeStatus.Redeemed, new RedeemedState());
-            code.AddDomainEvent(new AccessCodeRedeemedDomainEvent(code.Id, userId, code.TargetResourceArn, currentTime));
+            code.AddDomainEvent(new AccessCodeRedeemedDomainEvent(code.Id, code.TenantId, code.LibraryId, userId, code.TargetResourceArn, currentTime, forensicLogId, isUnsoldRedemption));
             return Result.Success;
         }
 
-        public override ErrorOr<Success> Void(AccessCode code, string reason)
+        public override ErrorOr<Success> Void(AccessCode code, string reason, Guid? actorUserId = null)
         {
             code.VoidedReason = reason;
             code.TransitionTo(AccessCodeStatus.Voided, new VoidedState());
-            code.AddDomainEvent(new AccessCodeVoidedDomainEvent(code.Id, null, code.TargetResourceArn, reason));
+            code.AddDomainEvent(new AccessCodeVoidedDomainEvent(code.Id, code.TenantId, code.LibraryId, actorUserId, null, code.TargetResourceArn, reason));
             return Result.Success;
         }
 
@@ -297,7 +317,7 @@ public class AccessCode : AggregateRoot, IDomainTenantOwned
         {
             var expiredAt = now ?? DateTime.UtcNow;
             code.TransitionTo(AccessCodeStatus.Expired, new ExpiredState());
-            code.AddDomainEvent(new AccessCodeExpiredDomainEvent(code.Id, expiredAt));
+            code.AddDomainEvent(new AccessCodeExpiredDomainEvent(code.Id, code.TenantId, code.LibraryId, expiredAt));
             return Result.Success;
         }
     }
@@ -306,7 +326,7 @@ public class AccessCode : AggregateRoot, IDomainTenantOwned
     {
         public override AccessCodeStatus Status => AccessCodeStatus.Redeemed;
 
-        public override ErrorOr<Success> Redeem(AccessCode code, Guid userId, DateTime? now)
+        public override ErrorOr<Success> Redeem(AccessCode code, Guid userId, DateTime? now, Guid? forensicLogId = null, bool isUnsoldRedemption = false)
         {
             // Natural Idempotency check: if already redeemed by the same user, succeed without error
             if (code.RedeemedByUserId == userId)
@@ -317,12 +337,12 @@ public class AccessCode : AggregateRoot, IDomainTenantOwned
             return Error.Conflict("AccessCode.InvalidStatus", $"Code cannot be redeemed. Current status: {Status}");
         }
 
-        public override ErrorOr<Success> Void(AccessCode code, string reason)
+        public override ErrorOr<Success> Void(AccessCode code, string reason, Guid? actorUserId = null)
         {
             code.VoidedReason = reason;
             code.TransitionTo(AccessCodeStatus.Voided, new VoidedState());
             // Redeemed code carries the user ID so access can be revoked
-            code.AddDomainEvent(new AccessCodeVoidedDomainEvent(code.Id, code.RedeemedByUserId, code.TargetResourceArn, reason));
+            code.AddDomainEvent(new AccessCodeVoidedDomainEvent(code.Id, code.TenantId, code.LibraryId, actorUserId, code.RedeemedByUserId, code.TargetResourceArn, reason));
             return Result.Success;
         }
     }
@@ -331,7 +351,7 @@ public class AccessCode : AggregateRoot, IDomainTenantOwned
     {
         public override AccessCodeStatus Status => AccessCodeStatus.Voided;
 
-        public override ErrorOr<Success> Void(AccessCode code, string reason)
+        public override ErrorOr<Success> Void(AccessCode code, string reason, Guid? actorUserId = null)
         {
             return Error.Conflict("AccessCode.AlreadyVoided", "Code is already voided.");
         }
@@ -341,7 +361,7 @@ public class AccessCode : AggregateRoot, IDomainTenantOwned
     {
         public override AccessCodeStatus Status => AccessCodeStatus.Expired;
 
-        public override ErrorOr<Success> Redeem(AccessCode code, Guid userId, DateTime? now)
+        public override ErrorOr<Success> Redeem(AccessCode code, Guid userId, DateTime? now, Guid? forensicLogId = null, bool isUnsoldRedemption = false)
         {
             return Error.Conflict("AccessCode.Expired", "This access code has expired.");
         }
@@ -350,43 +370,281 @@ public class AccessCode : AggregateRoot, IDomainTenantOwned
     #endregion
 }
 
-public class AccessCodeDistributedDomainEvent(Guid AccessCodeId, Guid? LibraryId, Guid? BatchId, DateTime DistributedAt) : DomainEvent()
+public class AccessCodeMintedDomainEvent : DomainEvent, ILibraryLifecycleDomainEvent
 {
-    public Guid AccessCodeId { get; } = AccessCodeId;
-    public Guid? LibraryId { get; } = LibraryId;
-    public Guid? BatchId { get; } = BatchId;
-    public DateTime DistributedAt { get; } = DistributedAt;
+    public Guid AccessCodeId { get; }
+    public Guid TenantId { get; }
+    public Guid? LibraryId { get; }
+    public Guid? BatchId { get; }
+    public Guid? ActorUserId { get; }
+    public string StrategyId { get; }
+    public ResourceArn TargetResourceArn { get; }
+    public decimal? FaceValue { get; }
+    public DateTime MintedAt { get; }
+
+    public Guid AggregateId => AccessCodeId;
+    public string Action => "Minted";
+    public DateTime OccurredAt => MintedAt;
+    public JsonDocument Payload { get; }
+
+    public AccessCodeMintedDomainEvent(
+        Guid accessCodeId,
+        Guid tenantId,
+        Guid? libraryId,
+        Guid? batchId,
+        Guid? actorUserId,
+        string strategyId,
+        ResourceArn targetResourceArn,
+        decimal? faceValue,
+        DateTime mintedAt)
+    {
+        AccessCodeId = accessCodeId;
+        TenantId = tenantId;
+        LibraryId = libraryId;
+        BatchId = batchId;
+        ActorUserId = actorUserId;
+        StrategyId = strategyId;
+        TargetResourceArn = targetResourceArn;
+        FaceValue = faceValue;
+        MintedAt = mintedAt;
+
+        var payloadObj = new
+        {
+            BatchId,
+            StrategyId,
+            TargetResourceArn = targetResourceArn.Value,
+            FaceValue
+        };
+        Payload = JsonDocument.Parse(JsonSerializer.Serialize(payloadObj));
+    }
 }
 
-public class AccessCodeSoldDomainEvent(Guid AccessCodeId, Guid TenantId, Guid LibraryId, Guid SoldByUserId, decimal Price, string Currency, DateTime SoldAt) : DomainEvent()
+public class AccessCodeDistributedDomainEvent : DomainEvent, ILibraryLifecycleDomainEvent
 {
-    public Guid AccessCodeId { get; } = AccessCodeId;
-    public Guid TenantId { get; } = TenantId;
-    public Guid LibraryId { get; } = LibraryId;
-    public Guid SoldByUserId { get; } = SoldByUserId;
-    public decimal Price { get; } = Price;
-    public string Currency { get; } = Currency;
-    public DateTime SoldAt { get; } = SoldAt;
+    public Guid AccessCodeId { get; }
+    public Guid TenantId { get; }
+    public Guid? LibraryId { get; }
+    public Guid? BatchId { get; }
+    public Guid? ActorUserId { get; }
+    public DateTime DistributedAt { get; }
+
+    public Guid AggregateId => AccessCodeId;
+    public string Action => "Distributed";
+    public DateTime OccurredAt => DistributedAt;
+    public JsonDocument Payload { get; }
+
+    public AccessCodeDistributedDomainEvent(
+        Guid accessCodeId,
+        Guid tenantId,
+        Guid? libraryId,
+        Guid? batchId,
+        DateTime distributedAt,
+        Guid? actorUserId = null)
+    {
+        AccessCodeId = accessCodeId;
+        TenantId = tenantId;
+        LibraryId = libraryId;
+        BatchId = batchId;
+        DistributedAt = distributedAt;
+        ActorUserId = actorUserId;
+
+        var payloadObj = new
+        {
+            LibraryId,
+            BatchId
+        };
+        Payload = JsonDocument.Parse(JsonSerializer.Serialize(payloadObj));
+    }
+
+    // Backwards-compatible constructor for existing tests
+    public AccessCodeDistributedDomainEvent(Guid accessCodeId, Guid? libraryId, Guid? batchId, DateTime distributedAt)
+        : this(accessCodeId, Guid.Empty, libraryId, batchId, distributedAt, null)
+    {
+    }
 }
 
-public class AccessCodeRedeemedDomainEvent(Guid AccessCodeId, Guid UserId, ResourceArn Resource, DateTime RedeemedAt) : DomainEvent()
+public class AccessCodeSoldDomainEvent : DomainEvent, ILibraryLifecycleDomainEvent
 {
-    public Guid AccessCodeId { get; } = AccessCodeId;
-    public Guid UserId { get; } = UserId;
-    public ResourceArn Resource { get; } = Resource;
-    public DateTime RedeemedAt { get; } = RedeemedAt;
+    public Guid AccessCodeId { get; }
+    public Guid TenantId { get; }
+    public Guid LibraryId { get; }
+    public Guid SoldByUserId { get; }
+    public decimal Price { get; }
+    public string Currency { get; }
+    public DateTime SoldAt { get; }
+
+    public Guid AggregateId => AccessCodeId;
+    Guid? ILibraryLifecycleDomainEvent.LibraryId => LibraryId;
+    public Guid? ActorUserId => SoldByUserId;
+    public string Action => "Sold";
+    public DateTime OccurredAt => SoldAt;
+    public JsonDocument Payload { get; }
+
+    public AccessCodeSoldDomainEvent(
+        Guid accessCodeId,
+        Guid tenantId,
+        Guid libraryId,
+        Guid soldByUserId,
+        decimal price,
+        string currency,
+        DateTime soldAt)
+    {
+        AccessCodeId = accessCodeId;
+        TenantId = tenantId;
+        LibraryId = libraryId;
+        SoldByUserId = soldByUserId;
+        Price = price;
+        Currency = currency;
+        SoldAt = soldAt;
+
+        var payloadObj = new
+        {
+            Price,
+            Currency,
+            SoldByUserId
+        };
+        Payload = JsonDocument.Parse(JsonSerializer.Serialize(payloadObj));
+    }
 }
 
-public class AccessCodeVoidedDomainEvent(Guid AccessCodeId, Guid? UserId, ResourceArn Resource, string Reason) : DomainEvent()
+public class AccessCodeRedeemedDomainEvent : DomainEvent, ILibraryLifecycleDomainEvent
 {
-    public Guid AccessCodeId { get; } = AccessCodeId;
-    public Guid? UserId { get; } = UserId;
-    public ResourceArn Resource { get; } = Resource;
-    public string Reason { get; } = Reason;
+    public Guid AccessCodeId { get; }
+    public Guid TenantId { get; }
+    public Guid? LibraryId { get; }
+    public Guid UserId { get; }
+    public ResourceArn Resource { get; }
+    public DateTime RedeemedAt { get; }
+    public Guid? ForensicLogId { get; }
+    public bool IsUnsoldRedemption { get; }
+
+    public Guid AggregateId => AccessCodeId;
+    public Guid? ActorUserId => UserId;
+    public string Action => "Redeemed";
+    public DateTime OccurredAt => RedeemedAt;
+    public JsonDocument Payload { get; }
+
+    public AccessCodeRedeemedDomainEvent(
+        Guid accessCodeId,
+        Guid tenantId,
+        Guid? libraryId,
+        Guid userId,
+        ResourceArn resource,
+        DateTime redeemedAt,
+        Guid? forensicLogId = null,
+        bool isUnsoldRedemption = false)
+    {
+        AccessCodeId = accessCodeId;
+        TenantId = tenantId;
+        LibraryId = libraryId;
+        UserId = userId;
+        Resource = resource;
+        RedeemedAt = redeemedAt;
+        ForensicLogId = forensicLogId;
+        IsUnsoldRedemption = isUnsoldRedemption;
+
+        var payloadObj = new
+        {
+            UserId,
+            Resource = resource.Value,
+            ForensicLogId,
+            UnsoldRedemption = isUnsoldRedemption
+        };
+        Payload = JsonDocument.Parse(JsonSerializer.Serialize(payloadObj));
+    }
+
+    // Backwards-compatible constructor for existing tests
+    public AccessCodeRedeemedDomainEvent(Guid accessCodeId, Guid userId, ResourceArn resource, DateTime redeemedAt)
+        : this(accessCodeId, Guid.Empty, null, userId, resource, redeemedAt, null, false)
+    {
+    }
 }
 
-public class AccessCodeExpiredDomainEvent(Guid AccessCodeId, DateTime ExpiredAt) : DomainEvent()
+public class AccessCodeVoidedDomainEvent : DomainEvent, ILibraryLifecycleDomainEvent
 {
-    public Guid AccessCodeId { get; } = AccessCodeId;
-    public DateTime ExpiredAt { get; } = ExpiredAt;
+    public Guid AccessCodeId { get; }
+    public Guid TenantId { get; }
+    public Guid? LibraryId { get; }
+    public Guid? ActorUserId { get; }
+    public Guid? UserId { get; }
+    public ResourceArn Resource { get; }
+    public string Reason { get; }
+    public DateTime VoidedAt { get; }
+
+    public Guid AggregateId => AccessCodeId;
+    public string Action => "Voided";
+    public DateTime OccurredAt => VoidedAt;
+    public JsonDocument Payload { get; }
+
+    public AccessCodeVoidedDomainEvent(
+        Guid accessCodeId,
+        Guid tenantId,
+        Guid? libraryId,
+        Guid? actorUserId,
+        Guid? userId,
+        ResourceArn resource,
+        string reason,
+        DateTime? voidedAt = null)
+    {
+        AccessCodeId = accessCodeId;
+        TenantId = tenantId;
+        LibraryId = libraryId;
+        ActorUserId = actorUserId;
+        UserId = userId;
+        Resource = resource;
+        Reason = reason;
+        VoidedAt = voidedAt ?? DateTime.UtcNow;
+
+        var payloadObj = new
+        {
+            Reason,
+            RevokedUserId = userId,
+            Resource = resource.Value
+        };
+        Payload = JsonDocument.Parse(JsonSerializer.Serialize(payloadObj));
+    }
+
+    // Backwards-compatible constructor for existing tests
+    public AccessCodeVoidedDomainEvent(Guid accessCodeId, Guid? userId, ResourceArn resource, string reason)
+        : this(accessCodeId, Guid.Empty, null, null, userId, resource, reason)
+    {
+    }
+}
+
+public class AccessCodeExpiredDomainEvent : DomainEvent, ILibraryLifecycleDomainEvent
+{
+    public Guid AccessCodeId { get; }
+    public Guid TenantId { get; }
+    public Guid? LibraryId { get; }
+    public DateTime ExpiredAt { get; }
+
+    public Guid AggregateId => AccessCodeId;
+    public Guid? ActorUserId => null;
+    public string Action => "Expired";
+    public DateTime OccurredAt => ExpiredAt;
+    public JsonDocument Payload { get; }
+
+    public AccessCodeExpiredDomainEvent(
+        Guid accessCodeId,
+        Guid tenantId,
+        Guid? libraryId,
+        DateTime expiredAt)
+    {
+        AccessCodeId = accessCodeId;
+        TenantId = tenantId;
+        LibraryId = libraryId;
+        ExpiredAt = expiredAt;
+
+        var payloadObj = new
+        {
+            ExpiredAt
+        };
+        Payload = JsonDocument.Parse(JsonSerializer.Serialize(payloadObj));
+    }
+
+    // Backwards-compatible constructor for existing tests
+    public AccessCodeExpiredDomainEvent(Guid accessCodeId, DateTime expiredAt)
+        : this(accessCodeId, Guid.Empty, null, expiredAt)
+    {
+    }
 }

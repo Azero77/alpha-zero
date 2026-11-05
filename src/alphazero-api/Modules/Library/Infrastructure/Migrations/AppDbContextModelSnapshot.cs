@@ -54,6 +54,52 @@ namespace AlphaZero.Modules.Library.Infrastructure.Migrations
                     b.ToTable("Libraries", "Library");
                 });
 
+            modelBuilder.Entity("AlphaZero.Modules.Library.Domain.LibraryAuditLog", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<Guid?>("ActorUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("AggregateId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("EventId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("LibraryId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("OccurredAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<JsonDocument>("Payload")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AggregateId");
+
+                    b.HasIndex("EventId")
+                        .IsUnique();
+
+                    b.HasIndex("TenantId");
+
+                    b.HasIndex("TenantId", "LibraryId", "OccurredAt");
+
+                    b.ToTable("LibraryAuditLogs", "Library");
+                });
+
             modelBuilder.Entity("AlphaZero.Modules.Library.Domain.RedemptionAuditLog", b =>
                 {
                     b.Property<Guid>("Id")
