@@ -7,8 +7,6 @@ public interface IFailedProvisioningRecordRepository
     Task AddAsync(FailedProvisioningRecord record, CancellationToken cancellationToken = default);
     Task<FailedProvisioningRecord?> GetByAccessCodeIdAsync(Guid accessCodeId, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<FailedProvisioningRecord>> GetFailedRecordsAsync(CancellationToken cancellationToken = default);
-    Task SaveChangesAsync(CancellationToken cancellationToken = default);
-
     /// <summary>
     /// Tenant-scoped lookup. All provisioning paths are tenant-isolated — a record
     /// belonging to another tenant must never match.
