@@ -42,8 +42,8 @@ public class DistributeBatchCommandHandlerTests
 
         _accessCodeRepository.GetBatchForUpdateAsync(TenantId, BatchId, Arg.Any<CancellationToken>())
             .Returns(codes);
-        _accessCodeRepository.UpdateAsync(Arg.Any<AccessCode>(), Arg.Any<CancellationToken>())
-            .Returns(Result.Success);
+        _accessCodeRepository.UpdateBatch(TenantId, BatchId, AccessCodeStatus.Minted, AccessCodeStatus.Distributed, Arg.Any<CancellationToken>())
+            .Returns(2);
 
         var command = new DistributeBatchCommand(BatchId);
 
@@ -54,7 +54,7 @@ public class DistributeBatchCommandHandlerTests
         result.IsError.Should().BeFalse();
         code1.Status.Should().Be(AccessCodeStatus.Distributed);
         code2.Status.Should().Be(AccessCodeStatus.Distributed);
-        await _accessCodeRepository.Received(2).UpdateAsync(Arg.Any<AccessCode>(), Arg.Any<CancellationToken>());
+        await _accessCodeRepository.Received(1).UpdateBatch(TenantId, BatchId, AccessCodeStatus.Minted, AccessCodeStatus.Distributed, Arg.Any<CancellationToken>());
     }
 
     [Fact]

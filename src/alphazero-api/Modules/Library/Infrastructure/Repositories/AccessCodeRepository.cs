@@ -145,7 +145,19 @@ public class AccessCodeRepository : IAccessCodeRepository
             .IgnoreQueryFilters()
             .ToListAsync(cancellationToken);
 
-        return dataModels.Select(MapToDomain).ToList();
+        var result =  dataModels.Select(MapToDomain).ToList();
+        _unitOfWork.TrackEntity(result.ToArray());
+        return result;
+    }
+
+    public async Task<int> UpdateBatch(Guid tenantId, Guid batchId, AccessCodeStatus? prevStatus , AccessCodeStatus newStatus, CancellationToken cancellationToken = default)
+    {
+        var query = _context.AccessCodes
+            .Where(x => x.TenantId == tenantId && x.BatchId == batchId);
+        if(prevStatus is not null)
+            query = query.Where(ac => ac.Status == prevStatus);
+        
+        return await query.ExecuteUpdateAsync(s => s.SetProperty(x => x.Status, newStatus), cancellationToken);
     }
 
     public async Task<bool> BatchExistsAsync(Guid batchId, CancellationToken cancellationToken = default)

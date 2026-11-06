@@ -25,4 +25,7 @@ public interface IAccessCodeRepository : IRepository<AccessCode>
     Task<List<AccessCode>> GetDueForExpiryAsync(DateTime now, CancellationToken cancellationToken = default);
 
     Task<ErrorOr<Success>> UpdateAsync(AccessCode code, CancellationToken cancellationToken = default);
+
+    Task<int> UpdateBatch(Guid tenantId, Guid batchId, AccessCodeStatus? prevStatus, AccessCodeStatus newStatus,
+        CancellationToken cancellationToken = default);
 }

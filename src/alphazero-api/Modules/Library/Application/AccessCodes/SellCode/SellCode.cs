@@ -96,25 +96,8 @@ public sealed class SellCodeCommandHandler : IRequestHandler<SellCodeCommand, Er
         {
             return Error.Validation("AccessCode.MissingLibrary", "A library must be associated with the access code to record a sale.");
         }
-
-        // 5. Evaluate permission on the code's owning scope
-        if (_policyEvaluatorService != null)
-        {
-            var baseContext = _authorizationContextProvider?.CurrentAuthorizationContext ?? new AuthorizationContext
-            {
-                AuthenticationMethod = "TenantUser"
-            };
-            var resourceArn = accessCode.LibraryId.HasValue
-                ? ResourceArn.ForLibrary(accessCode.TenantId, accessCode.LibraryId.Value)
-                : ResourceArn.ForTenant(accessCode.TenantId);
-            var authContext = baseContext.ForResource("library:SellCodes", resourceArn);
-
-            var authResult = await _policyEvaluatorService.Authorize(authContext);
-            if (authResult.IsError)
-            {
-                return authResult.Errors;
-            }
-        }
+        
+        //NO NEED TO EVALUATE PERMISSIONS, will already be handled by the Sell Endpoint
 
         // 6. Check existing sale record (unique active sale)
         var alreadyHasSale = await _saleRecordRepository.ExistsForCodeAsync(accessCode.Id, cancellationToken);

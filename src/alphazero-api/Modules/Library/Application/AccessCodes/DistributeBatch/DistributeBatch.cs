@@ -34,7 +34,7 @@ public sealed class DistributeBatchCommandHandler(
         }
 
         // Lock ordering discipline (prevents deadlocks between concurrent flows):
-        // 1. AccessCode rows ordered deterministically by Id (via SELECT ... FOR UPDATE)
+        //  1. AccessCode rows ordered deterministically byId (via SELECT ... FOR UPDATE)
         // 2. RedemptionAuditLog row (INSERT)
         // 3. Audit stream projection (P3b)
         // The tenant predicate is part of the locking SQL (I-TENANT): a foreign batch is never
@@ -63,7 +63,6 @@ public sealed class DistributeBatchCommandHandler(
         }
 
         var currentUser = currentUserRepository != null ? await currentUserRepository.GetCurrentUser() : null;
-
         foreach (var code in mintedCodes)
         {
             var distributeResult = code.Distribute(currentUser?.UserId);
@@ -71,15 +70,11 @@ public sealed class DistributeBatchCommandHandler(
             {
                 return distributeResult.Errors;
             }
-
-            var updateResult = await repository.UpdateAsync(code, cancellationToken);
-            if (updateResult.IsError)
-            {
-                return updateResult.Errors;
-            }
         }
 
-        logger.LogInformation("Distributed {Count} codes in Batch {BatchId}.", mintedCodes.Count, request.BatchId);
+        var rowsAffected = await repository.UpdateBatch(tenantId.Value, request.BatchId, AccessCodeStatus.Minted, AccessCodeStatus.Distributed, cancellationToken);
+
+        logger.LogInformation("Distributed {Count} codes in Batch {BatchId}.", rowsAffected, request.BatchId);
 
         return Result.Success;
     }
