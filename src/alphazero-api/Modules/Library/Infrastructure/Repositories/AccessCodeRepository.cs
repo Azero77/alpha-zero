@@ -156,8 +156,25 @@ public class AccessCodeRepository : IAccessCodeRepository
             .Where(x => x.TenantId == tenantId && x.BatchId == batchId);
         if(prevStatus is not null)
             query = query.Where(ac => ac.Status == prevStatus);
-        
+
         return await query.ExecuteUpdateAsync(s => s.SetProperty(x => x.Status, newStatus), cancellationToken);
+    }
+
+    public async Task<int> VoidBatch(Guid tenantId, Guid batchId, string reason, CancellationToken cancellationToken = default)
+    {
+        var voidable = new[]
+        {
+            AccessCodeStatus.Minted,
+            AccessCodeStatus.Distributed,
+            AccessCodeStatus.Sold,
+            AccessCodeStatus.Redeemed
+        };
+
+        return await _context.AccessCodes
+            .Where(x => x.TenantId == tenantId && x.BatchId == batchId && voidable.Contains(x.Status))
+            .ExecuteUpdateAsync(s => s
+                .SetProperty(x => x.Status, AccessCodeStatus.Voided)
+                .SetProperty(x => x.VoidedReason, reason), cancellationToken);
     }
 
     public async Task<bool> BatchExistsAsync(Guid batchId, CancellationToken cancellationToken = default)

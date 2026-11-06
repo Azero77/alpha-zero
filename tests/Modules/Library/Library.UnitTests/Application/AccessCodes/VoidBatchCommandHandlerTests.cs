@@ -45,8 +45,8 @@ public class VoidBatchCommandHandlerTests
         _policyEvaluatorService.Authorize(Arg.Any<AuthorizationContext>())
             .Returns(Result.Success);
 
-        _repository.UpdateAsync(Arg.Any<AccessCode>(), Arg.Any<CancellationToken>())
-            .Returns(Result.Success);
+        _repository.VoidBatch(TenantId, Arg.Any<Guid>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(4);
 
         _handler = new VoidBatchCommandHandler(
             _repository,
@@ -81,7 +81,7 @@ public class VoidBatchCommandHandlerTests
         result.IsError.Should().BeTrue();
         result.FirstError.Code.Should().Be("Batch.OverCap");
         await _repository.DidNotReceive().GetBatchForUpdateAsync(Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<CancellationToken>());
-        await _repository.DidNotReceive().UpdateAsync(Arg.Any<AccessCode>(), Arg.Any<CancellationToken>());
+        await _repository.DidNotReceive().VoidBatch(Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -124,8 +124,9 @@ public class VoidBatchCommandHandlerTests
         // Revocation of the redeemed code is producer-only (#58): the domain event carries
         // the redeemed user for AccessCodeVoidedDomainEventHandler; asserted in domain tests.
 
-        // 4 codes updated via repository
-        await _repository.Received(4).UpdateAsync(Arg.Any<AccessCode>(), Arg.Any<CancellationToken>());
+        // 4 codes voided via one set-based VoidBatch call
+        await _repository.Received(1).VoidBatch(TenantId, batchId, "Compromised inventory", Arg.Any<CancellationToken>());
+        await _repository.DidNotReceive().UpdateAsync(Arg.Any<AccessCode>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -147,7 +148,7 @@ public class VoidBatchCommandHandlerTests
         result.Value.TotalCodes.Should().Be(2);
         result.Value.VoidedCount.Should().Be(0);
         result.Value.SkippedCount.Should().Be(2);
-        await _repository.DidNotReceive().UpdateAsync(Arg.Any<AccessCode>(), Arg.Any<CancellationToken>());
+        await _repository.DidNotReceive().VoidBatch(Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -172,6 +173,6 @@ public class VoidBatchCommandHandlerTests
         // or even enumerated.
         await _repository.DidNotReceive().GetBatchForUpdateAsync(
             Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<CancellationToken>());
-        await _repository.DidNotReceive().UpdateAsync(Arg.Any<AccessCode>(), Arg.Any<CancellationToken>());
+        await _repository.DidNotReceive().VoidBatch(Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
     }
 }

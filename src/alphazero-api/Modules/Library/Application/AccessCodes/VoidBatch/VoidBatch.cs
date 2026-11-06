@@ -133,14 +133,19 @@ public sealed class VoidBatchCommandHandler : IRequestHandler<VoidBatchCommand, 
             // carries the redeemed user; AccessCodeVoidedDomainEventHandler publishes
             // AccessCodeRevokedIntegrationEvent for downstream revocation. No inline strategy.
 
-            var updateResult = await _repository.UpdateAsync(code, cancellationToken);
-            if (updateResult.IsError)
-            {
-                return updateResult.Errors;
-            }
-
             voidedCount++;
             voidedCodeIds.Add(code.Id);
+        }
+
+        // Single set-based bulk update (same pattern as DistributeBatch's UpdateBatch):
+        // in-memory Void() calls above only raise domain events (audit + revocation) on
+        // entities already tracked by GetBatchForUpdateAsync; persistence happens here in
+        // one statement that also stamps VoidedReason. Under the FOR UPDATE lock the rows
+        // affected must equal the in-memory voided count.
+        if (voidedCount > 0)
+        {
+            var rowsAffected = await _repository.VoidBatch(tenantId.Value, request.BatchId, request.Reason, cancellationToken);
+            voidedCount = rowsAffected;
         }
 
         _logger.LogInformation(

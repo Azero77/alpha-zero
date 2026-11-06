@@ -28,4 +28,12 @@ public interface IAccessCodeRepository : IRepository<AccessCode>
 
     Task<int> UpdateBatch(Guid tenantId, Guid batchId, AccessCodeStatus? prevStatus, AccessCodeStatus newStatus,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Set-based bulk void: transitions every non-terminal code in the batch
+    /// (Minted/Distributed/Sold/Redeemed) to Voided and stamps VoidedReason in one
+    /// statement. Terminal codes (Voided/Expired) are excluded — they are the
+    /// "skipped" set. Returns rows affected.
+    /// </summary>
+    Task<int> VoidBatch(Guid tenantId, Guid batchId, string reason, CancellationToken cancellationToken = default);
 }
