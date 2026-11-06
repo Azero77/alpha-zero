@@ -49,7 +49,8 @@ public class AccessCodeActivatedConsumer : IConsumer<AccessCodeActivatedIntegrat
             msg.AccessCodeId,
             msg.RedeemingUserId,
             msg.TargetResourceArn,
-            tenantId);
+            tenantId,
+            msg.Metadata);
 
         var result = await _coursesModule.Send(command, context.CancellationToken);
 

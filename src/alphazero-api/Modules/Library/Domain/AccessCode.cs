@@ -273,7 +273,7 @@ public class AccessCode : AggregateRoot, IDomainTenantOwned
             code.RedeemedAt = currentTime;
             code.RedeemedByUserId = userId;
             code.TransitionTo(AccessCodeState.Redeemed);
-            code.AddDomainEvent(new AccessCodeRedeemedDomainEvent(code.Id, code.TenantId, code.LibraryId, userId, code.TargetResourceArn, currentTime, forensicLogId, isUnsoldRedemption));
+            code.AddDomainEvent(new AccessCodeRedeemedDomainEvent(code.Id, code.TenantId, code.LibraryId, userId, code.TargetResourceArn, currentTime, forensicLogId, isUnsoldRedemption, code.Metadata));
             return Result.Success;
         }
 
@@ -309,7 +309,7 @@ public class AccessCode : AggregateRoot, IDomainTenantOwned
             code.RedeemedAt = currentTime;
             code.RedeemedByUserId = userId;
             code.TransitionTo(AccessCodeState.Redeemed);
-            code.AddDomainEvent(new AccessCodeRedeemedDomainEvent(code.Id, code.TenantId, code.LibraryId, userId, code.TargetResourceArn, currentTime, forensicLogId, isUnsoldRedemption));
+            code.AddDomainEvent(new AccessCodeRedeemedDomainEvent(code.Id, code.TenantId, code.LibraryId, userId, code.TargetResourceArn, currentTime, forensicLogId, isUnsoldRedemption, code.Metadata));
             return Result.Success;
         }
 
@@ -527,6 +527,12 @@ public class AccessCodeRedeemedDomainEvent : DomainEvent, ILibraryLifecycleDomai
     public Guid? AuditReference => ForensicLogId;
     public bool IsUnsoldRedemption { get; }
 
+    /// <summary>
+    /// Snapshot of the redeemed code's provisioning metadata (e.g. Courses' {"plan"} reference).
+    /// Carried so resource modules can express per-type activation contracts without parsing the ARN.
+    /// </summary>
+    public JsonDocument? Metadata { get; }
+
     public Guid AggregateId => AccessCodeId;
     public Guid? ActorUserId => UserId;
     public string Action => "Redeemed";
@@ -541,7 +547,8 @@ public class AccessCodeRedeemedDomainEvent : DomainEvent, ILibraryLifecycleDomai
         ResourceArn resource,
         DateTime redeemedAt,
         Guid? forensicLogId = null,
-        bool isUnsoldRedemption = false)
+        bool isUnsoldRedemption = false,
+        JsonDocument? metadata = null)
     {
         AccessCodeId = accessCodeId;
         TenantId = tenantId;
@@ -551,6 +558,7 @@ public class AccessCodeRedeemedDomainEvent : DomainEvent, ILibraryLifecycleDomai
         RedeemedAt = redeemedAt;
         ForensicLogId = forensicLogId;
         IsUnsoldRedemption = isUnsoldRedemption;
+        Metadata = metadata is null ? null : JsonDocument.Parse(metadata.RootElement.GetRawText());
 
         var payloadObj = new
         {

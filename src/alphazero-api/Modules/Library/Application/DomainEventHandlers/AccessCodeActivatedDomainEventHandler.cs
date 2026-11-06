@@ -26,6 +26,7 @@ public class AccessCodeActivatedDomainEventHandler(IPublishEndpoint bus)
             notification.UserId,
             notification.Resource,
             notification.RedeemedAt,
-            notification.AuditReference), cancellationToken);
+            notification.AuditReference,
+            notification.Metadata), cancellationToken);
     }
 }

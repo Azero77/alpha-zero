@@ -61,7 +61,6 @@ public class AccessCodeActivatedDomainEventHandlerTests
     [Fact]
     public async Task Handle_Should_FallbackToResourceTenantId_WhenEventTenantIdIsEmpty()
     {
-        // Arrange
         var accessCodeId = Guid.NewGuid();
         var tenantId = Guid.NewGuid();
         var userId = Guid.NewGuid();
@@ -87,6 +86,37 @@ public class AccessCodeActivatedDomainEventHandlerTests
                 e.RedeemingUserId == userId &&
                 e.TargetResourceArn == targetArn &&
                 e.AuditReference == null),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Handle_Should_ForwardMetadata_WhenDomainEventCarriesProvisioningMetadata()
+    {
+        var accessCodeId = Guid.NewGuid();
+        var tenantId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+        var planId = Guid.NewGuid();
+        var targetArn = ResourceArn.ForCourse(tenantId, Guid.NewGuid());
+        var redeemedAt = DateTime.UtcNow;
+        using var metadata = System.Text.Json.JsonDocument.Parse($"{{\"plan\":\"{planId}\"}}");
+
+        var domainEvent = new AccessCodeRedeemedDomainEvent(
+            accessCodeId,
+            tenantId,
+            null,
+            userId,
+            targetArn,
+            redeemedAt,
+            null,
+            false,
+            metadata);
+
+        await _handler.Handle(domainEvent, CancellationToken.None);
+
+        await _bus.Received(1).Publish(
+            Arg.Is<AccessCodeActivatedIntegrationEvent>(e =>
+                e.Metadata != null &&
+                e.Metadata.RootElement.GetProperty("plan").GetString() == planId.ToString()),
             Arg.Any<CancellationToken>());
     }
 }

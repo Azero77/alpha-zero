@@ -1,21 +1,27 @@
 using AlphaZero.Modules.Courses.Application.Enrollments.Commands.Enroll;
 using AlphaZero.Modules.Courses.Application.Repositories;
 using AlphaZero.Modules.Courses.Application.Services;
+using AlphaZero.Modules.Courses.Domain.Aggregates.Courses;
 using AlphaZero.Modules.Courses.Domain.Aggregates.Enrollments;
+using AlphaZero.Modules.Courses.Domain.Services;
 using AlphaZero.Shared.Application;
 using AlphaZero.Shared.Domain;
 using ErrorOr;
 using FluentValidation;
 using MediatR;
 using Microsoft.Extensions.Logging;
+using System.Text.Json;
 
 namespace AlphaZero.Modules.Courses.Application.Enrollments.Commands.ProvisionAccessCode;
 
 /// <summary>
 /// Provisions course access for a redeemed access code (Library integration event, issue #58).
 /// Validates the target ARN, resolves course/plan in the Courses domain, ensures the
-/// deterministic Identity principal, and creates the enrollment. Idempotent under
-/// at-least-once delivery; domain validation or repeated failures are parked into
+/// deterministic Identity principal, and creates the enrollment. The plan is selected
+/// strictly by CoursePlanSelector: the code's metadata "plan" reference (legacy /plan/
+/// ARN segment) or, only unambiguously, the course's single plan. Unresolvable or
+/// ambiguous references are parked as failed provisioning, never guessed.
+/// Idempotent under at-least-once delivery; domain validation or repeated failures are parked into
 /// a retryable FailedProvisioningRecord (via the repository, never raw persistence).
 /// Always completes with Success — a parked failure is the business outcome, not an error,
 /// so the surrounding transaction commits the park record.
@@ -24,7 +30,8 @@ public record ProvisionAccessCodeCommand(
     Guid AccessCodeId,
     Guid RedeemingUserId,
     ResourceArn? TargetResourceArn,
-    Guid TenantId) : ICommand<Success>, ITransactionalCommand;
+    Guid TenantId,
+    JsonDocument? Metadata = null) : ICommand<Success>, ITransactionalCommand;
 
 public class ProvisionAccessCodeCommandValidator : AbstractValidator<ProvisionAccessCodeCommand>
 {
@@ -41,6 +48,7 @@ public sealed class ProvisionAccessCodeCommandHandler(
     IEnrollmentRepository enrollmentRepository,
     ICoursePlanPrincipalService planPrincipalService,
     IFailedProvisioningRecordRepository failedProvisioningRepository,
+    CoursePlanSelector planSelector,
     ISender mediator,
     ILogger<ProvisionAccessCodeCommandHandler> logger) : IRequestHandler<ProvisionAccessCodeCommand, ErrorOr<Success>>
 {
@@ -119,42 +127,23 @@ public sealed class ProvisionAccessCodeCommandHandler(
             return Result.Success;
         }
 
-        // 4. Resolve plan from Courses' own domain
-        Domain.Aggregates.Courses.CoursePlan? selectedPlan = null;
-        if (arn != null && arn.ResourcePath.Contains("/plan/"))
-        {
-            try
-            {
-                var planId = arn.GetResource("plan");
-                selectedPlan = course.Plans.FirstOrDefault(p => p.Id == planId);
-            }
-            catch { }
-        }
-
-        if (selectedPlan is null)
-        {
-            if (course.Plans.Count == 1)
-            {
-                selectedPlan = course.Plans.Single();
-            }
-            else if (course.Plans.Count > 1)
-            {
-                selectedPlan = course.Plans.FirstOrDefault(p => string.Equals(p.Name, "Standard", StringComparison.OrdinalIgnoreCase))
-                    ?? course.Plans.First();
-            }
-        }
-
-        if (selectedPlan is null)
+        // 4. Resolve plan strictly: metadata "plan" reference, legacy /plan/ ARN
+        // segment, or (only unambiguously) the course's single plan. Unknown or
+        // ambiguous references are parked — never guessed.
+        var planResult = planSelector.SelectPlan(course, request.Metadata, arn);
+        if (planResult.IsError)
         {
             await ParkAsync(
                 tenantId,
                 accessCodeId,
                 userId,
                 arnString,
-                $"No applicable plan could be resolved for Course '{courseId.Value}'.",
+                string.Join(", ", planResult.Errors.Select(e => e.Description)),
                 cancellationToken);
             return Result.Success;
         }
+
+        var selectedPlan = planResult.Value;
 
         // 5. Ensure principal in Identity via deterministic idempotent ensure-principal command
         var mintResult = await planPrincipalService.EnsurePlanPrincipalAsync(
@@ -178,7 +167,7 @@ public sealed class ProvisionAccessCodeCommandHandler(
         var principalId = mintResult.Value;
 
         // 6. Create enrollment via nested command (fires EnrollmentCreated domain & integration events)
-        var accessExpiresOn = selectedPlan.AccessWindowDays is int windowDays
+        var accessExpiresOn = selectedPlan.AccessWindowDays is { } windowDays
             ? DateTime.UtcNow.AddDays(windowDays)
             : (DateTime?)null;
 

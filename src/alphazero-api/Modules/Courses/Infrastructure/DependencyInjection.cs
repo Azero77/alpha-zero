@@ -80,6 +80,7 @@ public static class DependencyInjection
         moduleServices.AddScoped<AlphaZero.Modules.Courses.Domain.Services.CourseReadinessService>();
         moduleServices.AddScoped<AlphaZero.Modules.Courses.Domain.Services.CoursePublishingService>();
         moduleServices.AddScoped<AlphaZero.Modules.Courses.Domain.Services.EnrollmentStatusTransitionService>();
+        moduleServices.AddScoped<AlphaZero.Modules.Courses.Domain.Services.CoursePlanSelector>();
 
         // Asset Readiness Strategies
         moduleServices.AddScoped<ICourseAssetReadinessStrategy, VideoAssetReadinessStrategy>();

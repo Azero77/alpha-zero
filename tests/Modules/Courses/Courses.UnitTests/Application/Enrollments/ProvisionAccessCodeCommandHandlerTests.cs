@@ -4,6 +4,7 @@ using AlphaZero.Modules.Courses.Application.Repositories;
 using AlphaZero.Modules.Courses.Application.Services;
 using AlphaZero.Modules.Courses.Domain.Aggregates.Courses;
 using AlphaZero.Modules.Courses.Domain.Aggregates.Enrollments;
+using AlphaZero.Modules.Courses.Domain.Services;
 using AlphaZero.Modules.Courses.Infrastructure.Persistance;
 using AlphaZero.Modules.Courses.Infrastructure.Repositories;
 using AlphaZero.Shared.Domain;
@@ -24,6 +25,7 @@ public class ProvisionAccessCodeCommandHandlerTests : IDisposable
     private readonly IEnrollmentRepository _enrollmentRepository = Substitute.For<IEnrollmentRepository>();
     private readonly ICoursePlanPrincipalService _planPrincipalService = Substitute.For<ICoursePlanPrincipalService>();
     private readonly ISender _mediator = Substitute.For<ISender>();
+    private readonly CoursePlanSelector _planSelector = new();
     private readonly ILogger<ProvisionAccessCodeCommandHandler> _logger = Substitute.For<ILogger<ProvisionAccessCodeCommandHandler>>();
     private readonly ProvisionAccessCodeCommandHandler _handler;
     private readonly AppDbContext _dbContext;
@@ -51,14 +53,15 @@ public class ProvisionAccessCodeCommandHandlerTests : IDisposable
             _enrollmentRepository,
             _planPrincipalService,
             _failedProvisioningRepository,
+            _planSelector,
             _mediator,
             _logger);
     }
 
     public void Dispose() => _dbContext.Dispose();
 
-    private static ProvisionAccessCodeCommand CreateCommand(ResourceArn arn) =>
-        new(AccessCodeId, UserId, arn, TenantId);
+    private static ProvisionAccessCodeCommand CreateCommand(ResourceArn arn, System.Text.Json.JsonDocument? metadata = null) =>
+        new(AccessCodeId, UserId, arn, TenantId, metadata);
 
     private void SetupQuery(Course? course)
     {
@@ -183,7 +186,7 @@ public class ProvisionAccessCodeCommandHandlerTests : IDisposable
         result.IsError.Should().BeFalse();
         var failedRecords = await _dbContext.FailedProvisioningRecords.ToListAsync();
         failedRecords.Should().ContainSingle();
-        failedRecords.First().FailureReason.Should().Contain("No applicable plan could be resolved");
+        failedRecords.First().FailureReason.Should().Contain("No plan could be resolved");
     }
 
     [Fact]
@@ -206,6 +209,76 @@ public class ProvisionAccessCodeCommandHandlerTests : IDisposable
         var failedRecords = await _dbContext.FailedProvisioningRecords.ToListAsync();
         failedRecords.Should().ContainSingle();
         failedRecords.First().FailureReason.Should().Contain("Failed to ensure principal in Identity");
+    }
+
+    [Fact]
+    public async Task Handle_Should_ActivateSpecificPlan_FromMetadata_WhenCourseHasMultiplePlans()
+    {
+        var targetArn = ResourceArn.ForCourse(TenantId, CourseId);
+        var course = Course.Create(CourseId, TenantId, "Physics 101", "Desc", Guid.NewGuid()).Value;
+        var premiumResult = course.AddPlan("Premium", Guid.NewGuid(), accessWindowDays: 30);
+        premiumResult.IsError.Should().BeFalse();
+        var basicResult = course.AddPlan("Basic", Guid.NewGuid(), null);
+        basicResult.IsError.Should().BeFalse();
+
+        SetupQuery(course);
+        _enrollmentRepository.GetFirst(Arg.Any<System.Linq.Expressions.Expression<Func<Enrollment, bool>>>(), Arg.Any<CancellationToken>())
+            .Returns((Enrollment?)null);
+        _planPrincipalService.EnsurePlanPrincipalAsync(CourseId, premiumResult.Value.Id, TenantId, Arg.Any<CancellationToken>())
+            .Returns(Guid.NewGuid());
+        _mediator.Send(Arg.Any<EnrollInCourseCommand>(), Arg.Any<CancellationToken>())
+            .Returns((ErrorOr<Guid>)Guid.NewGuid());
+
+        using var metadata = System.Text.Json.JsonDocument.Parse($"{{\"plan\":\"{premiumResult.Value.Id}\"}}");
+        var result = await _handler.Handle(CreateCommand(targetArn, metadata), CancellationToken.None);
+
+        result.IsError.Should().BeFalse();
+        await _planPrincipalService.Received().EnsurePlanPrincipalAsync(CourseId, premiumResult.Value.Id, TenantId, Arg.Any<CancellationToken>());
+        await _planPrincipalService.DidNotReceive().EnsurePlanPrincipalAsync(CourseId, basicResult.Value.Id, TenantId, Arg.Any<CancellationToken>());
+        (await _dbContext.FailedProvisioningRecords.ToListAsync()).Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task Handle_Should_ParkFailedProvisioning_WhenMultiplePlansAndNoReference()
+    {
+        var targetArn = ResourceArn.ForCourse(TenantId, CourseId);
+        var course = Course.Create(CourseId, TenantId, "Physics 101", "Desc", Guid.NewGuid()).Value;
+        course.AddPlan("Standard", Guid.NewGuid(), null).IsError.Should().BeFalse();
+        course.AddPlan("Premium", Guid.NewGuid(), null).IsError.Should().BeFalse();
+
+        SetupQuery(course);
+        _enrollmentRepository.GetFirst(Arg.Any<System.Linq.Expressions.Expression<Func<Enrollment, bool>>>(), Arg.Any<CancellationToken>())
+            .Returns((Enrollment?)null);
+
+        var result = await _handler.Handle(CreateCommand(targetArn), CancellationToken.None);
+
+        result.IsError.Should().BeFalse();
+        var failedRecords = await _dbContext.FailedProvisioningRecords.ToListAsync();
+        failedRecords.Should().ContainSingle();
+        failedRecords.First().FailureReason.Should().Contain($"has 2 plans but the access code does not specify one");
+        await _mediator.DidNotReceive().Send(Arg.Any<EnrollInCourseCommand>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Handle_Should_ParkFailedProvisioning_WhenMetadataPlanUnknown()
+    {
+        var targetArn = ResourceArn.ForCourse(TenantId, CourseId);
+        var course = Course.Create(CourseId, TenantId, "Physics 101", "Desc", Guid.NewGuid()).Value;
+        course.AddPlan("Standard", Guid.NewGuid(), null).IsError.Should().BeFalse();
+
+        SetupQuery(course);
+        _enrollmentRepository.GetFirst(Arg.Any<System.Linq.Expressions.Expression<Func<Enrollment, bool>>>(), Arg.Any<CancellationToken>())
+            .Returns((Enrollment?)null);
+
+        var unknownPlanId = Guid.NewGuid();
+        using var metadata = System.Text.Json.JsonDocument.Parse($"{{\"plan\":\"{unknownPlanId}\"}}");
+        var result = await _handler.Handle(CreateCommand(targetArn, metadata), CancellationToken.None);
+
+        result.IsError.Should().BeFalse();
+        var failedRecords = await _dbContext.FailedProvisioningRecords.ToListAsync();
+        failedRecords.Should().ContainSingle();
+        failedRecords.First().FailureReason.Should().Contain($"Plan '{unknownPlanId}' was not found");
+        await _mediator.DidNotReceive().Send(Arg.Any<EnrollInCourseCommand>(), Arg.Any<CancellationToken>());
     }
 
     private sealed class TestCoursesDbContext : AppDbContext
