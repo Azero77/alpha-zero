@@ -60,6 +60,7 @@ public class AccessCode : AggregateRoot, IDomainTenantOwned
         VoidedReason = voidedReason;
         ExpiresAt = expiresAt?.ToUniversalTime();
         _state = AccessCodeState.Create(status);
+        Status = _state.Status;
     }
 
     public static AccessCode Mint(
@@ -169,27 +170,34 @@ public class AccessCode : AggregateRoot, IDomainTenantOwned
         return _state.Expire(this, now);
     }
 
-    private void TransitionTo(AccessCodeStatus newStatus, AccessCodeState newState)
+    private void TransitionTo(AccessCodeState newState)
     {
         ExpectedPreviousStatus = Status;
-        Status = newStatus;
         _state = newState;
+        Status = newState.Status;
     }
 
     #region State Pattern Classes
 
     private abstract class AccessCodeState
     {
+        public static readonly AccessCodeState Minted = new MintedState();
+        public static readonly AccessCodeState Distributed = new DistributedState();
+        public static readonly AccessCodeState Sold = new SoldState();
+        public static readonly AccessCodeState Redeemed = new RedeemedState();
+        public static readonly AccessCodeState Voided = new VoidedState();
+        public static readonly AccessCodeState Expired = new ExpiredState();
+
         public abstract AccessCodeStatus Status { get; }
 
         public static AccessCodeState Create(AccessCodeStatus status) => status switch
         {
-            AccessCodeStatus.Minted => new MintedState(),
-            AccessCodeStatus.Distributed => new DistributedState(),
-            AccessCodeStatus.Sold => new SoldState(),
-            AccessCodeStatus.Redeemed => new RedeemedState(),
-            AccessCodeStatus.Voided => new VoidedState(),
-            AccessCodeStatus.Expired => new ExpiredState(),
+            AccessCodeStatus.Minted => Minted,
+            AccessCodeStatus.Distributed => Distributed,
+            AccessCodeStatus.Sold => Sold,
+            AccessCodeStatus.Redeemed => Redeemed,
+            AccessCodeStatus.Voided => Voided,
+            AccessCodeStatus.Expired => Expired,
             _ => throw new ArgumentOutOfRangeException(nameof(status), status, "Unknown access code status.")
         };
 
@@ -215,7 +223,7 @@ public class AccessCode : AggregateRoot, IDomainTenantOwned
 
         public override ErrorOr<Success> Distribute(AccessCode code, Guid? actorUserId = null)
         {
-            code.TransitionTo(AccessCodeStatus.Distributed, new DistributedState());
+            code.TransitionTo(AccessCodeState.Distributed);
             code.AddDomainEvent(new AccessCodeDistributedDomainEvent(code.Id, code.TenantId, code.LibraryId, code.BatchId, DateTime.UtcNow, actorUserId));
             return Result.Success;
         }
@@ -223,7 +231,7 @@ public class AccessCode : AggregateRoot, IDomainTenantOwned
         public override ErrorOr<Success> Void(AccessCode code, string reason, Guid? actorUserId = null)
         {
             code.VoidedReason = reason;
-            code.TransitionTo(AccessCodeStatus.Voided, new VoidedState());
+            code.TransitionTo(AccessCodeState.Voided);
             code.AddDomainEvent(new AccessCodeVoidedDomainEvent(code.Id, code.TenantId, code.LibraryId, actorUserId, null, code.TargetResourceArn, reason));
             return Result.Success;
         }
@@ -231,7 +239,7 @@ public class AccessCode : AggregateRoot, IDomainTenantOwned
         public override ErrorOr<Success> Expire(AccessCode code, DateTime? now)
         {
             var expiredAt = now ?? DateTime.UtcNow;
-            code.TransitionTo(AccessCodeStatus.Expired, new ExpiredState());
+            code.TransitionTo(AccessCodeState.Expired);
             code.AddDomainEvent(new AccessCodeExpiredDomainEvent(code.Id, code.TenantId, code.LibraryId, expiredAt));
             return Result.Success;
         }
@@ -249,7 +257,7 @@ public class AccessCode : AggregateRoot, IDomainTenantOwned
                 return Error.Conflict("AccessCode.Expired", "This access code has expired.");
             }
 
-            code.TransitionTo(AccessCodeStatus.Sold, new SoldState());
+            code.TransitionTo(AccessCodeState.Sold);
             code.AddDomainEvent(new AccessCodeSoldDomainEvent(code.Id, code.TenantId, libraryId, soldByUserId, price, currency, currentTime));
             return Result.Success;
         }
@@ -264,7 +272,7 @@ public class AccessCode : AggregateRoot, IDomainTenantOwned
 
             code.RedeemedAt = currentTime;
             code.RedeemedByUserId = userId;
-            code.TransitionTo(AccessCodeStatus.Redeemed, new RedeemedState());
+            code.TransitionTo(AccessCodeState.Redeemed);
             code.AddDomainEvent(new AccessCodeRedeemedDomainEvent(code.Id, code.TenantId, code.LibraryId, userId, code.TargetResourceArn, currentTime, forensicLogId, isUnsoldRedemption));
             return Result.Success;
         }
@@ -272,7 +280,7 @@ public class AccessCode : AggregateRoot, IDomainTenantOwned
         public override ErrorOr<Success> Void(AccessCode code, string reason, Guid? actorUserId = null)
         {
             code.VoidedReason = reason;
-            code.TransitionTo(AccessCodeStatus.Voided, new VoidedState());
+            code.TransitionTo(AccessCodeState.Voided);
             code.AddDomainEvent(new AccessCodeVoidedDomainEvent(code.Id, code.TenantId, code.LibraryId, actorUserId, null, code.TargetResourceArn, reason));
             return Result.Success;
         }
@@ -280,7 +288,7 @@ public class AccessCode : AggregateRoot, IDomainTenantOwned
         public override ErrorOr<Success> Expire(AccessCode code, DateTime? now)
         {
             var expiredAt = now ?? DateTime.UtcNow;
-            code.TransitionTo(AccessCodeStatus.Expired, new ExpiredState());
+            code.TransitionTo(AccessCodeState.Expired);
             code.AddDomainEvent(new AccessCodeExpiredDomainEvent(code.Id, code.TenantId, code.LibraryId, expiredAt));
             return Result.Success;
         }
@@ -300,7 +308,7 @@ public class AccessCode : AggregateRoot, IDomainTenantOwned
 
             code.RedeemedAt = currentTime;
             code.RedeemedByUserId = userId;
-            code.TransitionTo(AccessCodeStatus.Redeemed, new RedeemedState());
+            code.TransitionTo(AccessCodeState.Redeemed);
             code.AddDomainEvent(new AccessCodeRedeemedDomainEvent(code.Id, code.TenantId, code.LibraryId, userId, code.TargetResourceArn, currentTime, forensicLogId, isUnsoldRedemption));
             return Result.Success;
         }
@@ -308,7 +316,7 @@ public class AccessCode : AggregateRoot, IDomainTenantOwned
         public override ErrorOr<Success> Void(AccessCode code, string reason, Guid? actorUserId = null)
         {
             code.VoidedReason = reason;
-            code.TransitionTo(AccessCodeStatus.Voided, new VoidedState());
+            code.TransitionTo(AccessCodeState.Voided);
             code.AddDomainEvent(new AccessCodeVoidedDomainEvent(code.Id, code.TenantId, code.LibraryId, actorUserId, null, code.TargetResourceArn, reason));
             return Result.Success;
         }
@@ -316,7 +324,7 @@ public class AccessCode : AggregateRoot, IDomainTenantOwned
         public override ErrorOr<Success> Expire(AccessCode code, DateTime? now)
         {
             var expiredAt = now ?? DateTime.UtcNow;
-            code.TransitionTo(AccessCodeStatus.Expired, new ExpiredState());
+            code.TransitionTo(AccessCodeState.Expired);
             code.AddDomainEvent(new AccessCodeExpiredDomainEvent(code.Id, code.TenantId, code.LibraryId, expiredAt));
             return Result.Success;
         }
@@ -340,7 +348,7 @@ public class AccessCode : AggregateRoot, IDomainTenantOwned
         public override ErrorOr<Success> Void(AccessCode code, string reason, Guid? actorUserId = null)
         {
             code.VoidedReason = reason;
-            code.TransitionTo(AccessCodeStatus.Voided, new VoidedState());
+            code.TransitionTo(AccessCodeState.Voided);
             // Redeemed code carries the user ID so access can be revoked
             code.AddDomainEvent(new AccessCodeVoidedDomainEvent(code.Id, code.TenantId, code.LibraryId, actorUserId, code.RedeemedByUserId, code.TargetResourceArn, reason));
             return Result.Success;
