@@ -2,11 +2,13 @@ using AlphaZero.Modules.VideoUploading.Application.Commands.CreatePlaybackSessio
 using AlphaZero.Modules.VideoUploading.Application.Repositories;
 using AlphaZero.Modules.VideoUploading.Domain.Models;
 using AlphaZero.Shared.Application;
+using AlphaZero.Shared.Authorization;
 using AlphaZero.Shared.Domain;
 using AlphaZero.Shared.Infrastructure.Security;
 using AlphaZero.Shared.Infrastructure.Tenats;
 using AlphaZero.Shared.Queries;
 using AlphaZero.Shared.Security;
+using ErrorOr;
 using FluentAssertions;
 using MassTransit;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -17,11 +19,12 @@ namespace VideoUploading.Tests.Integration;
 
 public class CreatePlaybackSessionHandlerUnitTests
 {
-    private class FakeCurrentTenantUserRepository : ICurrentTenantUserRepository
+    private class FakeAuthorizationContextProvider : IAuthorizationContextProvider
     {
-        public TenantUserDTO? UserToReturn { get; set; }
-
-        public Task<TenantUserDTO?> GetCurrentUser() => Task.FromResult(UserToReturn);
+        public AuthorizationContext? ContextToReturn { get; set; }
+        public AuthorizationContext? CurrentAuthorizationContext => ContextToReturn;
+        public ErrorOr<AuthorizationContext?> Get(CancellationToken token = default) => ContextToReturn;
+        public void SetExplicitContext(AuthorizationContext context) => ContextToReturn = context;
     }
 
     private class FakeTenantProvider : ITenantProvider
@@ -63,7 +66,7 @@ public class CreatePlaybackSessionHandlerUnitTests
         public DateTime UtcNow => DateTime.UtcNow;
     }
 
-    private readonly FakeCurrentTenantUserRepository _userRepo = new();
+    private readonly FakeAuthorizationContextProvider _userRepo = new();
     private readonly FakeTenantProvider _tenantProvider = new();
     private readonly FakeVideoRepository _videoRepo = new();
     private readonly CloudflareCookieSigner _cookieSigner;
@@ -84,7 +87,7 @@ public class CreatePlaybackSessionHandlerUnitTests
     public async Task Handle_ShouldReturnUnauthorized_WhenUserNotAuthenticated()
     {
         // Arrange
-        _userRepo.UserToReturn = null;
+        _userRepo.ContextToReturn = null;
         var handler = new CreatePlaybackSessionQueryHandler(
             _videoRepo,
             _cookieSigner,
@@ -108,7 +111,14 @@ public class CreatePlaybackSessionHandlerUnitTests
         // Arrange
         var userId = Guid.NewGuid();
         var tenantId = Guid.NewGuid();
-        _userRepo.UserToReturn = new TenantUserDTO(userId, "user-id", "Test Student", tenantId);
+        _userRepo.ContextToReturn = new TenantUserAuthorizationContext
+        {
+            Id = userId,
+            IdentityId = "user-id",
+            Name = "Test Student",
+            TenantId = tenantId,
+            AuthenticationMethod = "TenantUser"
+        };
         _videoRepo.VideoToReturn = null;
 
         var handler = new CreatePlaybackSessionQueryHandler(
@@ -135,7 +145,14 @@ public class CreatePlaybackSessionHandlerUnitTests
         // Arrange
         var userId = Guid.NewGuid();
         var tenantId = Guid.NewGuid();
-        _userRepo.UserToReturn = new TenantUserDTO(userId, "user-id", "Test Student", tenantId);
+        _userRepo.ContextToReturn = new TenantUserAuthorizationContext
+        {
+            Id = userId,
+            IdentityId = "user-id",
+            Name = "Test Student",
+            TenantId = tenantId,
+            AuthenticationMethod = "TenantUser"
+        };
 
         var clock = new FakeClock();
         var metadata = new VideoMetadata("test.mp4", "video/mp4", 1000, "ffmpeg");
@@ -167,7 +184,15 @@ public class CreatePlaybackSessionHandlerUnitTests
         // Arrange
         var userId = Guid.NewGuid();
         var tenantId = Guid.NewGuid();
-        _userRepo.UserToReturn = new TenantUserDTO(userId, "user-id", "Ahmad Al-Khatib", tenantId, DeviceName: "+963991234567");
+        _userRepo.ContextToReturn = new TenantUserAuthorizationContext
+        {
+            Id = userId,
+            IdentityId = "user-id",
+            Name = "Ahmad Al-Khatib",
+            TenantId = tenantId,
+            DeviceName = "+963991234567",
+            AuthenticationMethod = "TenantUser"
+        };
         _tenantProvider.TenantId = tenantId;
 
         var clock = new FakeClock();
@@ -209,7 +234,7 @@ public class CreatePlaybackSessionHandlerUnitTests
         // Watermark identity assertions
         session.WatermarkContext.UserId.Should().Be(userId.ToString());
         session.WatermarkContext.UserName.Should().Be("Ahmad Al-Khatib");
-        session.WatermarkContext.UserPhone.Should().Be("+963991234567");
+        session.WatermarkContext.userDeviceName.Should().Be("+963991234567");
         session.WatermarkContext.TenantId.Should().Be(tenantId.ToString());
     }
 

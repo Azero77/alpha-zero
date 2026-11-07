@@ -110,7 +110,7 @@ public class CreatePlaybackSessionQueryHandler : IRequestHandler<CreatePlaybackS
         if (currentUser.IsError)
             return currentUser.Errors;
         if (currentUser.Value is null)
-            return Error.Forbidden();
+            return Error.Unauthorized("Identity.Unauthorized", "Playback requires an authenticated user session.");
         var user = currentUser.Value;
             
         string userId = user.Id.ToString();
