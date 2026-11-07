@@ -24,6 +24,13 @@ public record GenerateBatchCommand(
 
 public class GenerateBatchCommandValidator : AbstractValidator<GenerateBatchCommand>
 {
+    // Mirrors the Courses provisioning contract's exact key names (CoursePlanSelector
+    // reads these case-sensitively). Library only validates reference syntax here;
+    // whether the referenced plan exists is decided at redemption — validating
+    // existence at mint time would couple Library to the Courses module.
+    public const string PlanKey = "plan";
+    public const string LegacyPlanKey = "planId";
+
     public GenerateBatchCommandValidator()
     {
         RuleFor(x => x.LibraryId).NotEmpty();
@@ -31,6 +38,31 @@ public class GenerateBatchCommandValidator : AbstractValidator<GenerateBatchComm
         RuleFor(x => x.StrategyId).NotEmpty();
         RuleFor(x => x.TargetResourceArn).NotEmpty();
         RuleFor(x => x.FaceValue).GreaterThan(0).LessThanOrEqualTo(1000);
+
+        // Reject at mint: an invalid plan reference mints codes that fail
+        // deterministically at redemption (CoursePlan.NotFound) — surfacing
+        // the defect only after the batch has been distributed.
+        RuleFor(x => x.Metadata)
+            .Must(HaveGuidPlanReference)
+            .When(x => x.Metadata is not null && x.Metadata.Count is > 0)
+            .WithMessage(string.Format(
+                "Metadata keys '{0}' or '{1}' must be a valid plan GUID.",
+                PlanKey,
+                LegacyPlanKey))
+            .WithErrorCode("Library.Batch.InvalidMetadata");
+    }
+
+    internal static bool HaveGuidPlanReference(Dictionary<string, object>? metadata)
+    {
+        if (metadata is null)
+        {
+            return true;
+        }
+
+        var planReferences = metadata.Keys.Where(
+            key => key is PlanKey or LegacyPlanKey);
+
+        return planReferences.All(key => Guid.TryParse(metadata[key]?.ToString(), out _));
     }
 }
 

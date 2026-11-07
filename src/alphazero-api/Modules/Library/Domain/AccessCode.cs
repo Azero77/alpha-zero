@@ -560,12 +560,21 @@ public class AccessCodeRedeemedDomainEvent : DomainEvent, ILibraryLifecycleDomai
         IsUnsoldRedemption = isUnsoldRedemption;
         Metadata = metadata is null ? null : JsonDocument.Parse(metadata.RootElement.GetRawText());
 
+        // WHY Metadata here: the audit row (LibraryAuditLog, projected from Payload) is
+        // the forensic surface for redemption. Shipping the raw provisioning metadata
+        // snapshot means auditors see the plan *reference* the code carried without a
+        // join to the aggregate — the *selected* plan is only resolved in Courses, so
+        // this is intent, not outcome. Library never interprets the keys; it clones and
+        // forwards, so key semantics stay owned by the provisioning module.
         var payloadObj = new
         {
             UserId,
             Resource = resource.Value,
             ForensicLogId,
-            UnsoldRedemption = isUnsoldRedemption
+            UnsoldRedemption = isUnsoldRedemption,
+            // Serialized via RootElement before any disposal can occur — same clone
+            // safety model as the Metadata property above.
+            Metadata = Metadata?.RootElement
         };
         Payload = JsonDocument.Parse(JsonSerializer.Serialize(payloadObj));
     }

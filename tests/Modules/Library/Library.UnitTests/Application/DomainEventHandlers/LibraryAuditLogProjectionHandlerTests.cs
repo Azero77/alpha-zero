@@ -134,6 +134,52 @@ public class LibraryAuditLogProjectionHandlerTests
     }
 
     [Fact]
+    public async Task Handle_RedeemedEvent_WithProvisioningMetadata_Should_ProjectPlanIntentInPayload()
+    {
+        var planId = Guid.NewGuid();
+        using var metadata = JsonDocument.Parse($$"""{"plan": "{{planId}}"}""");
+        var @event = new AccessCodeRedeemedDomainEvent(
+            CodeId,
+            TenantId,
+            LibraryId,
+            ActorUserId,
+            Resource,
+            DateTime.UtcNow,
+            metadata: metadata);
+
+        await _handler.Handle(@event, CancellationToken.None);
+
+        await _repository.Received(1).AddAsync(
+            Arg.Is<LibraryAuditLog>(log =>
+                log.Action == "Redeemed" &&
+                log.Payload.RootElement
+                    .GetProperty("Metadata")
+                    .GetProperty("plan")
+                    .GetString() == planId.ToString()),
+            CancellationToken.None);
+    }
+
+    [Fact]
+    public async Task Handle_RedeemedEvent_WithoutMetadata_Should_ProjectNullMetadataInPayload()
+    {
+        var @event = new AccessCodeRedeemedDomainEvent(
+            CodeId,
+            TenantId,
+            LibraryId,
+            ActorUserId,
+            Resource,
+            DateTime.UtcNow);
+
+        await _handler.Handle(@event, CancellationToken.None);
+
+        await _repository.Received(1).AddAsync(
+            Arg.Is<LibraryAuditLog>(log =>
+                log.Action == "Redeemed" &&
+                log.Payload.RootElement.GetProperty("Metadata").ValueKind == JsonValueKind.Null),
+            CancellationToken.None);
+    }
+
+    [Fact]
     public async Task Handle_VoidedEvent_Should_ProjectToRepository_WithReason()
     {
         var @event = new AccessCodeVoidedDomainEvent(
