@@ -7,4 +7,6 @@ public record AccessCodeRevokedIntegrationEvent(
     Guid AccessCodeId,
     Guid UserId,
     ResourceArn Resource,
-    DateTime OccuredOn);
+    DateTime OccuredOn,
+    Guid TenantId = default);
+

@@ -22,10 +22,10 @@ public class VoidCodeCommandValidator : AbstractValidator<VoidCodeCommand>
 
 public sealed class VoidCodeCommandHandler(
     IAccessCodeRepository repository,
-    IRedemptionStrategyFactory strategyFactory,
     IPasswordHasher passwordHasher,
     ITenantProvider tenantProvider,
-    ILogger<VoidCodeCommandHandler> logger) : IRequestHandler<VoidCodeCommand, ErrorOr<Success>>
+    ILogger<VoidCodeCommandHandler> logger,
+    ICurrentTenantUserRepository? currentUserRepository = null) : IRequestHandler<VoidCodeCommand, ErrorOr<Success>>
 {
     public async Task<ErrorOr<Success>> Handle(VoidCodeCommand request, CancellationToken cancellationToken)
     {
@@ -47,19 +47,9 @@ public sealed class VoidCodeCommandHandler(
             return Error.Forbidden("AccessCode.TenantMismatch", "This code belongs to another academy.");
         }
 
-        var wasRedeemed = code.Status == AccessCodeStatus.Redeemed;
-        var userId = code.RedeemedByUserId;
-
-        var result = code.Void(request.Reason);
+        var currentUser = currentUserRepository != null ? await currentUserRepository.GetCurrentUser() : null;
+        var result = code.Void(request.Reason, currentUser?.UserId);
         if (result.IsError) return result.Errors;
-
-        // If it was already redeemed, trigger the revocation strategy
-        if (wasRedeemed && userId.HasValue)
-        {
-            var strategy = strategyFactory.GetRevocationStrategy(code.StrategyId);
-            await strategy.ExecuteAsync(userId.Value, code.Id, code.TargetResourceArn);
-            logger.LogInformation("Triggered revocation strategy '{StrategyId}' for User {UserId}.", code.StrategyId, userId.Value);
-        }
 
         var updateResult = await repository.UpdateAsync(code, cancellationToken);
         if (updateResult.IsError) return updateResult.Errors;

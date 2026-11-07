@@ -15,10 +15,12 @@
     <PackageReference Include="NSubstitute" />
   </ItemGroup>
 
-  <ItemGroup>
+      <ItemGroup>
     <ProjectReference Include="..\..\..\..\src\alphazero-api\AlphaZero.Shared\AlphaZero.Shared.csproj" />
     <ProjectReference Include="..\..\..\..\src\alphazero-api\Modules\Library\Domain\Domain.csproj" />
     <ProjectReference Include="..\..\..\..\src\alphazero-api\Modules\Library\Application\Application.csproj" />
+    <ProjectReference Include="..\..\..\..\src\alphazero-api\Modules\Library\Infrastructure\Infrastructure.csproj" />
+    <ProjectReference Include="..\..\..\..\src\alphazero-api\Modules\Library\IntegrationEvents\IntegrationEvents.csproj" />
   </ItemGroup>
 
   <ItemGroup>

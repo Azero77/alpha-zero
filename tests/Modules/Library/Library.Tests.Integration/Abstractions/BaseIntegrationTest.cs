@@ -5,6 +5,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Respawn;
 using Library.Tests.Integration.Abstractions;
 
+[assembly: Xunit.CollectionBehavior(DisableTestParallelization = true)]
+
 namespace Library.Tests.Integration.Abstractions;
 
 [Collection("LibraryIntegration")]

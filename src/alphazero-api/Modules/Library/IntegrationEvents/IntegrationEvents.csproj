@@ -9,7 +9,6 @@
   <ItemGroup>
     <ProjectReference Include="..\Domain\Domain.csproj" />
     <ProjectReference Include="..\..\..\AlphaZero.Shared\AlphaZero.Shared.csproj" />
-    <ProjectReference Include="..\..\Courses\IntegrationEvents\IntegrationEvents.csproj" />
   </ItemGroup>
 
 </Project>

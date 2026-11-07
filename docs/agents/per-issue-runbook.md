@@ -15,6 +15,40 @@ Issue-specific deltas (§3) override the generic text where they differ.
 
 ---
 
+## §0 Branching & merge mechanism (canonical rules — all agents follow these)
+
+Observed failure mode this rules out: stacked issue branches that were merged **sideways** into
+each other ("merge: stack p3-lifecycle into p4-analytics, pre-merge of #67"), producing
+mega-diffs in open PRs, duplicate SHAs, and fix-the-merge commits.
+
+1. **Branching.** One branch per issue: `<type>/<module-or-spec>-<slug>` (e.g. `library/p4-analytics`,
+   `spec/35-hardening`) or `spec/<n>-<slug>` per this runbook. Cut it from the module's
+   **integration branch** (`LibraryManagement`, `CourseContentManagement`) when the work builds on
+   open sibling work, otherwise from fresh `origin/main`.
+2. **No sideways merges.** Never merge a sibling issue branch into another ("pre-merge of #N").
+   Integration happens on the module integration branch only.
+3. **Integration branches are long-lived.** They receive per-issue branches via
+   `git merge --no-ff`; per-issue **PRs target the integration branch** (`gh pr create --base
+   LibraryManagement`), so each PR's diff shows only that issue's work.
+4. **Commit format.** Conventional-commit title ≤ 72 chars (`feat(library): ...`), blank line,
+   then bullet body. Never bury multi-paragraph bodies in the subject line. Out-of-scope fixes
+   never ride along in review-fix commits — open a separate micro-PR.
+5. **Landing integration → main.** Requires green `dotnet test` (unit suites; integration suites
+   require Docker — verify Docker is up first or skip with a note). Land with a **regular merge
+   commit** (`gh pr merge --merge`, squash is wrong here — it would collapse the whole era into
+   one mega-commit and strand the contained PRs "closed, unmerged"). GitHub then auto-marks every
+   contained per-issue PR as merged.
+6. **Standalone fixes straight off main** (no stack, single-purpose): branch from fresh
+   `origin/main`, PR base = `main`, land with **squash-merge**; keep the `(#issue)` ref in the
+   squash title; delete the branch after.
+7. **After any landing:** `git remote prune origin`, delete merged per-issue branches (local +
+   remote), fast-forward the integration branch to fresh `origin/main`
+   (`git merge --ff-only origin/main`) before starting the next issue.
+8. **Never force-push with plain `--force`.** Use `--force-with-lease` only, and only on branches
+   you own. Before risky rebases, pin the pre-rebase state (`git branch <name>-pre-rebase`).
+9. **Scratch/hand-off notes** do not stay untracked at the repo root — put them in
+   `docs/agents/handoffs/<topic>.md`.
+
 ## §1 The kickoff prompt (copy per agent, fill ⟨n⟩ and slug)
 
 ```text
