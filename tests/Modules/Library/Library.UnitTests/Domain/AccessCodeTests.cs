@@ -78,7 +78,11 @@ public class AccessCodeTests
         code.RedeemedByUserId.Should().BeNull();
         code.VoidedReason.Should().BeNull();
         code.ExpiresAt.Should().BeNull();
-        code.DomainEvents.Should().BeEmpty();
+        var mintedEvent = code.DomainEvents.Should().ContainSingle(e => e is AccessCodeMintedDomainEvent)
+            .Subject as AccessCodeMintedDomainEvent;
+        mintedEvent.Should().NotBeNull();
+        mintedEvent!.AggregateId.Should().Be(code.Id);
+        mintedEvent.Action.Should().Be("Minted");
     }
 
     [Fact]
@@ -159,9 +163,10 @@ public class AccessCodeTests
     {
         var code = CreateDistributedCode();
         var userId = Guid.NewGuid();
+        var auditRef = Guid.NewGuid();
         var before = DateTime.UtcNow;
 
-        var result = code.Redeem(userId);
+        var result = code.Redeem(userId, forensicLogId: auditRef);
 
         result.IsError.Should().BeFalse();
         code.Status.Should().Be(AccessCodeStatus.Redeemed);
@@ -174,6 +179,33 @@ public class AccessCodeTests
         @event!.AccessCodeId.Should().Be(code.Id);
         @event.UserId.Should().Be(userId);
         @event.Resource.Should().Be(TargetResource);
+        @event.TenantId.Should().Be(code.TenantId);
+        @event.AuditReference.Should().Be(auditRef);
+    }
+
+    [Fact]
+    public void Transition_Distributed_To_Sold_Should_Succeed_And_RaiseEvent()
+    {
+        var code = CreateDistributedCode();
+        var libraryId = Guid.NewGuid();
+        var sellerId = Guid.NewGuid();
+        var before = DateTime.UtcNow;
+
+        var result = code.Sell(libraryId, sellerId, 49.99m, "USD");
+
+        result.IsError.Should().BeFalse();
+        code.Status.Should().Be(AccessCodeStatus.Sold);
+        code.ExpectedPreviousStatus.Should().Be(AccessCodeStatus.Distributed);
+
+        var @event = code.DomainEvents.Should().ContainSingle(e => e is AccessCodeSoldDomainEvent)
+            .Subject as AccessCodeSoldDomainEvent;
+        @event!.AccessCodeId.Should().Be(code.Id);
+        @event.TenantId.Should().Be(TenantId);
+        @event.LibraryId.Should().Be(libraryId);
+        @event.SoldByUserId.Should().Be(sellerId);
+        @event.Price.Should().Be(49.99m);
+        @event.Currency.Should().Be("USD");
+        @event.SoldAt.Should().BeOnOrAfter(before);
     }
 
     [Fact]
@@ -331,9 +363,24 @@ public class AccessCodeTests
     #region 3. Illegal Transitions Matrix (Conflict + No Event)
 
     [Fact]
+    public void Minted_Cannot_Sell()
+    {
+        var code = CreateMintedCode();
+        code.PopDomainEvents();
+
+        var result = code.Sell(Guid.NewGuid(), Guid.NewGuid(), 10m, "USD");
+
+        result.IsError.Should().BeTrue();
+        result.FirstError.Code.Should().Be("AccessCode.InvalidStatus");
+        code.Status.Should().Be(AccessCodeStatus.Minted);
+        code.DomainEvents.Should().BeEmpty();
+    }
+
+    [Fact]
     public void Minted_Cannot_Redeem()
     {
         var code = CreateMintedCode();
+        code.PopDomainEvents();
 
         var result = code.Redeem(Guid.NewGuid());
 
@@ -353,6 +400,19 @@ public class AccessCodeTests
         result.IsError.Should().BeTrue();
         result.FirstError.Code.Should().Be("AccessCode.InvalidStatus");
         code.Status.Should().Be(AccessCodeStatus.Distributed);
+        code.DomainEvents.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void Sold_Cannot_Sell()
+    {
+        var code = CreateSoldCode();
+
+        var result = code.Sell(Guid.NewGuid(), Guid.NewGuid(), 10m, "USD");
+
+        result.IsError.Should().BeTrue();
+        result.FirstError.Code.Should().Be("AccessCode.InvalidStatus");
+        code.Status.Should().Be(AccessCodeStatus.Sold);
         code.DomainEvents.Should().BeEmpty();
     }
 
@@ -483,6 +543,7 @@ public class AccessCodeTests
     public void Void_Should_RejectEmptyOrWhitespaceReason_WithValidationError()
     {
         var code = CreateMintedCode();
+        code.PopDomainEvents();
 
         var result = code.Void("   ");
 

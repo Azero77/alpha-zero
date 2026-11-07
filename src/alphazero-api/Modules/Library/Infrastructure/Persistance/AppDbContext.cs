@@ -21,6 +21,9 @@ public class AppDbContext : DbContext, ITenantDbContext
     public DbSet<AccessCodeDataModel> AccessCodes => Set<AccessCodeDataModel>();
     public DbSet<Domain.Library> Libraries => Set<Domain.Library>();
     public DbSet<RedemptionAuditLog> RedemptionAuditLogs => Set<RedemptionAuditLog>();
+    public DbSet<SaleRecord> SaleRecords => Set<SaleRecord>();
+    public DbSet<LibraryAuditLog> LibraryAuditLogs => Set<LibraryAuditLog>();
+    public DbSet<Models.LibraryAnalytics> LibraryAnalytics => Set<Models.LibraryAnalytics>();
 
     public Guid? TenantId => _tenantProvider.GetTenant();
 

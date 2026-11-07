@@ -33,6 +33,7 @@ public class AppDbContext : DbContext,ITenantDbContext
     public DbSet<CourseOverview> CourseOverviews => Set<CourseOverview>();
     public DbSet<CurriculumItem> CurriculumItems => Set<CurriculumItem>();
     public DbSet<CurriculumResource> CurriculumResources => Set<CurriculumResource>();
+    public DbSet<FailedProvisioningRecord> FailedProvisioningRecords => Set<FailedProvisioningRecord>();
 
     public Guid? TenantId => _tenantProvider.GetTenant();
 

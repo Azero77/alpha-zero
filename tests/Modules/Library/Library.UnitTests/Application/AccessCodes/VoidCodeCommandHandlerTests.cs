@@ -14,7 +14,6 @@ namespace Library.UnitTests.Application.AccessCodes;
 public class VoidCodeCommandHandlerTests
 {
     private readonly IAccessCodeRepository _repository;
-    private readonly IRedemptionStrategyFactory _strategyFactory;
     private readonly IPasswordHasher _passwordHasher;
     private readonly ITenantProvider _tenantProvider;
     private readonly ILogger<VoidCodeCommandHandler> _logger;
@@ -25,14 +24,12 @@ public class VoidCodeCommandHandlerTests
     public VoidCodeCommandHandlerTests()
     {
         _repository = Substitute.For<IAccessCodeRepository>();
-        _strategyFactory = Substitute.For<IRedemptionStrategyFactory>();
         _passwordHasher = Substitute.For<IPasswordHasher>();
         _tenantProvider = Substitute.For<ITenantProvider>();
         _logger = Substitute.For<ILogger<VoidCodeCommandHandler>>();
 
         _handler = new VoidCodeCommandHandler(
             _repository,
-            _strategyFactory,
             _passwordHasher,
             _tenantProvider,
             _logger);

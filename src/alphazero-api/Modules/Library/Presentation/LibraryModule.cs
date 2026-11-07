@@ -9,7 +9,7 @@ using AlphaZero.Shared.Infrastructure;
 
 namespace AlphaZero.Modules.Library.Presentation;
 
-public class LibraryModule : AppModule
+public class LibraryModule : AppModule, AlphaZero.Modules.Library.Application.ILibraryModule
 {
     // The module must never run with degraded persistence wiring: without its
     // persistence configuration the explosion would otherwise be deferred to the
@@ -30,6 +30,7 @@ public class LibraryModule : AppModule
     {
         ThrowIfConfigurationMissing(nameof(RegisterGlobal));
         globalServices.AddLibraryGlobalInfrastructure(Configuration!);
+        globalServices.AddSingleton<AlphaZero.Modules.Library.Application.ILibraryModule>(this);
     }
 
     public override void RegisterPrivate(IServiceCollection moduleServices, ContainerBuilder builder)

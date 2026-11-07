@@ -70,6 +70,7 @@ public static class DependencyInjection
         // DomainEventHandler, staging rows on the SAME scoped context/UnitOfWork save as the
         // aggregate mutation — never via the module bus.
         moduleServices.AddScoped<IEnrollmentAuditRepository, EnrollmentAuditRepository>();
+        moduleServices.AddScoped<IFailedProvisioningRecordRepository, FailedProvisioningRecordRepository>();
         moduleServices.AddScoped<IAssessmentService, AssessmentService>();
         moduleServices.AddScoped<ICoursePlanPrincipalService, CoursePlanPrincipalService>();
         moduleServices.AddScoped<IUnitOfWork, UnitOfWork<AppDbContext>>();
@@ -79,6 +80,7 @@ public static class DependencyInjection
         moduleServices.AddScoped<AlphaZero.Modules.Courses.Domain.Services.CourseReadinessService>();
         moduleServices.AddScoped<AlphaZero.Modules.Courses.Domain.Services.CoursePublishingService>();
         moduleServices.AddScoped<AlphaZero.Modules.Courses.Domain.Services.EnrollmentStatusTransitionService>();
+        moduleServices.AddScoped<AlphaZero.Modules.Courses.Domain.Services.CoursePlanSelector>();
 
         // Asset Readiness Strategies
         moduleServices.AddScoped<ICourseAssetReadinessStrategy, VideoAssetReadinessStrategy>();

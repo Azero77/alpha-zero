@@ -24,9 +24,13 @@ public class GenerateBatchSummary : Summary<GenerateBatchEndpoint>
     public GenerateBatchSummary()
     {
         Summary = "Generates a batch of access codes for a library";
-        Description = "Generates physical or digital access codes linked to a course/resource for distribution.";
+        Description = "Generates physical or digital access codes linked to a course/resource for distribution. " +
+            "Optional Metadata is persisted on every minted code and flows through redemption into provisioning; " +
+            "for multi-plan courses, set \"plan\" or \"planId\" to a valid plan GUID to target a specific plan. " +
+            "Metadata plan references must be GUIDs (validated here); whether the plan exists on the course is " +
+            "validated at redemption — unresolvable references are parked there, not rejected at mint.";
         Response<GenerateBatchResponse>(201, "Access codes generated successfully");
-        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(400, "Validation failure (Quantity <= 0 or > 1000, FaceValue <= 0 or > 1000, StrategyId or TargetResourceArn empty)");
+        Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(400, "Validation failure (Quantity <= 0 or > 1000, FaceValue <= 0 or > 1000, StrategyId or TargetResourceArn empty, Metadata 'plan'/'planId' reference not a GUID)");
         Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(401, "Unauthorized (Tenant not found or unauthenticated)");
         Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(403, "Forbidden (Missing library:GenerateCodes or library not authorized for resource)");
         Response<Microsoft.AspNetCore.Mvc.ProblemDetails>(404, "Library not found (Library.NotFound)");

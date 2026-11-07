@@ -54,6 +54,54 @@ namespace AlphaZero.Modules.Library.Infrastructure.Migrations
                     b.ToTable("Libraries", "Library");
                 });
 
+            modelBuilder.Entity("AlphaZero.Modules.Library.Domain.LibraryAuditLog", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<Guid?>("ActorUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("AggregateId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("EventId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("LibraryId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("OccurredAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<JsonDocument>("Payload")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AggregateId");
+
+                    b.HasIndex("EventId")
+                        .IsUnique();
+
+                    b.HasIndex("TenantId");
+
+                    b.HasIndex("TenantId", "Action", "OccurredAt");
+
+                    b.HasIndex("TenantId", "LibraryId", "OccurredAt");
+
+                    b.ToTable("LibraryAuditLogs", "Library");
+                });
+
             modelBuilder.Entity("AlphaZero.Modules.Library.Domain.RedemptionAuditLog", b =>
                 {
                     b.Property<Guid>("Id")
@@ -97,9 +145,52 @@ namespace AlphaZero.Modules.Library.Infrastructure.Migrations
                     b.HasIndex("AccessCodeId")
                         .IsUnique();
 
+                    b.HasIndex("TenantId");
+
                     b.HasIndex("TenantId", "LibraryId", "RedeemedAt");
 
                     b.ToTable("RedemptionAuditLogs", "Library");
+                });
+
+            modelBuilder.Entity("AlphaZero.Modules.Library.Domain.SaleRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("AccessCodeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<Guid>("LibraryId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("Price")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<DateTime>("SoldAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("SoldByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AccessCodeId")
+                        .IsUnique();
+
+                    b.HasIndex("TenantId");
+
+                    b.HasIndex("TenantId", "LibraryId", "SoldAt");
+
+                    b.ToTable("SaleRecords", "Library");
                 });
 
             modelBuilder.Entity("AlphaZero.Modules.Library.Infrastructure.Models.AccessCodeDataModel", b =>
@@ -166,6 +257,60 @@ namespace AlphaZero.Modules.Library.Infrastructure.Migrations
                     b.HasIndex("TenantId");
 
                     b.ToTable("AccessCodes", "Library");
+                });
+
+            modelBuilder.Entity("AlphaZero.Modules.Library.Infrastructure.Models.LibraryAnalytics", b =>
+                {
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("LibraryId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("BatchId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("DistributedCount")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("ExpiredCount")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("MintedCount")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("OutstandingCount")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("RedeemedCount")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("RevenueByPeriod")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<string>("SalesByPeriod")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<int>("SoldCount")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal>("TotalRevenue")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<int>("VoidedAfterSaleCount")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("VoidedCount")
+                        .HasColumnType("integer");
+
+                    b.HasKey("TenantId", "LibraryId", "BatchId");
+
+                    b.HasIndex("TenantId");
+
+                    b.ToTable("LibraryAnalytics", "Library");
                 });
 
             modelBuilder.Entity("MassTransit.EntityFrameworkCoreIntegration.InboxState", b =>

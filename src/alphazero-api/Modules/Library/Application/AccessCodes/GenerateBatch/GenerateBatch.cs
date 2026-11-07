@@ -20,10 +20,17 @@ public record GenerateBatchCommand(
     string StrategyId,
     string TargetResourceArn,
     decimal FaceValue,
-    Dictionary<string, object> Metadata) : ICommand<GenerateBatchResult>;
+    Dictionary<string, object> Metadata) : ICommand<GenerateBatchResult>, ITransactionalCommand;
 
 public class GenerateBatchCommandValidator : AbstractValidator<GenerateBatchCommand>
 {
+    // Mirrors the Courses provisioning contract's exact key names (CoursePlanSelector
+    // reads these case-sensitively). Library only validates reference syntax here;
+    // whether the referenced plan exists is decided at redemption — validating
+    // existence at mint time would couple Library to the Courses module.
+    public const string PlanKey = "plan";
+    public const string LegacyPlanKey = "planId";
+
     public GenerateBatchCommandValidator()
     {
         RuleFor(x => x.LibraryId).NotEmpty();
@@ -31,6 +38,31 @@ public class GenerateBatchCommandValidator : AbstractValidator<GenerateBatchComm
         RuleFor(x => x.StrategyId).NotEmpty();
         RuleFor(x => x.TargetResourceArn).NotEmpty();
         RuleFor(x => x.FaceValue).GreaterThan(0).LessThanOrEqualTo(1000);
+
+        // Reject at mint: an invalid plan reference mints codes that fail
+        // deterministically at redemption (CoursePlan.NotFound) — surfacing
+        // the defect only after the batch has been distributed.
+        RuleFor(x => x.Metadata)
+            .Must(HaveGuidPlanReference)
+            .When(x => x.Metadata is not null && x.Metadata.Count is > 0)
+            .WithMessage(string.Format(
+                "Metadata keys '{0}' or '{1}' must be a valid plan GUID.",
+                PlanKey,
+                LegacyPlanKey))
+            .WithErrorCode("Library.Batch.InvalidMetadata");
+    }
+
+    internal static bool HaveGuidPlanReference(Dictionary<string, object>? metadata)
+    {
+        if (metadata is null)
+        {
+            return true;
+        }
+
+        var planReferences = metadata.Keys.Where(
+            key => key is PlanKey or LegacyPlanKey);
+
+        return planReferences.All(key => Guid.TryParse(metadata[key]?.ToString(), out _));
     }
 }
 
@@ -41,19 +73,22 @@ public sealed class GenerateBatchCommandHandler : IRequestHandler<GenerateBatchC
     private readonly ITenantProvider _tenantProvider;
     private readonly IPasswordHasher _passwordHasher;
     private readonly ILogger<GenerateBatchCommandHandler> _logger;
+    private readonly ICurrentTenantUserRepository? _currentUserRepository;
 
     public GenerateBatchCommandHandler(
         IAccessCodeRepository accessCodeRepository,
         ILibraryRepository libraryRepository,
         ITenantProvider tenantProvider,
         IPasswordHasher passwordHasher,
-        ILogger<GenerateBatchCommandHandler> logger)
+        ILogger<GenerateBatchCommandHandler> logger,
+        ICurrentTenantUserRepository? currentUserRepository = null)
     {
         _accessCodeRepository = accessCodeRepository;
         _libraryRepository = libraryRepository;
         _tenantProvider = tenantProvider;
         _passwordHasher = passwordHasher;
         _logger = logger;
+        _currentUserRepository = currentUserRepository;
     }
 
     public async Task<ErrorOr<GenerateBatchResult>> Handle(GenerateBatchCommand request, CancellationToken cancellationToken)
@@ -78,6 +113,7 @@ public sealed class GenerateBatchCommandHandler : IRequestHandler<GenerateBatchC
             });
         }
 
+        var currentUser = _currentUserRepository != null ? await _currentUserRepository.GetCurrentUser() : null;
         var batchId = Guid.NewGuid();
         var generatedCodes = new List<string>();
         var metadata = new Dictionary<string, object>(request.Metadata ?? new())
@@ -98,7 +134,8 @@ public sealed class GenerateBatchCommandHandler : IRequestHandler<GenerateBatchC
                 request.StrategyId,
                 resourceArn.Value,
                 jsonMetadata,
-                batchId);
+                batchId,
+                actorUserId: currentUser?.UserId);
 
             _accessCodeRepository.Add(accessCode);
             generatedCodes.Add(rawCode);

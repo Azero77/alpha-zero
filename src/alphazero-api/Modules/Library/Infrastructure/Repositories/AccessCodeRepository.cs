@@ -120,10 +120,12 @@ public class AccessCodeRepository : IAccessCodeRepository
     }
 
     /// <summary>
-    /// Pessimistic row-level lock on an entire batch (#54).
-    /// Acquires Postgres FOR UPDATE locks ordered deterministically by Id to prevent deadlocks.
+    /// Pessimistic row-level lock on an entire batch (#54). Acquires Postgres FOR UPDATE locks
+    /// ordered deterministically by Id to prevent deadlocks. The tenant predicate is part of the
+    /// locking statement: cross-tenant rows are never locked, read, or returned (I-TENANT) —
+    /// an other-tenant batch is indistinguishable from a missing one.
     /// </summary>
-    public async Task<List<AccessCode>> GetBatchForUpdateAsync(Guid batchId, CancellationToken cancellationToken = default)
+    public async Task<List<AccessCode>> GetBatchForUpdateAsync(Guid tenantId, Guid batchId, CancellationToken cancellationToken = default)
     {
         if (_context.Database.CurrentTransaction is null)
         {
@@ -135,7 +137,72 @@ public class AccessCodeRepository : IAccessCodeRepository
             .FromSqlInterpolated($"""
                 SELECT *
                 FROM "Library"."AccessCodes"
-                WHERE "BatchId" = {batchId}
+                WHERE "TenantId" = {tenantId}
+                  AND "BatchId" = {batchId}
+                ORDER BY "Id"
+                FOR UPDATE
+                """)
+            .IgnoreQueryFilters()
+            .ToListAsync(cancellationToken);
+
+        var result =  dataModels.Select(MapToDomain).ToList();
+        _unitOfWork.TrackEntity(result.ToArray());
+        return result;
+    }
+
+    public async Task<int> UpdateBatch(Guid tenantId, Guid batchId, AccessCodeStatus? prevStatus , AccessCodeStatus newStatus, CancellationToken cancellationToken = default)
+    {
+        var query = _context.AccessCodes
+            .Where(x => x.TenantId == tenantId && x.BatchId == batchId);
+        if(prevStatus is not null)
+            query = query.Where(ac => ac.Status == prevStatus);
+
+        return await query.ExecuteUpdateAsync(s => s.SetProperty(x => x.Status, newStatus), cancellationToken);
+    }
+
+    public async Task<int> VoidBatch(Guid tenantId, Guid batchId, string reason, CancellationToken cancellationToken = default)
+    {
+        var voidable = new[]
+        {
+            AccessCodeStatus.Minted,
+            AccessCodeStatus.Distributed,
+            AccessCodeStatus.Sold,
+            AccessCodeStatus.Redeemed
+        };
+
+        return await _context.AccessCodes
+            .Where(x => x.TenantId == tenantId && x.BatchId == batchId && voidable.Contains(x.Status))
+            .ExecuteUpdateAsync(s => s
+                .SetProperty(x => x.Status, AccessCodeStatus.Voided)
+                .SetProperty(x => x.VoidedReason, reason), cancellationToken);
+    }
+
+    public async Task<bool> BatchExistsAsync(Guid batchId, CancellationToken cancellationToken = default)
+    {
+        return await _context.AccessCodes
+            .AnyAsync(x => x.BatchId == batchId, cancellationToken);
+    }
+
+    /// <summary>
+    /// Pessimistic mass-load of due-for-expiry access codes (#59). Acquires Postgres FOR UPDATE
+    /// locks ordered deterministically by Id (documented lock order), across all tenants (the
+    /// sweep runs without a request tenant context). Requires an active ambient EF transaction.
+    /// </summary>
+    public async Task<List<AccessCode>> GetDueForExpiryAsync(DateTime now, CancellationToken cancellationToken = default)
+    {
+        if (_context.Database.CurrentTransaction is null)
+        {
+            throw new InvalidOperationException(
+                "GetDueForExpiryAsync requires an active transaction; FOR UPDATE lock is released at statement end otherwise.");
+        }
+
+        var dataModels = await _context.AccessCodes
+            .FromSqlInterpolated($"""
+                SELECT *
+                FROM "Library"."AccessCodes"
+                WHERE "ExpiresAt" IS NOT NULL
+                  AND "ExpiresAt" <= {now}
+                  AND "Status" IN ('Minted', 'Distributed', 'Sold')
                 ORDER BY "Id"
                 FOR UPDATE
                 """)
@@ -145,10 +212,10 @@ public class AccessCodeRepository : IAccessCodeRepository
         return dataModels.Select(MapToDomain).ToList();
     }
 
-    public async Task<bool> BatchExistsAsync(Guid batchId, CancellationToken cancellationToken = default)
+    public async Task<int> CountBatchAsync(Guid batchId, CancellationToken cancellationToken = default)
     {
         return await _context.AccessCodes
-            .AnyAsync(x => x.BatchId == batchId, cancellationToken);
+            .CountAsync(x => x.BatchId == batchId, cancellationToken);
     }
 
     public void IgnoreQueryFilter()
