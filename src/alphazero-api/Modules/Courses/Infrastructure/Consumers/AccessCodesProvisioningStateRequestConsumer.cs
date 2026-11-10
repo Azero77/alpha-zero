@@ -1,20 +1,18 @@
-using AlphaZero.Modules.Courses.Domain.Aggregates.Enrollments;
-using AlphaZero.Modules.Courses.Infrastructure.Persistance;
+using AlphaZero.Modules.Courses.Application.Enrollments.Queries.GetAccessCodesProvisioningState;
 using AlphaZero.Modules.Courses.IntegrationEvents;
 using MassTransit;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 namespace AlphaZero.Modules.Courses.Infrastructure.Consumers;
 
 /// <summary>
-/// MassTransit request-response consumer (issue #59): answers Library's provisioning
-/// reconciliation queue with the FailedProvisioningRecords whose status is Pending or Failed
-/// for the requested tenant/access codes. Tenant filtering is explicit (I-TENANT): the record
-/// set is tenant-owned and consumer runs without a request tenant context.
+/// Thin MassTransit adapter over <see cref="GetAccessCodesProvisioningStateQuery"/> (issue #59).
+/// Guards the contract invariant (non-empty AccessCodeIds) and delegates the record lookup to
+/// the Courses application layer, which owns the business rules; the query result is translated
+/// directly into the wire response.
 /// </summary>
 public class AccessCodesProvisioningStateRequestConsumer(
-    AppDbContext dbContext,
+    ICoursesModule coursesModule,
     ILogger<AccessCodesProvisioningStateRequestConsumer> logger)
     : IConsumer<GetAccessCodesProvisioningStateRequest>
 {
@@ -31,32 +29,20 @@ public class AccessCodesProvisioningStateRequestConsumer(
             return;
         }
 
-        var ids = msg.AccessCodeIds.ToList();
-        var query = dbContext.FailedProvisioningRecords
-            .AsNoTracking()
-            .IgnoreQueryFilters()
-            .Where(r => r.TenantId == msg.TenantId
-                        && r.Status != ProvisioningStatus.Provisioned
-                        && ids.Contains(r.AccessCodeId));
+        var query = new GetAccessCodesProvisioningStateQuery(msg.TenantId, msg.AccessCodeIds);
+        var result = await coursesModule.Send(query, context.CancellationToken);
 
-        var records = await query
-            .OrderBy(r => r.CreatedAt)
-            .ToListAsync(context.CancellationToken);
+        if (result.IsError)
+        {
+            logger.LogError(
+                "Provisioning-state query failed for tenant {TenantId}. Errors: {Errors}",
+                msg.TenantId,
+                string.Join(", ", result.Errors.Select(e => e.Description)));
 
-        var items = records.Select(r => new AccessCodeProvisioningStateItem(
-            r.AccessCodeId,
-            r.UserId,
-            r.TargetResourceArn,
-            r.Status.ToString(),
-            r.FailureReason,
-            r.RetryCount,
-            r.CreatedAt,
-            r.LastAttemptedAt)).ToList();
+            await context.RespondAsync(new AccessCodesProvisioningStateResponse([]));
+            return;
+        }
 
-        logger.LogDebug(
-            "Answered provisioning-state request for tenant {TenantId}: {Count} non-provisioned of {Requested} requested access codes.",
-            msg.TenantId, items.Count, msg.AccessCodeIds.Count);
-
-        await context.RespondAsync(new AccessCodesProvisioningStateResponse(items));
+        await context.RespondAsync(new AccessCodesProvisioningStateResponse(result.Value));
     }
 }
