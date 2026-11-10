@@ -30,6 +30,18 @@ public interface IFailedProvisioningRecordRepository
         string failureReason,
         CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Tenant-scoped reconciliation read (issue #59): all non-Provisioned records
+    /// (Pending or Failed) for the requested codes, oldest first. Bypasses global query
+    /// filters because the caller (Library's reconciliation request) runs without a
+    /// request tenant context — the tenant is matched explicitly. Read-only,
+    /// AsNoTracking; codes without a record are simply absent from the result.
+    /// </summary>
+    Task<IReadOnlyList<FailedProvisioningRecord>> GetUnprovisionedByTenantAndAccessCodesAsync(
+        Guid tenantId,
+        IReadOnlyList<Guid> accessCodeIds,
+        CancellationToken cancellationToken = default);
+
     /// <summary>Marks the existing record (if any) Provisioned. No-op when absent.</summary>
     Task MarkProvisionedIfExistsAsync(
         Guid tenantId,

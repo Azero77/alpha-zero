@@ -107,6 +107,23 @@ public class FailedProvisioningRecordRepository : IFailedProvisioningRecordRepos
             .ToListAsync(cancellationToken);
     }
 
+    public async Task<IReadOnlyList<FailedProvisioningRecord>> GetUnprovisionedByTenantAndAccessCodesAsync(
+        Guid tenantId,
+        IReadOnlyList<Guid> accessCodeIds,
+        CancellationToken cancellationToken = default)
+    {
+        var ids = accessCodeIds.ToList();
+
+        return await _context.FailedProvisioningRecords
+            .AsNoTracking()
+            .IgnoreQueryFilters()
+            .Where(r => r.TenantId == tenantId
+                        && r.Status != ProvisioningStatus.Provisioned
+                        && ids.Contains(r.AccessCodeId))
+            .OrderBy(r => r.CreatedAt)
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task SaveChangesAsync(CancellationToken cancellationToken = default)
     {
         await _context.SaveChangesAsync(cancellationToken);
