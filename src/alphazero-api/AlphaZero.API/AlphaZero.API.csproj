@@ -46,6 +46,7 @@
     <ProjectReference Include="..\Modules\Courses\Presentation\Presentation.csproj" />
     <ProjectReference Include="..\Modules\Library\Presentation\Presentation.csproj" />
     <ProjectReference Include="..\Modules\Documents\Presentation\Presentation.csproj" />
+    <ProjectReference Include="..\Modules\Payments\Presentation\Presentation.csproj" />
   </ItemGroup>
 
 </Project>
