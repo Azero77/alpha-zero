@@ -1,6 +1,6 @@
 # Payments Module — Database Design
 
-**Status:** Ratified 2026-11-14 (Q1–Q27 settled). External adversarial review applied 2026-11-14 — verdict **SHIP WITH FIXES**: 13 findings (2×P0, 4×P1, 4×P2, 3×P3), all incorporated (§13). Second adversarial review, same day — verdict **CONDITIONAL PASS**: 14 findings (4×P0, 4×P1, 4×P2, 2×P3), all incorporated (§14). Third review — senior DBA adversarial review, 2026-11-15 — verdict **MAJOR REVISIONS REQUIRED**: 34 findings (5×Critical, 10×High, 9×Medium, 10×Low/hygiene), all incorporated (§15); decisions Q28–Q38 added to the ledger.
+**Status:** Ratified 2026-11-14 (Q1–Q27 settled). External adversarial review applied 2026-11-14 — verdict **SHIP WITH FIXES**: 13 findings (2×P0, 4×P1, 4×P2, 3×P3), all incorporated (§13). Second adversarial review, same day — verdict **CONDITIONAL PASS**: 14 findings (4×P0, 4×P1, 4×P2, 2×P3), all incorporated (§14). Third review — senior DBA adversarial review, 2026-11-15 — verdict **MAJOR REVISIONS REQUIRED**: 34 findings (5×Critical, 10×High, 9×Medium, 10×Low/hygiene), all incorporated (§15); decisions Q28–Q38 added to the ledger. Manual partial-refunds amendment, 2026-11-17 — decisions Q39–Q41 added (§17).
 **Source of truth** for the Payments module's data model. Companion: `requirement.md` (currently at the plan-mode path; move to `plans/payments/requirement.md` when landing), `GLOSSARY.md` (repo root), queued ADRs 0002–0004 in requirement.md Appendix A. **D1–D17**, cited throughout, are the ratified design decisions defined in `requirement.md`'s decision ledger (third review, Low).
 **This is a design document — zero implementation.** No migrations, no code.
 
@@ -19,7 +19,7 @@
 
 ---
 
-## 1. Decision ledger (Q1–Q38, settled)
+## 1. Decision ledger (Q1–Q41, settled)
 
 | Q | Decision |
 |---|---|
@@ -36,7 +36,7 @@
 | Q14 | Reporting currency ≡ settlement currency (config constant); conversion slots into projection worker later |
 | Q15 | Balances derived-on-read (indexed SUMs) + analytics projection for dashboards; no materialized balance column |
 | Q16 | WebhookEvents: unique `PspEventId`, jsonb payload, outcome column; keep forever; **no partitioning** |
-| Q17 | Refunds two-phase (`Requested → Succeeded | Failed`), `RefundId` = PSP idempotency root, Ledger reversal on `refund.succeeded` — **amended by Q31** (refund family events, async failures, partial/multiple/external refunds) |
+| Q17 | Refunds two-phase (`Pending → Succeeded | Failed`), `RefundId` = PSP idempotency root, Ledger reversal on `refund.succeeded` — **amended by Q31** (refund family events, async failures, partial/multiple/external refunds) |
 | Q18 | Disputes: separate table, coarse statuses `Open → Won | Lost`, Purchase stays `Paid` while disputed |
 | Q19 | Settlements: record-only, **no status column**; partial settlements = multiple rows |
 | Q20 | **No idempotency-key table** — deterministic keys (`CheckoutSessionId`, `RefundId`) |
@@ -57,6 +57,9 @@
 | Q36 | **Dispute cash movement booked at the PSP's movement time** (third review Critical 3): `charge.dispute.funds_withdrawn` books the withdrawal (disputed amount + fee) immediately — even on an already-refunded Purchase; `charge.dispute.funds_reinstated` books the return on Won; `charge.dispute.closed` only flips status. No money event depends on a 0-row tripwire |
 | Q37 | **`Currencies` reference table** (third review Medium): code → ISO 4217 exponent; FK target for every currency column; the balance trigger and price triggers enforce minor-unit scale in the DB (closes the "trigger can't check scale without a map" gap of second review P0-C) |
 | Q38 | **Reconciliation is a first-class citizen** (third review Medium): `ReconciliationRuns` + `ReconciliationFindings` tables record every run (ledger-vs-PSP balance transactions, ledger internal consistency, mirror drift, unmatched captures, stale sessions); ops dashboards read outputs, not ad-hoc queries |
+| Q39 | **Refund requests are a first-class workflow** (manual partial refunds amendment): a student opens a `RefundRequest` against a Purchase (one open request per Purchase, inside `RefundWindowDays` when configured — app policy, admins may override); a platform admin decides at review time, setting the actual `ApprovedAmount`; approval creates the `Refunds` row (`Source = 'Platform'`, `Pending`) **in the same transaction** and hands off to the §5 row 4 path. Requests and decisions write audit rows only — never ledger entries |
+| Q40 | **Revocation is a per-refund decision, not only an amount rule**: `Refunds.ReasonCode` (`RequestedByCustomer \| Duplicate \| Fraudulent \| Other`) + `Refunds.RevokeAccess` (set-once at insert, default FALSE). Access revokes when the Purchase reaches `Refunded` (any cause), on **any** lost dispute (unchanged), or when a `Succeeded` refund carries `RevokeAccess = TRUE`; an unflagged partial refund never revokes. `PurchaseRefundedIntegrationEvent` keeps its exactly-one-cause invariant |
+| Q41 | **One Remaining Refundable formula everywhere**: `SettlementAmount − Σ(Pending + Succeeded refunds) − Σ(disputes withdrawn (Open) or Lost)` — drives the refund sum cap (§3.11), the request-approval check, and the settlement hold (§3.13: an open request withholds the remaining Academy-payable leg). A dispute resolved `Won` drops out of the sum because `funds_reinstated` restores the money (Q36) |
 
 ---
 
@@ -71,6 +74,8 @@ erDiagram
     Prices ||--o{ Purchases : "snapshotted by"
     CheckoutSessions ||--o| Purchases : "completes into"
     Purchases ||--o{ Refunds : "refunded by"
+    Purchases ||--o{ RefundRequests : "requested against"
+    RefundRequests ||--o| Refunds : "approved into"
     Purchases ||--o{ Disputes : "disputed by"
     Purchases ||--o{ LedgerEntries : "referenced by"
     Refunds ||--o{ LedgerEntries : "reversal of"
@@ -113,6 +118,7 @@ erDiagram
         uuid TenantId UK
         boolean OnlineSellingEnabled
         numeric CommissionShare "0..1 fraction"
+        smallint RefundWindowDays "nullable, 0..365, self-service window"
         uuid UpdatedByUserId
         timestamptz UpdatedAt
     }
@@ -220,7 +226,9 @@ erDiagram
         varchar Source "Platform or Psp (dashboard-initiated)"
         uuid RequestedByUserId "null for Psp-source refunds"
         varchar Reason
-        numeric Amount "> 0, ≤ remaining unrefunded gross"
+        varchar ReasonCode "RequestedByCustomer-Duplicate-Fraudulent-Other"
+        boolean RevokeAccess "set-once at insert"
+        numeric Amount "> 0, ≤ Remaining Refundable (Q41)"
         varchar Currency
         varchar PspRefundId UK
         varchar PspFeeRefunded
@@ -228,6 +236,21 @@ erDiagram
         varchar Status "Pending-Succeeded-Failed"
         timestamptz CreatedAt
         timestamptz CompletedAt
+    }
+    RefundRequests {
+        uuid Id PK
+        uuid PurchaseId FK
+        uuid TenantId
+        uuid RequestedByUserId
+        varchar Reason
+        varchar Status "Requested-Approved-Rejected-Cancelled"
+        numeric ApprovedAmount "admin decides at approval time"
+        varchar Currency
+        uuid DecidedByUserId
+        timestamptz DecidedAt
+        varchar DecisionNotes
+        uuid RefundId FK "set iff Approved"
+        timestamptz CreatedAt
     }
     Disputes {
         uuid Id PK
@@ -349,6 +372,7 @@ Standalone (no relationships drawn): `AcademyPaymentSettings` (one row per tenan
 | CommissionShare | numeric(5,4) | no | fraction: 0.25 = 25%; `CHECK (CommissionShare BETWEEN 0 AND 1)`; **no default** — the creating platform admin states the share explicitly at opt-in (third review Medium: a silent code default is a pricing decision nobody made) |
 | ReserveRate | numeric(5,4) | no | default `0.1000` (10%); fraction of net Academy share held during the rolling dispute window; `CHECK (ReserveRate BETWEEN 0 AND 1)` |
 | ShortHoldDays | smallint | no | default `14`; 100% hold window for initial refund exposure; `CHECK (ShortHoldDays BETWEEN 0 AND 120)` |
+| RefundWindowDays | smallint | yes | NULL (default) = self-service refund **requests** disabled for this Academy (fail-closed, same posture as "absent row = selling disabled"); when set, students may open a `RefundRequest` within `PaidAt + RefundWindowDays`; `CHECK (RefundWindowDays BETWEEN 0 AND 365)`; **app policy only** — the DB never enforces the window and admins may approve outside it (Q39) |
 | UpdatedByUserId | uuid | yes | platform admin (`payments:ManageAcademySettings`) |
 | UpdatedAt | timestamptz | yes | |
 | CreatedAt | timestamptz | no | |
@@ -556,6 +580,8 @@ FOR EACH ROW EXECUTE FUNCTION "Payments".check_line_same_tx();
 | Source | varchar(16) | no | `Platform` (initiated here, `payments:IssueRefund`) \| `Psp` (dashboard/PSP-initiated, ingested from `refund.created` webhooks); `CHECK (Source IN ('Platform','Psp'))` |
 | RequestedByUserId | uuid | yes | platform admin for `Source = 'Platform'`; **NULL for PSP-initiated refunds** (nobody here asked for it) |
 | Reason | varchar(512) | yes | |
+| ReasonCode | varchar(32) | no | default `'Other'`; `CHECK (ReasonCode IN ('RequestedByCustomer','Duplicate','Fraudulent','Other'))` (Q40) |
+| RevokeAccess | boolean | no | default FALSE — **set-once at insert**, immutable thereafter; a `Succeeded` refund with TRUE revokes access even though the Purchase stays `PartiallyRefunded` (Q40) |
 | Amount | numeric(18,4) | no | `CHECK (Amount > 0)`; any amount up to the remaining unrefunded gross — partial refunds are first-class (Q31) |
 | Currency | varchar(3) | no | = purchase settlement currency; FK → `Currencies(Code)` |
 | PspRefundId | varchar(255) | yes | **UNIQUE**; NULL while a `Platform` row is still `Pending` pre-call; required once `Succeeded` |
@@ -566,7 +592,12 @@ FOR EACH ROW EXECUTE FUNCTION "Payments".check_line_same_tx();
 | CompletedAt | timestamptz | yes | terminal transition time |
 
 **Constraints:** `CHECK (Status <> 'Succeeded' OR (CompletedAt IS NOT NULL AND PspRefundId IS NOT NULL))`; `CHECK (Status = 'Pending' OR CompletedAt IS NOT NULL)`; `CHECK (Source <> 'Psp' OR PspRefundId IS NOT NULL)` (a PSP row arrives carrying its refund id).
-**Sum cap instead of full-only (Q31, third review Critical 2):** Σ (`Pending` + `Succeeded`) refunds ≤ `Purchase.SettlementAmount`, enforced inside the refund-creation transaction under the Purchase row's `FOR NO KEY UPDATE` lock — the lock serializes concurrent refund creations, so the sum check is race-free. The old partial unique (one live refund per purchase) is gone; the DB backstop is the `PspRefundId` unique plus the ledger's `RefundReversal` uniqueness (§3.9).
+**Minor-unit scale (DB-enforced, amendment Q41):** a `BEFORE INSERT` trigger on `Refunds` verifies `Amount × 10^exponent` is an integer using the `Currencies` row — the same mechanism as the `Prices` trigger (§3.2); a sub-minor-unit refund amount can never reach the ledger pipeline. `RefundRequests.ApprovedAmount` carries the identical trigger (§3.19).
+**Remaining Refundable & sum cap (Q31, Q41; third review Critical 2):** every refund-creation and request-approval transaction computes, under the Purchase row's `FOR NO KEY UPDATE` lock:
+
+> **Remaining Refundable** = `Purchase.SettlementAmount` − Σ(`Pending` + `Succeeded` refund amounts) − Σ(dispute amounts currently withdrawn — disputes `Open` (funds already taken by `funds_withdrawn`) or `Lost`)
+
+A new refund (or an approved request's refund) must satisfy `Amount ≤ Remaining`. The lock serializes concurrent creations, so the sum is race-free. A dispute resolved `Won` drops out of the dispute term because `funds_reinstated` restores the money (Q36), and refunds are blocked outright while any dispute is `Open` (§4 row 31), so the conservatism never blocks a legitimate refund. The DB backstops are the `PspRefundId` unique plus the ledger's `RefundReversal` partial unique (§3.9).
 **Event family (third review Critical 2):** refunds are now processed from the modern Stripe refund events — `refund.created` (system rows: confirm `PspRefundId`, transition `Pending → Succeeded` when the payload's status is `succeeded`; **PSP-initiated rows: created here**, `Source = 'Psp'`, `RequestedByUserId NULL`, amount from the payload), `refund.updated` (status transitions), `refund.failed` (async failure → `Failed` + alert, no ledger write). The legacy `charge.refunded` / `charge.refund.updated` names are accepted by the adapter for older API versions (same semantics). The old `refund.succeeded` event name did not exist in Stripe — corrected.
 **Status semantics:** `Failed` means the PSP definitively will not refund (explicit rejection or async failure event). An ambiguous outcome — timeout, 5xx, dropped connection — leaves the row `Pending`: the PSP may still be processing, and re-issuing under a new idempotency key would double-refund. Ops resolves ambiguous rows from PSP reports + reconciliation; the sum cap blocks over-refunding meanwhile.
 **Guard:** refund creation checks `NOT EXISTS (Disputes WHERE PurchaseId = @id AND Status = 'Open')` before the PSP call (Stripe rejects such refunds with `charge_disputed`; failing early avoids a stuck `Pending` row — §5 row 4).
@@ -574,7 +605,7 @@ FOR EACH ROW EXECUTE FUNCTION "Payments".check_line_same_tx();
 **Reversal booking — proportional per refund (§5 row 5, second review P0-B + third review Q31):** with partial refunds the capture allocations reverse *pro rata*: `CommissionLeg = ROUND(refund.Amount × Purchase.CommissionShare, minor-unit)` (the stored applied share, not a re-derived one), `AcademyLeg = refund.Amount − CommissionLeg`. Entry: Dr Academy Payable `AcademyLeg` + Dr Platform Revenue `CommissionLeg` / Cr PSP Clearing (`refund.Amount − PspFeeRefunded`) / Cr PSP Fees `PspFeeRefunded` (omitted when 0). PSP-retained capture fees are **not** touched — they were expensed at capture and the PSP keeps them on refund.
 **Revocation policy (Q31):** only **full** refunds (Purchase → `Refunded`) fire the revocation mirror; partial refunds leave course access intact (the student still paid most of the price). Lost disputes always revoke (§3.12).
 **Tenancy:** marker + global filter. Transitions guarded EF-side with the repo's tripwire pattern (conditional `UPDATE … WHERE Status = expected`, AccessCode precedent).
-**Transition-only trigger (third review High 6):** `deny_money_amend` — `Amount`, `Currency`, `PurchaseId`, `TenantId`, `Source` immutable; writable: status ladder (`Pending → Succeeded | Failed`) with `CompletedAt`, and PSP-id/fee columns NULL→value (set-once). DELETE/TRUNCATE denied.
+**Transition-only trigger (third review High 6):** `deny_money_amend` — `Amount`, `Currency`, `PurchaseId`, `TenantId`, `Source`, `ReasonCode`, `RevokeAccess` immutable; writable: status ladder (`Pending → Succeeded | Failed`) with `CompletedAt`, and PSP-id/fee columns NULL→value (set-once). DELETE/TRUNCATE denied.
 
 ### 3.12 Disputes
 | Column | Type | Null | Notes |
@@ -621,8 +652,9 @@ FOR EACH ROW EXECUTE FUNCTION "Payments".check_line_same_tx();
 > − Σ live refunds (`Status = 'Pending'`, which will debit when they succeed)
 > − Σ 100% of Academy-payable legs of captures inside the short refund hold window (`PaidAt ≥ now() − ShortHoldDays`, default 14 days)
 > − Σ (`ReserveRate` × Academy-payable legs of captures inside the rolling dispute window: `now() − DisputeHoldDays ≤ PaidAt < now() − ShortHoldDays`, where `DisputeHoldDays` defaults to 120 days and `ReserveRate` defaults to 10%).
+> − Σ (the **remaining Academy-payable leg** of every Purchase with an open `RefundRequest`: `Remaining Refundable − ROUND(Remaining × CommissionShare, minor-unit)` — the money that would leave the payable if the pending request is approved in full; Q41)
 >
-> **Why two-tier instead of a flat 120-day cliff:** holding 100% of captures for 120 days freezes an Academy's payouts at $0 for their first four months on the platform. The two-tier formula holds 100% during the high-velocity 14-day refund window, releases 90% (`1 − ReserveRate`) for settlement after day 14, and holds a 10% rolling reserve through day 120 to absorb late chargebacks (with high-risk Academies configurable up to `ReserveRate = 1.0000` via `AcademyPaymentSettings`). Open disputes still need no separate reserve: with Q36 booking the withdrawal at `funds_withdrawn`, the disputed amount + fee have already debited the payable. RefundReversal and DisputeLoss never check the balance and may legitimately drive it negative — a clawback owed by the Academy to the Platform, netted against future sales. Settled amounts are minor-unit granular (no $14.9925 wires — P0-C rule). Written in one transaction with its `Settlement` LedgerEntry (`Dr Academy Payable / Cr Bank Account`), `LedgerEntries.SettlementId` linking them.
+> **Why two-tier instead of a flat 120-day cliff:** holding 100% of captures for 120 days freezes an Academy's payouts at $0 for their first four months on the platform. The two-tier formula holds 100% during the high-velocity 14-day refund window, releases 90% (`1 − ReserveRate`) for settlement after day 14, and holds a 10% rolling reserve through day 120 to absorb late chargebacks (with high-risk Academies configurable up to `ReserveRate = 1.0000` via `AcademyPaymentSettings`). Open disputes still need no separate reserve: with Q36 booking the withdrawal at `funds_withdrawn`, the disputed amount + fee have already debited the payable. RefundReversal and DisputeLoss never check the balance and may legitimately drive it negative — a clawback owed by the Academy to the Platform, netted against future sales. Settled amounts are minor-unit granular (no $14.9925 wires — P0-C rule). Written in one transaction with its `Settlement` LedgerEntry (`Dr Academy Payable / Cr Bank Account`), `LedgerEntries.SettlementId` linking them. The open-request hold is released automatically when the request leaves `Requested`: an approval converts the exposure into the existing live-refund term (a `Pending` refund already withholds the full refund amount, which is conservative), and a rejection/cancellation removes it. Nothing new to unwind; no ledger write changes.
 **Offboarding (Q32):** when an Academy's selling is disabled (settings row off or tenant suspended), the documented path is: settle out the remaining positive Settleable Balance (if any) → the account ends at zero (or negative, from clawbacks) → the payable account is deactivated (`IsActive = false`, additive column update) only at exactly zero; an offboarded Academy with a non-zero payable is a `ReconciliationFindings` entry requiring an explicit manual resolution (final clawback invoice or write-off adjustment — never silently abandoned). An Academy that stops selling mid-window is held by the same Settleable rule; nothing auto-settles. **Indexes:** `(TenantId, RecordedAt) INCLUDE (Amount)` (settled-to-date is an index-only SUM, §7 metric 5 — second review P2-A). **Tenancy:** marker + global filter.
 
 ### 3.14 ProductDailySales — analytics projection
@@ -647,7 +679,7 @@ FOR EACH ROW EXECUTE FUNCTION "Payments".check_line_same_tx();
 | Id | uuid | no | PK |
 | EventId | uuid | no | **UNIQUE** (idempotent projection writes) |
 | TenantId | uuid | yes | nullable — platform-level actions exist |
-| Action | varchar(64) | no | e.g. `Purchase.Paid`, `Price.Created`, `Price.Archived`, `Settings.Updated`, `Settlement.Recorded`, `Purchase.Refunded` |
+| Action | varchar(64) | no | e.g. `Purchase.Paid`, `Price.Created`, `Price.Archived`, `Settings.Updated`, `Settlement.Recorded`, `Purchase.Refunded`, `Refund.Requested`, `Refund.Approved`, `Refund.Rejected`, `Refund.Issued` |
 | AggregateId | uuid | yes | PurchaseId / ProductId / SettlementId / Settings row id |
 | ActorUserId | uuid | yes | |
 | Payload | jsonb | yes | old/new values for config changes; event context for transitions |
@@ -702,6 +734,47 @@ FOR EACH ROW EXECUTE FUNCTION "Payments".check_line_same_tx();
 
 **Scope (third review Medium + Critical 1/2):** (a) **ledger internal** — every entry balanced, every business-event unique holds, payable balances match `Settlements` sums; (b) **ledger vs PSP** — capture/refund/dispute/payout `balance_transaction` amounts and fees compared against PSP report exports (the DBA's "ledger-vs-PSP balance transaction comparison"); (c) **mirror** — `Products` vs Courses' current state (drift, missing backfill); (d) **stale sessions** — `Pending` rows older than the PSP expiry window; (e) **unmatched captures** — `UnmatchedCapture` entries awaiting resolution; (f) **negative payables** — clawbacks awaiting netting or offboarding resolution (§3.13). Runs are scheduled (worker) and manually triggerable; every run persists a row, so "prove reconciliation ran" is a query, not a memory. Append-once (runs) / mutable-resolution (findings) — no deny trigger on `ReconciliationFindings` (resolution updates are the point), deny on `ReconciliationRuns`.
 
+### 3.19 RefundRequests — student-initiated, admin-decided (Q39, manual partial refunds amendment)
+*The request is not the money movement. No PSP columns, no ledger linkage — the financial act is the `Refunds` row created at approval (§5 row 19).*
+
+| Column | Type | Null | Notes |
+|---|---|---|---|
+| Id | uuid | no | PK |
+| PurchaseId | uuid | no | FK → Purchases `ON DELETE RESTRICT` (money rows never delete; RESTRICT is belt-and-suspenders) |
+| TenantId | uuid | no | = Purchase.TenantId, stamped at insert |
+| RequestedByUserId | uuid | no | the student (no FK — Identity owns users) |
+| Reason | varchar(512) | yes | student's free-text statement; carries no amount commitment |
+| Status | varchar(32) | no | `Requested` \| `Approved` \| `Rejected` \| `Cancelled`; `CHECK (Status IN ('Requested','Approved','Rejected','Cancelled'))` |
+| ApprovedAmount | numeric(18,4) | yes | the admin's decision — the actual refund amount, fixed at approval time (may be any value ≤ Remaining Refundable); **NOT NULL iff `Approved`** |
+| Currency | varchar(3) | no | = purchase settlement currency; FK → `Currencies(Code)` |
+| DecidedByUserId | uuid | yes | platform admin; NOT NULL for `Approved`/`Rejected` |
+| DecidedAt | timestamptz | yes | NOT NULL for `Approved`/`Rejected` |
+| DecisionNotes | varchar(1024) | yes | reviewer's note; optional for any terminal state |
+| RefundId | uuid | yes | **UNIQUE** FK → Refunds; set exactly when `Approved` (the same-transaction refund row) |
+| CreatedAt | timestamptz | no | |
+
+**Constraints (status/field coherence, exact sets):**
+- `CHECK (Status <> 'Approved' OR (ApprovedAmount IS NOT NULL AND DecidedByUserId IS NOT NULL AND DecidedAt IS NOT NULL AND RefundId IS NOT NULL))`
+- `CHECK (Status <> 'Requested' OR (ApprovedAmount IS NULL AND DecidedByUserId IS NULL AND DecidedAt IS NULL AND RefundId IS NULL))`
+- `CHECK (Status <> 'Rejected' OR (DecidedByUserId IS NOT NULL AND DecidedAt IS NOT NULL AND ApprovedAmount IS NULL AND RefundId IS NULL))`
+- `CHECK (Status <> 'Cancelled' OR (ApprovedAmount IS NULL AND RefundId IS NULL))` — cancellation is the requester's act (`RequestedByUserId`), no separate actor column
+- `CHECK (ApprovedAmount IS NULL OR ApprovedAmount > 0)`
+- `CHECK ((Status = 'Approved') = (RefundId IS NOT NULL))` — stated as the headline invariant
+
+**One open request per Purchase (DB-enforced):** partial `UNIQUE (PurchaseId) WHERE Status = 'Requested'` — a second request is impossible while one awaits decision; after a decision, a new request may be opened (e.g. re-request after rejection).
+
+**Transition-only trigger `deny_request_amend` (third-review High 6 pattern):** UPDATE allowed only from `OLD.Status = 'Requested'` to `Approved | Rejected | Cancelled`, writing exactly the coherent fields the CHECKs shape (`Status`, `ApprovedAmount`, `DecidedByUserId`, `DecidedAt`, `DecisionNotes`, `RefundId`). `PurchaseId`, `TenantId`, `RequestedByUserId`, `Reason`, `Currency`, `CreatedAt` immutable. Terminal states reject any further UPDATE — an approved-then-`Failed` refund is re-issued via §5 row 4 (a fresh `Refunds` row), never by reopening the request. DELETE/TRUNCATE denied.
+
+**Approval is one transaction (Q39):** approve = `Refunds` insert (`Source = 'Platform'`, `Pending`, `ReasonCode`, `RevokeAccess` per the admin's decision, `RequestedByUserId` = deciding admin) + request → `Approved` with `ApprovedAmount`/`DecidedByUserId`/`DecidedAt`/`RefundId`, under the Purchase row's `FOR NO KEY UPDATE` lock with the `Amount ≤ Remaining Refundable` cap (Q41) and the open-dispute guard (§4 row 31). **No ledger entries at request or decision time** — money moves only when the refund succeeds (§5 row 5). The request's `Currency` must equal the Purchase's settlement currency (app-checked; the FK only proves ISO validity).
+
+**Minor-unit scale (DB-enforced):** a `BEFORE INSERT` trigger verifies `ApprovedAmount × 10^exponent` is an integer via `Currencies` — identical to the `Refunds.Amount` trigger.
+
+**Indexes:** `(TenantId, Status, CreatedAt)` (the admin's decision queue reads open requests first); FK indexes on `PurchaseId`, `RefundId` (the unique index on `RefundId` doubles as its FK index).
+
+**Tenancy:** marker + global filter (student/academy-facing aggregate, `Purchases` bucket).
+
+**Retention:** forever — the request trail is part of the financial record (append-only discipline; no soft delete).
+
 ---
 
 ## 4. Invariants & enforcement matrix
@@ -719,7 +792,7 @@ FOR EACH ROW EXECUTE FUNCTION "Payments".check_line_same_tx();
 | 9 | Active price ⇔ ArchivedAt IS NULL | **DB** | CHECK |
 | 10 | Webhook exactly-once; the audit row survives processing failure; unsigned deliveries never reach the DB | **DB** + EF | verify-before-write + unique `PspEventId` + two-phase ingest (autonomous upsert w/ `DeliveryCount`; §3.7, §5 preamble — second review P0-D + third review High 10); state-machine guards make replays no-ops |
 | 11 | Purchase status ladder (`Paid → PartiallyRefunded → Refunded`) transitions happen exactly once, guarded | **EF** + DB | tripwire conditional UPDATE (`WHERE Status = expected`) under the purchase row lock; CHECK on RefundedAt coherence |
-| 12 | Refund sum cap: Σ (`Pending` + `Succeeded`) refunds + lost-dispute amounts ≤ Purchase.SettlementAmount — multiple partial refunds are legal (Q31) | **EF** + DB | app check under the Purchase row's `FOR NO KEY UPDATE` lock (race-free sum, §3.11; third review Critical 2); `PspRefundId` unique + ledger `RefundReversal` partial unique as DB backstops |
+| 12 | Refund sum cap via **Remaining Refundable**: `SettlementAmount − Σ(Pending + Succeeded refunds) − Σ(disputes Open (withdrawn) or Lost)`; a new refund or an approved request must satisfy `Amount ≤ Remaining`; multiple partial refunds are legal (Q31, Q41) | **EF** + DB | computed under the Purchase row's `FOR NO KEY UPDATE` lock (race-free, §3.11); `PspRefundId` unique + ledger `RefundReversal` partial unique as DB backstops; minor-unit scale trigger on `Refunds.Amount` |
 | 13 | Purchases.Status derives from Σ reversals: 0 ⇒ `Paid`, < G ⇒ `PartiallyRefunded`, ≥ G ⇒ `Refunded` + `RefundedAt` | **EF** + DB | tripwire ladder under the purchase lock; transition-only trigger constrains the ladder (§3.5) |
 | 14 | Refund/session status coherence with timestamps | **DB** | CHECK constraints |
 | 15 | CommissionShare ∈ [0,1] | **DB** | CHECK |
@@ -737,7 +810,7 @@ FOR EACH ROW EXECUTE FUNCTION "Payments".check_line_same_tx();
 | 27 | Reads on unfiltered tables (Ledger*, WebhookEvents, PaymentsAuditLogs, PspCustomers) are explicitly tenant-scoped wherever tenant meaning exists | **EF** + tests | enumerated read paths (§7/§13); NetArchTest rule: no unscoped tenant reads on unfiltered tables (review P2-3) |
 | 28 | Ledger splits are minor-unit granular per entry currency; one leg computed, the other derived | **DB** + EF | rounding rule (§3.10, §5 row 2) — **now trigger-enforced** via the `Currencies` exponent map (§3.9 check 7, §3.16; closes the second review P0-C gap); app rules + arch tests remain as backstop |
 | 29 | A ledger entry's lines are written only in the entry's own transaction; entries always carry ≥ 2 lines | DB | entry-level deferred balance trigger (≥ 2 lines + balance, §3.9) + `BEFORE INSERT` timestamp-equality same-tx append guard on LedgerLines (`PostedAt = transaction_timestamp()`, §3.10; savepoint-proof and multi-statement-safe) |
-| 30 | Only Settlement enforces amount ≤ **Settleable Balance**; reversals may drive the payable negative | **EF** | clawback semantics (§3.13, §5 rows 5/7; second review P2-D) + risk reserves (Q32) |
+| 30 | Only Settlement enforces amount ≤ **Settleable Balance**; reversals may drive the payable negative | **EF** | clawback semantics (§3.13, §5 rows 5/7; second review P2-D) + risk reserves (Q32) + open-`RefundRequest` hold (Q41: the remaining Academy-payable leg of any Purchase with a `Requested` request is withheld from settleable) |
 | 31 | No refund on a Purchase with an Open dispute | **EF** | guard before the PSP call (§5 row 4; second review P1-B) |
 | 32 | One ledger entry per business event — one Capture per Purchase, one RefundReversal per Refund, one DisputeLoss/DisputeWon per Dispute, one Settlement entry per Settlement, one PspPayout per PSP payout id | **DB** | partial unique indexes on LedgerEntries (§3.9; third review High 7) |
 | 33 | ManualAdjustment entries carry an explicit actor and description; two-person rule (maker/checker) enforced app-side | **DB** + EF | CHECK (§3.9) + `payments:AdjustLedger` permission + PaymentsAuditLogs trail (third review High 7) |
@@ -754,6 +827,9 @@ FOR EACH ROW EXECUTE FUNCTION "Payments".check_line_same_tx();
 | 44 | `PostedAt` is the DB clock; PSP event time is preserved separately in `EffectiveAt` | **DB** + app | `DEFAULT now()` + EffectiveAt column (§3.9; third review Medium) |
 | 45 | Mirror updates apply only in `SourceVersion` order; mirror drift is reconciled periodically | **app** | conditional upsert + backfill + reconciliation (§3.1; third review Medium) |
 | 46 | Every enum-like column admits only its documented vocabulary | **DB** | CHECK `IN` lists on Status/Type/Source/Kind/Severity columns (third review Medium — `Status = 'Garbage'` satisfies nothing anymore) |
+| 47 | At most one open (`Requested`) RefundRequest per Purchase; decision fields are exactly coherent with status; approval produces the `Refunds` row in the same transaction (`RefundId` set iff `Approved`) | **DB** + EF | partial unique `WHERE Status='Requested'` + status/field coherence CHECKs + transition-only trigger (§3.19); approval atomicity is the TransactionalBehavior transaction |
+| 48 | Revocation fires exactly when: the Purchase reaches `Refunded` (any cause), any dispute is `Lost`, or a `Succeeded` refund carries `RevokeAccess = TRUE`; an unflagged partial refund never revokes | **EF** | tripwired transitions under the Purchase/refund row locks; `RevokeAccess` is set-once at insert so the flag check is race-free (Q40; §6) |
+| 49 | `Refunds.Amount` and `RefundRequests.ApprovedAmount` are minor-unit granular per the `Currencies` exponent | **DB** | `BEFORE INSERT` scale triggers matching the `Prices` trigger (§3.11, §3.19; Q41 amendment) |
 
 ---
 
@@ -771,13 +847,13 @@ Every transaction below runs through the module scaffold's `TransactionalBehavio
 | 1 | Student: create checkout session | eligibility check (active enrollment ⇒ reject, Q33) → `CheckoutSessions` insert (or reuse: re-invoke PSP create with the same idempotency key; refresh if the locked price was archived — §3.4) | partial unique + `CheckoutSessionId` as PSP idempotency key; definitive PSP rejection → `Expired`; timeout stays `Pending` (Q28) |
 | 2 | Webhook: `checkout.session.completed` | ingest row → *(PSP call outside tx: retrieve session with expanded `payment_intent.balance_transaction`)* → lock `CheckoutSessions` row `FOR NO KEY UPDATE` — **metadata-first resolution (Q29):** by `client_reference_id`/metadata, else `PspCheckoutSessionId`; a missing session here ⇒ `UnmatchedCapture` booking to PSP Suspense + alert, **never Skipped** (Q28); a session in `Expired` ⇒ late payment, legal transition to `Completed` (racing second event observes `Completed` → marks its event `Duplicate`, 200 — review P1-2) → `PspCustomers` ensure → **`Purchases` insert (Paid)** — presentment vs `Price.Amount` mismatch ⇒ audit warning + finding, capture proceeds (§3.2) → **`Capture` entry + lines** — Dr PSP Clearing G / Cr Academy Payable / Cr Platform Revenue with `PlatformRevenue = ROUND(G×c, minor-unit)`, `AcademyPayable = G − PlatformRevenue` (one leg computed, one derived — review P0-C; `c` stored on the Purchase), fee pair Dr PSP Fees F / Cr PSP Clearing F omitted when F = 0 → outbox `PurchaseActivatedIntegrationEvent` → session → Completed → audit row | unique PspEventId; session-row lock; state guards; `Capture` partial unique (PurchaseId); PurchaseId known only here |
 | 3 | Webhook: `checkout.session.expired` | ingest row + session → Expired + audit row (late payments may still complete later — Q28) | unique PspEventId |
-| 4 | Platform admin: issue refund | lock `Purchases` row `FOR NO KEY UPDATE` → open-dispute guard + Σ-refunds ≤ gross − Σ live refunds (Q31 sum cap, race-free under the lock) → `Refunds` insert (`Source = 'Platform'`, `Pending`) + audit row → *then* PSP call outside tx, keyed by `RefundId`, metadata `{RefundId, PurchaseId}` stamped (Q29) | RefundId durable before the call; `Failed` only on definitive PSP rejection or `refund.failed` (ambiguous outcomes stay `Pending` — §3.11) |
+| 4 | Platform admin: issue refund | lock `Purchases` row `FOR NO KEY UPDATE` → open-dispute guard + `Amount ≤ Remaining Refundable` (`SettlementAmount − Σ(Pending+Succeeded) − Σ(disputes Open or Lost)`; Q41 unified formula, race-free under the lock) → `Refunds` insert (`Source = 'Platform'`, `Pending`, `ReasonCode`, `RevokeAccess`) + audit row `Refund.Issued` → *then* PSP call outside tx, keyed by `RefundId`, metadata `{RefundId, PurchaseId}` stamped (Q29) | RefundId durable before the call; `Failed` only on definitive PSP rejection or `refund.failed` (ambiguous outcomes stay `Pending` — §3.11) |
 | 5 | Webhook: refund family — `refund.created` / `refund.updated` / `refund.failed` | ingest row → resolve Purchase via refund metadata or `PspRefundId`→Refunds row; **`refund.created` for an unknown refund ⇒ PSP-initiated (dashboard) refund: `Refunds` insert (`Source = 'Psp'`, `RequestedByUserId NULL`, payload amount)** then normal path — `Pending → Succeeded` (tripwire) + Purchase status ladder recomputed from Σ reversals (tripwire, §3.5) + **`RefundReversal` entry + lines** written only after the guarded transition wins — Dr Academy Payable (`Amount − ROUND(Amount×CommissionShare)`) + Dr Platform Revenue (`ROUND(Amount×CommissionShare)`) / Cr PSP Clearing (`Amount − PspFeeRefunded`) / Cr PSP Fees `PspFeeRefunded` (omitted when 0; PSP-retained capture fees untouched — review P0-B); payable row locked `FOR NO KEY UPDATE` first, balance never checked; **`refund.failed`** ⇒ Refund → `Failed` + alert, no ledger write; revocation outbox only when the Purchase became fully `Refunded` (Q31) + audit row | unique PspEventId + tripwires; PSP-initiated rows keyed by `PspRefundId` unique |
 | 6 | Webhook: `charge.dispute.created` | ingest row → resolve Purchase via charge/PI (unique indexes, §3.5) → `Disputes` insert (Open) + audit row — **no ledger write**: the withdrawal has its own event (Q36) | unique PspEventId |
 | 7 | Webhook: `charge.dispute.funds_withdrawn` | ingest row → **`DisputeLoss` entry booked immediately and unconditionally** (the PSP took the cash now, regardless of dispute status or Purchase state — Q36): Dr Academy Payable (`Amount − ROUND(Amount×CommissionShare)`) + Dr Platform Revenue (`ROUND(Amount×CommissionShare)`) + Dr PSP Fees (`PspDisputeFee`) / Cr PSP Clearing (`Amount + PspDisputeFee`); payable locked `FOR NO KEY UPDATE` first; Purchase already `Refunded` ⇒ payable goes negative (documented clawback, §4 row 30) + audit row | unique PspEventId + `(DisputeId, Type)` partial unique |
 | 8 | Webhook: `charge.dispute.funds_reinstated` (Won) | ingest row → **`DisputeWon` entry** — Dr PSP Clearing (`Amount`) / Cr Academy Payable + Cr Platform Revenue (capture allocations restored pro rata; the fee stays expensed) + audit row — the sale stands | unique PspEventId + `(DisputeId, Type)` partial unique |
 | 9 | Webhook: `charge.dispute.closed` | ingest row + Dispute → Won/Lost tripwire + `ResolvedAt`/`ResolvedByUserId`/`OutcomeNotes`; **Lost:** Purchase status ladder recomputed from Σ reversals (may complete the gross → `Refunded`) → outbox revocation mirror (**any Lost dispute revokes — a bank ruling, not an amount-driven policy**, unlike refunds) + audit row; **no money movement at close** (Q36) | unique PspEventId + tripwires |
-| 10 | Platform admin: record settlement | `SELECT … FOR NO KEY UPDATE` on the Academy's payable account row (review P0-A) → **Settleable Balance** computed under lock (ledger − live refunds − 100% short-hold capture legs − `ReserveRate` × rolling-window capture legs; Q32 two-tier formula) → `Settlements` insert + **`Settlement` entry + 2 lines** (Dr Academy Payable / Cr Bank Account) + audit row | amount ≤ Settleable Balance (only Settlement checks; computed under the row lock) |
+| 10 | Platform admin: record settlement | `SELECT … FOR NO KEY UPDATE` on the Academy's payable account row (review P0-A) → **Settleable Balance** computed under lock (ledger − live refunds − 100% short-hold capture legs − `ReserveRate` × rolling-window capture legs − remaining Academy-payable legs of Purchases with an open `RefundRequest`; Q32 two-tier formula + Q41 hold) → `Settlements` insert + **`Settlement` entry + 2 lines** (Dr Academy Payable / Cr Bank Account) + audit row | amount ≤ Settleable Balance (only Settlement checks; computed under the row lock) |
 | 11 | Ops: record PSP payout (manual, from PSP reports — MVP) | `PspPayout` entry + 2 lines (Dr Bank Account / Cr PSP Clearing; TenantId NULL) + audit row; `PspObjectId` = PSP payout id | reconciliation against PSP payout reports; `(PspObjectId)` partial unique stops double-recording (§3.9) |
 | 12 | Courses event consumer: mirror upsert | `Products` version-conditional upsert (+ IsPurchasable/Title updates, `WHERE SourceVersion` newer — §3.1) + audit row | upsert keyed by (ItemType, ItemId); out-of-order events are no-ops |
 | 13 | Academy admin: create/archive price | `Prices` insert **and** archive of the superseded row **in one transaction** (§3.2) + audit row | deny-amend trigger constrains the update; partial unique backstops |
@@ -785,6 +861,8 @@ Every transaction below runs through the module scaffold's `TransactionalBehavio
 | 15 | Refresh worker | rebuild `ProductDailySales` (per-(Tenant, Day) slice in one transaction — readers never see a half-built day, §3.14) | unique (TenantId, ProductId, Day, Currency) |
 | 16 | Sweeper worker: stuck webhook re-drive | rows non-terminal past threshold re-enter the process phase; `Failed` rows re-drivable by ops; `UnmatchedCapture` entries older than N days escalated (§3.7, §16) | state-machine guards make re-drives idempotent |
 | 17 | Reconciliation worker | run one reconciliation kind per cycle (ledger internal / ledger-vs-PSP / mirror / stale sessions / unmatched / negative payables) → `ReconciliationRuns` + `ReconciliationFindings` rows (§3.18) | runs append-only; findings worked to resolution |
+| 18 | Student: request refund | eligibility: own `Paid`/`PartiallyRefunded` Purchase, no Open dispute, `Remaining Refundable > 0`, inside `RefundWindowDays` when configured (app policy, Q39) → `RefundRequests` insert (`Requested`) + audit row `Refund.Requested` — **no locks, no money movement** | partial unique `(PurchaseId) WHERE Status='Requested'` absorbs double-submits; no ledger writes |
+| 19 | Platform admin: decide request | lock `RefundRequests` row, then `Purchases` row `FOR NO KEY UPDATE` (lock order: named aggregate → Purchase) → open-dispute guard + `ApprovedAmount ≤ Remaining Refundable` (Q41) → **Approve:** `Refunds` insert (`Source = 'Platform'`, `Pending`, `ReasonCode`, `RevokeAccess`, `RequestedByUserId` = deciding admin) + request → `Approved` (`ApprovedAmount`, `DecidedByUserId`, `DecidedAt`, `DecisionNotes`, `RefundId`) in the same transaction + audit row `Refund.Approved` → the new refund then follows row 4's PSP-call path. **Reject:** request → `Rejected` + decision fields + audit row `Refund.Rejected`. **No ledger writes at decision time** | request-row + purchase-row locks; partial unique; tripwires on both rows; `RefundId` unique ties one refund to one request |
 
 **Cross-module contract (unchanged pipeline):** the outbox events ride to Courses; provisioning stays idempotent and parks failures in `FailedProvisioningRecord` — `PurchaseId` occupies its `(TenantId, AccessCodeId)` unique slot (no Courses schema change). Revocation rides `CourseRevocationSaga` via the mirror event (§6).
 
@@ -794,11 +872,11 @@ Every transaction below runs through the module scaffold's `TransactionalBehavio
 
 1. **`PurchaseActivatedIntegrationEvent`** — Payments-owned, mirroring the Library event's shape:
 `EventId, TenantId, PurchaseId, UserId, TargetResourceArn, Metadata { plan: <planId> }, AuditReference (= capture LedgerEntry.Id)`.
-2. **`PurchaseRefundedIntegrationEvent`** — revocation mirror: `EventId`, `TenantId`, `PurchaseId`, `UserId`, `TargetResourceArn`, `RefundId` (`Guid?`, set when triggered by a full refund), `DisputeId` (`Guid?`, set when triggered by a lost dispute — §5 row 9 creates no `Refunds` row), `AuditReference` (`= reversal LedgerEntry.Id`). Invariant: `(RefundId IS NOT NULL) <> (DisputeId IS NOT NULL)` — exactly one reversal cause is populated, and `AuditReference` always points to the backing `LedgerEntries.Id`. Not Library's `AccessCodeRevokedIntegrationEvent` — that would couple Payments→Library across the boundary. `CourseRevocationSaga` gains an **additive** second correlation (`When(PurchaseRefunded …)`, same flow, correlated by `EventId`) — no Courses schema change. Documented overload: the saga state's `AccessCodeId` column holds `PurchaseId` for payment revocations.
+2. **`PurchaseRefundedIntegrationEvent`** — revocation mirror: `EventId`, `TenantId`, `PurchaseId`, `UserId`, `TargetResourceArn`, `RefundId` (`Guid?`, set when triggered by a refund that carries revocation — a full refund (ladder completion) or a partial refund whose `RevokeAccess = true` (Q40)), `DisputeId` (`Guid?`, set when triggered by a lost dispute — §5 row 9 creates no `Refunds` row), `AuditReference` (`= reversal LedgerEntry.Id`). Invariant: `(RefundId IS NOT NULL) <> (DisputeId IS NOT NULL)` — exactly one reversal cause is populated, and `AuditReference` always points to the backing `LedgerEntries.Id`. A revoke-flagged partial refund's event is shape-identical to a full refund's (`RefundId` set, `DisputeId` NULL) — by design: Courses treats the event purely as an access decision, never as an amount signal. The exactly-one-cause invariant is unchanged (Q40). Not Library's `AccessCodeRevokedIntegrationEvent` — that would couple Payments→Library across the boundary. `CourseRevocationSaga` gains an **additive** second correlation (`When(PurchaseRefunded …)`, same flow, correlated by `EventId`) — no Courses schema change. Documented overload: the saga state's `AccessCodeId` column holds `PurchaseId` for payment revocations.
 
 **Overload caveat (review P1-3):** `PurchaseId` travels in `ProvisionAccessCodeCommand.AccessCodeId` and lands in `FailedProvisioningRecord.AccessCodeId` (its `(TenantId, AccessCodeId)` unique idempotency slot intact). The column name says AccessCode; the payment flow stores a PurchaseId there. A Courses-side `SourceType` discriminator column (`AccessCode` | `Purchase`) would remove the ambiguity — that is a Courses migration, deliberately out of the Payments MVP scope; this note is the contract until then.
 
-**Saga idempotency (review P1-4, amended by third review Q31):** revocation fires when the Purchase becomes **fully** `Refunded` (Σ reversals ≥ gross) or on **any** lost dispute (a bank ruling revokes regardless of amount — refunds are amount-driven, disputes are decision-driven); partial refunds flip `PartiallyRefunded` and never revoke. The transition runs under the Purchase row lock, so a refund and a lost dispute racing to complete the gross produce exactly one `Refunded` transition and one revocation outbox; the loser observes the new status and becomes a no-op. The per-`EventId` saga correlation means multiple events can still spawn multiple saga instances; Courses' enrollment revocation MUST therefore be idempotent (deactivating an already-inactive enrollment = no-op) — the same idempotency class `ProvisionAccessCode` already implements for granting. Verify during implementation.
+**Saga idempotency (review P1-4, amended by third review Q31 and amendment Q40):** revocation fires when the Purchase becomes **fully** `Refunded` (Σ reversals ≥ gross), on **any** lost dispute (a bank ruling revokes regardless of amount), or when a `Succeeded` refund row carries `RevokeAccess = TRUE` (Q40 — the flag is set-once at insert, so the check is race-free); partial refunds without the flag never revoke. The transition runs under the Purchase row lock, so a refund and a lost dispute racing to complete the gross produce exactly one `Refunded` transition and one revocation outbox; the loser observes the new status and becomes a no-op. The per-`EventId` saga correlation means multiple events can still spawn multiple saga instances; Courses' enrollment revocation MUST therefore be idempotent (deactivating an already-inactive enrollment = no-op) — the same idempotency class `ProvisionAccessCode` already implements for granting. Verify during implementation.
 
 ---
 
@@ -810,7 +888,7 @@ Every transaction below runs through the module scaffold's `TransactionalBehavio
 | 2. Transaction list + drill-down | direct indexed query on `Purchases` (status/Academy/product/date/currency filters); drill-down joins `LedgerEntries` (via PurchaseId), `WebhookEvents` (PspObjectId/PurchaseId), `PaymentsAuditLogs` (AggregateId), session + PSP refs on the row |
 | 3. Refund rate | `ProductDailySales` (Σ RefundCount ÷ Σ SaleCount) by Academy and product. **Semantics note (third review Low):** Σ refunds ÷ Σ sales over a window mixes cohorts — a burst of refunds of old sales can exceed 100% in short windows; read the number next to its window definition, and remember partial refunds count once per refund row, not pro-rated |
 | 4. Top products | `ProductDailySales` grouped by product (units + revenue) |
-| 5. Settlement position | derived live: Balance Owed = Σ credits − Σ debits on the Academy's payable account lines (covered index-only SUM); Settleable Balance = Balance Owed − Σ live refunds − 100% short-hold capture legs (≤ `ShortHoldDays`) − `ReserveRate` × rolling-window capture legs (`ShortHoldDays`..`DisputeHoldDays`) (Q32 two-tier formula, §3.13); settled-to-date = `COALESCE(SUM(Amount), 0)` and last settlement = `MAX(RecordedAt)` straight off `Settlements` — no ledger join (second review P2-A) |
+| 5. Settlement position | derived live: Balance Owed = Σ credits − Σ debits on the Academy's payable account lines (covered index-only SUM); Settleable Balance = Balance Owed − Σ live refunds − 100% short-hold capture legs (≤ `ShortHoldDays`) − `ReserveRate` × rolling-window capture legs (`ShortHoldDays`..`DisputeHoldDays`) (Q32 two-tier formula, §3.13) − Σ (remaining Academy-payable legs of Purchases with an open `RefundRequest`) (Q41, §3.13); settled-to-date = `COALESCE(SUM(Amount), 0)` and last settlement = `MAX(RecordedAt)` straight off `Settlements` — no ledger join (second review P2-A) |
 
 Student purchase history: `Purchases` by (TenantId, UserId) — the global filter serves scoping.
 
@@ -829,7 +907,8 @@ Student purchase history: `Purchases` by (TenantId, UserId) — the global filte
 | §7.4 Signature verification; dedupe unique index; payload archived; four event families | `WebhookEvents` (SignatureVerified = verify-before-write, unique PspEventId, outcome) + `WebhookEventPayloads` (archived body); EventType covers session/refund/dispute/payout families (+ PSP payouts recorded manually, boundary row 11) |
 | §7.5 Double-entry, append-only, DB-enforced invariant; settlement-currency entries; Purchase keeps presentment + FX | `LedgerAccounts/Entries/Lines` + deferred balance trigger + deny triggers; lines single-currency; `Purchases` presentment/FX columns |
 | §7.5 Settlements manual, record-only, partial allowed | `Settlements` (no status) + `Settlement` entries; Balance Owed derived (Q15a) |
-| §7.6 Refunds auto-revoke via saga; disputes recorded, resolved manually | `Refunds` (multiple/partial/external per Q31; full-completion drives revocation) → mirror event → saga; `Disputes` coarse statuses + `OutcomeNotes`; lost disputes book at `funds_withdrawn` (Q36) and feed the same reversal ladder |
+| §7.6 Refunds auto-revoke via saga; disputes recorded, resolved manually | `Refunds` (multiple/partial/external per Q31; `ReasonCode`/`RevokeAccess` per Q40; revocation on full refund, lost dispute, or revoke-flagged refund) → mirror event → saga; `Disputes` coarse statuses + `OutcomeNotes`; lost disputes book at `funds_withdrawn` (Q36) and feed the same reversal ladder |
+| Manual partial refunds — student requests + admin decisions (amendment Q39; requirement.md sync pending) | `RefundRequests` (§3.19: one open per Purchase, coherence CHECKs, transition trigger) + boundary rows 18–19 + audit actions `Refund.Requested/Approved/Rejected/Issued`; approval creates the `Refunds` row atomically; `RefundWindowDays` on settings (§3.3) |
 | §8 Account model + capture/reversal/payout/settlement entry shapes | account seed (5 structural incl. PSP Suspense + per-tenant payable), entry Type vocabulary, typed refs, boundary-map line shapes (rows 2, 5, 7, 8, 10, 11) |
 | §8 AuditReference linkage end-to-end | `LedgerEntries` typed FKs + `PspObjectId`; events carry `AuditReference = LedgerEntry.Id`; `WebhookEvents` archived payloads carry the PSP object IDs |
 | §9 bar 1 (PSP-call keys) | deterministic: `CheckoutSessionId`, `RefundId`; no key table (Q20a) |
@@ -846,14 +925,15 @@ Student purchase history: `Purchases` by (TenantId, UserId) — the global filte
 - **One initial migration** (`make migrations-create NAME=InitialPayments -m=Payments`): all tables, `Currencies` seed, structural account seed (five accounts, fixed uuid5-derived Guids), deny-mutation triggers (LedgerEntries, LedgerLines, Prices, PaymentsAuditLogs, WebhookEventPayloads, Settlements, ReconciliationRuns) + `deny_money_amend` transition triggers (Purchases, Refunds, Disputes, CheckoutSessions) + REVOKE statements + role creation/grants, deferred balance constraint trigger, same-tx line guard, CHECKs, partial indexes — SQL via `migrationBuilder.Sql` following the `LibraryAuditLogs` migration precedent. Applied at startup by the existing dev-only runner.
 - **No prod seed data** (structural accounts are schema, not seed).
 - **Go-live flag**: configuration only; zero schema presence.
-- **Role separation (Q35, third review High 6):** the initial migration creates two roles. `payments_migration` (or the platform's existing migration principal) **owns** the schema — it runs DDL, seeds, and is the only role that can `ALTER TABLE … DISABLE TRIGGER` inside a reviewed migration. `payments_runtime` — the app's connection user — owns **nothing**: it cannot `ALTER`, `TRUNCATE`, `DROP`, or disable triggers, and its grants are table-scoped: SELECT everywhere it reads; INSERT on everything it writes; UPDATE **only** on tables with legitimate transitions (Products mirror, Prices archive, AcademyPaymentSettings, CheckoutSessions, Purchases, Refunds, Disputes, ReconciliationFindings); SELECT+INSERT only on append-only tables (LedgerEntries, LedgerLines, LedgerAccounts, Settlements, PaymentsAuditLogs, WebhookEventPayloads, ReconciliationRuns). The deny triggers remain the primary control (they fire for every role including the owner); the grants turn the old "defense in depth" REVOKE into a real boundary — the runtime role physically cannot mutate what it shouldn't. EF migrations run as the migration principal at deploy time, never as the runtime user.
+- **Role separation (Q35, third review High 6):** the initial migration creates two roles. `payments_migration` (or the platform's existing migration principal) **owns** the schema — it runs DDL, seeds, and is the only role that can `ALTER TABLE … DISABLE TRIGGER` inside a reviewed migration. `payments_runtime` — the app's connection user — owns **nothing**: it cannot `ALTER`, `TRUNCATE`, `DROP`, or disable triggers, and its grants are table-scoped: SELECT everywhere it reads; INSERT on everything it writes; UPDATE **only** on tables with legitimate transitions (Products mirror, Prices archive, AcademyPaymentSettings, CheckoutSessions, Purchases, Refunds, Disputes, RefundRequests, ReconciliationFindings); SELECT+INSERT only on append-only tables (LedgerEntries, LedgerLines, LedgerAccounts, Settlements, PaymentsAuditLogs, WebhookEventPayloads, ReconciliationRuns). The deny triggers remain the primary control (they fire for every role including the owner); the grants turn the old "defense in depth" REVOKE into a real boundary — the runtime role physically cannot mutate what it shouldn't. EF migrations run as the migration principal at deploy time, never as the runtime user.
 - **Card-only checkout guarantee is configuration-validated (third review High 11):** the adapter's payment-method allow-list (instant-capture methods only) is asserted by a startup/config test, so `PspFee`/`SettlementAmount` NOT NULL rest on a guaranteed invariant, not hope.
 - **Evolution policy: additive-only.** Money tables cannot be rewritten (deny triggers make that physical); new entry types/account types/columns are forward migrations; nothing destructive against `Ledger*`, `Purchases`, `Prices`, `Refunds`, `Disputes`, `Settlements`.
 - Phase-2 slot-ins already accounted for: `Interval` column when subscriptions land (D1 keeps it out now); bridge model (academy-collects) needs only new entry types/accounts — no structural change.
 - **Outbox delivery latency (review P1-1):** the Payments module MUST configure the EF-outbox poller at `o.QueryDelay ≤ TimeSpan.FromSeconds(5)` — the scaffolded 5-minute value (copied from Library) violates §11's "granted within seconds". Library's own 5-minute poll is a Library decision, out of scope here.
 - **Architecture tests (review P2-2/P2-3):** NetArchTest rules — (a) no type in the Payments assembly implements `ISoftDeletable` (money rows are never soft-deleted; the scaffold's `SoftDeleteInterceptor` registration may stay — it is fail-safe, the deny triggers would catch any accident loudly; removal is an optional cleanup); (b) no query path reads unfiltered tables without explicit tenant scoping (invariant rows 26–27).
-- **Second-review migration deltas:** balance constraint trigger on `LedgerEntries` (not LedgerLines); `BEFORE INSERT` same-tx append guard on `LedgerLines`; statement-level `BEFORE TRUNCATE` arms on every deny-triggered table; `deny_price_amend` compares immutable columns with `IS DISTINCT FROM`; `INCLUDE (Amount)` on the ledger/settlement indexes + partial `(TenantId, AccountId)` on LedgerLines; partial refund unique `WHERE Status IN ('Requested','Succeeded')`; `CHECK (PspFee >= 0)`; `PspFeeRefunded` / `PspDisputeFee` / `PspBalanceTransactionId` columns; `DisputeWon` entry type; the webhook ingest upsert is raw SQL in its own transaction.
+- **Second-review migration deltas:** balance constraint trigger on `LedgerEntries` (not LedgerLines); `BEFORE INSERT` same-tx append guard on `LedgerLines`; statement-level `BEFORE TRUNCATE` arms on every deny-triggered table; `deny_price_amend` compares immutable columns with `IS DISTINCT FROM`; `INCLUDE (Amount)` on the ledger/settlement indexes + partial `(TenantId, AccountId)` on LedgerLines; `CHECK (PspFee >= 0)`; `PspFeeRefunded` / `PspDisputeFee` / `PspBalanceTransactionId` columns; `DisputeWon` entry type; the webhook ingest upsert is raw SQL in its own transaction.
 - **Third-review migration deltas (§15):** `Currencies` seed + FKs from every currency column; **fifth** structural account `PSP Suspense` (fixed Guid); `UnmatchedCapture` entry type + its exact-ref-set CHECKs; the full partial-unique set on `LedgerEntries` (business-event uniqueness); `EffectiveAt` on LedgerEntries with `PostedAt DEFAULT now()`; `CommissionShare` on Purchases; `Source` + nullable `RequestedByUserId` + `Pending` status on Refunds; `PartiallyRefunded` on Purchases; `SourceVersion` on Products; `Livemode`/`PspAccountId`/`PspObjectId` on WebhookEvents + `WebhookEventPayloads` split; `ReconciliationRuns`/`ReconciliationFindings`; `deny_money_amend` transition triggers on Purchases, Refunds, Disputes, Settlements, CheckoutSessions; count-based (not `xmin`) same-tx guard on LedgerLines; `deny_price_amend` gains the one-time `PspPriceId` NULL→value path + the price-scale check via `Currencies`; balance trigger gains checks 6 (account tenancy) and 7 (minor-unit scale); role creation + scoped GRANTs per the bullet above; PSP id columns widened to varchar(255).
+- **Manual-refund amendment deltas (§17, 2026-11-17):** `RefundRequests` table + transition trigger `deny_request_amend` + partial unique `(PurchaseId) WHERE Status='Requested'` + coherence CHECKs + grants; `Refunds.ReasonCode` + `Refunds.RevokeAccess` (both insert-immutable — `deny_money_amend` immutable lists extended); `BEFORE INSERT` minor-unit scale triggers on `Refunds.Amount` and `RefundRequests.ApprovedAmount` via `Currencies`; `AcademyPaymentSettings.RefundWindowDays`; audit actions `Refund.Requested/Approved/Rejected/Issued`; the stale second-review partial-unique item above is removed (superseded by Q31's sum cap).
 
 ---
 
@@ -884,6 +964,8 @@ Student purchase history: `Purchases` by (TenantId, UserId) — the global filte
 - **Reporting Currency**: The normalization currency for platform-wide analytics; equals the settlement currency today. _Avoid: base currency (ambiguous with list-price base)._
 - **Suspense**: The PSP Suspense structural account where a capture that matches no local session is booked (`UnmatchedCapture` entry) until ops resolves it; nothing money-shaped is ever silently dropped. _Avoid: orphanage, holding pen (it is a real ledger account with real balance)._
 - **Eligibility**: The explicit business rule deciding whether a student may start a checkout for a product (active enrollment ⇒ reject); distinct from the financial record of what was bought. _Avoid: uniqueness (it is not a constraint), duplication guard._
+- **Refund Request**: A student-initiated ask for money back on a Purchase, decided by a platform admin at review time; the decision and its amount are recorded, and only an approval creates a Refunds row. _Avoid: refund (the request is not the money movement), chargeback._
+- **Remaining Refundable**: What a Purchase can still return — gross minus succeeded and pending refunds minus dispute amounts currently withdrawn or lost. The single number behind the refund sum cap, the request-approval check, and the settlement hold. _Avoid: unrefunded amount (ambiguous about disputes), refundable balance._
 
 ---
 
@@ -933,7 +1015,7 @@ Verdict **CONDITIONAL PASS** — 14 findings, all incorporated; none re-litigate
 | P0-C rounding drift aborts the balance trigger; un-settleable sub-cent dust | Accepted — minor-unit rounding rule + derived-leg formula (one leg computed, one derived) | §0.3, §3.10, §5 row 2, §4 row 28 |
 | P0-D webhook audit row lost inside the domain transaction (no `Failed` outcome, `DeliveryCount` resets, 23505 on concurrent duplicates) | Accepted — two-phase ingestion: autonomous upsert → domain tx (row locked `FOR NO KEY UPDATE`) → clean failure-writer | §3.7, §5 preamble + rows 2/3/5/6/7, §4 row 10 |
 | P1-A zero-line headers; appending lines to historical entries; N×N trigger runs | Accepted — trigger moved to `LedgerEntries` (once per entry, ≥ 2 lines) + `xmin` same-tx append guard on lines | §3.9, §3.10, §4 rows 1/3/4/29 |
-| P1-B `UNIQUE (PurchaseId)` blocks retries after `Failed`; no open-dispute refund guard | Accepted — partial unique over live statuses; `Failed` = definitive rejection only (ambiguous stays `Requested`); dispute guard | §3.11, §5 row 4, §4 rows 12/31 |
+| P1-B `UNIQUE (PurchaseId)` blocks retries after `Failed`; no open-dispute refund guard | Accepted — partial unique over live statuses; `Failed` = definitive rejection only (ambiguous stays `Pending`); dispute guard | §3.11, §5 row 4, §4 rows 12/31 |
 | P1-C checkout reuse traps: pre-PSP failure lockout, no stored redirect URL, stale price | Accepted — three app rules in §3.4; URL still never stored (reuse = idempotent PSP re-create with the same session id) | §3.4, §5 row 1 |
 | P1-D refunded commission/net not derivable; `DisputeLoss` invisible in projection | Accepted — `RefundedCommissionAmount` + `RefundedNetAcademyAmount` from reversal lines; disputes folded into refunded buckets (documented) | §3.14, ERD, §7 |
 | P2-A missing `TenantId` line index; non-covering balance index; Metric-5 ledger join | Accepted — partial `(TenantId, AccountId)`; `INCLUDE (Amount)`; Metric 5 queries `Settlements` directly | §3.10, §3.13, §7 |
@@ -1058,3 +1140,55 @@ Rejected: none — every finding landed either as an engineering fix, a ratified
 ### 16.7 Runbook summary
 - Go-live requires: reconciliation worker scheduled; sweeper scheduled; monitoring items of §16.5 wired; restore test executed on the final migration set; **legal sign-off on the money-transmission flag (§10)**; card-only config test green.
 - Incident ladder for money events: PSP reports are truth for what moved → `WebhookEventPayloads` is truth for what was said → the ledger is truth for what we booked. Reconcile in that order, repair only via reviewed migrations.
+
+---
+
+## 17. Manual partial-refunds amendment — dispositions (2026-11-17)
+
+Not an adversarial review — a product amendment: manual partial refunds became the primary refund flow (a student asks after 4–5 days; an admin decides the amount at approval time). Built **on top of** Q31's refunds-v2 model; nothing in D1–D17 or Q1–Q38 was re-litigated. Decisions ratified as **Q39–Q41**.
+
+| # | Task | Disposition | Applied in |
+|---|---|---|---|
+| 1a | Stale partial-unique + `Requested` wording | Accepted — the superseded unique removed from §9; `Requested` → `Pending` in Q17 and §14 P1-B (Q18 contained no instance) | §1 (Q17), §9, §14 |
+| 1b | Unify the refundable-remaining formula | Accepted, with one interpretation: "withdrawn or lost" means disputes **currently** `Open` or `Lost`; a dispute resolved `Won` drops out because `funds_reinstated` restores the money (Q36) — a literal all-time sum would permanently freeze a Won dispute's amount | Q41; §3.11, §4 row 12, §5 row 4 |
+| 1c | Minor-unit scale trigger on `Refunds.Amount` | Accepted — same `Currencies.Exponent` mechanism as the `Prices` trigger; extended to `ApprovedAmount` | §3.11, §3.19, §4 row 49, §9 |
+| 2 | `RefundRequests` table | Accepted in full — coherence CHECKs, partial unique, transition trigger, tenancy marker, indexes, grants; approval creates the `Refunds` row atomically; no ledger writes | Q39; §3.19, §2, §4 row 47, §5 rows 18–19, §9 |
+| 3 | `ReasonCode` + `RevokeAccess` | Accepted — set-once at insert; revocation triggers extended; event invariant unchanged | Q40; §3.11, §6, §4 row 48 |
+| 4 | Open-request settlement hold | Accepted — remaining Academy-payable leg withheld; releases automatically on decision | Q41; §3.13, §4 row 30, §5 row 10, §7 metric 5 |
+| 5 | `RefundWindowDays` | Accepted — nullable; **NULL = self-service disabled** (fail-closed, symmetric with absent-row semantics); app policy only | §3.3 |
+| 6 | Audit actions + boundary rows | Accepted — four `Refund.*` actions; boundary rows 18–19 appended (existing rows untouched — no renumbering) | §3.15, §5 |
+| 7 | Worked ledger example | Accepted — below (§17.1) | §17.1 |
+| 8 | Ledger Q39–Q41, dispositions, §9/§4/§8/§11 sync | Accepted | throughout |
+
+### 17.1 Worked ledger example — $100 capture, 25% commission, $3.20 fee, $60 partial refund
+
+**Capture (Type `Capture`, fee pair included):**
+
+| Account | Direction | Amount |
+|---|---|---|
+| PSP Clearing | Debit | 100.00 |
+| PSP Clearing | Credit | 3.20 |
+| Academy Payable | Credit | 75.00 |
+| Platform Revenue | Credit | 25.00 |
+| PSP Fees | Debit | 3.20 |
+
+Σ Debits = 103.20 = Σ Credits ✓. `PlatformRevenue = ROUND(100 × 0.25) = 25.00` (computed), `AcademyPayable = 100 − 25 = 75.00` (derived).
+
+**Partial refund of $60 (Type `RefundReversal`, `PspFeeRefunded = 0` — Stripe card refunds return no fee):**
+
+| Account | Direction | Amount |
+|---|---|---|
+| Academy Payable | Debit | 45.00 |
+| Platform Revenue | Debit | 15.00 |
+| PSP Clearing | Credit | 60.00 |
+
+`CommissionLeg = ROUND(60 × 0.25, 2) = 15.00` (computed), `AcademyLeg = 60 − 15 = 45.00` (derived). Σ Debits = 60.00 = Σ Credits ✓. All legs minor-unit granular (2 decimals).
+
+**Position after the refund:** Academy Payable 75 − 45 = **30.00** (= 75% of the remaining 40 gross ✓); Platform Revenue 25 − 15 = **10.00** ✓; PSP Clearing net 96.80 − 60 = **36.80** (= PSP's outstanding obligation ✓); PSP Fees stays 3.20 (the PSP keeps the capture fee — second review P0-B). Purchase: Σ reversals = 60 < 100 ⇒ `PartiallyRefunded`, `Remaining Refundable = 40.00`, no revocation (Q40 default).
+
+**Settlement-risk interplay:** if the student then opens a request for the rest, the open-request hold withholds `40 − ROUND(40 × 0.25) = 30.00` (the Academy-payable leg) from Settleable until the request is decided.
+
+### 17.2 OPEN DECISIONS (product owner required; recommended defaults recorded)
+
+1. **Who bears a refund — pro rata or fully?** The design (per Q31) reverses **pro rata**: each party returns the share it received (academy 75%, platform 25% in the worked example), and PSP capture fees are never returned. The alternatives — platform absorbs the full commission on refunds, or the academy returns its gross and the platform rebates commission — change every reversal booking and the analytics projections. **Recommended default: keep pro rata** (status-quo-consistent, no party subsidizes the other); ratify explicitly before implementation.
+2. **Revocation default in the approval UI.** The schema default is `RevokeAccess = FALSE` (ratified in Q40). The open question is the admin UX: whether the approval dialog pre-checks revocation for partial refunds. **Recommended default: unchecked for partial refunds** (the student paid for most of the access; access follows money only when fully refunded or explicitly flagged), with the checkbox surfaced whenever the approved amount equals the full gross (where it is moot — revocation fires regardless).
