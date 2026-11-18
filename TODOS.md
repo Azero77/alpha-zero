@@ -24,3 +24,12 @@
 - **Context:** `AlphaZero.Shared/Infrastructure/DependencyInjection.cs:68-78` registers HybridCache without a distributed cache. `docs/CachingArchitecture.md` states the deployment is single-server, and issue #33 deferred production sizing. Start by registering `AddStackExchangeRedisCache` and verifying `RemoveByTagAsync` propagation across two instances.
 - **Depends on / blocked by:** a decision to run more than one API instance.
 - **Priority:** P2
+
+## [Payments / Compliance] Money-transmission legal sign-off
+- **What:** Obtain qualified legal review of the merchant-of-record model that holds Academy payables and records manual settlements.
+- **Why:** Code completion does not establish that AlphaZero may legally hold and transfer third-party funds in the operating jurisdiction.
+- **Pros:** makes the go-live decision explicit and may validate or reshape the settlement model before live money moves.
+- **Cons:** external counsel cost and scheduling; the answer may require provider or ledger design changes.
+- **Context:** `plans/payments/database.md` §10 and §16.7 make legal sign-off or a Connect-style evaluation a go-live gate. Start with the approved provider-account, Academy payable, reserve, and manual settlement flows.
+- **Depends on / blocked by:** finalized Payments design and identified launch jurisdiction/provider account structure.
+- **Priority:** P1
