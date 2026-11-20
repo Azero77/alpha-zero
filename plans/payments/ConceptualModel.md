@@ -1,6 +1,6 @@
 # Payments — Conceptual Domain Model
 
-**Derived from:** [`design.md`](design.md) §§2–8, with canonical terms from [`database.md`](database.md) §11 and scope from [`requirement.md`](requirement.md).
+**Derived from:** [`design.md`](design.md) §§2–8, using canonical terms from repository-root [`GLOSSARY.md`](../../GLOSSARY.md) and scope from [`requirement.md`](requirement.md).
 **Authority:** `design.md` owns implementation decisions. If these two disagree, `design.md` wins. This document is a shared thinking artifact — aggregates, meaning, and invariants — not a second implementation contract or a restatement of the SQL schema.
 
 ---
@@ -9,41 +9,27 @@
 
 | Context | Owns the truth of | Does **not** own | Contract with Payments |
 |---|---|---|---|
-| **Payments** (core) | Product mirror, Price, Checkout Session, Purchase and its reversal ladder, Refund Request, Refund, Dispute, Payment Review Case, Provider Transactions, Ledger, Settlements, webhook state, finance analytics | Course plans, enrollments, who may access a course | Publishes `PurchasePaidDomainEvent` / revocation events; calls Courses' source-aware grant/revoke commands |
+| **Payments** (core) | Product mirror, Price, Checkout Session, Purchase and reversal decisions, Refund Request, Refund, Dispute, Payment Review Case, Provider Transactions, Ledger, Settlements, webhook state, finance analytics | Course plans, enrollments, who may access a course | Publishes `PurchaseActivatedIntegrationEvent` / `PurchaseAccessRevocationRequestedIntegrationEvent` through its outbox |
 | **Courses** | Plans, enrollments, access grants and revocations | Money, purchases, refund decisions | Exposes `GrantCourseAccess` / `RevokeCourseAccess` keyed by `(SourceType, SourceId)`; `SourceType = Purchase` is the Payments origin |
 | **Identity** | Principals, tenant membership, permissions, authorization facts | Financial state | Supplies permission checks (`docs/Permissions.md`) and maker/checker identity facts; tenant context is ambient |
 | **Library** | Access Codes (the offline economy) | Online money | Existing grants are migrated to the shared command with `SourceType = AccessCode`; Library consumers stay thin mappings and act as regression parity |
 | **Stripe / ShamCash** (external) | Provider-side money movement, signed events, payouts, disputes | Application state or Ledger truth | Adapted behind capability-specific ports; only normalized, provider-neutral facts enter Payments |
 | **Infrastructure services** | Durable state: PostgreSQL (Ledger, outbox, invariants), KeyVault (secret *names* resolved at runtime), object storage (archived raw payloads), MassTransit (outbox transport) | Business decisions | Implement Application ports; never interpret a financial rule |
 
-**Context map rule:** Payments never reaches into Courses to decide eligibility or access. `ICourseAccessReader` answers checkout eligibility; access *mutation* is asynchronous through the shared Courses contract.
+**Context map rule:** Payments never sends Courses commands directly. `ICourseAccessReader` supplies the access fact needed for checkout eligibility; Payments publishes integration facts, and Courses consumers translate them into Courses-owned source-aware commands.
 
 ---
 
 ## 2. Ubiquitous language
 
-| Term | Meaning | Avoid |
-|---|---|---|
-| Sellable | Product with an active Price, sold only while the Academy opted in | item, SKU, offering |
-| Product | Payments' mirror of a sellable thing (today: a Course Plan); changes flow in as events | catalog item, course |
-| Price | Immutable money offer; changing it archives it and creates a new one | pricing plan, cost |
-| Checkout Session | The attempt shell a Student drives through hosted PSP checkout; only completion creates a Purchase | order, cart, payment |
-| Capture | PSP collects the charge; Purchase, Ledger allocation and activation event are written together | charge, sale |
-| Reversal | Ledger counterpart of a capture, for refunds and lost disputes | rollback, negative entry |
-| Presentment Currency | Currency the Student was actually charged in | local currency |
-| Settlement Currency | Currency the PSP deposits into the Platform account; fixed when the account opens | payout currency |
-| Provider | Integration with an immutable machine name (`stripe`, `sham-cash`); a DB row does not install adapter code | gateway (for the domain identity) |
-| Provider Account | One Platform-owned external account in one provider/environment | Academy account, LedgerAccount |
-| Provider Currency Route | Enabled integration/settlement currencies + presentment mode for one account; decides capability, not amount | Price |
-| Unapplied Funds | Provider-scoped liability when real money arrived but cannot yet become a Purchase | failed payment |
-| Payment Review Case | Evidence-backed maker/checker workflow for Unapplied Funds or exceptional reversals | direct status override |
-| Refund Request | Student's ask; a decision and amount, never money itself | refund, chargeback |
-| Refund | A reserved/confirmed reversal; partial or full, source-aware, with its own revoke decision | request, adjustment |
-| Purchase | Confirmed acquisition and reversal ladder; the single source for Remaining Refundable | order, invoice |
-| Remaining Refundable | What a Purchase can still return: gross − pending/succeeded refunds − currently withdrawn/lost disputes | unrefunded amount, refundable balance |
-| Settleable Balance | What may be paid out of an exact payable account after exposure and risk holds | available balance |
-| Reporting Currency | Settlement currency of one analytics partition; no cross-provider/currency total exists | global base currency |
-| Eligibility | The rule deciding whether a Student may start checkout (active enrollment ⇒ reject) | uniqueness, duplication guard |
+Repository-root [`GLOSSARY.md`](../../GLOSSARY.md) is the sole authority for definitions and avoided synonyms. This model relies on four distinctions that are easy to lose in implementation:
+
+| Distinction | Boundary |
+|---|---|
+| Checkout Session vs Purchase | hosted provider creation leaves an attempt Pending; only confirmed movement creates a Purchase |
+| Refund Request vs Refund | a request is an ask/decision; a Pending Refund reserves Q41; a Succeeded Refund confirms movement |
+| Dispute vs Dispute Exposure | opening is paperwork; only withdrawn and not-reinstated money contributes exposure |
+| Provider Currency Route vs Payment Method | route is operational configuration; method is the Student-facing eligible choice derived from it |
 
 ---
 
@@ -55,6 +41,10 @@ flowchart LR
     subgraph Cat["Catalog"]
       Product["Product<br/>sellable mirror"]
       Price["Price<br/>immutable offer"]
+    end
+    subgraph Cfg["Configuration"]
+      AcademySettings["AcademyPaymentSettings"]
+      ProviderConfig["ProviderConfiguration"]
     end
     subgraph Chk["Checkout"]
       Session["CheckoutSession<br/>one attempt"]
@@ -84,32 +74,38 @@ flowchart LR
     subgraph Prv["Providers"]
       PName["ProviderName"]
       PRef["ProviderAccountRef"]
-      Route["ProviderRoute"]
-      EMI["ExternalMovementIdentity"]
+      Route["ProviderCurrencyRoute"]
+      Method["PaymentMethod"]
+      EMI["ProviderTransactionIdentity"]
     end
     subgraph Evt["Domain events (raised inside methods)"]
       EPaid["PurchasePaid"]
       ERef["PurchaseRefunded"]
       EDisp["DisputeResolved"]
-      EPost["LedgerEntryPosted"]
+      EPost["LedgerPostingPrepared"]
     end
   end
 
   Product -->|"active price"| Price
   Price -->|"locked into"| Session
   Elig -->|"decides"| Session
+  AcademySettings -->|"selling policy"| Elig
+  ProviderConfig -->|"eligible routes"| Elig
   Session -->|"completed becomes"| Purchase
   Purchase -->|"at most one open"| Request
   Request -->|"approval creates"| Refund
   Refund -->|"confirmed reversal drives"| Purchase
   Dispute -->|"Lost / Won"| Purchase
-  RefPol -->|"Remaining Refundable"| Purchase
+  Purchase -->|"gross + lock identity"| RefPol
+  Refund -->|"Pending/Succeeded facts"| RefPol
+  Dispute -->|"withdrawn exposure"| RefPol
   Review -->|"approval drives"| Settlement
   SetPol -->|"Settleable Balance"| Settlement
   PTrans -->|"normalized movement"| Factory
   Factory -->|"balanced"| Posting
   Posting -->|"sole write path"| Entry
   Route -->|"scopes"| Session
+  Route -->|"projects"| Method
   PRef -->|"identifies"| PTrans
   EMI -->|"dedupes"| PTrans
   Money -->|"amount + currency"| Price
@@ -122,9 +118,9 @@ flowchart LR
   Courses["Courses context<br/>owns access"]
   Identity["Identity context<br/>owns permissions"]
   Stripe["Stripe / ShamCash<br/>own provider money"]
-  EPaid -->|"grant, via outbox"| Courses
-  ERef -->|"revoke, via outbox"| Courses
-  EDisp -->|"Lost ⇒ revoke"| Courses
+  EPaid -->|"translated to activation integration event"| Courses
+  ERef -->|"translated to revocation integration event"| Courses
+  EDisp -->|"Lost ⇒ revocation integration event"| Courses
   Review -->|"maker/checker facts"| Identity
   Stripe -->|"signed events"| PTrans
 ```
@@ -133,20 +129,24 @@ flowchart LR
 
 ## 4. Aggregate boundaries and core invariants
 
-Each aggregate is a behavioral root: private state, methods that enforce the transition, an `ExpectedPreviousStatus` tripwire for persistence, and an event raised from inside the method. Children are exposed as `IReadOnlyCollection<T>` and changed only through the root.
+Domain Models are independent from persistence DataModels. A mapper may assemble a root or immutable policy snapshot from multiple rows; stores persist the result with explicit Add/targeted Update operations. Separate roots may participate in one approved short transaction when a cross-aggregate invariant requires it.
 
 | Aggregate | Ladder / identity | Invariant the root enforces |
 |---|---|---|
 | Product | mirror `SourceVersion` | only strictly newer source state applies |
-| Price | active per Product + currency | archive, never edit |
-| Checkout Session | Pending → Completed / Expired | one locked Price + route; ambiguous stays Pending |
-| Purchase | Paid → PartiallyRefunded → Refunded | Σ reversals vs `SettlementAmount`; no refund beyond Remaining Refundable (Q41) |
+| Price | immutable Product/currency identity | archive, never edit; active uniqueness is a Domain precondition plus DB guard |
+| Academy Payment Settings | Academy policy lifecycle | absent means selling disabled; commission/refund-window validity |
+| Provider Configuration | account/route/environment lifecycle | capability and currency coherence; projects Payment Methods |
+| Checkout Session | Pending → Completed / Expired; Expired → Completed | one locked Price + Provider Currency Route; ambiguous creation stays Pending and valid late money may complete |
+| Purchase | Paid → PartiallyRefunded → Refunded | confirmed reversal facts drive status; it does not reserve Q41 during confirmation |
 | Refund Request | one open per Purchase | approval creates Refund; decider ≠ requester; no money moves |
 | Refund | Pending → Succeeded / Failed | partial/full, source-aware; revoke decision immutable after confirmation |
-| Dispute | Open → Won / Lost | cash truth is a separate Provider Transaction; `Won` leaves the Q41 sum |
+| Dispute | Open → Won / Lost plus separate withdrawal/reinstatement facts | Open does not imply funds moved; cash truth is a Provider Transaction |
 | Payment Review Case | Open → Approved/Rejected → Resolved | evidence required; checker ≠ maker; approval alone moves no money |
 
 **Cross-cutting invariants:** money rows are append-only (no soft delete); every Ledger write goes through one hardened database function; all lines in a posting share one currency and balance in minor units; no cross-currency total is ever computed; tenant / provider / currency / environment scope is explicit on unfiltered money reads.
+
+**Q41 boundary:** RefundRequest, Refund, Dispute, and Purchase are separate roots with independent provider-driven lifecycles. Application locks Purchase, loads immutable Refund/Dispute facts, and asks `RefundabilityPolicy` for the reservation decision. Pending Refund creation and request approval commit atomically. Confirmation consumes that reservation and cannot apply the cap a second time.
 
 ---
 
@@ -158,13 +158,14 @@ Financial policies are I/O-free Domain services fed by facts fetched under lock 
 Remaining Refundable (Q41) =
     Purchase.SettlementAmount
   - Σ(refunds where status in {Pending, Succeeded})
-  - Σ(disputes currently Open (funds withdrawn) or Lost)
+  - Σ(dispute amounts currently withdrawn and not reinstated, including final Lost exposure)
   // A dispute resolved Won drops out: funds_reinstated restored the money.
 ```
 
 ```text
 Settleable Balance (Q32/Q53) =
     Σ(credits - debits) on the exact payable LedgerAccount
+  - Σ(Pending Refund amounts that will debit the payable)
   - 100% of capture legs inside the short hold        // Stripe: 14 days
   - ReserveRate × capture legs in the rolling window  // Stripe: 10% through day 120
   - remaining Academy-payable leg of every open RefundRequest:
@@ -179,19 +180,27 @@ Settleable Balance (Q32/Q53) =
 
 ## 6. Cross-context access contract
 
-Access is **Courses state**, not a Payments field. Payments owns the money decision; Courses owns the entitlement. Both origins use the same capability:
+Access is **Courses state**, not a Payments field. Payments owns the money fact; Courses owns the entitlement. Payments publishes:
+
+```text
+PurchaseActivatedIntegrationEvent(..., AuditReference)
+PurchaseAccessRevocationRequestedIntegrationEvent(..., CauseType, CauseId, AuditReference)
+```
+
+Courses consumers map those facts to its capability:
 
 ```text
 GrantCourseAccess(SourceType, SourceId, UserId, TenantId, TargetResourceArn, Metadata)
 RevokeCourseAccess(SourceType, SourceId, UserId, TenantId, TargetResourceArn, Cause)
 ```
 
-`SourceType` is `AccessCode` (Library) or `Purchase` (Payments); the identical UUID in both origins must not collide. Messages are written through the EF outbox in the same transaction as the aggregate transition, so a paid Purchase cannot exist without its grant intent being durable.
+`SourceType` is `AccessCode` (Library) or `Purchase` (Payments); the identical UUID in both origins must not collide. The integration event is written through the EF outbox in the same transaction as the Purchase, Ledger entry, and audit, so a paid Purchase cannot exist without durable activation intent.
 
 ---
 
 ## 7. Conceptual non-goals
 
+- No DomainModel-to-table assumption; DataModels and composite mappings may differ from aggregate shape.
 - No second Payments-specific enrollment pipeline; Courses' source-aware capability is generalized once.
 - No typed-ID wrappers for every UUID (Q2 chose primitive `Guid`); value objects exist only for real multi-field invariants.
 - No generic repository per table; stores align with workflow boundaries.
