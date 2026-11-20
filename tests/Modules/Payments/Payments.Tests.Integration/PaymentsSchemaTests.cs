@@ -58,7 +58,7 @@ public sealed class PaymentsSchemaTests : IAsyncLifetime
 
         await using var connection = await OpenAsync();
         (await ScalarAsync<long>(connection, "SELECT count(*) FROM information_schema.tables WHERE table_schema = 'Payments' AND table_type = 'BASE TABLE';"))
-            .Should().Be(29);
+            .Should().Be(26);
         (await ScalarAsync<string>(connection, "SELECT \"MigrationId\" FROM \"Payments\".\"__PaymentsMigrationHistory\";"))
             .Should().Be(PaymentsSqlMigrationRunner.InitialMigrationId);
         (await ScalarAsync<long>(connection, "SELECT count(*) FROM \"Payments\".\"Currencies\";"))
@@ -67,6 +67,8 @@ public sealed class PaymentsSchemaTests : IAsyncLifetime
             .Should().Be(2);
         (await ScalarAsync<bool>(connection, "SELECT has_table_privilege('payments_runtime', '\"Payments\".\"Prices\"', 'INSERT');"))
             .Should().BeTrue();
+        (await ScalarAsync<long>(connection, "SELECT count(*) FROM information_schema.tables WHERE table_schema = 'Payments' AND table_name IN ('InboxState','OutboxState','OutboxMessage');"))
+            .Should().Be(0);
         (await ScalarAsync<bool>(connection, "SELECT to_regclass('\"Payments\".\"UQ_CheckoutSessions_User_Product_Pending\"') IS NOT NULL;"))
             .Should().BeTrue();
         (await ScalarAsync<string>(connection, "SELECT pg_get_expr(indpred, indrelid) FROM pg_index WHERE indexrelid = '\"Payments\".\"UQ_CheckoutSessions_User_Product_Pending\"'::regclass;"))

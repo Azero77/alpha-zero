@@ -414,7 +414,7 @@ erDiagram
     }
 ```
 
-Standalone (no relationships drawn): `AcademyPaymentSettings` (one row per tenant), sparse `AcademyProviderRiskOverrides`, `PaymentsAuditLogs`, `ReconciliationRuns` + `ReconciliationFindings` (§3.18). MassTransit scaffolding tables (`InboxState`, `OutboxMessage`, `OutboxState`) live in the Payments schema via the existing `AppDbContext` config; migration history is `__PaymentsMigrationHistory` (already wired).
+Standalone (no relationships drawn): `AcademyPaymentSettings` (one row per tenant), sparse `AcademyProviderRiskOverrides`, `PaymentsAuditLogs`, `ReconciliationRuns` + `ReconciliationFindings` (§3.18). MassTransit inbox/outbox tables are intentionally excluded from the Payments initial SQL migration and are owned by a separate migration so their schema exactly matches MassTransit; `__PaymentsMigrationHistory` tracks the SQL-first Payments migration.
 
 **Conventions** (repo-wide): quoted PascalCase identifiers; enums as `varchar(32)` strings (keep literals in sync with `HasConversion<string>()`); `timestamptz` everywhere; PKs `ValueGeneratedNever()` domain-generated; **Postgres does not auto-index FK columns — every FK below carries an explicit index**; no cross-module/cross-schema FKs (TenantId, UserId, ItemId, ParentContainerId are event-driven references).
 
