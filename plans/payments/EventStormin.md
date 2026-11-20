@@ -1,6 +1,6 @@
 # Payments — Event Storming
 
-**Derived from:** [`design.md`](design.md) §4 and [`transaction_flows.md`](transaction_flows.md).
+**Derived from:** [`requirement.md`](requirement.md) product behavior, [`database.md`](database.md) invariants, [`transaction_flows.md`](transaction_flows.md) sequencing, [`stripe_payments_transaction_flows.md`](stripe_payments_transaction_flows.md) / [`sham_cash_payments_transaction_flows.md`](sham_cash_payments_transaction_flows.md) provider deltas, and [`design.md`](design.md) §4 boundaries.
 **Purpose:** business intent, facts, policies, and context boundaries. Internal transactional phases such as `Ensure…`, `Stamp…`, and `Confirm…` belong in C4 dynamic views, not in the Domain storm.
 
 ---
@@ -32,6 +32,7 @@ flowchart TD
   classDef policy fill:#e1bee7,stroke:#6a1b9a,color:#4a148c;
   classDef external fill:#f8bbd0,stroke:#ad1457,color:#880e4f;
   classDef readmodel fill:#c8e6c9,stroke:#2e7d32,color:#1b5e20;
+  classDef integration fill:#dcedc8,stroke:#558b2f,color:#33691e;
 
   subgraph Catalog["Catalog and configuration"]
     Staff["EXT: Academy / Platform staff"]:::external
@@ -53,7 +54,7 @@ flowchart TD
     Start["CMD: Start Checkout"]:::command
     Eligibility["POL: Checkout Eligibility"]:::policy
     Session["AGG: Checkout Session"]:::aggregate
-    Started["EVT: Checkout Session Started"]:::event
+    Started["EVT: Checkout Session Created"]:::event
     Expire["CMD: Expire Checkout Session"]:::command
     Expired["EVT: Checkout Session Expired"]:::event
     Student --> Start --> Eligibility --> Session --> Started
@@ -68,10 +69,11 @@ flowchart TD
     Purchase["AGG: Purchase"]:::aggregate
     Paid["EVT: Purchase Paid"]:::event
     Posting["POL: Build Capture Posting"]:::policy
-    Posted["Ledger entry posted<br/>after writer succeeds"]:::event
-    Activation["Integration: Purchase Activated"]:::event
-    Courses["EXT: Courses"]:::external
-    Provider --> RecordPayment --> Movement --> Complete --> Session
+    Posted["Ledger entry ID<br/>returned after writer succeeds"]:::record
+    Activation["Integration: Purchase Activated"]:::integration
+  Courses["EXT: Courses"]:::external
+  Provider --> RecordPayment --> Movement --> Complete --> Session
+  Courses -->|"Course Plan availability snapshot"| Mirror
     Session --> Purchase --> Paid --> Posting --> Posted --> Activation --> Courses
   end
 
@@ -82,14 +84,14 @@ flowchart TD
     Decide["CMD: Approve / Reject Refund Request"]:::command
     RefPolicy["POL: Refundability (Q41)"]:::policy
     Refund["AGG: Refund"]:::aggregate
-    Reserved["EVT: Refund Reserved (Pending)"]:::event
+    Reserved["EVT: Refund Created (Pending)"]:::event
     ConfirmRefund["CMD: Confirm Refund Movement"]:::command
     RefundDone["EVT: Refund Succeeded / Failed"]:::event
     PurchaseStatus["EVT: Purchase Partially / Fully Refunded"]:::event
-    Revoke["Integration: Purchase Access Revocation Requested"]:::event
+    Revoke["Integration: Purchase Access Revocation Requested"]:::integration
     Student --> Ask --> Request --> Requested --> Decide --> RefPolicy --> Refund --> Reserved
     Provider --> ConfirmRefund --> Refund --> RefundDone --> Purchase --> PurchaseStatus
-    PurchaseStatus --> Revoke --> Courses
+    PurchaseStatus -->|"Full or flagged"| Revoke --> Courses
   end
 
   subgraph Disputes["Disputes"]
@@ -115,12 +117,13 @@ flowchart TD
     Review["AGG: Payment Review Case"]:::aggregate
     ReviewDecision["CMD: Approve / Reject Review"]:::command
     Decided["EVT: Payment Review Decided"]:::event
-    Settle["CMD: Record Confirmed Settlement"]:::command
+    Settle["CMD: Confirm Settlement Transfer"]:::command
     SetPolicy["POL: Settleable Balance"]:::policy
     Settlement["Settlement<br/>immutable result"]:::record
     Settled["EVT: Settlement Recorded"]:::event
     Unapplied --> OpenReview --> Review --> ReviewDecision --> Decided
-    Staff --> Settle --> SetPolicy --> Settlement --> Settled
+    Staff --> OpenReview
+    Decided -->|"Approved Settlement"| Settle --> SetPolicy --> Settlement --> Settled
   end
 
   RM["RM: checkout methods, purchases, transactions,<br/>review queues, revenue, settlement, reconciliation"]:::readmodel
@@ -158,7 +161,7 @@ Dispute Resolved Won       → paperwork close; no cash movement at close
 
 ### Settlement
 
-Approval authorizes a transfer intent but does not move money. After transfer evidence exists, the result transaction locks the exact payable, recomputes Settleable Balance including Pending Refunds and open-request exposure, and only then records Settlement + Ledger posting.
+Approval authorizes a typed transfer intent but does not move money. Approval and immediate pre-transfer revalidation lock the exact payable and enforce Settleable Balance. Confirmation locks it again; confirmed money is recorded even if payable facts changed after transfer, with a Critical finding rather than an omitted movement.
 
 ---
 
@@ -167,9 +170,9 @@ Approval authorizes a transfer intent but does not move money. After transfer ev
 | Private Payments fact | Additional committed fact | Public outbox contract | Courses reaction |
 |---|---|---|---|
 | `PurchasePaidDomainEvent` | capture LedgerEntry ID | `PurchaseActivatedIntegrationEvent` | `GrantCourseAccess(SourceType=Purchase, …)` |
-| Purchase fully refunded | reversal LedgerEntry ID | `PurchaseAccessRevocationRequestedIntegrationEvent` | `RevokeCourseAccess(SourceType=Purchase, …)` |
-| Succeeded Refund with `RevokeAccess` | Refund + reversal IDs | same revocation event | same idempotent command |
-| Dispute resolved Lost | Dispute + backing reversal ID | same revocation event | same idempotent command |
+| Purchase fully refunded | cause audit row containing reversal LedgerEntry ID | `PurchaseAccessRevocationRequestedIntegrationEvent` | `RevokeCourseAccess(SourceType=Purchase, …)` |
+| Succeeded Refund with `RevokeAccess` | cause audit row containing Refund + reversal IDs | same revocation event | same idempotent command |
+| Dispute resolved Lost | Dispute resolution audit row | same revocation event immediately | same idempotent command |
 
 No Domain event or Payments handler invokes a Courses command directly.
 
@@ -194,9 +197,9 @@ Provider Transactions, Settlement, Ledger entries/lines, and audit/reconciliatio
 
 ---
 
-## 5. Remaining hot spots
+## 5. Resolved boundaries and downstream gates
 
-| Hot spot | Resolution / owner |
+| Topic | Resolution / owner |
 |---|---|
 | DomainModel vs DataModel | Separate by rule; composite mapper/store may use several rows |
 | Q41 across separate roots | Domain policy from immutable facts, serialized by Purchase lock |
@@ -204,5 +207,5 @@ Provider Transactions, Settlement, Ledger entries/lines, and audit/reconciliatio
 | Technical phases | Removed from Domain storm; retained in `design.md` and C4 dynamic views |
 | Outbox delay / soft delete / `Persistance` typo | Slice 1 scaffold corrections |
 | Courses source-aware migration | Slice 2 dependency; Library regression + Purchase parity gate |
-| Legal settlement gate | Slice 5 release gate; still open |
-| Provider sandbox credentials | Missing credentials report **BLOCKED** |
+| Legal settlement gate | Slice 5 release gate; not a Slice 0 architecture decision |
+| Provider sandbox credentials | Provider-slice release gate; missing credentials report **BLOCKED** for that slice |
