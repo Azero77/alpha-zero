@@ -1,7 +1,7 @@
 # Payments — Conceptual Domain Model
 
-**Derived from:** [`design.md`](design.md) §§2–8, using canonical terms from repository-root [`GLOSSARY.md`](../../GLOSSARY.md) and scope from [`requirement.md`](requirement.md).
-**Authority:** `design.md` owns implementation decisions. If these two disagree, `design.md` wins. This document is a shared thinking artifact — aggregates, meaning, and invariants — not a second implementation contract or a restatement of the SQL schema.
+**Derived from:** [`requirement.md`](requirement.md) for product behavior, [`database.md`](database.md) for data invariants, [`transaction_flows.md`](transaction_flows.md) for sequencing, [`stripe_payments_transaction_flows.md`](stripe_payments_transaction_flows.md) / [`sham_cash_payments_transaction_flows.md`](sham_cash_payments_transaction_flows.md) for provider deltas, and [`design.md`](design.md) for boundaries, using canonical terms from repository-root [`GLOSSARY.md`](../../GLOSSARY.md).
+**Authority:** the source documents above retain that order and ownership. This document is a shared thinking artifact — aggregates, meaning, and invariants — not a second implementation contract or a restatement of the SQL schema.
 
 ---
 
@@ -10,8 +10,8 @@
 | Context | Owns the truth of | Does **not** own | Contract with Payments |
 |---|---|---|---|
 | **Payments** (core) | Product mirror, Price, Checkout Session, Purchase and reversal decisions, Refund Request, Refund, Dispute, Payment Review Case, Provider Transactions, Ledger, Settlements, webhook state, finance analytics | Course plans, enrollments, who may access a course | Publishes `PurchaseActivatedIntegrationEvent` / `PurchaseAccessRevocationRequestedIntegrationEvent` through its outbox |
-| **Courses** | Plans, enrollments, access grants and revocations | Money, purchases, refund decisions | Exposes `GrantCourseAccess` / `RevokeCourseAccess` keyed by `(SourceType, SourceId)`; `SourceType = Purchase` is the Payments origin |
-| **Identity** | Principals, tenant membership, permissions, authorization facts | Financial state | Supplies permission checks (`docs/Permissions.md`) and maker/checker identity facts; tenant context is ambient |
+| **Courses** | Plans, source availability, enrollments, access grants and revocations | Money, Purchases, Refund decisions | Publishes versioned `CoursePlanAvailabilityChangedIntegrationEvent`; exposes `GrantCourseAccess` / `RevokeCourseAccess` keyed by `(SourceType, SourceId)` |
+| **Identity** | Principals, tenant membership, permissions, authorization facts | Financial state | Supplies permission checks ([`docs/Permissions.md`](../../docs/Permissions.md)) and maker/checker identity facts; tenant context is ambient |
 | **Library** | Access Codes (the offline economy) | Online money | Existing grants are migrated to the shared command with `SourceType = AccessCode`; Library consumers stay thin mappings and act as regression parity |
 | **Stripe / ShamCash** (external) | Provider-side money movement, signed events, payouts, disputes | Application state or Ledger truth | Adapted behind capability-specific ports; only normalized, provider-neutral facts enter Payments |
 | **Infrastructure services** | Durable state: PostgreSQL (Ledger, outbox, invariants), KeyVault (secret *names* resolved at runtime), object storage (archived raw payloads), MassTransit (outbox transport) | Business decisions | Implement Application ports; never interpret a financial rule |
@@ -80,9 +80,8 @@ flowchart LR
     end
     subgraph Evt["Domain events (raised inside methods)"]
       EPaid["PurchasePaid"]
-      ERef["PurchaseRefunded"]
+      ERef["Purchase Partially / Fully Refunded"]
       EDisp["DisputeResolved"]
-      EPost["LedgerPostingPrepared"]
     end
   end
 
@@ -95,7 +94,7 @@ flowchart LR
   Purchase -->|"at most one open"| Request
   Request -->|"approval creates"| Refund
   Refund -->|"confirmed reversal drives"| Purchase
-  Dispute -->|"Lost / Won"| Purchase
+  Dispute -->|"confirmed withdrawal + Lost"| Purchase
   Purchase -->|"gross + lock identity"| RefPol
   Refund -->|"Pending/Succeeded facts"| RefPol
   Dispute -->|"withdrawn exposure"| RefPol
@@ -113,16 +112,16 @@ flowchart LR
   Purchase -->|"raises"| EPaid
   Purchase -->|"raises"| ERef
   Dispute -->|"raises"| EDisp
-  Entry -->|"raises"| EPost
 
   Courses["Courses context<br/>owns access"]
   Identity["Identity context<br/>owns permissions"]
   Stripe["Stripe / ShamCash<br/>own provider money"]
   EPaid -->|"translated to activation integration event"| Courses
-  ERef -->|"translated to revocation integration event"| Courses
+  ERef -->|"full or flagged ⇒ revocation integration event"| Courses
   EDisp -->|"Lost ⇒ revocation integration event"| Courses
   Review -->|"maker/checker facts"| Identity
   Stripe -->|"signed events"| PTrans
+  Courses -->|"versioned Plan availability"| Product
 ```
 
 ---
@@ -133,16 +132,16 @@ Domain Models are independent from persistence DataModels. A mapper may assemble
 
 | Aggregate | Ladder / identity | Invariant the root enforces |
 |---|---|---|
-| Product | mirror `SourceVersion` | only strictly newer source state applies |
+| Product | mirror `SourceVersion` and source availability | only strictly newer source state applies; Sellable is derived, not stored |
 | Price | immutable Product/currency identity | archive, never edit; active uniqueness is a Domain precondition plus DB guard |
 | Academy Payment Settings | Academy policy lifecycle | absent means selling disabled; commission/refund-window validity |
 | Provider Configuration | account/route/environment lifecycle | capability and currency coherence; projects Payment Methods |
 | Checkout Session | Pending → Completed / Expired; Expired → Completed | one locked Price + Provider Currency Route; ambiguous creation stays Pending and valid late money may complete |
-| Purchase | Paid → PartiallyRefunded → Refunded | confirmed reversal facts drive status; it does not reserve Q41 during confirmation |
+| Purchase | Paid → PartiallyRefunded or Refunded; PartiallyRefunded → Refunded | confirmed reversal facts drive status; a full first reversal may go directly to Refunded; confirmation does not reserve Q41 |
 | Refund Request | one open per Purchase | approval creates Refund; decider ≠ requester; no money moves |
-| Refund | Pending → Succeeded / Failed | partial/full, source-aware; revoke decision immutable after confirmation |
+| Refund | Pending → Succeeded / Failed | partial/full, source-aware; revoke decision immutable from creation |
 | Dispute | Open → Won / Lost plus separate withdrawal/reinstatement facts | Open does not imply funds moved; cash truth is a Provider Transaction |
-| Payment Review Case | Open → Approved/Rejected → Resolved | evidence required; checker ≠ maker; approval alone moves no money |
+| Payment Review Case | Open → Approved/Rejected → Resolved | evidence plus typed amount/currency intent required; checker ≠ maker; approval alone moves no money |
 
 **Cross-cutting invariants:** money rows are append-only (no soft delete); every Ledger write goes through one hardened database function; all lines in a posting share one currency and balance in minor units; no cross-currency total is ever computed; tenant / provider / currency / environment scope is explicit on unfiltered money reads.
 
@@ -150,29 +149,11 @@ Domain Models are independent from persistence DataModels. A mapper may assemble
 
 ---
 
-## 5. Canonical decision formulas (Domain services)
+## 5. Canonical decision policies
 
-Financial policies are I/O-free Domain services fed by facts fetched under lock by an Application phase.
+Financial policies are I/O-free Domain services fed by facts fetched under lock by an Application phase. The canonical Q41 formula is defined once in [`requirement.md`](requirement.md#52-refund-and-provider-amendments-q39q58); [`database.md` §3.13](database.md#313-settlements--record-only) owns the Settleable Balance data contract. This derived view does not restate either formula.
 
-```text
-Remaining Refundable (Q41) =
-    Purchase.SettlementAmount
-  - Σ(refunds where status in {Pending, Succeeded})
-  - Σ(dispute amounts currently withdrawn and not reinstated, including final Lost exposure)
-  // A dispute resolved Won drops out: funds_reinstated restored the money.
-```
-
-```text
-Settleable Balance (Q32/Q53) =
-    Σ(credits - debits) on the exact payable LedgerAccount
-  - Σ(Pending Refund amounts that will debit the payable)
-  - 100% of capture legs inside the short hold        // Stripe: 14 days
-  - ReserveRate × capture legs in the rolling window  // Stripe: 10% through day 120
-  - remaining Academy-payable leg of every open RefundRequest:
-        Remaining Refundable - ROUND(Remaining × CommissionShare, minor unit)
-  // ShamCash: 0 reserve after one successful daily reconciliation.
-  // Unapplied Funds never enter Academy Payable and are never settleable.
-```
+`RefundabilityPolicy` reserves only at Pending Refund creation; confirmation consumes that reservation. `SettlementPolicy` evaluates the exact payable at approval/preflight and compares again at confirmation; a confirmed transfer is still booked if facts changed after external I/O, with a Critical finding.
 
 `CheckoutEligibilityPolicy` returns eligible methods or an explicit reason. `LedgerPostingFactory` builds the balanced `LedgerPosting` (one computed leg, one derived leg) rejected on imbalance or mixed currency.
 
