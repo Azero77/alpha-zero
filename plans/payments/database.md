@@ -1,10 +1,10 @@
 # Payments Module — Database Design
 
-**Status:** Ratified 2026-11-14 (Q1–Q27 settled). External adversarial review applied 2026-11-14 — verdict **SHIP WITH FIXES**: 13 findings (2×P0, 4×P1, 4×P2, 3×P3), all incorporated (§13). Second adversarial review, same day — verdict **CONDITIONAL PASS**: 14 findings (4×P0, 4×P1, 4×P2, 2×P3), all incorporated (§14). Third review — senior DBA adversarial review, 2026-11-15 — verdict **MAJOR REVISIONS REQUIRED**: 34 findings (5×Critical, 10×High, 9×Medium, 10×Low/hygiene), all incorporated (§15); decisions Q28–Q38 added to the ledger. Manual partial-refunds amendment, 2026-11-17 — decisions Q39–Q41 added (§17). **Multi-provider + ShamCash amendment, 2026-11-17 — decisions Q42–Q58 added (§18), all approved.**
-**Source of truth** for the Payments module's data model. Companion: `plans/payments/requirement.md`, `GLOSSARY.md` (repo root), queued ADRs 0002–0004 in requirement.md Appendix A. **D1–D17**, cited throughout, are the ratified design decisions defined in `requirement.md`'s decision ledger (third review, Low). Requirement and ADR wording that still says “Stripe-only” must be synchronized to Q42–Q58 before implementation.
+**Status:** Synchronized 2026-11-18 with the approved engineering review. Q1–Q58 are settled; the sole Ledger posting function, durable webhook handoff, retained archive manifest, source-aware access contract, and benchmark gates are normative. Earlier review history remains in §§13–15 and amendment history in §§17–18.
+**Source of truth** for the Payments module's data model. Companions: [`requirement.md`](requirement.md) owns product scope; [`transaction_flows.md`](transaction_flows.md) owns provider-neutral workflows; provider flow documents own wire contracts and deltas; [`design.md`](design.md) owns Clean Architecture and implementation sequencing; `GLOSSARY.md` owns shared terms. **D1–D17**, cited throughout, are defined in `requirement.md`; Q1–Q58 below are the complete data-decision ledger.
 **This is a design document — zero implementation.** No migrations, no code.
 
-**Supersession rule:** §18 is the normative multi-provider amendment. Where Q42–Q58 or §18 conflict with the pre-amendment wording retained in §§3–17 or the historical review dispositions, the newer decision wins. The ERD in §2 already reflects the amended target.
+**Supersession rule:** the table specifications and Q1–Q58 ledger are normative. §§13–15 and §§17–18 retain review provenance; when historical wording differs, the current table specification and decision ledger win.
 
 ---
 
@@ -28,7 +28,7 @@
 | Q1 | decimal(18,4) amounts / numeric(18,8) FX / varchar(3) currency; minor-units only at provider boundary |
 | Q2 | UUIDv7 PKs on append-heavy tables (`LedgerEntries`, `LedgerLines`, `WebhookEvents`); `Guid.NewGuid()` elsewhere; plain primitive Guid storage, no typed-ID wrappers |
 | Q3/Q10 | Mixed tenancy: marker + global filter on tenant-scoped aggregates; plain `TenantId` + explicit indexes elsewhere; Ledger/Accounts/Webhook nullable-TenantId unfiltered; Platform-overview reads via named `IgnoreQueryFilters` (ADR-0001 discipline) |
-| Q4/Q5/Q11 | Decoupled from Courses: plan-level `Products` mirror + immutable `Prices`; polymorphic `ItemType`/`ItemId`, no cross-schema FKs; mirror fed by Courses lifecycle events. The pre-amendment `PspCustomers` map is removed by Q58. |
+| Q4/Q5/Q11 | Decoupled from Courses: plan-level `Products` mirror + immutable `Prices`; polymorphic `ItemType`/`ItemId`, no cross-schema FKs; mirror fed by Courses lifecycle events. No provider-customer mirror exists in MVP (Q58). |
 | Q6 | `AcademyPaymentSettings`: one row per tenant, `CommissionShare decimal(5,4)` fraction, lazy-created, absent row = selling disabled |
 | Q7 | Two-table ledger (entries + lines), Direction + unsigned Amount, **deferred constraint trigger** balance check, deny-mutation trigger + REVOKE append-only |
 | Q8 | Typed nullable FK columns on LedgerEntries (PurchaseId / RefundId / SettlementId / DisputeId), later extended by Q49/Q52 with ProviderTransactionId / PaymentReviewCaseId and generic ExternalObjectId. |
@@ -46,7 +46,7 @@
 | Q23 | State split: sessions carry attempt lifecycle (`Pending → Completed | Expired`); Purchase carries money lifecycle (`Paid → Refunded`) — **amended by Q28** (late payments: `Expired → Completed` allowed) and **Q31** (Purchase gains `PartiallyRefunded`) |
 | Q24 | **Amended by Q43/Q46/Q58:** CheckoutSessions and Purchases bind a ProviderAccount/route and generic external IDs; no provider-customer table in the one-time-purchase MVP. |
 | Q25 | **Amended by Q54:** `ProductDailySales` grain = (TenantId, ProviderAccountId, ProductId, Day, SettlementCurrency); settlement position remains derived live per payable account. |
-| Q26 | Payments-owned integration events; Courses saga gains additive second correlation; saga-state `AccessCodeId` holds PurchaseId (documented overload) |
+| Q26 | Payments-owned integration events feed Courses-owned source-aware grant/revoke commands. Library uses `SourceType=AccessCode`; Payments uses `SourceType=Purchase`; failure, log, and saga identity is `(TenantId, SourceType, SourceId)`. PurchaseId never occupies an `AccessCodeId` field. |
 | Q27 | Single initial migration: all tables + structural seed + triggers; additive-only evolution; no prod seed; go-live flag absent from schema |
 | Q28 | **Ambiguity is money-safe:** timeouts stay Pending; only definitive rejection expires. **Amended by Q50:** any received money that cannot create an exact Purchase posts to provider-scoped Unapplied Funds and alerts — never skipped. |
 | Q29 | **Domain-ID-first resolution:** Stripe stamps client_reference_id/metadata; **amended by Q48** so ShamCash stamps order_id and payment note. ExternalCheckoutId is a mirror, not the join authority. |
@@ -60,8 +60,8 @@
 | Q37 | **`Currencies` reference table** (third review Medium): code → ISO 4217 exponent; FK target for every currency column; the balance trigger and price triggers enforce minor-unit scale in the DB (closes the "trigger can't check scale without a map" gap of second review P0-C) |
 | Q38 | **Reconciliation is first-class:** persisted runs/findings for ledger-vs-provider, internal consistency, provider health, mirror drift, stale sessions, unapplied receipts and negative payables; ops reads outputs, not ad-hoc memory. |
 | Q39 | **Refund requests are a first-class workflow** for refund-capable providers: one open per Purchase, admin-decided amount, approval atomically creates Pending Refund; request/decision writes no Ledger. **Amended by Q51:** ShamCash rejects ordinary requests and uses support review. |
-| Q40 | **Revocation is a per-refund decision, not only an amount rule**: `Refunds.ReasonCode` (`RequestedByCustomer \| Duplicate \| Fraudulent \| Other`) + `Refunds.RevokeAccess` (set-once at insert, default FALSE). Access revokes when the Purchase reaches `Refunded` (any cause), on **any** lost dispute (unchanged), or when a `Succeeded` refund carries `RevokeAccess = TRUE`; an unflagged partial refund never revokes. `PurchaseRefundedIntegrationEvent` keeps its exactly-one-cause invariant |
-| Q41 | **One Remaining Refundable formula everywhere**: `SettlementAmount − Σ(Pending + Succeeded refunds) − Σ(disputes withdrawn (Open) or Lost)` — drives the refund sum cap (§3.11), the request-approval check, and the settlement hold (§3.13: an open request withholds the remaining Academy-payable leg). A dispute resolved `Won` drops out of the sum because `funds_reinstated` restores the money (Q36) |
+| Q40 | **Revocation is a per-refund decision, not only an amount rule**: `Refunds.ReasonCode` (`RequestedByCustomer \| Duplicate \| Fraudulent \| Other`) + `Refunds.RevokeAccess` (set-once at insert, default FALSE). Access revokes when the Purchase reaches `Refunded` (any cause), on **any** lost dispute, or when a `Succeeded` refund carries `RevokeAccess = TRUE`; an unflagged partial refund never revokes. The source-aware revocation event carries exactly one typed cause. |
+| Q41 | **One Remaining Refundable formula everywhere**: `SettlementAmount − Σ(Pending + Succeeded refunds) − Σ(dispute exposure currently withdrawn and not reinstated, including final Lost exposure)` — drives the refund sum cap (§3.11), the request-approval check, and the settlement hold (§3.13: an open request withholds the remaining Academy-payable leg). Merely opening a Dispute contributes zero; reinstated funds remove exposure (Q36). |
 | Q42 | **Provider registry:** `PaymentProviders.Name varchar(32)` is the immutable machine-name PK (`stripe`, `sham-cash`); optional `DisplayName` is presentation only. Adapter registration uses the same key. |
 | Q43 | **Platform provider accounts:** `ProviderAccounts` represent actual Platform-owned external accounts per provider/environment. MVP has one live account per enabled provider; secrets stay in KeyVault. AlphaZero does not link, subscribe, renew or unlink ShamCash accounts in-app. |
 | Q44 | **Provider-scoped chart of accounts:** preserve `LedgerAccounts`, add `Role` + nullable `ProviderAccountId`; Clearing/Wallet, Revenue, Fees and Suspense are per provider account/currency; Academy Payable is per tenant/provider account/currency; Bank/Cash remains provider-neutral per currency. |
@@ -78,7 +78,7 @@
 | Q55 | **Provider health fail-closed:** invalid credentials, expired ShamCash session/subscription or disabled currency route blocks new checkout only. Existing attempts, webhook ingestion, reconciliation and immutable history remain active and alertable. |
 | Q56 | **Go-live isolation:** Stripe and ShamCash may be configured simultaneously, but every ProviderAccount has its own environment/status gate. Live Stripe requires valid credentials and compliance approval; test events cannot mutate live money. |
 | Q57 | **Exclusive accounts + reconciliation:** Platform provider accounts are dedicated to AlphaZero. Signed webhooks are notifications, not sole truth; Stripe reports and ShamCash invoice/transaction/balance reads reconcile every movement. |
-| Q58 | **No provider-price/customer mirrors in MVP:** Stripe uses inline price data and one-time checkout; remove `PspPriceId` and `PspCustomers`. Add them later only when a concrete subscription/saved-customer requirement exists. |
+| Q58 | **No provider-price/customer mirrors in MVP:** Stripe uses inline price data and one-time checkout. Add mirrors later only when a concrete subscription/saved-customer requirement exists. |
 
 ---
 
@@ -245,8 +245,12 @@ erDiagram
     }
     WebhookEventPayloads {
         uuid EventId PK "1:1 with WebhookEvents"
-        jsonb Payload "archived event; PII erasure target"
+        jsonb Payload "nullable after verified archive"
+        varchar ArchiveObjectKey "immutable cold reference"
+        varchar ContentHash "SHA-256 of canonical bytes"
+        varchar ArchiveState "Hot-Uploading-Archived-Redacted"
         timestamptz ArchivedAt
+        timestamptz RedactedAt
     }
     Currencies {
         varchar Code PK "ISO 4217"
@@ -457,7 +461,7 @@ Standalone (no relationships drawn): `AcademyPaymentSettings` (one row per tenan
 **Constraints:** partial `UNIQUE (ProductId, Currency) WHERE IsActive = TRUE` (your `UQ_Prices_Product_Currency`, preserved in spirit); `CHECK (Amount > 0)`; `CHECK (IsActive = (ArchivedAt IS NULL))`; `CHECK (char_length(Currency) = 3)` + FK → `Currencies(Code)`.
 **Minor-unit scale (DB-enforced, third review Medium):** a `BEFORE INSERT OR UPDATE` trigger verifies `Amount × 10^exponent` is an integer, using the `Currencies` row for the row's currency — `numeric(18,4)` alone would accept `19.9999` and the adapter would round silently. This DB check replaces the app-only half of the second review's P0-C rounding rule.
 **Immutability (DB-enforced):** trigger `deny_price_amend` — UPDATE allowed only for the archive transition (`IsActive` TRUE → FALSE with `ArchivedAt` set). All immutable columns are compared as a row tuple with `IS DISTINCT FROM`; DELETE/TRUNCATE denied and runtime UPDATE is limited to the archive path. There is no provider price mirror in MVP: Stripe receives inline price data and ShamCash receives invoice amount/currency (Q58).
-**Archive + insert is one transaction (third review Medium):** price change = archive the active row and insert its successor inside a **single** transaction (§5 row 13) — an intermediate state with no active price, or two active prices, never exists; the partial unique is the backstop either way.
+**Archive + insert is one transaction (third review Medium):** price change = archive the active row and insert its successor inside a **single** transaction (canonical catalog flow) — an intermediate state with no active price, or two active prices, never exists; the partial unique is the backstop either way.
 **Sellable currency (Q45/Q47):** a Product may have active Prices in several currencies, but each checkout locks exactly one. A provider method is eligible only when an active `ProviderCurrencyRoute.IntegrationCurrency` matches `Price.Currency`. Stripe Adaptive Pricing may localize the customer's presentment after that selection; ShamCash charges the Price currency exactly.
 **Indexes:** `(TenantId, ProductId)`, FK index on `ProductId`.
 **Checkout rule:** session creation locks the active Price and provider currency route. For Exact routes, provider amount/currency must equal the Price or the receipt becomes Unapplied Funds. For Stripe Adaptive Pricing, Stripe's integration amount/currency must equal the Price while `presentment_details` may differ; a base/integration mismatch writes a Critical finding and never silently changes catalog truth.
@@ -579,7 +583,7 @@ Standalone (no relationships drawn): `AcademyPaymentSettings` (one row per tenan
 
 **Constraints:** `UNIQUE (ProviderAccountId, IntegrationCurrency)`; both currencies FK → Currencies; `CHECK (ReserveRate BETWEEN 0 AND 1)`; MVP CHECK `IntegrationCurrency = SettlementCurrency` for both Exact and Stripe Adaptive routes (customer-local Adaptive presentment is not the integration currency). A future provider doing merchant-side integration→settlement conversion requires a new explicit mode and migration. Initial live routes: Stripe USD/Adaptive; ShamCash SYP/Exact and USD/Exact. Published ShamCash EUR support stays disabled until tested. There is no `AcademyPaymentRoutes`: checkout availability is Academy opt-in + active Price + active compatible route. A sparse `AcademyProviderRiskOverrides` row may only make the route's settlement controls stricter.
 
-**Adapter registry:** application startup validates every enabled `PaymentProviders.Name` against the code registry and fails if no adapter exists. A DB insert cannot install executable provider support. AlphaZero does not expose ShamCash link-session, subscription, auto-renew or unlink APIs; operators manage that account on the provider dashboard and the app monitors health only. `PspCustomers` is removed from MVP because one-time Stripe Checkout and ShamCash invoices do not require a durable customer mirror (Q58).
+**Adapter registry:** application startup validates every enabled `PaymentProviders.Name` against the code registry and fails if no adapter exists. A DB insert cannot install executable provider support. AlphaZero does not expose ShamCash link-session, subscription, auto-renew or unlink APIs; operators manage that account on the provider dashboard and the app monitors health only. No durable provider-customer mirror exists in MVP because one-time Stripe Checkout and ShamCash invoices do not require one (Q58).
 
 ### 3.7 WebhookEvents — exactly-once ingestion archive
 | Column | Type | Null | Notes |
@@ -600,8 +604,8 @@ Standalone (no relationships drawn): `AcademyPaymentSettings` (one row per tenan
 
 **Constraints/indexes:** `UNIQUE (ProviderName, ExternalEventId)` — **delivery idempotency bar**; `(ProviderName, EventType, ReceivedAt)`; partial `(ExternalObjectId) WHERE ExternalObjectId IS NOT NULL`; partial `(ProcessingOutcome) WHERE ProcessingOutcome IS NULL`. ShamCash invoice and transaction callbacks may report the same transfer under different event IDs; cash idempotency therefore lives separately on `ProviderTransactions(ProviderAccountId, ExternalTransactionId)`.
 **Account resolution:** a delivery is provider-scoped, not necessarily account-scoped. Stripe resolves the account from endpoint credentials/event account. ShamCash arrays group items by external `account_id`; every group must resolve to exactly one ProviderAccount with matching ProviderName/Environment or the whole delivery fails and alerts. No event-level TenantId is trusted or stored.
-**Two-phase ingestion with async handoff:** *verify → ingest → enqueue*. The adapter verifies raw bytes before any write (Stripe signature or ShamCash `t=<timestamp>,v1=<HMAC-SHA256>` within five minutes). Phase 1 atomically upserts the event + payload on `(ProviderName, ExternalEventId)`, increments DeliveryCount on conflict, commits, queues the row and returns 2xx. Phase 2 parses normalized provider events, performs external reads outside any DB transaction, locks and re-reads the event outcome, then writes ProviderTransactions/domain/Ledger/outbox atomically. ShamCash arrays are processed atomically; a malformed item fails the delivery, while already-seen transfers remain harmless because of the transaction unique key.
-**Stuck-event sweeper (third review High 10):** the PSP only retries for ~3 days; rows can stall non-terminal after a crash between ingest and process, or sit `Failed`. A background sweeper re-drives every row where `ProcessingOutcome IS NULL AND ReceivedAt < now() − threshold` and exposes a ops-triggered re-drive for `Failed` rows; a **documented replay-from-archive** procedure re-processes events from `WebhookEventPayloads` into a fresh environment (idempotency bars make replays safe). Sweeper activity and un-driven failures surface in `ReconciliationRuns`/alerting (§16).
+**Two-phase ingestion with durable handoff:** *verify → ingest + outbox → process*. The adapter verifies raw bytes before any write (Stripe signature or ShamCash timestamped HMAC contract). Phase 1 atomically upserts the event + payload on `(ProviderName, ExternalEventId)`, increments DeliveryCount on conflict, inserts `ProcessWebhookEvent(EventId)` through the Payments EF outbox, commits, and returns 2xx. Phase 2 consumes that message, parses normalized provider facts, performs external reads outside any DB transaction, locks/re-reads the event outcome, then writes ProviderTransactions/domain state/Ledger/integration outbox atomically. ShamCash arrays are processed atomically; a malformed item fails the delivery, while already-seen transfers remain harmless because of the movement unique key.
+**Stuck-event sweeper (third review High 10):** rows may still stall after repeated consumer failure or sit `Failed`. A background sweeper re-enqueues rows where `ProcessingOutcome IS NULL AND ReceivedAt < now() − threshold` and exposes an ops-triggered re-drive for `Failed` rows; it is repair, not the normal handoff. Replay reads hot JSON or uses the archive reader to hash-verify cold payloads before processing. Sweeper activity and undriven failures surface in `ReconciliationRuns`/alerting (§16).
 
 ### 3.8 LedgerAccounts — chart of accounts
 | Column | Type | Null | Notes |
@@ -689,29 +693,33 @@ Fires once per entry — a 4-line capture validates once, not four times (the li
 **Indexes:** `(AccountId, Direction) INCLUDE (Amount)` (covering — balance SUMs become index-only scans, second review P2-A), `(EntryId)`, partial `(TenantId, AccountId) WHERE TenantId IS NOT NULL` (tenant-scoped line queries; justifies the denormalized stamp).
 **Tenancy:** nullable TenantId, no filter.
 
-**Same-transaction append guard (second review P1-A, redesigned by third review High 9, patched for multi-statement safety).** The balance trigger (on `LedgerEntries`, §3.9) cannot stop a later transaction from appending balanced lines to a historical entry — the entry stays balanced and no deny trigger fires on a plain INSERT. An immediate `BEFORE INSERT` trigger on `LedgerLines` makes historical appends physically impossible:
+### 3.10.1 Sole runtime posting boundary
+
+The runtime role has **no direct INSERT grant** on `LedgerEntries` or `LedgerLines`. One versioned database function inserts the header and every line atomically inside the caller's transaction:
 
 ```sql
-CREATE TRIGGER trg_ledger_lines_same_tx
-BEFORE INSERT ON "Payments"."LedgerLines"
-FOR EACH ROW EXECUTE FUNCTION "Payments".check_line_same_tx();
--- check_line_same_tx(): RAISE unless the parent entry was created in this exact transaction:
---   (SELECT "PostedAt" FROM "Payments"."LedgerEntries" WHERE "Id" = NEW."EntryId") = transaction_timestamp()
+REVOKE ALL ON FUNCTION "Payments".post_ledger_entry(jsonb) FROM PUBLIC;
+REVOKE INSERT ON "Payments"."LedgerEntries", "Payments"."LedgerLines"
+  FROM payments_runtime;
+GRANT EXECUTE ON FUNCTION "Payments".post_ledger_entry(jsonb)
+  TO payments_runtime;
 ```
 
-**Why `PostedAt = transaction_timestamp()` instead of `xmin` or `count(*) = 0`:**
+`post_ledger_entry(p_posting jsonb)` is `SECURITY DEFINER`, owned by `payments_migration`, and declares a fixed trusted `search_path = pg_catalog, "Payments"` (with all references schema-qualified). `PUBLIC` has no execute permission. The function validates the typed reference set and non-empty line array, inserts the immutable entry, inserts all lines, and returns the entry ID. It does not commit; the caller's transaction still owns domain state, audit, and outbox atomicity.
 
-1. The original `xmin = pg_current_xact_id()` comparison breaks under savepoints (third review High 9): a row inserted inside a subtransaction carries the subtransaction's xid while `pg_current_xact_id()` returns the top-level xid.
-2. A naive `count(*) = 0` check inside a `BEFORE INSERT FOR EACH ROW` trigger breaks whenever EF Core or Npgsql splits `LedgerLines` inserts across multiple `INSERT` statements within the same transaction — the second statement sees the first statement's uncommitted lines (`count > 0`) and falsely aborts.
-3. Because `LedgerEntries.PostedAt` is set by `DEFAULT now()` (which is an alias for `transaction_timestamp()` in PostgreSQL) and is immutable, its value is frozen for the entire duration of the top-level transaction across all savepoints and all statements. Every line inserted in the creating transaction sees `PostedAt = transaction_timestamp()`; any subsequent transaction has a strictly later `transaction_timestamp()` (and cannot see an uncommitted entry due to FK visibility rules) and is rejected.
+The deferred balance/provider/tenant/currency/minor-unit constraint trigger remains the final database check at commit. Deny UPDATE/DELETE/TRUNCATE triggers remain defense in depth. No repository, migration helper used at runtime, reporting role, or ad-hoc SQL path may append Ledger rows outside this function.
 
-**Minor-unit rounding rule (second review P0-C).** Split amounts round to the entry currency's ISO 4217 minor-unit exponent (2 for USD/EUR, 3 for KWD/BHD/OMR, 0 for JPY) even though columns are numeric(18,4). Two independent multiplications can fail the balance trigger at commit — 19.99 @ 33.33 % rounds to legs summing 20.00 — and even when they do sum, un-rounded splits leave un-wireable dust ($14.9925 can never be settled). One leg is computed, the other derived (formula in §5 row 2). **DB-enforced as of the third review**: the `Currencies` table supplies the exponent map the trigger previously lacked, so the balance trigger's check 7 rejects sub-minor-unit lines outright; app rules + architecture tests remain as belt-and-suspenders.
+**Why the former timestamp guard was removed:** `transaction_timestamp()` is transaction start time, not transaction identity. Equality could not prove which transaction created a parent entry. The function removes the invalid operation entirely: runtime code cannot insert a later line because it cannot insert any line directly. Migration-owner access is reserved for reviewed migrations and remains subject to deny triggers unless the migration explicitly changes them.
+
+Required PostgreSQL contract tests cover: balanced posting; malformed JSON/reference sets; zero/one-line entries; mixed currency/provider/tenant; sub-minor-unit amounts; duplicate business references; savepoints; caller rollback; function replay; fixed `search_path`; `PUBLIC` denial; runtime direct-insert denial; and inability to append to a historical entry.
+
+**Minor-unit rounding rule (second review P0-C).** Split amounts round to the entry currency's ISO 4217 minor-unit exponent (2 for USD/EUR, 3 for KWD/BHD/OMR, 0 for JPY) even though columns are numeric(18,4). Two independent multiplications can fail the balance trigger at commit — 19.99 @ 33.33 % rounds to legs summing 20.00 — and even when they do sum, un-rounded splits leave un-wireable dust ($14.9925 can never be settled). One leg is computed, the other derived by `LedgerPostingFactory`. **DB-enforced as of the third review**: the `Currencies` table supplies the exponent map the trigger previously lacked, so the balance trigger's check 7 rejects sub-minor-unit lines outright; app rules + architecture tests remain as belt-and-suspenders.
 
 ### 3.11 Refunds — multiple, partial, external, async
 | Column | Type | Null | Notes |
 |---|---|---|---|
 | Id | uuid | no | PK — provider idempotency key when `Source = 'Platform'`; provider/support rows get a domain-generated id |
-| PurchaseId | uuid | no | FK → Purchases; **many refunds per Purchase** (Q31) — no uniqueness on this column; the sum cap (below) replaces the old full-only rule |
+| PurchaseId | uuid | no | FK → Purchases; **many refunds per Purchase** (Q31) — no uniqueness on this column; the sum cap below governs partial/full refunds |
 | TenantId | uuid | no | |
 | ProviderAccountId | uuid | no | FK → ProviderAccounts; must equal Purchase.ProviderAccountId |
 | ProviderTransactionId | uuid | yes | FK → ProviderTransactions; actual outgoing/refund movement when succeeded |
@@ -733,13 +741,15 @@ FOR EACH ROW EXECUTE FUNCTION "Payments".check_line_same_tx();
 **Minor-unit scale (DB-enforced, amendment Q41):** a `BEFORE INSERT` trigger on `Refunds` verifies `Amount × 10^exponent` is an integer using the `Currencies` row — the same mechanism as the `Prices` trigger (§3.2); a sub-minor-unit refund amount can never reach the ledger pipeline. `RefundRequests.ApprovedAmount` carries the identical trigger (§3.19).
 **Remaining Refundable & sum cap (Q31, Q41; third review Critical 2):** every refund-creation and request-approval transaction computes, under the Purchase row's `FOR NO KEY UPDATE` lock:
 
-> **Remaining Refundable** = `Purchase.SettlementAmount` − Σ(`Pending` + `Succeeded` refund amounts) − Σ(dispute amounts currently withdrawn — disputes `Open` (funds already taken by `funds_withdrawn`) or `Lost`)
+> **Remaining Refundable** = `Purchase.SettlementAmount` − Σ(`Pending` + `Succeeded` refund amounts) − Σ(dispute exposure currently withdrawn and not reinstated, including final `Lost` exposure). `Open` paperwork alone contributes zero.
+
+Dispute exposure is derived from the unique `DisputeLoss` / `DisputeWon` Ledger entries for the Dispute, not inferred from `Disputes.Status`. This preserves Q36's separation between cash-movement time and paperwork close time.
 
 A new refund (or an approved request's refund) must satisfy `Amount ≤ Remaining`. The lock serializes concurrent creations. The DB backstops are the provider-scoped external ID, unique ProviderTransaction and ledger RefundReversal uniqueness.
 **Stripe event family:** `refund.created` confirms ExternalRefundId and creates unknown provider-originated rows with `Source = 'Provider'`; `refund.updated` advances status; `refund.failed` records definitive failure. The adapter maps legacy `charge.refunded` / `charge.refund.updated` names where needed. Each succeeded event first inserts/dedupes its ProviderTransaction, then writes the reversal.
 **Provider capability (Q51):** ordinary RefundRequests and automatic refund calls are available only when the locked provider adapter supports refunds (Stripe). ShamCash purchases reject the normal request endpoint and direct the student to support. A confirmed exceptional ShamCash reversal is `Source = 'ProviderSupport'`, requires maker/checker review + immutable evidence, and becomes Succeeded only after the outgoing/reversal ProviderTransaction is recorded. Returns of partial/overpaid/duplicate receipts are not Purchase refunds; they resolve Unapplied Funds through PaymentReviewCases.
 **Status semantics:** `Failed` means the provider definitively will not refund. Ambiguous automatic outcomes stay Pending. Manual support reversals never become Succeeded from an email alone: approval and movement evidence are both required.
-**Guard:** refund creation checks `NOT EXISTS (Disputes WHERE PurchaseId = @id AND Status = 'Open')` before the PSP call (Stripe rejects such refunds with `charge_disputed`; failing early avoids a stuck `Pending` row — §5 row 4).
+**Guard:** refund intent checks `NOT EXISTS (Disputes WHERE PurchaseId = @id AND Status = 'Open')` before the provider call (Stripe rejects such refunds with `charge_disputed`; failing early avoids a stuck `Pending` row). The canonical refund orchestrator owns this sequence.
 **FX and reversal truth:** the reversal books the ProviderTransaction's actual settlement delta; any provider FX difference from the original allocation goes to an additive FX Gain/Loss account when that case exists. Stripe Adaptive Pricing refunds the customer in their presentment currency, but our Ledger still uses provider-reported settlement currency. Commission/Academy legs reverse pro rata from the stored CommissionShare; ProviderFeeRefunded is credited only when actually reported.
 **Revocation policy (Q31, Q40):** the revocation mirror fires when the Purchase reaches `Refunded` (any cause), on **any** lost dispute (§3.12), or when a `Succeeded` refund carries `RevokeAccess = TRUE` — even though the Purchase stays `PartiallyRefunded`. Unflagged partial refunds leave course access intact (the student still paid most of the price).
 **Tenancy:** marker + global filter. Transitions guarded EF-side with the repo's tripwire pattern (conditional `UPDATE … WHERE Status = expected`, AccessCode precedent).
@@ -827,7 +837,7 @@ A new refund (or an approved request's refund) must satisfy `Amount ≤ Remainin
 | Id | uuid | no | PK |
 | EventId | uuid | no | **UNIQUE** (idempotent projection writes) |
 | TenantId | uuid | yes | nullable — platform-level actions exist |
-| Action | varchar(64) | no | e.g. `Purchase.Paid`, `Price.*`, `ProviderAccount.*`, `ProviderRoute.*`, `Settlement.Recorded`, `Refund.*`, `PaymentReview.Opened/Approved/Rejected/Resolved`, `Unapplied.Received/Applied/Returned` |
+| Action | varchar(64) | no | e.g. `Purchase.Paid`, `Price.*`, `ProviderAccount.*`, `ProviderCurrencyRoute.*`, `Settlement.Recorded`, `Refund.*`, `PaymentReview.Opened/Approved/Rejected/Resolved`, `Unapplied.Received/Applied/Returned` |
 | AggregateId | uuid | yes | PurchaseId / ProductId / SettlementId / Settings row id |
 | ActorUserId | uuid | yes | |
 | Payload | jsonb | yes | old/new values for config changes; event context for transitions |
@@ -852,11 +862,21 @@ A new refund (or an approved request's refund) must satisfy `Amount ≤ Remainin
 | Column | Type | Null | Notes |
 |---|---|---|---|
 | EventId | uuid | no | PK **and** FK → `WebhookEvents` (1:1); written in the same ingest transaction |
-| Payload | jsonb | no | archived provider delivery — audit trail + replay forensics |
-| ArchivedAt | timestamptz | no | ingest time |
+| Payload | jsonb | yes | hot provider delivery; NULL only after a verified cold upload or approved redaction transition |
+| ArchiveObjectKey | varchar(512) | yes | deterministic immutable object-store key; required once Archived |
+| ContentHash | varchar(64) | yes | lowercase SHA-256 of canonical raw delivery bytes; required once Archived |
+| ArchiveState | varchar(16) | no | `Hot` \| `Uploading` \| `Archived` \| `Redacted`; default `Hot` |
+| ArchivedAt | timestamptz | yes | verified cold-upload completion time, not ingest time |
+| RedactedAt | timestamptz | yes | completed PII-redaction/tombstone time |
+| LastArchiveAttemptAt | timestamptz | yes | retry/monitoring watermark |
 
-**Why separate:** `WebhookEvents` is the narrow hot dedupe table; payloads are wide replay/forensics data. Stripe payloads can contain email/billing/card details and ShamCash payloads can contain sender names/addresses/payment notes. A dedicated table gives archival and surgical erasure one target without touching immutable ProviderTransactions or Ledger money facts.
-**Append-only:** `deny_webhook_payload_amend` trigger + REVOKE. Unlike money tables (which require a reviewed migration to repair), `WebhookEventPayloads` permits surgical in-place PII redaction exclusively via the `payments_migration`-owned `SECURITY DEFINER` stored procedure `"Payments".redact_webhook_pii(p_user_id uuid, p_actor_id uuid)` (§16.3), which sets a transaction-local session variable (`SET LOCAL payments.allow_pii_redaction = 'true'`) checked by the trigger — avoiding `ACCESS EXCLUSIVE` DDL locks on the hot webhook ingest path.
+**Lifecycle constraints:** `Hot` requires non-null Payload and null archive fields. `Uploading` retains Payload. `Archived` requires object key, hash and ArchivedAt; Payload is cleared only in the same transition that records verified archive evidence. `Redacted` requires RedactedAt and may retain only an approved financially-minimal hot payload or a cold-object tombstone reference. EventId never changes. Object key and content hash are set-once; a mismatch is a Critical reconciliation finding, not an overwrite.
+
+**Why separate:** `WebhookEvents` is the narrow hot dedupe table; payloads are wide replay/forensics data. Stripe payloads can contain email/billing/card details and ShamCash payloads can contain sender names/addresses/payment notes. The retained manifest bounds hot JSON while preserving replay, hash verification, and erasure evidence without touching immutable ProviderTransactions or Ledger money facts.
+
+**Controlled transitions:** `deny_webhook_payload_amend` denies arbitrary mutation/DELETE/TRUNCATE and permits only `Hot → Uploading → Archived` (retry may return `Uploading → Hot`) and an audited transition to `Redacted`. The archive worker uploads by deterministic key, verifies object hash/readability, then clears Payload and stamps the manifest in one transaction. Upload or verification failure leaves hot JSON available. One archive reader returns hot JSON or downloads and hash-verifies the cold object.
+
+PII redaction runs only through the `payments_migration`-owned hardened `SECURITY DEFINER` procedure `"Payments".redact_webhook_pii(p_user_id uuid, p_actor_id uuid)` (§16.3), with fixed `search_path`, `PUBLIC` execute revoked, and transaction-local authorization checked by the transition trigger.
 
 ### 3.18 ReconciliationRuns / ReconciliationFindings — reconciliation with an output (Q38, third review Medium)
 `ReconciliationRuns`
@@ -884,7 +904,7 @@ A new refund (or an approved request's refund) must satisfy `Amount ≤ Remainin
 **Scope:** (a) ledger internal balance/ref/provider checks; (b) ledger vs provider by ProviderAccount + currency — Stripe balance transactions/reports and ShamCash balances, invoices and overlapping transaction windows; (c) provider health — credentials, environment, ShamCash subscription/session; (d) Products mirror; (e) stale sessions; (f) Unapplied Funds/PaymentReviewCases; (g) negative payables. Every run persists proof. ShamCash settlement requires at least one successful daily `LedgerVsProvider` run after the relevant capture; a webhook alone never satisfies that gate.
 
 ### 3.19 RefundRequests — student-initiated, admin-decided (Q39, manual partial refunds amendment)
-*The request is not the money movement. No PSP columns, no ledger linkage — the financial act is the `Refunds` row created at approval (§5 row 19).*
+*The request is not the money movement. It has no provider columns or Ledger linkage; approval creates the `Refunds` row through the canonical shared refund flow.*
 
 **Capability gate (Q51):** creation is rejected unless the Purchase's provider adapter supports ordinary refunds. Stripe qualifies; ShamCash does not. ShamCash students are directed to support, where a `PaymentReviewCase` handles return of unapplied money or an exceptional provider-confirmed reversal.
 
@@ -914,9 +934,9 @@ A new refund (or an approved request's refund) must satisfy `Amount ≤ Remainin
 
 **One open request per Purchase (DB-enforced):** partial `UNIQUE (PurchaseId) WHERE Status = 'Requested'` — a second request is impossible while one awaits decision; after a decision, a new request may be opened (e.g. re-request after rejection).
 
-**Transition-only trigger `deny_request_amend` (third-review High 6 pattern):** UPDATE allowed only from `OLD.Status = 'Requested'` to `Approved | Rejected | Cancelled`, writing exactly the coherent fields the CHECKs shape (`Status`, `ApprovedAmount`, `DecidedByUserId`, `DecidedAt`, `DecisionNotes`, `RefundId`). `PurchaseId`, `TenantId`, `RequestedByUserId`, `Reason`, `Currency`, `CreatedAt` immutable. Terminal states reject any further UPDATE — an approved-then-`Failed` refund is re-issued via §5 row 4 (a fresh `Refunds` row), never by reopening the request. DELETE/TRUNCATE denied.
+**Transition-only trigger `deny_request_amend` (third-review High 6 pattern):** UPDATE allowed only from `OLD.Status = 'Requested'` to `Approved | Rejected | Cancelled`, writing exactly the coherent fields the CHECKs shape (`Status`, `ApprovedAmount`, `DecidedByUserId`, `DecidedAt`, `DecisionNotes`, `RefundId`). `PurchaseId`, `TenantId`, `RequestedByUserId`, `Reason`, `Currency`, `CreatedAt` immutable. Terminal states reject any further UPDATE; an approved-then-`Failed` refund is re-issued as a fresh Refund, never by reopening the request. DELETE/TRUNCATE denied.
 
-**Approval is one transaction (Q39):** approve = `Refunds` insert (`Source = 'Platform'`, `Pending`, `ReasonCode`, `RevokeAccess` per the admin's decision, `RequestedByUserId` = deciding admin) + request → `Approved` with `ApprovedAmount`/`DecidedByUserId`/`DecidedAt`/`RefundId`, under the Purchase row's `FOR NO KEY UPDATE` lock with the `Amount ≤ Remaining Refundable` cap (Q41) and the open-dispute guard (§4 row 31). **No ledger entries at request or decision time** — money moves only when the refund succeeds (§5 row 5). The request's `Currency` must equal the Purchase's settlement currency (app-checked; the FK only proves ISO validity).
+**Approval is one transaction (Q39):** approve = `Refunds` insert (`Source = 'Platform'`, `Pending`, `ReasonCode`, `RevokeAccess` per the admin's decision, `RequestedByUserId` = deciding admin) + request → `Approved` with `ApprovedAmount`/`DecidedByUserId`/`DecidedAt`/`RefundId`, under the Purchase row's `FOR NO KEY UPDATE` lock with the `Amount ≤ Remaining Refundable` cap (Q41) and the open-dispute guard (§4 row 31). **No Ledger entries at request or decision time**; confirmed provider movement drives the reversal flow. The request's `Currency` must equal the Purchase's settlement currency (app-checked; the FK only proves ISO validity).
 
 **Minor-unit scale (DB-enforced):** a `BEFORE INSERT` trigger verifies `ApprovedAmount × 10^exponent` is an integer via `Currencies` — identical to the `Refunds.Amount` trigger.
 
@@ -972,7 +992,7 @@ A new refund (or an approved request's refund) must satisfy `Amount ≤ Remainin
 
 **Money rule:** opening/approving a case moves no money. Resolution atomically writes the new outgoing ProviderTransaction when applicable, LedgerEntry/Lines, Purchase/refund transition when applicable, audit row and outbox revocation. Provider support email alone is never sufficient to mark money returned; movement evidence is mandatory.
 
-**Permissions:** Academy-side `payments:OpenPaymentReview` may create/read its tenant's payment/support cases but never approve or write Ledger effects. Settlement-type cases are Platform-finance-only (`payments:RecordSettlement`). Platform-only `payments:ApprovePaymentReview` decides/resolves either kind; authorization additionally rejects `OpenedByUserId = current actor`.
+**Permissions:** Academy-side `payments:OpenReview` may create/read its tenant's payment/support cases but never approve or write Ledger effects. Settlement-type cases are Platform-finance-only (`payments:RecordSettlement`). Platform-only `payments:ApproveReview` decides/resolves either kind; authorization additionally rejects `OpenedByUserId = current actor`.
 
 ### 3.22 AcademyProviderRiskOverrides — sparse stricter settlement policy (Q53)
 
@@ -1004,9 +1024,9 @@ A new refund (or an approved request's refund) must satisfy `Amount ≤ Remainin
 | 7 | Prices immutable; only the archive transition is writable | **DB** + EF | `deny_price_amend` trigger; no EF edit path |
 | 8 | One active price per (Product, Currency) | **DB** | partial unique `WHERE IsActive` |
 | 9 | Active price ⇔ ArchivedAt IS NULL | **DB** | CHECK |
-| 10 | Webhook delivery exactly-once; cash movement exactly-once; audit survives processing failure; unsigned deliveries never reach DB | **DB** + EF | unique (ProviderName, ExternalEventId) + unique (ProviderAccountId, ExternalTransactionId) + verify-before-write + two-phase ingest |
+| 10 | Webhook delivery exactly-once; cash movement exactly-once; committed ingest always has durable processing work; unsigned deliveries never reach DB | **DB** + EF | unique (ProviderName, ExternalEventId) + unique (ProviderAccountId, ExternalTransactionId) + verify-before-write + Payments EF outbox message in the ingest transaction + idempotent consumer/sweeper |
 | 11 | Purchase status ladder (`Paid → PartiallyRefunded → Refunded`) transitions happen exactly once, guarded | **EF** + DB | tripwire conditional UPDATE (`WHERE Status = expected`) under the purchase row lock; CHECK on RefundedAt coherence |
-| 12 | Refund sum cap via **Remaining Refundable**: `SettlementAmount − Σ(Pending + Succeeded refunds) − Σ(disputes Open (withdrawn) or Lost)`; multiple partial refunds are legal for refund-capable providers | **EF** + DB | Purchase lock; provider-scoped ExternalRefundId/ProviderTransaction uniques; RefundReversal unique; amount scale trigger |
+| 12 | Refund sum cap via **Remaining Refundable**: `SettlementAmount − Σ(Pending + Succeeded refunds) − Σ(dispute exposure currently withdrawn and not reinstated, including final Lost exposure)`; Open paperwork alone contributes zero; multiple partial refunds are legal for refund-capable providers | **EF** + DB | Purchase lock; provider-scoped ExternalRefundId/ProviderTransaction uniques; RefundReversal unique; amount scale trigger |
 | 13 | Purchases.Status derives from Σ reversals: 0 ⇒ `Paid`, < G ⇒ `PartiallyRefunded`, ≥ G ⇒ `Refunded` + `RefundedAt` | **EF** + DB | tripwire ladder under the purchase lock; transition-only trigger constrains the ladder (§3.5) |
 | 14 | Refund/session status coherence with timestamps | **DB** | CHECK constraints |
 | 15 | CommissionShare ∈ [0,1] | **DB** | CHECK |
@@ -1022,16 +1042,16 @@ A new refund (or an approved request's refund) must satisfy `Amount ≤ Remainin
 | 25 | Analytics projections are caches, never truth | **design** | rebuildable from Ledger + Purchases; no FK, no reads in decision paths |
 | 26 | Balance mutations of an Academy payable are serialized; captures never block | **DB** | `SELECT … FOR NO KEY UPDATE` on the payable account row, acquired BEFORE any ledger write, in Settlement / RefundReversal / DisputeLoss transactions — compatible with the `FOR KEY SHARE` FK locks of concurrent capture inserts, unlike `FOR UPDATE` (reviews P0-1/P0-A/P2-D) |
 | 27 | Reads on unfiltered tables (Provider*, Ledger*, WebhookEvents, PaymentsAuditLogs) are explicitly tenant/provider scoped wherever meaning exists | **EF** + tests | enumerated read paths + architecture tests |
-| 28 | Ledger splits are minor-unit granular per entry currency; one leg computed, the other derived | **DB** + EF | rounding rule (§3.10, §5 row 2) — **now trigger-enforced** via the `Currencies` exponent map (§3.9 check 7, §3.16; closes the second review P0-C gap); app rules + arch tests remain as backstop |
-| 29 | A ledger entry's lines are written only in the entry's own transaction; entries always carry ≥ 2 lines | DB | entry-level deferred balance trigger (≥ 2 lines + balance, §3.9) + `BEFORE INSERT` timestamp-equality same-tx append guard on LedgerLines (`PostedAt = transaction_timestamp()`, §3.10; savepoint-proof and multi-statement-safe) |
-| 30 | Only Settlement enforces amount ≤ **Settleable Balance**; reversals may drive the payable negative | **EF** | clawback semantics (§3.13, §5 rows 5/7; second review P2-D) + risk reserves (Q32) + open-`RefundRequest` hold (Q41: the remaining Academy-payable leg of any Purchase with a `Requested` request is withheld from settleable) |
+| 28 | Ledger splits are minor-unit granular per entry currency; one leg computed, the other derived | **DB** + app | `LedgerPostingFactory` rounding rule (§3.10), trigger-enforced via `Currencies` exponent (§3.9 check 7, §3.16); app rules + architecture tests remain as backstop |
+| 29 | One hardened posting function is the only runtime insertion path for an entry and all its lines; entries carry ≥ 2 balanced lines | **DB** | runtime direct INSERT revoked; hardened `SECURITY DEFINER` function with fixed search path; deferred entry constraint trigger (§3.9–§3.10.1) |
+| 30 | Only Settlement enforces amount ≤ **Settleable Balance**; reversals may drive the payable negative | **app** | clawback semantics (§3.13), risk reserves (Q32), and open-RefundRequest hold (Q41) in the canonical Settlement flow |
 | 31 | No refund on a Purchase with an Open dispute | **EF** | guard before provider call/manual approval |
 | 32 | One ledger entry per business event/movement semantic | **DB** | Purchase/Refund/Dispute/Settlement partial uniques plus (ProviderTransactionId, Type) uniques |
 | 33 | ManualAdjustment entries carry an explicit actor and description; two-person rule (maker/checker) enforced app-side | **DB** + EF | CHECK (§3.9) + `payments:AdjustLedger` permission + PaymentsAuditLogs trail (third review High 7) |
 | 34 | A per-Academy account can only carry that Academy's lines | **DB** | balance-trigger check 6: account.TenantId = entry.TenantId (§3.9; third review High 8) |
 | 35 | Every currency code is a valid ISO 4217 code; all amounts are minor-unit granular | **DB** | FK → `Currencies(Code)` on every currency column + exponent-based scale checks (§3.16; third review Medium) |
 | 36 | Money tables are immutable/transition-only; provider movements are append-only | **DB** | deny triggers on Purchases/Refunds/Disputes/Settlements/CheckoutSessions/ProviderTransactions |
-| 37 | The runtime DB role cannot mutate schema, truncate, disable triggers, or write append-only tables | **DB** | role separation: migration/owner role vs runtime role with scoped GRANTs (Q35, §9/§16; third review High 6) |
+| 37 | The runtime DB role cannot mutate schema, truncate, disable triggers, directly insert Ledger rows, or mutate append-only tables | **DB** | role separation plus table-scoped grants; Ledger runtime access is EXECUTE-only on the posting function (Q35, §3.10.1, §9/§16) |
 | 38 | Every provider-initiated refund is ingested and counts toward reversal total; unsupported providers cannot enter ordinary refund flow | **app** | adapter capability gate + provider refund events/support-reviewed reversal |
 | 39 | Dispute cash movement is booked at provider movement time; close is paperwork only | **app** + DB | Q36 + ProviderTransaction + (DisputeId, Type) uniqueness |
 | 40 | Mismatched/unmatched receipts are booked to provider-scoped Unapplied Funds and alerted — cash is never silently skipped | **app** + DB | UnappliedReceipt + ProviderTransaction unique + review workflow |
@@ -1060,55 +1080,46 @@ A new refund (or an approved request's refund) must satisfy `Amount ≤ Remainin
 
 ---
 
-## 5. Transactional boundary map
+## 5. Persistence boundaries for shared flows
 
-Every transaction below runs through the module scaffold's `TransactionalBehavior` (one DB transaction on Payments' `AppDbContext`); the MassTransit EF outbox lives in the same DbContext, so **outbox messages are atomic with every write they accompany** (idempotency bar #4).
+[`transaction_flows.md`](transaction_flows.md) is the single source for application sequence, provider I/O placement, lock order, and replay behavior. This section records only what must commit together in Payments storage.
 
-**Provider webhook rows are two-phase and decoupled from the HTTP thread:** verify raw bytes before any write → autonomous upsert on (`ProviderName`, `ExternalEventId`) + payload → enqueue/2xx → external provider reads outside transactions → domain transaction. The domain transaction locks/re-reads the event outcome, inserts deduped ProviderTransactions, writes domain/Ledger/outbox, and stamps Processed. Failure is stamped in a clean transaction and swept. **No provider API call happens under a DB transaction or row lock.**
-**Stripe capture-time call:** retrieve Checkout Session/PaymentIntent with expanded balance transaction outside the DB transaction. Fee, settlement gross and FX come from Stripe; Adaptive Pricing customer amount/currency comes from `presentment_details`. Instant-capture methods only, so ProviderFee/SettlementAmount are known before the domain transaction. `payment_status = unpaid` is Failed/alerted, never a Purchase. ShamCash does not use this call; its signed transaction + reconciliation is capture truth.
-**Global lock order (third review Low — now written down):** 1. `WebhookEvents` row → 2. the aggregate the event names (`CheckoutSessions` row for captures, `Refunds`/`Disputes` rows for their events) → 3. the `Purchases` row (when mutated) → 4. the Academy's payable `LedgerAccounts` row (before any ledger write, §3.13) → 5. `LedgerEntries`/`LedgerLines` inserts. All locks `FOR NO KEY UPDATE`; every handler acquires in this order, so no cross-handler deadlock exists (captures hold only 1–2, never blocking on 3–4).
+Every local phase below runs through `TransactionalBehavior` on the Payments `AppDbContext`. Provider workflows use public non-transactional orchestrators with internal transactional phases. No provider network call runs under a database transaction or lock.
 
-| # | Trigger | One transaction contains | Idempotency |
-|---|---|---|---|
-| 1 | Student: create checkout session | eligibility → select active Price → list active compatible ProviderCurrencyRoutes → student selects method → insert/reuse CheckoutSession locking route → provider create outside tx | partial unique + CheckoutSessionId as provider idempotency key; route/provider failure blocks only that method; timeout stays Pending |
-| 2 | Stripe: `checkout.session.completed` | ingest → retrieve session + balance transaction outside tx → insert ProviderTransaction → lock CheckoutSession → resolve metadata-first → validate integration Price + capture `presentment_details` → Purchase + provider-scoped Capture lines/fee pair + activation outbox + audit | provider event/transaction uniques + session lock + one Capture/Purchase |
-| 3 | Stripe: `checkout.session.expired` | ingest + session → Expired + audit; provider-proven late money still follows ambiguity rules | provider event unique |
-| 4 | Platform admin: issue refund | lock `Purchases` row `FOR NO KEY UPDATE` → open-dispute guard + `Amount ≤ Remaining Refundable` (`SettlementAmount − Σ(Pending+Succeeded) − Σ(disputes Open or Lost)`; Q41 unified formula, race-free under the lock) → `Refunds` insert (`Source = 'Platform'`, `Pending`, `ReasonCode`, `RevokeAccess`) + audit row `Refund.Issued` → *then* PSP call outside tx, keyed by `RefundId`, metadata `{RefundId, PurchaseId}` stamped (Q29) | RefundId durable before the call; `Failed` only on definitive PSP rejection or `refund.failed` (ambiguous outcomes stay `Pending` — §3.11) |
-| 5 | Stripe refund events | ingest/dedupe event + refund ProviderTransaction → resolve metadata/ExternalRefundId → guarded Refund/Purchase transition → provider-scoped RefundReversal lines → conditional revocation outbox/audit; failed event writes no Ledger | event + movement + RefundReversal uniques |
-| 6 | Stripe `charge.dispute.created` | ingest → resolve by provider refs → Dispute Open + audit; no money until withdrawal | event + ExternalDisputeId uniques |
-| 7 | Stripe `funds_withdrawn` | insert withdrawal ProviderTransaction → unconditional DisputeLoss against provider-scoped Payable/Revenue/Fees/Asset; negative payable allowed | event + movement + (DisputeId, Type) uniques |
-| 8 | Stripe `funds_reinstated` | insert reinstatement ProviderTransaction → DisputeWon restores Payable/Revenue from ProviderAsset; retained fee remains expense | same uniques |
-| 9 | Stripe `dispute.closed` | guarded Won/Lost paperwork transition; Lost recomputes Purchase reversal state and revokes access; no cash entry at close | event unique + state tripwire |
-| 10 | Platform finance: resolve Settlement review | maker opens evidence-backed case → different checker approves after completed transfer → lock exact Academy/provider/currency payable → provider-policy Settleable Balance → Settlement + Dr Payable / Cr selected same-currency ProviderAsset or Bank/Cash + audit | unique review, amount cap under lock, unique source/external reference |
-| 11 | Ops: record provider payout | ProviderTransaction + `ProviderPayout` entry (Dr Bank / Cr provider Clearing; TenantId NULL) + audit | provider transaction and semantic-entry uniques |
-| 12 | Courses event consumer: mirror upsert | `Products` version-conditional upsert (+ IsPurchasable/Title updates, `WHERE SourceVersion` newer — §3.1) + audit row | upsert keyed by (ItemType, ItemId); out-of-order events are no-ops |
-| 13 | Academy admin: create/archive price | `Prices` insert **and** archive of the superseded row **in one transaction** (§3.2) + audit row | deny-amend trigger constrains the update; partial unique backstops |
-| 14 | Platform admin: settings/provider config | Academy settings upsert; provider/route activation transaction ensures provider structural accounts; payable ensured at first eligible route use; audit | unique config/account-role keys + startup adapter validation |
-| 15 | Refresh worker | rebuild one `(Tenant, ProviderAccount, Day)` ProductDailySales slice transactionally | unique provider-account/settlement-currency grain |
-| 16 | Sweeper worker: stuck webhook/review re-drive | non-terminal events re-enter process; Failed rows re-drivable; stale UnappliedReceipt/open PaymentReviewCase escalates | delivery/movement/domain idempotency makes re-drives safe |
-| 17 | Reconciliation worker | provider-scoped ledger-vs-provider/balance/health plus internal/mirror/stale/unapplied/negative checks → persisted run/findings | runs append-only; ShamCash daily success gates settlement |
-| 18 | Student: request refund | provider-capability gate first; then existing ownership/window/dispute/remaining checks → RefundRequest + audit, no money | Stripe allowed; ShamCash rejected with support path |
-| 19 | Platform admin: decide request | lock `RefundRequests` row, then `Purchases` row `FOR NO KEY UPDATE` (lock order: named aggregate → Purchase) → open-dispute guard + `ApprovedAmount ≤ Remaining Refundable` (Q41) → **Approve:** `Refunds` insert (`Source = 'Platform'`, `Pending`, `ReasonCode`, `RevokeAccess`, `RequestedByUserId` = deciding admin) + request → `Approved` (`ApprovedAmount`, `DecidedByUserId`, `DecidedAt`, `DecisionNotes`, `RefundId`) in the same transaction + audit row `Refund.Approved` → the new refund then follows row 4's PSP-call path. **Reject:** request → `Rejected` + decision fields + audit row `Refund.Rejected`. **No ledger writes at decision time** | request-row + purchase-row locks; partial unique; tripwires on both rows; `RefundId` unique ties one refund to one request |
-| 20 | ShamCash: create hosted invoice | create/reuse locked CheckoutSession → POST invoice with single-use note, exact Price, hosted=true, order_id + idempotency key = CheckoutSessionId → stamp ExternalCheckoutId | one pending session; provider idempotency; 30-minute expiry |
-| 21 | ShamCash callback/reconciliation: exact receipt | verify/ingest delivery → upsert ProviderTransaction `(account, transaction_id)` → lock session → exact amount/currency/window check → Purchase + Dr ShamCash Wallet / Cr Academy Payable + Cr Platform Revenue → activation outbox/audit | event unique + transaction unique + session/Purchase/Capture tripwires |
-| 22 | ShamCash callback/reconciliation: non-exact receipt | upsert ProviderTransaction → `UnappliedReceipt` entry Dr Wallet / Cr Unapplied Funds → open review/finding; no Purchase/access | transaction + semantic-entry unique; remaining unapplied derived under lock |
-| 23 | Resolve unapplied receipt | Academy accountant opens case/evidence → different Platform finance actor approves → return: outgoing ProviderTransaction + Dr Unapplied / Cr Wallet; or overpayment apply: Purchase + Dr Unapplied expected / Cr Payable + Cr Revenue, excess stays unapplied until returned | maker/checker + evidence + remaining-unapplied cap + outbox only when Purchase created |
-| 24 | ShamCash support-confirmed Purchase reversal | reviewed case + outgoing/reversal ProviderTransaction → privileged `Refunds(Source=ProviderSupport)` Succeeded + RefundReversal lines + Purchase ladder/revocation outbox + audit | no ordinary refund API; evidence, actor separation and transaction unique required |
-| 25 | Provider health failure | reconciliation changes ProviderAccount/route to Degraded/Disabled and alerts; no new sessions; existing ingest/reconciliation/history continue | state gate, never data deletion |
+| Persistence phase | Must commit atomically | Database backstop |
+|---|---|---|
+| Checkout intent/result | one pending session locking Product/Price/route; later external ID stamp | partial unique pending attempt; immutable FKs/transition trigger |
+| Webhook ingest | verified delivery, hot payload/manifest row, internal `ProcessWebhookEvent` EF-outbox message | delivery unique; payload 1:1; outbox in same DbContext |
+| Exact capture | ProviderTransaction, Purchase, session completion, posting-function call, audit, activation outbox | movement/Purchase/business-entry uniques; deferred posting checks |
+| Non-exact receipt | ProviderTransaction, UnappliedReceipt posting, audit/finding | movement + semantic-entry uniques |
+| Refund request decision | request transition plus pending Refund on approval; no Ledger | request/Purchase locks, one-open unique, RefundId unique |
+| Confirm refund/dispute movement | ProviderTransaction, guarded state transitions, posting-function call, audit, conditional revocation outbox | movement/semantic-entry uniques; Purchase lock/cap |
+| Review resolution | case transition, confirmed movement when applicable, posting-function call, audit, optional activation/revocation outbox | maker/checker CHECKs, evidence, remaining-unapplied cap |
+| Settlement result | confirmed Settlement, exact payable lock/cap, posting-function call, audit | case/external-reference uniques; account/provider/currency checks |
+| Product/Price/config | versioned mirror upsert or constrained config/price transition plus audit | source version, partial uniques, startup adapter validation |
+| Analytics refresh | one ProviderAccount/currency/day projection slice | provider/currency unique grain |
+| Archive transition | verified object key/hash and lifecycle stamp; clear hot JSON only here | lifecycle CHECK/trigger; set-once manifest fields |
+| Reconciliation | run summary and findings | persisted evidence; ShamCash success gates settlement |
 
-**Cross-module contract (unchanged pipeline):** the outbox events ride to Courses; provisioning stays idempotent and parks failures in `FailedProvisioningRecord` — `PurchaseId` occupies its `(TenantId, AccessCodeId)` unique slot (no Courses schema change). Revocation rides `CourseRevocationSaga` via the mirror event (§6).
+Webhook HTTP ingest returns 2xx only after its transaction commits. The EF outbox is the normal processing handoff; a sweeper re-enqueues stale non-terminal work as repair. Provider event normalization and any external reads happen outside the domain transaction.
 
 ---
 
 ## 6. Integration events contract (Payments → Courses)
 
-1. **`PurchaseActivatedIntegrationEvent`** — Payments-owned, mirroring the Library event's shape:
-`EventId, TenantId, PurchaseId, UserId, TargetResourceArn, Metadata { plan: <planId> }, AuditReference (= the Purchase's unique funding LedgerEntry.Id: Capture or ApplyUnappliedFunds)`.
-2. **`PurchaseRefundedIntegrationEvent`** — revocation mirror: `EventId`, `TenantId`, `PurchaseId`, `UserId`, `TargetResourceArn`, `RefundId` (`Guid?`, set when triggered by a refund that carries revocation — a full refund (ladder completion) or a partial refund whose `RevokeAccess = true` (Q40)), `DisputeId` (`Guid?`, set when triggered by a lost dispute — §5 row 9 creates no `Refunds` row), `AuditReference` (`= reversal LedgerEntry.Id`). Invariant: `(RefundId IS NOT NULL) <> (DisputeId IS NOT NULL)` — exactly one reversal cause is populated, and `AuditReference` always points to the backing `LedgerEntries.Id`. A revoke-flagged partial refund's event is shape-identical to a full refund's (`RefundId` set, `DisputeId` NULL) — by design: Courses treats the event purely as an access decision, never as an amount signal. The exactly-one-cause invariant is unchanged (Q40). Not Library's `AccessCodeRevokedIntegrationEvent` — that would couple Payments→Library across the boundary. `CourseRevocationSaga` gains an **additive** second correlation (`When(PurchaseRefunded …)`, same flow, correlated by `EventId`) — no Courses schema change. Documented overload: the saga state's `AccessCodeId` column holds `PurchaseId` for payment revocations.
+1. **`PurchaseActivatedIntegrationEvent`** — Payments-owned:
+   `EventId, TenantId, PurchaseId, UserId, TargetResourceArn, Metadata { plan: <planId> }, AuditReference`, where AuditReference is the Purchase's unique `Capture` or `ApplyUnappliedFunds` LedgerEntry ID.
+2. **`PurchaseAccessRevocationRequestedIntegrationEvent`** — Payments-owned:
+   `EventId, TenantId, PurchaseId, UserId, TargetResourceArn, CauseType, CauseId, AuditReference`. `CauseType` is `Refund` or `Dispute`; CauseId names exactly one reversal cause; AuditReference names its backing LedgerEntry.
 
-**Overload caveat (review P1-3):** `PurchaseId` travels in `ProvisionAccessCodeCommand.AccessCodeId` and lands in `FailedProvisioningRecord.AccessCodeId` (its `(TenantId, AccessCodeId)` unique idempotency slot intact). The column name says AccessCode; the payment flow stores a PurchaseId there. A Courses-side `SourceType` discriminator column (`AccessCode` | `Purchase`) would remove the ambiguity — that is a Courses migration, deliberately out of the Payments MVP scope; this note is the contract until then.
+Courses consumers map these events into Courses-owned source-aware Application commands:
 
-**Saga idempotency (review P1-4, amended by third review Q31 and amendment Q40):** revocation fires when the Purchase becomes **fully** `Refunded` (Σ reversals ≥ gross), on **any** lost dispute (a bank ruling revokes regardless of amount), or when a `Succeeded` refund row carries `RevokeAccess = TRUE` (Q40 — the flag is set-once at insert, so the check is race-free); partial refunds without the flag never revoke. The transition runs under the Purchase row lock, so a refund and a lost dispute racing to complete the gross produce exactly one `Refunded` transition and one revocation outbox; the loser observes the new status and becomes a no-op. The per-`EventId` saga correlation means multiple events can still spawn multiple saga instances; Courses' enrollment revocation MUST therefore be idempotent (deactivating an already-inactive enrollment = no-op) — the same idempotency class `ProvisionAccessCode` already implements for granting. Verify during implementation.
+- `GrantCourseAccess(SourceType = Purchase, SourceId = PurchaseId, ...)`
+- `RevokeCourseAccess(SourceType = Purchase, SourceId = PurchaseId, ...)`
+
+Library maps Access Code events into the same commands with `SourceType = AccessCode`. Courses persistence, failure parking, logs, and saga state use truthful `(TenantId, SourceType, SourceId)` identity. Payment Purchases never occupy `AccessCodeId` fields, and Payments never calls Library commands.
+
+**Revocation idempotency:** revocation publishes when a Purchase becomes fully `Refunded`, on any lost dispute, or when a succeeded refund has `RevokeAccess = TRUE`. An unflagged partial refund does not revoke. Competing reversal paths serialize under the Purchase lock; Courses treats repeated source-aware revocation as a successful no-op. Library regression, Payments parity, cross-source ID collision, retry, and repeated-revocation tests are implementation gates.
 
 ---
 
@@ -1140,7 +1151,7 @@ Student purchase history: `Purchases` by (TenantId, UserId) — the global filte
 | §7.5 Double-entry, append-only, DB-enforced invariant; settlement-currency entries; Purchase keeps presentment + FX | `LedgerAccounts/Entries/Lines` + deferred balance trigger + deny triggers; lines single-currency; `Purchases` presentment/FX columns |
 | §7.5 Settlements manual, record-only, partial allowed | `Settlements` (no status) + `Settlement` entries; Balance Owed derived (Q15a) |
 | §7.6 Refunds/disputes | capability-gated: Stripe retains normal Refunds/Disputes; ShamCash ordinary refund/dispute endpoints reject and support-reviewed reversals use PaymentReviewCases + provider movement evidence |
-| Manual partial refunds — student requests + admin decisions (amendment Q39; requirement.md sync pending) | `RefundRequests` (§3.19: one open per Purchase, coherence CHECKs, transition trigger) + boundary rows 18–19 + audit actions `Refund.Requested/Approved/Rejected/Issued`; approval creates the `Refunds` row atomically; `RefundWindowDays` on settings (§3.3) |
+| Manual partial refunds — student requests + admin decisions (Q39–Q41) | `RefundRequests` (§3.19: one open per Purchase, coherence CHECKs, transition trigger) + canonical shared refund flow + audit actions `Refund.Requested/Approved/Rejected/Issued`; approval creates the `Refunds` row atomically; `RefundWindowDays` on settings (§3.3) |
 | §8 Account model + entry shapes | provider/currency-scoped LedgerAccounts roles, ProviderTransactions, Unapplied Funds and boundary-map rows 2–25 |
 | §8 AuditReference linkage end-to-end | Ledger typed FKs + ProviderTransaction/PaymentReviewCase/external refs; archived provider payloads preserve source evidence |
 | §9 bar 1 (provider-call keys) | deterministic CheckoutSessionId/RefundId; ShamCash order_id and Idempotency-Key use CheckoutSessionId |
@@ -1149,25 +1160,26 @@ Student purchase history: `Purchases` by (TenantId, UserId) — the global filte
 | §9 bar 4 (state+ledger+outbox atomic) | `TransactionalBehavior` + outbox in same DbContext (boundary map) |
 | §10 five metrics | §7 query plan + `ProductDailySales` + indexes |
 | §11 acceptance criteria | rows above collectively; ledger balance invariant DB-tested (trigger), replay tests hit unique index + guards, reconciliation queries defined in §7/§4 row 23 |
-| Multi-provider + ShamCash amendment (requirement sync pending) | PaymentProviders/Accounts/CurrencyRoutes, provider-scoped LedgerAccounts, ProviderTransactions, PaymentReviewCases, capability gates, provider-account analytics, §18 |
+| Multi-provider + ShamCash (Q42–Q58) | PaymentProviders/Accounts/CurrencyRoutes, provider-scoped LedgerAccounts, ProviderTransactions, PaymentReviewCases, capability gates, provider-account analytics, §18 and provider delta documents |
 
 ---
 
 ## 9. Migration plan
 
-- **One initial migration** (`make migrations-create NAME=InitialPayments -m=Payments`): all tables including PaymentProviders, ProviderAccounts, ProviderCurrencyRoutes, ProviderTransactions, PaymentReviewCases and AcademyProviderRiskOverrides; `Currencies` + provider-definition seed (`stripe`, `sham-cash`); deny/transition triggers, role grants, deferred balance/provider constraint trigger, same-tx guard, CHECKs and partial indexes. Provider accounts, routes and their LedgerAccounts are deployment configuration, not migration seed.
+- **One initial migration** (`make migrations-create NAME=InitialPayments -m=Payments`): all tables including PaymentProviders, ProviderAccounts, ProviderCurrencyRoutes, ProviderTransactions, PaymentReviewCases and AcademyProviderRiskOverrides; `Currencies` + provider-definition seed (`stripe`, `sham-cash`); deny/transition triggers, hardened Ledger posting function, role grants, deferred balance/provider constraint trigger, archive lifecycle, CHECKs and partial indexes. Provider accounts, routes and their LedgerAccounts are deployment configuration, not migration seed.
 - **No prod business/account seed data.** Only ISO currencies and executable provider definitions are schema seed. Creating/enabling a ProviderCurrencyRoute transactionally ensures its provider-scoped LedgerAccounts.
 - **Go-live flag**: configuration only; zero schema presence.
-- **Role separation (Q35):** migration principal owns schema. Runtime owns nothing and gets UPDATE only for legitimate configuration/state transitions (`PaymentProviders`/`ProviderAccounts`/routes through privileged admin paths, Products, Prices archive, Academy settings/risk overrides, CheckoutSessions, Purchases, Refunds, Disputes, RefundRequests, PaymentReviewCases, findings). It gets SELECT+INSERT only on append-only ProviderTransactions, Ledger*, Settlements, audit/payload/run tables. Secrets are never DB values.
+- **Role separation (Q35):** migration principal owns schema. Runtime owns nothing and gets UPDATE only for legitimate configuration/state transitions (`PaymentProviders`/`ProviderAccounts`/routes through privileged admin paths, Products, Prices archive, Academy settings/risk overrides, CheckoutSessions, Purchases, Refunds, Disputes, RefundRequests, PaymentReviewCases, payload lifecycle, findings). It gets scoped SELECT/INSERT on ProviderTransactions, Settlements, audit/run tables. It gets **no INSERT on LedgerEntries/LedgerLines** and only EXECUTE on the hardened posting function. `PUBLIC` execute is revoked; fixed `search_path` and grants are migration-tested. Secrets are never DB values.
 - **Provider capability/config validation:** Stripe remains instant-capture only and validates Adaptive Pricing/integration currency. ShamCash validates Exact routes, active paid subscription/session, and SYP/USD only. Startup rejects enabled provider names without adapters and Live Stripe without the compliance/credential gate.
 - **Evolution policy: additive-only.** Money tables cannot be rewritten (deny triggers make that physical); new entry types/account types/columns are forward migrations; nothing destructive against `Ledger*`, `Purchases`, `Prices`, `Refunds`, `Disputes`, `Settlements`.
 - Phase-2 slot-ins already accounted for: `Interval` column when subscriptions land (D1 keeps it out now); bridge model (academy-collects) needs only new entry types/accounts — no structural change.
 - **Outbox delivery latency (review P1-1):** the Payments module MUST configure the EF-outbox poller at `o.QueryDelay ≤ TimeSpan.FromSeconds(5)` — the scaffolded 5-minute value (copied from Library) violates §11's "granted within seconds". Library's own 5-minute poll is a Library decision, out of scope here.
+- **Webhook handoff:** ingest inserts `ProcessWebhookEvent(EventId)` through that EF outbox in the same transaction as event/payload rows. No process-local queue is a normal-path dependency. The sweeper is retained for stale/failed repair.
 - **Architecture tests (review P2-2/P2-3):** NetArchTest rules — (a) no type in the Payments assembly implements `ISoftDeletable` (money rows are never soft-deleted; the scaffold's `SoftDeleteInterceptor` registration may stay — it is fail-safe, the deny triggers would catch any accident loudly; removal is an optional cleanup); (b) no query path reads unfiltered tables without explicit tenant scoping (invariant rows 26–27).
-- **Historical second-review deltas (pre-Q42 names):** entry-level balance trigger, same-tx line guard, TRUNCATE guards, NULL-safe immutability comparisons, covering indexes, zero-fee handling, dispute-win accounting and autonomous webhook ingest remain valid. Q42–Q58 replace the former `Psp*` field names/locations with ProviderTransaction-backed fields.
+- **Historical second-review deltas:** entry-level balance trigger, TRUNCATE guards, NULL-safe immutability comparisons, covering indexes, zero-fee handling, and dispute-win accounting remain valid. The 2026-11-18 engineering review supersedes its direct-line-insert guard and webhook handoff with the posting function and EF outbox contracts.
 - **Historical third-review deltas (pre-Q42 account model):** currency FKs/scale checks, Unapplied/Suspense accounting intent, business-event uniqueness, EffectiveAt/DB clock, stored CommissionShare, partial refund ladder, SourceVersion, payload split, reconciliation output, transition triggers, account-tenancy checks and role separation remain valid. Q42–Q58 replace the deployment-global five-account seed and Stripe-shaped IDs with provider/currency accounts and generic external references.
 - **Manual-refund amendment deltas (§17, 2026-11-17):** `RefundRequests` table + transition trigger `deny_request_amend` + partial unique `(PurchaseId) WHERE Status='Requested'` + coherence CHECKs + grants; `Refunds.ReasonCode` + `Refunds.RevokeAccess` (both insert-immutable — `deny_money_amend` immutable lists extended); `BEFORE INSERT` minor-unit scale triggers on `Refunds.Amount` and `RefundRequests.ApprovedAmount` via `Currencies`; `AcademyPaymentSettings.RefundWindowDays`; audit actions `Refund.Requested/Approved/Rejected/Issued`; the stale second-review partial-unique item above is removed (superseded by Q31's sum cap).
-- **Multi-provider amendment deltas (§18, 2026-11-17):** replace global PSP identity/account assumptions with Q42–Q58; remove `PspCustomers`/`PspPriceId`; provider-scope external IDs and LedgerAccounts; add Unapplied Funds entry types, provider/account FK checks, review-case maker/checker, capability-gated refunds/disputes, provider-account analytics and provider-specific settlement risk/reconciliation.
+- **Multi-provider amendment deltas (§18, 2026-11-17):** replace global provider identity/account assumptions with Q42–Q58; omit provider customer/price mirrors; provider-scope external IDs and LedgerAccounts; add Unapplied Funds entry types, provider/account FK checks, review-case maker/checker, capability-gated refunds/disputes, provider-account analytics and provider-specific settlement risk/reconciliation.
 
 ---
 
@@ -1175,19 +1187,25 @@ Student purchase history: `Purchases` by (TenantId, UserId) — the global filte
 
 1. **0005 — "Payments tenancy is enforced case-by-case, not by global query filters."** Deviates from the repo-wide `IDomainTenantOwned` convention: the money engine (ledger, accounts, webhooks) is tenant-less; only student/academy-facing aggregates keep filters; Platform-overview reads use the named `IgnoreQueryFilters` discipline (extends ADR 0001). Hard to reverse (read-path discipline), surprising without context (every other module filters), genuine trade-off (DB-enforced safety net vs engine purity).
 2. **0006 — "Checkout attempt lifecycle is separate from the money lifecycle."** `CheckoutSessions` carry attempts (including abandoned/failed); `Purchases` exist only for paid money. Surprising split (§7.3's single machine), hard to reverse once analytics depend on it, chosen over the single-aggregate alternative.
-3. **0007 — "Ledger integrity is DB-enforced: deferred balance trigger + deny-mutation triggers."** Extends the `LibraryAuditLogs` precedent to money; records why EF-only enforcement was rejected (acceptance criterion demands DB enforcement) and why per-account non-negativity is deliberately *not* enforced.
+3. **0007 — "Ledger integrity is DB-enforced through one runtime posting function."** Records the hardened `SECURITY DEFINER` function, runtime direct-INSERT denial, deferred balance/provider/tenant/currency checks, deny-mutation triggers, why EF-only/timestamp-identity enforcement was rejected, and why per-account non-negativity is deliberately *not* enforced.
 4. *(Extends queued ADR 0003)* — "Prices are immutable rows; Products are an event-fed mirror of Courses aggregates." Records the archive-and-insert price model and the no-cross-schema-FK stance.
 5. **0008 — "Tax is out of scope with a hard guarantee."** Tax-exclusive pricing, PSP Tax off, no tax columns or invoice numbering (Q30). Records the merchant-of-record question the third review raised: if a PSP amount ever includes tax, the G-split would divide a tax liability between platform revenue and academy payable — the guarantee keeps that impossible rather than merely unlikely, and documents that retrofitting tax onto the append-only ledger is a designed-for-additive change, not an afterthought.
 6. **0009 — "Refunds are multiple, partial, and provider-initiated; Purchases are financial history, enrollments are access rights."** Records the Q31/Q33 reshape and Q51 capability gate.
 7. **0010 — "Payment providers are capability adapters; provider accounts partition the Ledger."** Records Q42–Q58: immutable provider machine names, configured Platform accounts/currency routes, ProviderTransaction cash identity, provider/currency LedgerAccounts, Stripe Adaptive Pricing, ShamCash Exact invoices, and why unsupported refunds/disputes are not emulated.
 8. **0011 — "Unapplied money is a liability, not a failed Purchase."** Exact payment alone creates a Purchase. Partial, overpaid, duplicate, expired and unmatched receipts debit the provider asset and credit Unapplied Funds until maker/checker review applies or returns them.
-*(Queued 0002/0004 in requirement.md stand as written; nothing here overturns them.)*
+9. **0012 — "Course access is source-aware, not Access-Code-shaped."** Courses owns shared grant/revoke commands and persistence keyed by SourceType + SourceId; Library and Payments remain thin origins; semantic ID overloading is forbidden.
+10. **0013 — "Committed webhook ingest always creates durable processing work."** The Payments EF outbox stores the internal processing message with event/payload ingest; the sweeper repairs stale work rather than serving as normal delivery.
+11. **0014 — "Webhook payload archival retains a verifiable manifest."** Hot JSON clears only after verified object upload; EventId, object key, content hash, and archive/redaction times remain for replay and compliance evidence.
+
+Queued ADRs 0002–0004 in `requirement.md` are already synchronized to provider accounts, capability adapters, and independent go-live gates.
 
 **Non-DB flag (third review, non-schema):** holding third-party funds in `Academy Payable` and paying out manually may carry **money-transmission regulatory implications** depending on jurisdiction. Requires legal sign-off, or an evaluation of PSP Connect-style destination charges/split payments that keep funds with the PSP until payout. This is a business/legal decision, not a schema one — but it gates the settlement design, so it is recorded here rather than buried in §16.
 
 ---
 
-## 11. Proposed glossary terms (for `GLOSSARY.md` — listed, not edited)
+## 11. Glossary synchronization
+
+The canonical definitions below are synchronized into repository-root `GLOSSARY.md`; this list records the database-specific meaning they must preserve.
 
 - **Sellable**: A purchasable item — a Product with an active Price, sold only while its Academy has opted in. _Avoid: item, SKU, offering._
 - **Product**: A Payments-module mirror of a thing that can be sold; today, a Course Plan. Changes in Courses flow in as events; Payments never reaches into Courses. _Avoid: catalog item, course._
@@ -1205,7 +1223,7 @@ Student purchase history: `Purchases` by (TenantId, UserId) — the global filte
 - **Payment Review Case**: Evidence-backed maker/checker workflow that applies or returns Unapplied Funds or records an exceptional provider-support reversal without rewriting money history. _Avoid: direct status override._
 - **Eligibility**: The explicit business rule deciding whether a student may start a checkout for a product (active enrollment ⇒ reject); distinct from the financial record of what was bought. _Avoid: uniqueness (it is not a constraint), duplication guard._
 - **Refund Request**: A student-initiated ask for money back on a Purchase, decided by a platform admin at review time; the decision and its amount are recorded, and only an approval creates a Refunds row. _Avoid: refund (the request is not the money movement), chargeback._
-- **Remaining Refundable**: What a Purchase can still return — gross minus succeeded and pending refunds minus dispute amounts currently withdrawn or lost. The single number behind the refund sum cap, the request-approval check, and the settlement hold. _Avoid: unrefunded amount (ambiguous about disputes), refundable balance._
+- **Remaining Refundable**: What a Purchase can still return — gross minus Pending/Succeeded Refunds and Dispute Exposure currently withdrawn and not reinstated. The single number behind the refund sum cap, the request-approval check, and the settlement hold. _Avoid: unrefunded amount (ambiguous about disputes), refundable balance._
 
 ---
 
@@ -1230,7 +1248,7 @@ Verdict **SHIP WITH FIXES** — 13 findings, all incorporated; none re-litigated
 | P0-2 deferred-trigger semantics unspecified | Accepted | §3.9 (precise DDL + semantics; relocated to the entries level by second review P1-A), §4 row 1 |
 | P1-1 outbox `QueryDelay` 5 min vs "within seconds" | Accepted | §9 (≤5 s directive; Library's own poll out of scope) |
 | P1-2 racing webhook recovery path | Accepted | §3.4, §5 row 2 (session-row lock; loser → `Duplicate`, 200) |
-| P1-3 `PurchaseId` in `AccessCodeId` slot | Accepted as contract note; `SourceType` discriminator deferred to a Courses-side migration | §6 |
+| P1-3 Purchase identity placed in an Access Code slot | **Superseded 2026-11-18:** source-aware Courses commands/state with `SourceType + SourceId` are required before Payments activation | §6; Q26 |
 | P1-4 refund + dispute-loss double revocation | Accepted | §5 rows 5/7, §6 (tripwire ordering + idempotent-revocation requirement) |
 | P2-1 REVOKE vs table owner | Accepted | §3.9, §4 row 2 |
 | P2-2 `SoftDeleteInterceptor` registration | Judgment call: keep registration (fail-safe) + NetArchTest rule; removal optional | §9 |
@@ -1238,7 +1256,7 @@ Verdict **SHIP WITH FIXES** — 13 findings, all incorporated; none re-litigated
 | P2-4 `CheckoutSessions.TenantId` nullable contradiction | Accepted | §3.4 (NOT NULL; fail-closed posture) |
 | P3-1 inverted FxRate CHECK / leftover self-correction | Accepted | §3.5 (biconditional) |
 | P3-2 erroneous singular-naming note | Accepted | §2 (removed) |
-| P3-3 `PspCustomers.TenantId` semantics | Accepted | §3.6 (cross-tenant clarification) |
+| P3-3 provider-customer tenant semantics | Superseded by Q58: no provider-customer mirror exists in MVP | Q58 |
 
 Rejected: none.
 
@@ -1254,7 +1272,7 @@ Verdict **CONDITIONAL PASS** — 14 findings, all incorporated; none re-litigate
 | P0-B fee modeling: zero-fee CHECK crash, refund fee double-count, missing dispute fee, Phase-2 FX drift | Accepted — `PspFee ≥ 0` + fee-pair omitted at 0; reversal spec corrected (capture fees untouched) + `PspFeeRefunded`/`PspBalanceTransactionId` on Refunds; `PspDisputeFee` on Disputes + `DisputeWon` entry type; FX-delta rule documented under D10 | §3.5, §3.9, §3.11, §3.12, §5 rows 2/5/7 |
 | P0-C rounding drift aborts the balance trigger; un-settleable sub-cent dust | Accepted — minor-unit rounding rule + derived-leg formula (one leg computed, one derived) | §0.3, §3.10, §5 row 2, §4 row 28 |
 | P0-D webhook audit row lost inside the domain transaction (no `Failed` outcome, `DeliveryCount` resets, 23505 on concurrent duplicates) | Accepted — two-phase ingestion: autonomous upsert → domain tx (row locked `FOR NO KEY UPDATE`) → clean failure-writer | §3.7, §5 preamble + rows 2/3/5/6/7, §4 row 10 |
-| P1-A zero-line headers; appending lines to historical entries; N×N trigger runs | Accepted — trigger moved to `LedgerEntries` (once per entry, ≥ 2 lines) + `xmin` same-tx append guard on lines | §3.9, §3.10, §4 rows 1/3/4/29 |
+| P1-A zero-line headers; appending lines to historical entries; N×N trigger runs | **Superseded 2026-11-18:** entry-level deferred validation remains; runtime direct INSERT is removed and one posting function owns header + lines | §3.9–§3.10.1; §4 row 29 |
 | P1-B `UNIQUE (PurchaseId)` blocks retries after `Failed`; no open-dispute refund guard | Accepted — partial unique over live statuses; `Failed` = definitive rejection only (ambiguous stays `Pending`); dispute guard | §3.11, §5 row 4, §4 rows 12/31 |
 | P1-C checkout reuse traps: pre-PSP failure lockout, no stored redirect URL, stale price | Accepted — three app rules in §3.4; URL still never stored (reuse = idempotent PSP re-create with the same session id) | §3.4, §5 row 1 |
 | P1-D refunded commission/net not derivable; `DisputeLoss` invisible in projection | Accepted — `RefundedCommissionAmount` + `RefundedNetAcademyAmount` from reversal lines; disputes folded into refunded buckets (documented) | §3.14, ERD, §7 |
@@ -1278,7 +1296,7 @@ Verdict **MAJOR REVISIONS REQUIRED** — 34 findings: the ledger core was judged
 | # | Finding | Disposition | Applied in |
 |---|---|---|---|
 | C1 | **Orphan captures**: rule §3.4(1) expired sessions on ambiguous timeouts; a late payment then arrives for an `Expired` session with `PspCheckoutSessionId IS NULL` — fail-closed `Skipped` leaves cash in the PSP with no ledger record | Accepted + redesigned — timeouts are ambiguous (session stays `Pending`, like refunds staying `Pending`); only definitive rejections expire; `Expired → Completed` is a legal late-payment transition; **metadata-first resolution** (`client_reference_id`, Q29) makes sessions resolvable even when the `cs_` id was never stamped; the residual (sessions we truly never created) books to the new **PSP Suspense** account via `UnmatchedCapture` + alert — "fail-closed" now means *booked + alerted*, never *skipped* | Q28, Q29; §3.4, §3.8, §3.9, §5 rows 1–2 |
-| C2 | **Refunds/disputes not originating from the system**: dashboard refunds arrive with no local row, breaking invariant 13 and the full-only unique; no async-refund-failure handler; `refund.succeeded` is not a real Stripe event name (the doc itself cites `charge.refund.updated` elsewhere) | Accepted as a **model decision (Q31)** — refunds are multiple, partial, and external: `Refunds.Source` ∈ `Platform` \| `Psp`, PSP rows ingested from webhooks, full-only invariant replaced by a lock-protected sum cap, `PartiallyRefunded` on Purchases, async failures handled (`Pending → Succeeded \| Failed`); event family corrected to `refund.created` / `refund.updated` / `refund.failed` (verified against Stripe docs; legacy `charge.refunded`/`charge.refund.updated` mapped by the adapter) | Q31; §3.11, §4 rows 12–13, §5 rows 4–5, §6 |
+| C2 | **Refunds/disputes not originating from the system**: dashboard refunds arrive with no local row; no async-refund-failure handler; stale event vocabulary | Accepted as Q31 — refunds are multiple, partial, and external: `Refunds.Source` ∈ `Platform` \| `Provider` \| `ProviderSupport`; a lock-protected sum cap replaces one-refund assumptions; async failure is explicit; provider adapters normalize current and legacy event names | Q31; §3.11; canonical refund flow |
 | C3 | **Lost dispute on an already-refunded Purchase drops cash**: row 7's "0 rows ⇒ no-op, no reversal" while the PSP still withdrew disputed amount + fee; `Disputes.Amount` never checked against the gross, making partial disputes ambiguous; booking at `closed` is the root error | Accepted + redesigned (Q36) — money booked at the PSP's movement events: `charge.dispute.funds_withdrawn` books the withdrawal **unconditionally** (even on refunded Purchases → documented negative-payable clawback), `funds_reinstated` books the Won return, `closed` is paperwork only; partial disputes are pro-rata reversals via the now-stored `CommissionShare`; `Amount ≤ gross` app-checked at ingest | Q36; §3.12, §4 row 39, §5 rows 6–9 |
 | C4 | **Tax/invoicing absent**: a tax-inclusive PSP amount would split a tax liability between platform revenue and academy payable; no tax columns, liability account, or invoice numbering; retrofitting on an append-only ledger is painful | Accepted as a **product decision (Q30)** — out of scope with a **hard guarantee**: tax-exclusive pricing, PSP Tax off, no tax modeling in MVP; scope boundary + retrofit plan recorded as ADR 0008; the guarantee (not absence) is what prevents the liability split | Q30; §0, §10 (ADR 0008) |
 | C5 | **Settlement has no risk controls**: captures inside the dispute/refund window are settleable; open disputes don't reduce Balance Owed; reversals can go negative with no clawback record or offboarding policy | Accepted as a **product decision (Q32)** — Settleable Balance = ledger − live refunds − 100% short-hold capture legs − `ReserveRate` × rolling-window capture legs (two-tier formula; §3.13); open-dispute reserve became **automatic** once withdrawal books at `funds_withdrawn` (Q36); documented offboarding path incl. non-zero/negative payables as reconciliation findings | Q32; §3.13, §4 row 40, §5 row 10, §7 metric 5 |
@@ -1290,7 +1308,7 @@ Verdict **MAJOR REVISIONS REQUIRED** — 34 findings: the ledger core was judged
 | H6 | **Owner-role hole**: the app user owns the tables, so REVOKE is not a real control; Purchases/Settlements/Refunds/Disputes money columns have no immutability trigger — an `UPDATE Purchases SET SettlementAmount` silently diverges from the ledger | Accepted — migration/owner role vs runtime role with scoped GRANTs (runtime owns nothing, cannot disable triggers, SELECT+INSERT only on append-only tables); `deny_money_amend` transition-only triggers added to all money tables | Q35; §0.4, §3.4/3.5/3.11/3.12/3.13, §9, §16 |
 | H7 | **Nothing makes entries unique per business event** (app-only tripwires); type-conditional CHECKs demand presence but not absence (a Capture with a RefundId is legal); ManualAdjustment has no CHECKs | Accepted — the five partial unique indexes (Capture/RefundReversal/(DisputeId,Type)/Settlement/PspPayout); CHECKs rewritten as **exact reference sets**; ManualAdjustment requires actor + description, two-person rule app-level | §3.9, §4 rows 32–33 |
 | H8 | **Balance trigger doesn't check line-to-account tenancy** — a tenant-A capture can credit tenant B's payable and pass every check | Accepted — balance-trigger check 6: per-tenant accounts require `account.TenantId = entry.TenantId` | §3.9 (check 6), §4 row 34 |
-| H9 | **`xmin` same-tx guard breaks under savepoints** (subtransaction xid ≠ top-level xid → legitimate inserts rejected); needs explicit testing + PG13 note | Accepted and **redesigned** — the guard is now count-based (`parent entry has zero lines`), which is savepoint-proof and version-independent: no committed entry can have zero lines, and other transactions cannot see an uncommitted one; READ COMMITTED precondition documented; the `xmin` design is retained as a historical note | §3.10, §4 row 29 |
+| H9 | Direct-line insertion guards break under savepoints or split statements | **Superseded 2026-11-18:** runtime direct INSERT is revoked; one posting function inserts header and all lines; savepoints and historical append denial are contract-tested | §3.10.1; §4 row 29 |
 | H10 | **Webhook edge cases**: unsigned events can pre-poison `PspEventId`s (real event dedupes into a silent 200); no re-drive for stuck/Failed rows (PSP retries ~3 days); handler must re-read outcome after the lock; two connections risk pool starvation | Accepted — verify-before-write (unsigned ⇒ 400, no row); sweeper worker + ops re-drive + documented replay-from-archive; re-read `ProcessingOutcome` after taking the row lock; ingest/payload writes consolidated in the ingest transaction, pool sizing noted in §16 | §3.7, §5 preamble, §4 row 42, §16 |
 | H11 | **Capture-time PSP calls and nullability**: the `balance_transaction` expansion needs an extra API call with no stated home; delayed methods lack an "unknown fee" state; `completed` with `payment_status = unpaid` would be treated as paid | Accepted — the PSP call is specified: after ingest commits, before the domain transaction, never under locks; MVP restricted to **instant-capture methods (card)** by config-validated guarantee, so NOT NULL fee/net has no unknown state; `payment_status = 'unpaid'` ⇒ event `Skipped` + alert, never a Purchase; delayed methods are a Phase-2 model change | §3.5, §5 preamble + row 2, §9 |
 | H12 | **Correlation relies on IDs that arrive too late** (webhook can beat the `PspCheckoutSessionId` stamp; 24 h re-create mints a new `cs_` id the "set once" column can't hold) | Accepted — **metadata-first resolution** (Q29): `client_reference_id` + metadata stamped at session/refund creation; `PspCheckoutSessionId` becomes a re-stampable mirror, not the join key | Q29; §3.4, §3.11, §5 rows 2/4 |
@@ -1302,7 +1320,7 @@ Verdict **MAJOR REVISIONS REQUIRED** — 34 findings: the ledger core was judged
 
 | # | Finding | Disposition | Applied in |
 |---|---|---|---|
-| M16 | `PspPriceId` contradicts `deny_price_amend` (NULL→value now forbidden, but the PSP id is only knowable post-insert) | Accepted — the deny trigger gains a one-time `PspPriceId` NULL→value path (set-once, still never amendable) | §3.2 |
+| M16 | Provider-price ID would contradict immutable Price rows | Superseded by Q58: providers receive inline Price data; no provider-price mirror exists | §3.2; Q58 |
 | M17 | Mirror out-of-order events: "benign races" is wrong for `IsPurchasable`; no backfill or reconciliation of the mirror | Accepted — `SourceVersion` + version-conditional upsert; initial backfill + periodic mirror reconciliation feeding `ReconciliationFindings` | §3.1, §5 row 12, §3.18 |
 | M18 | Time semantics: `PostedAt` source undefined; no `EffectiveAt`; no period close; "balance as of" can shift | Accepted — `PostedAt` = DB clock (`DEFAULT now()`); `EffectiveAt` (PSP event time) added for as-of queries; period close documented as Phase-2 ops practice | §3.9, §4 row 44 |
 | M19 | Derived balances at scale: hot-account SUMs grow unbounded; no volume estimates attached to the scaling decisions | Accepted — derived-on-read retained for MVP behind covering indexes; `LedgerBalanceCheckpoints` pre-designed as additive Phase-2; volume assumptions + decision reviews now in §16 | §3.9, §16 |
@@ -1342,17 +1360,17 @@ Rejected: none — every finding landed either as an engineering fix, a ratified
 
 ### 16.2 Retention & archival
 - **ProviderTransactions, PaymentReviewCases, Ledger, Purchases, Refunds, Disputes, Settlements, PaymentsAuditLogs**: keep hot ≥ 7 years (financial-record horizon), then archive to cold storage. Append-only money rows never delete.
-- **WebhookEventPayloads**: hot ≥ 90 days, then archive to cold storage (object store) with a reference row retained; erasure requests rewrite hot payloads and tombstone archived ones per the §16.3 procedure.
+- **WebhookEventPayloads**: target 90 days hot, then archive to cold storage. Retain the database manifest (`EventId`, object key, SHA-256, state, archive/redaction times). Clear hot JSON only after upload, read-back and hash verification; failed archive attempts keep Payload intact and alert.
 - **CheckoutSessions / analytics caches**: operational data; 2-year hot retention sufficient (sessions expire, caches rebuild).
 
 ### 16.3 PII erasure procedure (Q34 — non-locking, zero-DDL)
 1. Erasure request names a `UserId` (the only PII-bearing linkage in money tables is via user references — the money tables themselves store none).
-2. Instead of running `ALTER TABLE … DISABLE TRIGGER` (which acquires an `ACCESS EXCLUSIVE` lock that stalls live webhook ingestion and opens a table-wide mutation window), the initial migration installs a `SECURITY DEFINER` procedure owned by `payments_migration`:
+2. Instead of running `ALTER TABLE … DISABLE TRIGGER` (which acquires an `ACCESS EXCLUSIVE` lock that stalls live webhook ingestion and opens a table-wide mutation window), the initial migration installs a hardened `SECURITY DEFINER` procedure owned by `payments_migration`, with fixed trusted `search_path` and `PUBLIC` execute revoked:
    - `"Payments".redact_webhook_pii(p_user_id uuid, p_actor_id uuid)`
    - Inside its transaction, the procedure sets `SET LOCAL payments.allow_pii_redaction = 'true';` (scoped strictly to the current transaction and automatically reset on commit/rollback).
-   - The `deny_webhook_payload_amend` trigger checks `COALESCE(current_setting('payments.allow_pii_redaction', true), 'false') = 'true'` ONLY on `UPDATE` (never `DELETE` or `TRUNCATE`) and ONLY when `NEW."EventId" = OLD."EventId"` and `NEW."ArchivedAt" = OLD."ArchivedAt"`.
-   - The procedure redacts customer-PII keys (`email`, `name`, `billing_details`, `shipping_details`, `phone`, `card.last4`, ShamCash `sender_name`, `sender_address`/`peer_address`) while retaining financial IDs/amount/currency/time, and stamps `"__redacted_at"`.
-3. Archived (cold) payloads for the same user are tombstoned by key in object storage.
+   - The `deny_webhook_payload_amend` trigger checks `COALESCE(current_setting('payments.allow_pii_redaction', true), 'false') = 'true'` ONLY on the approved lifecycle transition (never `DELETE` or `TRUNCATE`) and keeps EventId/object identity immutable.
+   - For hot payloads, the procedure redacts customer-PII keys (`email`, `name`, `billing_details`, `shipping_details`, `phone`, `card.last4`, ShamCash `sender_name`, `sender_address`/`peer_address`) while retaining financial IDs/amount/currency/time.
+3. Archived cold payloads are tombstoned/replaced by deterministic object key; object-store proof is verified before the manifest transitions to `Redacted` and stamps `RedactedAt`.
 4. `PaymentsAuditLogs` is untouched by design (no customer PII, §3.15); `Purchases` keep `UserId` (financial-record retention lawful basis — documented in the ADR).
 5. Within the same transaction, `redact_webhook_pii` inserts a completed `ReconciliationRuns` row (kind `PiiErasure`, triggered by `p_actor_id`) for immutable compliance evidence.
 
@@ -1372,11 +1390,25 @@ Rejected: none — every finding landed either as an engineering fix, a ratified
 - **Mirror drift**: periodic `MirrorVsCourses` findings; `IsPurchasable` mismatch on a sellable is Critical.
 - **Reconciliation freshness**: `ReconciliationRuns` per kind older than its schedule ⇒ alert (a reconciliation that silently stops running is the DBA's "cannot prove it ran" failure).
 
-### 16.6 Capacity assumptions (attached to the scaling decisions, per finding M19)
-- Planning envelope: **50k purchases/day, 200k ledger lines/day, 500k webhook events/day** at steady state; 10× burst tolerance before revisiting.
-- `WebhookEvents` at 500k/day ≈ 180M rows/year hot — the payload split keeps the hot table ~60 bytes/row; the archive path (§16.2) bounds it.
-- Ledger line SUMs are partitioned by provider account/currency. Covering indexes remain the first-line plan; `LedgerBalanceCheckpoints` is the additive fix when any account crosses the measured threshold.
-- These are the numbers behind Q15/Q16's "no materialized balance / no partitioning"; when reality departs from them by 2×, the decisions get re-reviewed — that trigger is written down so the departure can't pass unnoticed.
+### 16.6 Capacity forecast and benchmark gate
+
+The former fixed daily-volume figures were unsupported and are removed. Before each provider slice is release-ready, Product supplies a 12-month forecast for Purchases, provider deliveries per Purchase, reconciliation overlap, payload bytes, refund/dispute rates, and worst ProviderAccount skew. The benchmark fixture contains 30 days at **10× the forecasted peak day**, including duplicate deliveries, one hot Provider Account, stale-event scans, wide payloads, and concurrent refund/settlement traffic.
+
+Record: commit, machine/CPU/RAM/storage, PostgreSQL version/config, row counts, payload/table/index bytes, statistics state, query plans, concurrency, N, and p50/p95. Run base and branch interleaved after warm-up; report steady and pathological cases separately.
+
+The initial unpartitioned/checkpoint-free design passes only when all of these hold in two consecutive interleaved runs:
+
+| Path | Release threshold |
+|---|---:|
+| verified webhook ingest including event/payload/outbox commit | p95 ≤ 100 ms |
+| event claim/dedupe and stale-event re-drive query | p95 ≤ 250 ms |
+| provider movement dedupe under duplicate contention | p95 ≤ 150 ms |
+| derived payable balance / Settleable Balance for hottest account | p95 ≤ 200 ms |
+| provider-account analytics slice rebuild for one peak day | p95 ≤ 5 s |
+| 12-month projected hot table + index footprint | ≤ 60% of provisioned database storage |
+| hottest required index working set | ≤ 50% of database RAM |
+
+A threshold miss blocks that provider's release until the query/index is fixed or an additive design is approved. Webhook partitioning requires a partition-compatible global delivery-dedupe authority and archive/restore runbook. `LedgerBalanceCheckpoints` requires reconciliation and replay proof. Neither optimization is pre-approved merely because row count is large.
 
 ### 16.7 Runbook summary
 - Go-live requires: provider-account/currency routes validated; reconciliation and sweeper scheduled; ShamCash exact/partial/overpaid/duplicate/late/outgoing tests completed; monitoring wired; restore test executed; **legal sign-off on money transmission**; Stripe live compliance gate green before Stripe Live is enabled.
@@ -1391,7 +1423,7 @@ Not an adversarial review — a product amendment: manual partial refunds became
 | # | Task | Disposition | Applied in |
 |---|---|---|---|
 | 1a | Stale partial-unique + `Requested` wording | Accepted — the superseded unique removed from §9; `Requested` → `Pending` in Q17 and §14 P1-B (Q18 contained no instance) | §1 (Q17), §9, §14 |
-| 1b | Unify the refundable-remaining formula | Accepted, with one interpretation: "withdrawn or lost" means disputes **currently** `Open` or `Lost`; a dispute resolved `Won` drops out because `funds_reinstated` restores the money (Q36) — a literal all-time sum would permanently freeze a Won dispute's amount | Q41; §3.11, §4 row 12, §5 row 4 |
+| 1b | Unify the refundable-remaining formula | Accepted, later clarified by the Domain review: exposure follows confirmed withdrawal/reinstatement movement, not `Dispute.Status` alone. Open paperwork contributes zero until funds are withdrawn; reinstatement removes exposure; final Lost exposure remains. | Q41; §3.11, §4 row 12, §5 row 4 |
 | 1c | Minor-unit scale trigger on `Refunds.Amount` | Accepted — same `Currencies.Exponent` mechanism as the `Prices` trigger; extended to `ApprovedAmount` | §3.11, §3.19, §4 row 49, §9 |
 | 2 | `RefundRequests` table | Accepted in full — coherence CHECKs, partial unique, transition trigger, tenancy marker, indexes, grants; approval creates the `Refunds` row atomically; no ledger writes | Q39; §3.19, §2, §4 row 47, §5 rows 18–19, §9 |
 | 3 | `ReasonCode` + `RevokeAccess` | Accepted — set-once at insert; revocation triggers extended; event invariant unchanged | Q40; §3.11, §6, §4 row 48 |
@@ -1538,7 +1570,7 @@ Every apply/return locks the incoming ProviderTransaction and derives remaining 
 | Scope | Engineer-days |
 |---|---:|
 | Design/database synchronization | 4–7 |
-| Multi-provider foundation beyond the Stripe-only design | 10–15 |
+| Multi-provider foundation beyond the original single-provider design | 10–15 |
 | ShamCash adapter, reconciliation and manual review | 20–30 |
 | **Incremental multi-provider + ShamCash** | **30–45** |
 | Full Payments backend from the current scaffold | 90–130 |
