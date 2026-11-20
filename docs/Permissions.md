@@ -50,3 +50,20 @@ This document defines the standard permission strings used across the AlphaZero 
 | `library:SellCodes` | Retrieve/Invalidate codes for physical sale. |
 | `library:Audit` | View financial and inventory logs. |
 | `library:AttachCourses` | Map courses to specific libraries. |
+
+## 💳 Payments Module
+| Permission | Scope | Description |
+| :--- | :--- | :--- |
+| `payments:ManageCatalog` | Academy | Create or archive immutable Prices for Products owned by the actor's tenant. |
+| `payments:ManageAcademySettings` | Platform | Enable online selling and set Commission Share/refund-window policy for an Academy. |
+| `payments:ManageProviders` | Platform | Configure Provider Accounts and currency routes; never exposes secret values. |
+| `payments:ViewAnalytics` | Academy | View one tenant's provider-account/currency analytics and transaction detail. |
+| `payments:ViewPlatformAnalytics` | Platform | View all Academies while preserving provider-account/currency partitions. |
+| `payments:IssueRefund` | Platform | Decide Refund Requests and issue provider-supported partial/full Refunds. |
+| `payments:OpenReview` | Academy / Platform | Open an evidence-backed Payment Review Case; does not approve or move money. |
+| `payments:ApproveReview` | Platform | Approve/reject a Payment Review Case; the actor must differ from its maker. |
+| `payments:RecordSettlement` | Platform | Resolve an approved Settlement case after confirmed transfer evidence. |
+| `payments:AdjustLedger` | Platform | Resolve an approved manual-adjustment case through the hardened Ledger posting path. |
+| `payments:RunReconciliation` | Platform | Run/re-drive reconciliation and inspect persisted findings. |
+
+Students create Checkout Sessions, view Purchases, and request supported Refunds through ownership and tenant checks rather than staff permissions. Permission checks never replace tenant, Provider Account, currency, environment, capability, or maker/checker validation in Payments commands.
