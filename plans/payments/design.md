@@ -1,10 +1,10 @@
 # Payments — Feature Architecture
 
-**Status:** Implementation design, created 2026-11-18 from the approved Payments engineering review; domain model revised through 2026-11-20 against the DDD reviews. Implementation remains blocked until this document and the synchronized plan set pass a follow-up engineering review.
+**Status:** Slice 0 architecture cleared 2026-11-20. This is the implementation contract for later slices; external legal, credential, and sandbox gates remain with their owning slices.
 
 **Domain revision (2026-11-20):** §4 defines behavioral Domain Models independently from persistence DataModels. Refund, Dispute, and Purchase remain separate aggregate roots because their provider-driven lifecycles are independent; Q41 is an explicit cross-aggregate Domain policy evaluated from immutable facts while Infrastructure serializes the decision with the Purchase lock. Domain events remain inside Payments and are translated to the integration events defined in `transaction_flows.md` before crossing into Courses.
 
-**Companions:** [`requirement.md`](requirement.md) owns product scope and Q39–Q58 behavior. [`database.md`](database.md) owns schema and data invariants. [`transaction_flows.md`](transaction_flows.md) owns shared workflow sequencing. [`stripe_payments_transaction_flows.md`](stripe_payments_transaction_flows.md) and [`sham_cash_payments_transaction_flows.md`](sham_cash_payments_transaction_flows.md) own provider wire contracts and deltas. Repository-root `DESIGN.md` remains the product visual design system and is not changed by this feature.
+**Companions:** [`requirement.md`](requirement.md) owns product scope and Q39–Q58 behavior. [`database.md`](database.md) owns schema and data invariants. [`transaction_flows.md`](transaction_flows.md) owns shared workflow sequencing. [`stripe_payments_transaction_flows.md`](stripe_payments_transaction_flows.md) and [`sham_cash_payments_transaction_flows.md`](sham_cash_payments_transaction_flows.md) own provider wire contracts and deltas. Repository-root [`GLOSSARY.md`](../../GLOSSARY.md) owns terminology. Repository-root `DESIGN.md` remains the product visual design system and is not changed by this feature.
 
 ---
 
@@ -48,7 +48,7 @@ flowchart TD
 
     subgraph Infra[Infrastructure]
         ADAPT[Stripe / ShamCash adapters]
-        PERSIST[EF data models + explicit SQL + _context.Add+context.Update explicit with NO EF TRRACKER]
+        PERSIST[EF DataModels + explicit Add / targeted update / SQL]
         LEDGER[Hardened Ledger writer]
         OUTBOX[MassTransit EF outbox]
         ARCHIVE[Object archive]
@@ -114,7 +114,7 @@ Modules/Payments/
     Finance/
       Aggregates/           # PaymentReviewCase (+ state)
       Records/              # validated factories: ProviderTransaction, Settlement, audit records
-      Events/               # LedgerPostingPrepared, SettlementRecorded, UnappliedFundsReceived, PaymentReviewDecided
+      Events/               # SettlementRecorded, UnappliedFundsReceived, PaymentReview lifecycle
       Services/             # SettlementPolicy
     Ledger/
       ValueObjects/         # Money, LedgerPosting
@@ -163,24 +163,24 @@ Domain Models protect decisions; persistence DataModels model rows. They are del
 
 The roots below are chosen for independent lifecycle and identity, not because similarly named tables exist. Refunds and Disputes receive provider events independently from Purchase, so they remain separate roots. Q41 is intentionally cross-aggregate and is described in §4.2.
 
-| Aggregate | Owns | Behavior (aggregate methods) | Events raised | Invariant / tripwire |
-|---|---|---|---|---|
-| `Product` | versioned sellable mirror state | `ApplyMirrorUpdate(sourceVersion, …)` | `ProductMirrorUpdatedDomainEvent` | applies only strictly newer `SourceVersion`; Sellable is derived, never a mutable Product flag |
-| `Price` | immutable Product/currency offer | static `Create(...)`, `Archive(now)` | `PriceCreatedDomainEvent`, `PriceArchivedDomainEvent` | archive, never edit; active uniqueness is a Domain precondition plus the database partial unique index |
-| `AcademyPaymentSettings` | Academy selling, commission, and refund-window policy | `UpdatePolicy(...)` | `AcademyPaymentSettingsUpdatedDomainEvent` | absent means selling disabled; valid commission/window |
-| `ProviderConfiguration` | Provider Account and Provider Currency Route configuration | `ConfigureAccount(...)`, `ConfigureCurrencyRoute(...)`, `DisableCurrencyRoute(...)` | `ProviderAccountConfiguredDomainEvent`, `ProviderCurrencyRouteConfiguredDomainEvent`, `ProviderCurrencyRouteDisabledDomainEvent` | provider/environment/currency/capability coherence |
-| `CheckoutSession` | one provider attempt | static `Create(...)`, `StampProviderSession(...)`, `Expire(now)`, `CompleteFromMovement(...)` | `CheckoutSessionCreatedDomainEvent`, `CheckoutSessionExpiredDomainEvent`, `CheckoutSessionCompletedDomainEvent` | locked Product/Price/Provider Currency Route; Pending → Expired/Completed and Expired → Completed for valid late money; ambiguous provider creation stays Pending |
-| `Purchase` | confirmed acquisition and confirmed-reversal status | static `CreateFromCapture(...)`, `RecordConfirmedRefund(facts)`, `RecordLostDispute(facts)` | `PurchasePaidDomainEvent`, `PurchasePartiallyRefundedDomainEvent`, `PurchaseFullyRefundedDomainEvent` | born Paid; confirmed reversals drive status; it does not reserve Q41 during confirmation |
-| `RefundRequest` | Student ask and Platform decision | static `Create(...)`, `Approve(decision, refundId, now)`, `Reject(admin, reason, now)` | `RefundRequestedDomainEvent`, `RefundRequestDecidedDomainEvent` | one open per Purchase; approval follows a successful Q41 policy decision and creates a pending Refund atomically |
-| `Refund` | reserved then confirmed reversal | `CreateFromApprovedRequest(...)`, `CreateFromProviderMovement(...)`, `CreateFromSupportResolution(...)`, `Succeed(movement, now)`, `Fail(reason, now)` | `RefundCreatedDomainEvent`, `RefundSucceededDomainEvent`, `RefundFailedDomainEvent` | Pending reserves Q41; Pending → Succeeded/Failed; source and revoke decision are immutable |
-| `Dispute` | formal provider dispute paperwork | static `OpenFromProvider(...)`, `RecordFundsWithdrawn(...)`, `RecordFundsReinstated(...)`, `ResolveWon(now)`, `ResolveLost(now)` | `DisputeOpenedDomainEvent`, `DisputeFundsWithdrawnDomainEvent`, `DisputeFundsReinstatedDomainEvent`, `DisputeResolvedDomainEvent` | Open does not imply money moved; Provider Transactions remain cash truth |
-| `PaymentReviewCase` | maker/checker exceptional decision | static `Open(...)`, `Approve(checker, now)`, `Reject(checker, reason, now)`, `Resolve(movement, now)` | `PaymentReviewDecidedDomainEvent` | evidence required; checker ≠ maker; approval alone moves no money |
+| Aggregate | Identity and lifecycle | Commands / behaviors | Internally owned invariants | Cross-aggregate participation | Domain events | Facts required for `Reconstitute` |
+|---|---|---|---|---|---|---|
+| `Product` | `ProductId`; mirrored `Unavailable ↔ Available` by increasing source version | `ApplyMirrorUpdate(sourceVersion, availability, …)` | only a strictly newer version applies; no mutable purchasability flag | Checkout derives Sellable from source availability + Price + Academy settings + route | `ProductMirrorUpdatedDomainEvent` | id, tenant/item/parent IDs, ARN, title, source availability/version, timestamps |
+| `Price` | `PriceId`; `Active → Archived` | `Create`, `Archive` | positive minor-unit Money; Product/currency/amount immutable; no unarchive | Domain precondition checks no active sibling; DB partial unique is race guard | `PriceCreatedDomainEvent`, `PriceArchivedDomainEvent` | id, tenant/product IDs, Money, active/archive facts, creator/time |
+| `AcademyPaymentSettings` | `TenantId`; absent or configured, then policy revisions | `CreatePolicy`, `UpdatePolicy` | commission/window ranges; absent means selling disabled | supplies checkout, refund-window, and settlement inputs | `AcademyPaymentSettingsUpdatedDomainEvent` | id/tenant, selling flag, commission, refund window, actor/time |
+| `ProviderConfiguration` | `ProviderAccountId` root with route identities; account `Active/Degraded/Disabled`, routes enabled/disabled | `ConfigureAccount`, `SetAccountStatus`, `ConfigureCurrencyRoute`, `DisableCurrencyRoute` | immutable Provider name/environment/account identity; currency/presentment/capability/risk coherence | projects Payment Methods; route enabling requires adapter and structural Ledger accounts | `ProviderAccountConfiguredDomainEvent`, `ProviderAccountStatusChangedDomainEvent`, `ProviderCurrencyRouteConfiguredDomainEvent`, `ProviderCurrencyRouteDisabledDomainEvent` | account identity/status/secret references/times plus route IDs, currencies, modes, enabled/risk facts |
+| `CheckoutSession` | `CheckoutSessionId`; `Pending → Completed/Expired`, `Expired → Completed` for valid late money | `Create`, `StampProviderSession`, `Expire`, `CompleteFromMovement` | locked Student/Product/Price/route immutable; hosted creation never completes payment; ambiguous create stays Pending | DB guards one Pending Student/Product; exact movement creates Purchase atomically | `CheckoutSessionCreatedDomainEvent`, `CheckoutSessionExpiredDomainEvent`, `CheckoutSessionCompletedDomainEvent` | id, tenant/user/product/price/route IDs, external ID, status and all timestamps |
+| `Purchase` | `PurchaseId`; born `Paid`; `Paid → PartiallyRefunded \| Refunded`, `PartiallyRefunded → Refunded` | `CreateFromCapture`, `RecordConfirmedRefund`, `RecordLostDispute` | immutable capture/split facts; only confirmed reversals change status; a full first reversal goes directly to Refunded; confirmation does not reserve Q41 | Purchase row lock serializes Q41 snapshots; Ledger/outbox persist atomically | `PurchasePaidDomainEvent`, `PurchasePartiallyRefundedDomainEvent`, `PurchaseFullyRefundedDomainEvent` | all capture snapshot fields, refs, status/timestamps, confirmed reversal total/facts composed by mapper |
+| `RefundRequest` | `RefundRequestId`; `Requested → Approved/Rejected/Cancelled` | `Create`, `Approve`, `Reject`, `Cancel` | requester/tenant/Purchase immutable; decision fields coherent; no money movement | one-open DB guard; approval follows Q41 and creates Pending Refund atomically | `RefundRequestedDomainEvent`, `RefundRequestDecidedDomainEvent` | id, purchase/tenant/requester, reason/currency, status, decision/refund refs, timestamps |
+| `Refund` | `RefundId`; `Pending → Succeeded/Failed` | `CreateFromApprovedRequest`, `CreateFromProviderNotice`, `CreateFromSupportApproval`, `Succeed`, `Fail` | source, amount, currency, reason and revoke decision immutable; Pending reserves Q41; confirmation consumes reservation | policy/lock controls local creation; succeeded movement drives Purchase, Ledger and possible revocation | `RefundCreatedDomainEvent`, `RefundSucceededDomainEvent`, `RefundFailedDomainEvent` | id, purchase/tenant/provider/review/movement refs, source/actor/reason/revoke/Money, external ID/fee, status/times |
+| `Dispute` | `DisputeId`; `Open → Won/Lost`, with independent withdrawal/reinstatement facts | `OpenFromProvider`, `RecordFundsWithdrawn`, `RecordFundsReinstated`, `ResolveWon`, `ResolveLost` | opening is paperwork only; each movement identity is idempotent; close posts no money | composed movement facts supply Q41 exposure; withdrawal/reinstatement write Ledger; Lost drives Purchase/revocation | `DisputeOpenedDomainEvent`, `DisputeFundsWithdrawnDomainEvent`, `DisputeFundsReinstatedDomainEvent`, `DisputeResolvedDomainEvent` | dispute row facts plus composed withdrawal/reinstatement Provider Transaction and Ledger references |
+| `PaymentReviewCase` | `PaymentReviewCaseId`; `Open → Approved/Rejected`, `Approved → Resolved` | `Open`, `Approve`, `Reject`, `Resolve` | immutable evidence and typed amount/currency intent; checker differs from maker; approval alone moves no money | ProviderReversal approval creates Pending Refund; resolution may persist movement/Ledger/Settlement atomically | `PaymentReviewOpenedDomainEvent`, `PaymentReviewDecidedDomainEvent`, `PaymentReviewResolvedDomainEvent` | case refs/type/status, amount/currency, type-specific intent, evidence, maker/checker, resolution/times |
 
 Domain types expose no EF navigation or public setters. Hydration uses `Reconstitute(...)` factories. A simple ladder uses guarded methods; use the Library State pattern only where it makes a genuinely complex transition matrix easier to read. Every persisted transition records its expected previous status for Infrastructure's conditional update tripwire.
 
 ### 4.2 Cross-aggregate Q41 decision
 
-`RefundabilityPolicy` owns Q41; Application owns sequencing; Infrastructure owns locking. Approval/reservation is the only point that checks the cap:
+`RefundabilityPolicy` owns Q41; Application owns sequencing; Infrastructure owns locking. Pending Refund creation/reservation is the only local point that checks the cap:
 
 ```csharp
 // Transactional approval phase — shape only.
@@ -192,9 +192,9 @@ refund = Refund.CreateFromApprovedRequest(decision, ...); // Pending now reserve
 store.Persist(request, refund);
 ```
 
-Confirmation does **not** recompute Q41 against the already-reserved Pending Refund. It validates the Refund/movement identity, transitions Refund to Succeeded, and passes immutable confirmed-reversal facts to Purchase so Purchase can update its status. A Failed Refund releases the reservation because it drops out of the next policy snapshot. Provider-originated and support Refunds create their missing Pending/Succeeded record through source-specific factories under the same Purchase lock.
+Confirmation does **not** recompute Q41 against the already-reserved Pending Refund. It validates the Refund/movement identity, transitions Refund to Succeeded, and passes immutable confirmed-reversal facts to Purchase so Purchase can update its status. A Failed Refund releases the reservation because it drops out of the next policy snapshot. Approved support cases create Pending Refunds only after Q41 admits the local decision. An accepted provider-originated notice creates its Pending Refund as external truth even if it raced local capacity; negative Remaining Refundable creates a Critical finding and blocks new local reservations. If the first observation is already-confirmed money, the same transaction creates and succeeds the Refund and books the movement rather than rejecting external cash.
 
-The snapshot contains Purchase settlement gross, Pending/Succeeded Refund amounts, and dispute amount currently withdrawn or finally Lost without reinstatement. Merely opening a Dispute contributes zero. PostgreSQL triggers and unique constraints are the final concurrency guard; they do not contain a second version of the formula.
+The snapshot contains Purchase settlement gross, Pending/Succeeded Refund amounts, and dispute amounts currently withdrawn and not reinstated, whether the paperwork is Open or finally Lost. Merely opening or closing a Dispute contributes no exposure by status alone. PostgreSQL triggers and unique constraints are the final concurrency guard; they do not contain a second version of the formula.
 
 ### 4.3 Domain and integration events
 
@@ -207,14 +207,23 @@ Domain events are private Payments facts raised by aggregate methods. Integratio
 | Checkout | `CheckoutSessionCreatedDomainEvent`, `CheckoutSessionCompletedDomainEvent`, `CheckoutSessionExpiredDomainEvent` |
 | Purchases | `PurchasePaidDomainEvent`, `PurchasePartiallyRefundedDomainEvent`, `PurchaseFullyRefundedDomainEvent` |
 | Aftercare | `RefundRequestedDomainEvent`, `RefundRequestDecidedDomainEvent`, `RefundCreatedDomainEvent`, `RefundSucceededDomainEvent`, `RefundFailedDomainEvent`, `DisputeOpenedDomainEvent`, `DisputeFundsWithdrawnDomainEvent`, `DisputeFundsReinstatedDomainEvent`, `DisputeResolvedDomainEvent` |
-| Finance | `LedgerPostingPreparedDomainEvent`, `SettlementRecordedDomainEvent`, `UnappliedFundsReceivedDomainEvent`, `PaymentReviewDecidedDomainEvent` |
+| Finance | `SettlementRecordedDomainEvent`, `UnappliedFundsReceivedDomainEvent`, `PaymentReviewOpenedDomainEvent`, `PaymentReviewDecidedDomainEvent`, `PaymentReviewResolvedDomainEvent` |
 
-| Internal fact | Public integration event |
-|---|---|
-| Purchase paid after capture posting succeeds | `PurchaseActivatedIntegrationEvent` |
-| Purchase fully refunded, succeeded flagged Refund, or lost Dispute after reversal posting succeeds | `PurchaseAccessRevocationRequestedIntegrationEvent` |
+| Business fact | Private Domain event | Ledger requirement | Public integration event | Consumer |
+|---|---|---|---|---|
+| Confirmed Capture creates Purchase | `PurchasePaidDomainEvent` | `Capture`/`ApplyUnappliedFunds` posting must succeed; returned LedgerEntry ID is `AuditReference` | `PurchaseActivatedIntegrationEvent` | Courses grant consumer |
+| Succeeded unflagged partial Refund | `RefundSucceededDomainEvent`, `PurchasePartiallyRefundedDomainEvent` | one `RefundReversal` | none | Payments only |
+| Succeeded flagged partial Refund | same Refund/Purchase events | one `RefundReversal`; revocation AuditReference is the resulting Payments audit row | `PurchaseAccessRevocationRequestedIntegrationEvent(CauseType=Refund)` | Courses revoke consumer |
+| Purchase becomes fully Refunded | `RefundSucceededDomainEvent`, `PurchaseFullyRefundedDomainEvent` | one backing `RefundReversal`; revocation AuditReference is the resulting Payments audit row | same revocation contract | Courses revoke consumer |
+| Dispute opens | `DisputeOpenedDomainEvent` | none | none | Payments only |
+| Dispute funds withdrawn | `DisputeFundsWithdrawnDomainEvent` | one `DisputeLoss` | none | Payments only |
+| Dispute funds reinstated | `DisputeFundsReinstatedDomainEvent` | one `DisputeWon` | none | Payments only |
+| Dispute resolves Lost | `DisputeResolvedDomainEvent(Lost)` | no posting at close; revocation AuditReference is the Dispute resolution Payments audit row | `PurchaseAccessRevocationRequestedIntegrationEvent(CauseType=Dispute)` | Courses revoke consumer |
+| Dispute resolves Won | `DisputeResolvedDomainEvent(Won)` | no posting at close | none | Payments only |
+| Unapplied receipt observed | `UnappliedFundsReceivedDomainEvent` | one `UnappliedReceipt` | none | Payments only |
+| Settlement transfer confirmed | `SettlementRecordedDomainEvent` | one `Settlement` posting | none | Payments only |
 
-No Domain event handler calls Courses. Application translates the fact and writes the public event to the outbox in the same transaction as Domain state, Ledger posting, and audit. `LedgerPostingPreparedDomainEvent` means a balanced posting was constructed; `LedgerEntryPosted` is an audit/operational fact recorded only after `ILedgerWriter` succeeds. New Domain event constructors receive an explicit `IClock` timestamp; Payments Domain does not import MediatR directly despite Shared's existing transitive `IDomainEvent` debt.
+No Domain event handler calls Courses. Application translates the fact and writes the public event to the outbox in the same transaction as Domain state, Ledger posting, and audit. Activation `AuditReference` is always the final funding LedgerEntry ID. Revocation `AuditReference` is always the cause's `PaymentsAuditLogs.Id`; for Refund causes that audit row is created only after `ILedgerWriter` succeeds and records the reversal ID. There is no `LedgerPostingPreparedDomainEvent`: constructing a `LedgerPosting` is a synchronous return value with no in-process consumer. Posting success is recorded as audit/operational data only after `ILedgerWriter` returns the LedgerEntry ID; no event named “posted” is raised before success. A Lost close revokes immediately using its immutable resolution audit row when withdrawal has not yet arrived; later movement processing updates exposure/Purchase status without duplicating the Courses effect. New Domain event constructors receive an explicit `IClock` timestamp; Payments Domain does not import MediatR directly despite Shared's existing transitive `IDomainEvent` debt.
 
 ### 4.4 Value objects and policies
 
@@ -235,7 +244,7 @@ Value objects exist only where a multi-field invariant needs a type; IDs stay pr
 |---|---|---|
 | `CheckoutEligibilityPolicy` | Product, Price, Academy settings, Provider Currency Route, enrollment/access fact | eligible `PaymentMethod` values or explicit reason |
 | `RefundabilityPolicy` | Purchase gross, Pending/Succeeded Refunds, currently withdrawn/unreinstated dispute exposure | Remaining Refundable and reservation decision (Q41) |
-| `SettlementPolicy` | payable balance, Pending Refunds, open-request exposure, route risk, reconciliation evidence | Settleable Balance (Q32/Q53) and rejection reasons; called again under lock in the result phase |
+| `SettlementPolicy` | payable balance, Pending Refund Academy-payable legs, open-request exposure, route risk, reconciliation evidence | Settleable Balance (Q32/Q53), pre-transfer rejection reasons, and a post-transfer stale-intent finding; called under the payable lock at approval, preflight, and confirmation |
 | `LedgerPostingFactory` | normalized movement plus stored purchase/split/review facts | balanced, minor-unit-safe `LedgerPosting` for each entry type |
 
 These policies are deterministic and I/O-free. Time, provider reads, authorization, locks, `ILedgerWriter`, and persistence stay in Application/Infrastructure.
@@ -246,7 +255,7 @@ These policies are deterministic and I/O-free. Time, provider reads, authorizati
 
 ### 4.6 Domain ↔ persistence mapping
 
-For simple shapes, Shared's `IDataModelMapper<TDomainModel, TDataModel>` supplies `ToDomain`, `ToData`, and `ApplyChanges`. For complex workflows, a capability mapper may consume a composite persistence projection assembled from several DataModels and call one or more `Reconstitute(...)` factories. Stores own explicit Add/targeted Update instructions and tripwire SQL; mappers do not. Domain assemblies never reference EF types, and query DTOs bypass Domain (`AsNoTracking` projections, §5.4).
+For simple one-to-one shapes, Shared's actual `IDataModelMapper<TDomainModel, TDataModel>` contract supplies `ToDomain(TDataModel)`, `ToData(TDomainModel)`, and `ApplyChanges(TDomainModel, existingDataModel)`; its Domain type must derive from Shared `Entity` and its DataModel is a class. Composite shapes do not pretend to implement that two-type interface: an Infrastructure capability mapper consumes a persistence projection assembled from several DataModels and calls one or more `Reconstitute(...)` factories. Stores own explicit Add/targeted Update instructions and tripwire SQL; mappers do not. Domain assemblies never reference EF types, and query DTOs bypass Domain (`AsNoTracking` projections, §5.4).
 
 ---
 
@@ -278,6 +287,7 @@ Names are the implementation contract; combine request/handler/validator in the 
 | Provider event | `ApplyNormalizedProviderEvent` | local transaction after normalization |
 | Review | `OpenPaymentReview`, `DecidePaymentReview` | local transaction |
 | Review resolution | `ApplyUnappliedFunds`, `ReturnUnappliedFunds`, `ReversePurchaseFromSupport` | local or provider orchestrator as movement requires |
+| Manual correction | `RecordManualAdjustment` | local transaction resolving an approved review; requires `payments:AdjustLedger` |
 | Settlement | `SettleAcademyPayable` | provider/manual-transfer orchestrator |
 | Provider payout | `RecordProviderPayout` | local transaction after normalized movement |
 | Reconciliation | `RunProviderReconciliation`, `RunInternalReconciliation` | orchestrator/read then local result phase |
@@ -321,7 +331,7 @@ Queries return DTOs, use no tracked Domain aggregates, and must name scope when 
 FluentValidation covers shape and basic ranges. Handlers enforce trust-boundary facts under lock:
 
 - tenant/user ownership;
-- staff permission from `docs/Permissions.md`;
+- staff permission from [`docs/Permissions.md`](../../docs/Permissions.md);
 - Provider Account/environment/currency/capability;
 - current status and allowed transition;
 - maker/checker separation;
@@ -329,6 +339,8 @@ FluentValidation covers shape and basic ranges. Handlers enforce trust-boundary 
 - evidence and external movement identity.
 
 For Q41, the handler locks Purchase, loads the Refund/Dispute policy snapshot, and asks `RefundabilityPolicy` for a reservation decision. It then mutates the separate RefundRequest and Refund roots in the same transaction. Refund confirmation uses the reservation and does not run the cap against itself. Do not perform a pre-check outside the transaction and assume it remains true.
+
+Canonical staff authorization comes from [`docs/Permissions.md`](../../docs/Permissions.md): catalog commands use `payments:ManageCatalog`; Academy settings use `payments:ManageAcademySettings`; Provider Account/route commands use `payments:ManageProviders`; Refund decisions/issuance use `payments:IssueRefund`; opening and deciding reviews use `payments:OpenReview` / `payments:ApproveReview`; Settlement and ManualAdjustment resolution use `payments:RecordSettlement` / `payments:AdjustLedger`; operator re-drive/reconciliation uses `payments:RunReconciliation`; Academy/Platform reads use `payments:ViewAnalytics` / `payments:ViewPlatformAnalytics`. Archive, scheduled reconciliation, analytics refresh, and PII procedures run as authorized internal service operations, not under an invented staff permission. Student commands use ownership/tenant checks as defined in the permission reference.
 
 ---
 
@@ -425,6 +437,18 @@ Workers for sweeper, reconciliation, analytics, and archive call public Applicat
 
 ## 8. Cross-module access design
 
+Courses also owns the inbound catalog fact used by the Payments mirror:
+
+```text
+CoursePlanAvailabilityChangedIntegrationEvent(
+  EventId, TenantId, CourseId, CoursePlanId, TargetResourceArn,
+  Title, Availability, SourceVersion, OccurredAt)
+```
+
+`Availability` is `Available | Unavailable`; it is source lifecycle state, not a precomputed Payments Sellable flag. Courses emits a full snapshot on relevant publish/unpublish, Plan add/update/remove, and title changes. `SourceVersion` is monotonic per Course Plan. The Payments consumer maps it to `UpsertProductMirror`, applies only newer versions, and is repaired by initial backfill plus mirror reconciliation. Slice 1 owns this Courses producer/contract and Payments consumer so it does not depend on Slice 2. This inbound catalog contract is not a Courses access mutation; Payments still sends only the two access integration events below.
+
+### Payments → Courses access
+
 Courses owns one source-aware access capability:
 
 ```text
@@ -466,11 +490,28 @@ This is one Courses capability refactor, not a Payments copy. A migration/backfi
 | Ledger | malformed or direct append | function/permissions/constraints reject transaction | no partial money state |
 | Refund/dispute | concurrent reversal | Purchase lock + Remaining Refundable + uniques | one valid result; loser retries/conflicts |
 | Review | maker is checker or evidence absent | authorization + DB CHECK | no money movement |
-| Settlement | stale balance/reconciliation | exact payable lock and policy recompute | rejected before booking |
+| Settlement | stale balance/reconciliation | exact payable lock and policy recompute | rejected before transfer; an already-confirmed transfer is booked once and creates a Critical stale-settlement finding |
 | Access | Courses cannot resolve plan/principal | source-aware failed-provisioning park | money remains valid; ops can retry |
 | Archive | upload/hash/DB transition failure | retain hot payload; deterministic retry | replay remains available |
 | Provider health | one provider credential/route fails | degrade affected route only | other methods and history continue |
 | Provider drift | fixture passes but live contract fails | sandbox gate reports BLOCKED | no release on inferred compatibility |
+
+### 9.1 Critical scenario closure
+
+| Scenario | Lock and Domain decision | DataModels and Ledger | Events / integration | Idempotency and retry outcome |
+|---|---|---|---|---|
+| Two simultaneous Refund approvals | lock RefundRequest then Purchase; `RefundabilityPolicy` admits one reservation and Request permits one terminal decision | winner updates `RefundRequests`, inserts Pending `Refund`, audit; no Ledger | request/refund Domain events; no integration event | request status + one-open/RefundId uniques; replay returns existing approval, competing stale decision conflicts and may reload |
+| Confirm Pending Refund 60 while Q41 Remaining after its reservation is 40 | lock Refund then Purchase then payable; `Refund.Succeed` consumes its reservation and `Purchase.RecordConfirmedRefund` uses confirmed facts; Q41 is not rerun | ProviderTransaction, Refund Succeeded, Purchase status, `RefundReversal`, audit | Refund/Purchase Domain events; revocation only if full or flagged | movement, external-ref and RefundReversal uniques; duplicate confirmation is a no-op |
+| Provider-originated Refund without local Request | lock/create Refund then Purchase then payable; provider movement truth is recorded even if it raced local capacity | ProviderTransaction, `Refund(Source=Provider)`, Purchase status, `RefundReversal`, audit; Critical finding if cap/payable becomes negative; no RefundRequest | Refund/Purchase Domain events; conditional revocation | provider movement/external refund/ledger uniques converge webhook and reconciliation; disagreement is Critical, retry reuses row |
+| ShamCash provider-support reversal | approval locks ReviewCase then Purchase and creates Pending `Refund(Source=ProviderSupport)` from typed amount/revoke facts; confirmation locks case/refund/Purchase/payable and succeeds it | approval: case + Pending Refund + audit, no Ledger; confirmation: outgoing ProviderTransaction, Refund/Purchase transitions, `RefundReversal`, audit | review/refund/Purchase Domain events; conditional revocation | case/Refund/movement/Ledger uniques; ambiguous transfer remains approved + Pending and polls/retries with same intent |
+| Dispute opened, no funds withdrawn | lock Dispute; `OpenFromProvider` records paperwork with zero exposure | Dispute Open + audit; no Ledger or Purchase status write | `DisputeOpenedDomainEvent`; no integration | provider dispute unique; replay is no-op; reconciliation waits for movement/close facts |
+| Dispute funds withdrawn then reinstated | for each movement lock Dispute, Purchase, payable; record independent withdrawal/reinstatement facts; exposure appears then is removed | two ProviderTransactions, one `DisputeLoss`, one `DisputeWon`, audit; Dispute may remain Open | withdrawal/reinstatement Domain events; no Courses event | movement and `(DisputeId, Type)` uniques; either delivery order redrives until prerequisites exist |
+| Lost Dispute after earlier partial Refund | lock Dispute then Purchase; Lost always requests revoke; `RecordLostDispute` advances Purchase only from confirmed withdrawal facts | Dispute Lost + audit; Purchase status advances when `DisputeLoss` exists; no Ledger at close | `DisputeResolvedDomainEvent(Lost)` + revocation using resolution audit ref | dispute transition/outbox identities; close-before-withdrawal revokes now and movement later redrives Purchase status only; Courses revoke is idempotent |
+| Hosted checkout creation timeout | no lock spans I/O; intent phase commits Pending session, ambiguous result makes no transition | CheckoutSession remains Pending; no Purchase/Ledger | initial CheckoutSessionCreated only; no integration | CheckoutSessionId provider key + pending unique; retrieve/retry same key, never create a second attempt |
+| Exact payment reported after CheckoutSession expiry | lock session then Purchase; `CompleteFromMovement` allows `Expired → Completed` when provider evidence proves a valid late observation (for ShamCash, occurrence was inside invoice window) | ProviderTransaction, Purchase, session completion retaining ExpiredAt, `Capture`, audit | session/Purchase Domain events + activation | session/movement/Purchase/Ledger uniques; callback/poll/reconciliation converge; money occurring after the valid window goes to Unapplied Funds instead |
+| Duplicate webhook delivery references same movement | lock each WebhookEvent then target aggregate; first applies, later source observes existing movement/result | delivery rows/counts as applicable; one ProviderTransaction and one semantic Ledger entry; later outcome Duplicate | Domain/integration events only from winner | delivery unique plus movement/business-entry uniques; duplicate returns 2xx and retries are safe |
+| Settlement approved, then payable changes before transfer confirmation | approval and preflight lock payable and run `SettlementPolicy`; confirmation locks payable again. No confirmed transfer: reject/re-approve. Confirmed transfer: record truth despite stale cap and flag it | typed ReviewCase intent; on confirmed transfer ProviderTransaction when applicable, Settlement, `Settlement` posting, audit, Critical finding; payable may become negative | review/Settlement Domain events; no integration | one in-flight case, PaymentReviewCaseId, external reference, movement and Ledger uniques; ambiguous transfer stays Approved and polls, confirmed replay is no-op |
+| Purchase commits while Courses is unavailable | session lock; capture Domain decisions complete without calling Courses | ProviderTransaction, Purchase, session, `Capture`, audit and activation outbox commit atomically | private `PurchasePaidDomainEvent`; durable activation integration event | outbox retries; Courses inbox and `(TenantId, SourceType, SourceId)` make redelivery a no-op; access failure parks for retry without changing money |
 
 ---
 
@@ -541,13 +582,13 @@ Architecture tests fail when Presentation/Consumers reference Infrastructure per
 
 **Delivers:** synchronized requirements/database/shared/provider flows, permissions, glossary, this design.
 
-**Gate:** follow-up engineering review has no open architecture/data-contract issue. No product implementation starts before this passes.
+**Gate:** met by the 2026-11-20 Slice 0 final review; no architecture or data-contract issue remains for Slice 1.
 
 ### Slice 1 — Financial kernel
 
-**Delivers:** Academy/Provider configuration Domain Models, Product mirror and immutable Price lifecycle, Checkout intent model, Provider Transactions, hardened Ledger posting, webhook ingest/outbox, a provider-neutral Purchase capture path driven by fake normalized movement, Payments-owned activation/revocation integration contracts and producers, core query seams, schema/roles/triggers, and Payments test projects.
+**Delivers:** Academy/Provider configuration Domain Models; the Courses-owned `CoursePlanAvailabilityChangedIntegrationEvent` producer/contract and Payments Product-mirror consumer; immutable Price lifecycle; Checkout intent model; Provider Transactions; hardened Ledger posting; webhook ingest/outbox; a provider-neutral Purchase capture path driven by fake normalized movement; both Payments-owned access integration contracts; the activation producer only; core query seams, schema/roles/triggers, and Payments test projects. The scaffolded `IntegrationEvents` project drops its unnecessary Domain project reference so public contracts cannot depend on private Domain types.
 
-**Gate:** only kernel Domain behavior is required: configuration, catalog, Checkout eligibility/session lifecycle, Purchase capture, Provider Transaction identity, and Ledger posting. Migration/grant/function and transaction/outbox crash tests prove `PurchaseActivatedIntegrationEvent` is durable with Purchase + Ledger without requiring a Courses consumer. Scaffold corrections are applied (`SoftDeleteInterceptor` removed, `QueryDelay ≤ 5s`, `Persistence` spelling). Refundability and Settlement policies wait for their owning slices; no provider SDK is needed for kernel acceptance.
+**Gate:** only kernel Domain behavior is required: configuration, versioned catalog mirror (including initial backfill, out-of-order event, and reconciliation tests), Checkout eligibility/session lifecycle, Purchase capture, Provider Transaction identity, and Ledger posting. Migration/grant/function and transaction/outbox crash tests prove `PurchaseActivatedIntegrationEvent` is durable with Purchase + Ledger without requiring a Courses access consumer. Scaffold corrections are applied (`SoftDeleteInterceptor` removed, `QueryDelay ≤ 5s`, `Persistence` spelling, IntegrationEvents→Domain reference removed). Refundability waits for Slice 3 and SettlementPolicy waits for Slice 5; no provider SDK or Courses access consumer is needed for kernel acceptance.
 
 ### Slice 2 — Source-aware Courses access
 
@@ -561,13 +602,13 @@ Slices 1 and 2 merge before provider work.
 
 ### Slice 3 — ShamCash
 
-**Delivers:** exact hosted invoice, callback normalization, polling/reconciliation, Unapplied Funds, review apply/return, support reversal, and provider health. Settlement remains Slice 5.
+**Delivers:** exact hosted invoice, callback normalization, polling/reconciliation, Unapplied Funds, review apply/return, `RefundabilityPolicy` as the first Refund-capable slice, support reversal and its revocation producer, and provider health. Settlement remains Slice 5.
 
 **Gate:** full exact/non-exact fixture matrix, concurrency/review tests, data-shaped benchmark, secret-gated sandbox smoke. Missing sandbox access = BLOCKED.
 
 ### Slice 4 — Stripe
 
-**Delivers:** Adaptive Pricing checkout/capture, refund requests/issuance, provider-originated refunds, disputes, payouts, reconciliation, risk holds.
+**Delivers:** Adaptive Pricing checkout/capture, refund requests/issuance, provider-originated refunds, disputes, payouts, reconciliation, risk holds, reuse of `RefundabilityPolicy`, and Stripe Refund/Dispute revocation producers.
 
 **Gate:** presentment/settlement/fee truth, async refund, dispute timing, overlap/replay fixtures, benchmark, Stripe test-mode smoke. Missing account access = BLOCKED.
 
@@ -578,6 +619,22 @@ Slices 1 and 2 merge before provider work.
 **Gate:** maker/checker and stale-policy tests; archive restore/erasure; no mixed totals; benchmark thresholds; RPO/RTO rehearsal; legal/compliance release gates visible.
 
 Each slice is independently deployable behind disabled provider routes. Schema evolution is additive; rollback disables new routes/consumers rather than deleting financial data.
+
+### Dependency graph
+
+```mermaid
+flowchart LR
+    S0[Slice 0: architecture] --> S1[Slice 1: financial kernel]
+    S0 --> S2[Slice 2: Courses access]
+    S1 --> S3[Slice 3: ShamCash]
+    S2 --> S3
+    S1 --> S4[Slice 4: Stripe]
+    S2 --> S4
+    S3 --> S5[Slice 5: operations]
+    S4 --> S5
+```
+
+Slices 1 and 2 may run in parallel. Slices 3 and 4 may run in parallel after both 1 and 2 merge. Slice 5 follows both provider slices. Contracts flow forward only: Slice 1 owns the Courses catalog producer + Payments mirror consumer, defines activation/revocation contracts, and produces activation; Slice 2 consumes the access contracts; Slices 3/4 produce revocation. No provider SDK or Courses access consumer is a prerequisite of Slice 1.
 
 ---
 
@@ -609,19 +666,19 @@ Do not add:
 
 ## 13. Review checklist
 
-- [ ] Every Payments plan header links this architecture and ownership is non-overlapping.
-- [ ] Public/internal command catalog matches `transaction_flows.md` and no provider call is transactional.
-- [ ] Q39–Q58 behavior matches `requirement.md` and `database.md`.
-- [ ] Posting-function grants/search path and archive lifecycle are migration-testable.
-- [ ] Courses source migration has backfill, uniqueness, Library regression, and Payments parity.
-- [ ] Provider capability matrix matches each provider document.
-- [ ] Slice gates include deterministic fixtures, secret-gated smoke, benchmark, and operations proof.
-- [ ] Domain Models and persistence DataModels remain separate; composite mappers are allowed and no table implies an aggregate boundary.
-- [ ] Q41 is evaluated once at Refund reservation from a snapshot loaded under the Purchase lock; confirmation cannot count its Pending Refund twice.
-- [ ] CheckoutSession supports valid late `Expired → Completed` movement and hosted-session creation never completes payment.
-- [ ] `PurchasePaidDomainEvent` remains private; Application emits `PurchaseActivatedIntegrationEvent` with its Ledger audit reference through the outbox.
-- [ ] Financial policies and `Money`/`LedgerPosting` live in Domain and are I/O-free; `ILedgerWriter` is called by Application, never Domain.
-- [ ] Dispute opening, funds withdrawal/reinstatement, and resolution are distinct facts.
-- [ ] No money entity is soft-deletable; no Payments Domain type imports MediatR/EF/MassTransit/provider SDKs.
-- [ ] Scaffold corrections (soft-delete interceptor, outbox `QueryDelay`, `Persistence` spelling) are in Slice 1.
-- [ ] Root `DESIGN.md` remains untouched.
+- [x] Every Payments plan header links this architecture and ownership is non-overlapping.
+- [x] Public/internal command catalog matches `transaction_flows.md` and no provider call is transactional.
+- [x] Q39–Q58 behavior matches `requirement.md` and `database.md`.
+- [x] Posting-function grants/search path and archive lifecycle are migration-testable.
+- [x] Courses source migration has backfill, uniqueness, Library regression, and Payments parity.
+- [x] Provider capability matrix matches each provider document.
+- [x] Slice gates include deterministic fixtures, secret-gated smoke, benchmark, and operations proof.
+- [x] Domain Models and persistence DataModels remain separate; composite mappers are allowed and no table implies an aggregate boundary.
+- [x] Q41 is evaluated once at Refund reservation from a snapshot loaded under the Purchase lock; confirmation cannot count its Pending Refund twice.
+- [x] CheckoutSession supports valid late `Expired → Completed` movement and hosted-session creation never completes payment.
+- [x] `PurchasePaidDomainEvent` remains private; Application emits `PurchaseActivatedIntegrationEvent` with its Ledger audit reference through the outbox.
+- [x] Financial policies and `Money`/`LedgerPosting` live in Domain and are I/O-free; `ILedgerWriter` is called by Application, never Domain.
+- [x] Dispute opening, funds withdrawal/reinstatement, and resolution are distinct facts.
+- [x] No money entity is soft-deletable; no Payments Domain type imports MediatR/EF/MassTransit/provider SDKs.
+- [x] Scaffold corrections (soft-delete interceptor, outbox `QueryDelay`, `Persistence` spelling, IntegrationEvents→Domain reference) are in Slice 1.
+- [x] Root `DESIGN.md` remains untouched.
