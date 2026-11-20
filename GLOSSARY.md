@@ -50,7 +50,7 @@ The payments-module-owned record of what each sellable costs.
 _Avoid_: price book, product table, pricing table
 
 **Product**:
-A Payments-owned mirror of something sellable; in the MVP, one Course Plan. Courses changes reach it through versioned events.
+A Payments-owned mirror of one source item and its availability; in the MVP, one Course Plan. Courses changes reach it through versioned events. Whether it is Sellable is derived in Payments.
 _Avoid_: course, catalog row
 
 **Price**:
@@ -62,7 +62,7 @@ A Student's pending or completed provider attempt, locking one Product, Price, a
 _Avoid_: purchase, order, cart
 
 **Sellable**:
-A Product with an active compatible Price, offered only while its Academy and at least one Provider Currency Route are enabled.
+A source-available Product with an active compatible Price, offered only while its Academy and at least one Provider Currency Route are enabled.
 _Avoid_: SKU, offering
 
 **Eligibility**:
