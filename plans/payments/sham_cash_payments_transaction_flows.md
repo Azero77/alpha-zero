@@ -2,7 +2,7 @@
 
 **Status:** Provider-specific source, synchronized 2026-11-18 with Q39–Q58.
 
-**Ownership:** [`transaction_flows.md`](transaction_flows.md) owns shared checkout, webhook, Unapplied Funds, review, settlement, access, outbox, lock, and Ledger workflows. [`database.md`](database.md) owns data invariants. This file owns only ShamCash capabilities, wire contracts, normalization, and deltas. [`design.md`](design.md) owns implementation boundaries.
+**Ownership:** [`requirement.md`](requirement.md) owns product behavior. [`database.md`](database.md) owns schema and invariants. [`transaction_flows.md`](transaction_flows.md) owns shared checkout, webhook, Unapplied Funds, review, settlement, access, outbox, lock, and Ledger workflows. This file owns only ShamCash capabilities, wire contracts, normalization, and deltas. [`design.md`](design.md) owns implementation boundaries; repository-root [`GLOSSARY.md`](../../GLOSSARY.md) owns terminology.
 
 Provider identity: `PaymentProviders.Name = 'sham-cash'`. MVP uses one dedicated, Platform-owned, AlphaZero-exclusive linked account with SYP→SYP and USD→USD routes, `PresentmentMode = Exact`.
 
@@ -13,7 +13,7 @@ Provider identity: `PaymentProviders.Name = 'sham-cash'`. MVP uses one dedicated
 | Capability | ShamCash MVP behavior |
 |---|---|
 | Hosted checkout | Hosted exact invoice |
-| Customer identity | No customer mirror; payer account is not Ledger identity |
+| Student identity | No provider-customer mirror; payer account is not Ledger identity |
 | Presentment | Exact Price amount/currency; no provider FX |
 | Ordinary refund | Unsupported; Student is directed to support |
 | Dispute lifecycle | Unsupported; never create a `Disputes` row |
@@ -122,8 +122,8 @@ A genuinely unpaid invoice becomes expired after provider confirmation. An after
 
 - The normal Refund Request endpoint rejects ShamCash Purchases with a support instruction.
 - ShamCash has no refund API and no formal dispute event family.
-- An exceptional provider-support reversal requires a reviewed case plus confirmed outgoing/reversal Provider Transaction.
-- Resolution creates a succeeded `Refund(Source = ProviderSupport)` only to reuse the shared reversal, Purchase status, and access-revocation behavior.
+- An exceptional provider-support reversal approval locks Purchase, applies Q41, and creates a Pending `Refund(Source = ProviderSupport)` to reserve the reviewed amount before transfer.
+- Confirmed outgoing/reversal Provider Transaction transitions that Refund to Succeeded through the shared reversal, Purchase status, and access-revocation behavior.
 - An email, support ticket, or approval without movement evidence cannot mark money returned.
 
 ---
@@ -132,10 +132,11 @@ A genuinely unpaid invoice becomes expired after provider confirmation. An after
 
 ShamCash Academy liabilities may settle directly from the same-currency ShamCash Wallet:
 
-1. maker/checker case identifies exact payable account, amount, destination snapshot, and evidence;
-2. approved transfer runs outside the database transaction;
-3. confirmed outgoing `transaction_id` becomes the Provider Transaction;
-4. shared result phase recomputes Settleable Balance and posts Dr Academy Payable / Cr ShamCash Wallet.
+1. maker/checker case identifies exact payable/source accounts, amount/currency, destination snapshot, and evidence;
+2. approval and immediate pre-transfer revalidation lock the payable and enforce the daily-reconciliation/Settleable Balance gates;
+3. approved transfer runs outside the database transaction;
+4. confirmed outgoing `transaction_id` becomes the Provider Transaction;
+5. shared result phase locks the payable and posts Dr Academy Payable / Cr ShamCash Wallet exactly once. A post-transfer payable change creates a Critical finding and may leave a negative payable; confirmed cash is not omitted.
 
 Settlement is blocked until a successful daily `LedgerVsProvider` run with `FinishedAt` after the relevant capture covers that movement. Route policy then uses `ShortHoldDays = 0`, `ReserveRate = 0`, and `DisputeHoldDays = 0` because ordinary refunds/disputes are unsupported. Unapplied Funds remains outside Academy Payable.
 
