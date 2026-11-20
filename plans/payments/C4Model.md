@@ -1,6 +1,6 @@
 # Payments — C4 Model
 
-**Derived from:** [`design.md`](design.md) §§2–8 (layers, ports, infrastructure, cross-module access) and [`requirement.md`](requirement.md) (actors and scope).
+**Derived from:** [`requirement.md`](requirement.md) for actors/scope, [`database.md`](database.md) for data invariants, [`transaction_flows.md`](transaction_flows.md) for sequencing, [`stripe_payments_transaction_flows.md`](stripe_payments_transaction_flows.md) / [`sham_cash_payments_transaction_flows.md`](sham_cash_payments_transaction_flows.md) for provider deltas, and [`design.md`](design.md) §§2–8 for layers/ports/infrastructure/access.
 **Notation:** C4 levels expressed as Mermaid diagrams so they render in the repository. Colour key: blue = a Payments element, grey = external system, darker blue = person, light blue = component, cylinder-style label = data store. `design.md` remains the authority on implementation decisions.
 
 ---
@@ -33,9 +33,9 @@ flowchart TB
 
   student -->|"checkout / view purchases / request refund"| payments
   academy -->|"ManageCatalog, OpenReview, ViewAnalytics"| payments
-  platform -->|"ManageAcademySettings, ManageProviders, IssueRefund,<br/>ApproveReview, RecordSettlement, RunReconciliation"| payments
+  platform -->|"ManageAcademySettings, ManageProviders, IssueRefund,<br/>ApproveReview, RecordSettlement, AdjustLedger, RunReconciliation"| payments
   payments -->|"Purchase activation/revocation integration facts"| courses
-  courses -->|"Product mirror events; eligibility fact"| payments
+  courses -->|"CoursePlanAvailabilityChangedIntegrationEvent;<br/>eligibility fact"| payments
   payments -->|"permission + maker/checker checks"| identity
   library -->|"AccessCode parity after source migration"| courses
   payments -->|"checkout, refund, dispute, payout API"| stripe
@@ -52,9 +52,9 @@ flowchart TB
 | External | Direction | Contract |
 |---|---|---|
 | Courses | out | `PurchaseActivatedIntegrationEvent` / `PurchaseAccessRevocationRequestedIntegrationEvent` via EF outbox; Courses maps them to source-aware commands |
-| Courses | in | Product mirror events; `ICourseAccessReader` eligibility fact only — no direct access mutation |
+| Courses | in | versioned `CoursePlanAvailabilityChangedIntegrationEvent`; `ICourseAccessReader` eligibility fact only — no direct access mutation |
 | Stripe / ShamCash | both | capability-specific ports; signed events normalized to provider-neutral facts |
-| Identity | in | permissions from `docs/Permissions.md`, tenant context, maker/checker identity |
+| Identity | in | permissions from [`docs/Permissions.md`](../../docs/Permissions.md), tenant context, maker/checker identity |
 | Library | indirect | same Courses capability with `SourceType=AccessCode`; regression parity, no Payments coupling |
 | KeyVault / storage / monitoring | out | secret names, deterministic archive keys, redrive and health signals |
 
@@ -119,10 +119,12 @@ flowchart LR
   con["MassTransit consumers<br/>ProcessWebhookEvent and Payments-owned messages"]:::component
   wrk["Workers<br/>sweeper, reconciliation, analytics, archive"]:::component
   bus[("EF outbox / inbox")]:::component
-  ep --> bus
-  wh --> bus
-  con --> bus
-  wrk --> bus
+  app["Application public commands / queries"]:::component
+  bus --> con
+  ep --> app
+  wh --> app
+  con --> app
+  wrk --> app
 ```
 
 ### 3b. Application
@@ -141,7 +143,6 @@ flowchart LR
   behavior --> cmd
   cmd --> orch
   cmd --> phase
-  cmd --> qry
   orch --> phase
   orch --> cap
   phase --> pers
@@ -160,7 +161,6 @@ flowchart LR
   pol["Pure domain services<br/>CheckoutEligibilityPolicy, RefundabilityPolicy (Q41),<br/>SettlementPolicy (Q32/Q53), LedgerPostingFactory"]:::component
   evt["Private Domain events<br/>translated by Application after required<br/>Ledger audit references exist"]:::component
   agg --> evt
-  rec --> evt
   pol --> vo
   agg --> pol
 ```
@@ -229,7 +229,7 @@ sequenceDiagram
   APP->>APP: verify signature outside any transaction
   APP->>DB: IngestVerifiedProviderWebhook: event + payload + ProcessWebhookEvent outbox
   DB-->>APP: committed ingest
-  Note over DB,CRS: outbox delivers within <= 5 seconds
+  Note over DB,API: outbox delivers processing message within <= 5 seconds
   DB->>API: ProcessWebhookEvent consumer
   API->>APP: normalize to provider-neutral fact
   APP->>DB: ApplyNormalizedProviderEvent (transactional phase; lock session)
@@ -270,8 +270,12 @@ sequenceDiagram
   Note over APP,DOM: confirmation consumes reservation; Q41 is not rerun
   DOM-->>APP: PartiallyRefunded or FullyRefunded outcome
   APP->>DB: ILedgerWriter.Post + state/audit + revocation event if required
-  DB-->>CRS: PurchaseAccessRevocationRequestedIntegrationEvent
-  CRS->>CRS: RevokeCourseAccess(SourceType=Purchase) idempotently
+  alt Full Refund or flagged partial Refund
+    DB-->>CRS: PurchaseAccessRevocationRequestedIntegrationEvent
+    CRS->>CRS: RevokeCourseAccess(SourceType=Purchase) idempotently
+  else Unflagged partial Refund
+    Note over DB,CRS: no access event
+  end
 ```
 
 ### 4d. Settlement (maker/checker + risk policy)
@@ -287,12 +291,13 @@ sequenceDiagram
   PL->>APP: Open Settlement review case
   APP->>CK: approval required (checker differs from maker)
   CK->>APP: DecidePaymentReview → Approved
+  APP->>DB: lock payable + approve and preflight typed intent
+  APP->>DOM: SettlementPolicy enforces current Settleable Balance
   APP->>PRV: perform/confirm transfer outside transaction
-  APP->>DB: ConfirmSettlementTransfer
-  APP->>DB: lock exact payable account FOR NO KEY UPDATE<br/>+ load current Pending Refund/open-request/risk facts
-  APP->>DOM: SettlementPolicy recomputes Settleable Balance
-  DOM-->>APP: rejection reasons or validated Settlement + LedgerPosting
-  APP->>DB: ILedgerWriter.Post + persist Settlement/audit atomically
+  APP->>DB: ConfirmSettlementTransfer; lock exact payable again
+  APP->>DOM: SettlementPolicy compares current facts to approved intent
+  DOM-->>APP: normal result or stale-after-transfer finding
+  APP->>DB: ILedgerWriter.Post + persist Settlement/audit/finding atomically
 ```
 
 ---
