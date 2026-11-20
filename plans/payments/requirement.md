@@ -1,6 +1,6 @@
 # Payments Module — Requirements
 
-**Status:** Synchronized 2026-11-18. Product decisions D1–D17 and Q1–Q58 are settled; implementation remains blocked until the feature architecture passes engineering review.
+**Status:** Slice 0 architecture cleared 2026-11-20. Product decisions D1–D17 and Q1–Q58 are settled. Provider credentials, legal approval, and sandbox proof remain release gates for their owning implementation slices, not open Slice 0 decisions.
 
 **Document ownership:** this file owns product scope and acceptance. [`database.md`](database.md) owns schema and data invariants. [`transaction_flows.md`](transaction_flows.md) owns provider-neutral workflows. [`stripe_payments_transaction_flows.md`](stripe_payments_transaction_flows.md) and [`sham_cash_payments_transaction_flows.md`](sham_cash_payments_transaction_flows.md) own provider wire contracts and deltas. [`design.md`](design.md) owns Clean Architecture, CQRS, and implementation sequencing.
 
@@ -41,7 +41,7 @@ This document records product and engineering constraints, not legal advice.
 - Payments-owned Product mirror and immutable Prices for Course Plans.
 - Per-Academy selling opt-in, Commission Share, and optional self-service refund window.
 - Provider registry, Platform Provider Accounts, and enabled currency routes.
-- Stripe hosted Checkout with Adaptive Pricing: integration/settlement Price remains authoritative; customer-local presentment is recorded separately.
+- Stripe hosted Checkout with Adaptive Pricing: integration/settlement Price remains authoritative; Student-local presentment is recorded separately.
 - ShamCash hosted exact invoices for SYP→SYP and USD→USD, with a 30-minute payment window.
 - One pending Checkout Session per Student/Product, locking one Price and provider route.
 - Immutable Provider Transactions and provider-scoped double-entry Ledger accounts.
@@ -67,7 +67,7 @@ This document records product and engineering constraints, not legal advice.
 
 ## 4. Domain language
 
-Canonical definitions live in `GLOSSARY.md`.
+Canonical definitions live in repository-root [`GLOSSARY.md`](../../GLOSSARY.md).
 
 | Term | Meaning | Not this |
 |---|---|---|
@@ -122,7 +122,7 @@ Q1–Q38 remain ratified in [`database.md`](database.md#1-decision-ledger-q1q58-
 | Q44 | Provider assets, revenue, fees, unapplied funds, and Academy payables are partitioned by Provider Account and currency. Bank/Cash may be provider-neutral. |
 | Q45 | Provider Currency Routes declare enabled integration/settlement currencies and presentment mode. Prices remain provider-neutral. |
 | Q46 | One pending attempt per Student/Product locks one Price and route. Method switching waits for completion or expiry. |
-| Q47 | Stripe Adaptive Pricing may change customer presentment; allocation and analytics use provider-reported settlement gross. |
+| Q47 | Stripe Adaptive Pricing may change Student presentment; allocation and analytics use provider-reported settlement gross. |
 | Q48 | ShamCash uses an exact hosted invoice, single-use payment note, `order_id` and idempotency key equal to CheckoutSessionId, and a 30-minute window. |
 | Q49 | Provider Transaction identity, unique within a Provider Account, is the authority for whether external cash was already observed. |
 | Q50 | Partial, excess, duplicate, late, or unmatched incoming money posts to Unapplied Funds and creates no Purchase or access until approved review. |
@@ -182,7 +182,7 @@ Courses owns grant/revoke behavior, failure parking, enrollment, principal assig
 
 - Courses lifecycle events maintain a versioned Payments Product mirror.
 - A Price is immutable. Changing amount archives the old Price and inserts another.
-- Checkout eligibility requires an active Product, active Price, Academy opt-in, no active enrollment, and an active compatible Provider Currency Route.
+- Checkout eligibility requires a source-available Product, active Price, Academy opt-in, no active enrollment, and an active compatible Provider Currency Route.
 - If several providers support the Price currency, the Student chooses before one pending session locks the route.
 
 ### 7.2 Checkout and purchase
@@ -261,7 +261,7 @@ Dr Academy Payable             S
 
 ## 9. Authorization
 
-Canonical strings and actor scope are in `docs/Permissions.md`.
+Canonical strings and actor scope are in [`docs/Permissions.md`](../../docs/Permissions.md).
 
 - Platform finance controls Academy settings, provider configuration, refund decisions, review approval, adjustments, settlements, platform analytics, and reconciliation.
 - Academy operators manage their own catalog, view their scoped analytics, and may open evidence-backed review cases but never approve their own cases.
@@ -290,12 +290,12 @@ UI sections may display several partitions but must not sum them into one money 
 - [ ] Provider timeout preserves durable intent and retry uses the same idempotency key.
 - [ ] Ingest commit plus process crash still dispatches through the EF outbox; duplicate dispatch is a no-op; sweeper repair works.
 - [ ] Direct runtime inserts into Ledger tables fail; the posting function accepts balanced entries and rejects malformed, cross-tenant, cross-provider, mixed-currency, sub-minor-unit, or replayed entries.
-- [ ] Stripe Adaptive Pricing stores customer presentment while Ledger allocation and analytics use settlement truth.
+- [ ] Stripe Adaptive Pricing stores Student presentment while Ledger allocation and analytics use settlement truth.
 - [ ] ShamCash exact in-window receipt creates one Purchase; partial, overpaid, duplicate, late, or unmatched receipts create no Purchase and balance through Unapplied Funds.
-- [ ] Concurrent refunds/disputes cannot exceed Remaining Refundable or duplicate a reversal.
+- [ ] Concurrent local Refund reservations cannot exceed Remaining Refundable or duplicate a reversal. Already-confirmed external Refund/dispute movements always book once; if they raced local capacity, further reservations stop and a Critical negative-exposure finding is persisted.
 - [ ] Full refund, lost dispute, and flagged partial refund revoke access exactly once; an unflagged partial refund does not.
 - [ ] Library and Payments access origins have parity, truthful source IDs, collision safety, retry, and idempotent revocation.
-- [ ] Same-actor maker/checker, missing evidence, stale balance, cross-provider settlement, and unresolved ShamCash reconciliation are rejected before booking.
+- [ ] Same-actor maker/checker, missing evidence, stale pre-transfer balance, cross-provider settlement, and unresolved ShamCash reconciliation are rejected before transfer. A transfer already confirmed externally is always booked once and raises a Critical finding if payable facts changed after approval.
 - [ ] Disabling one provider route blocks only new checkout on that route; ingest, history, and other providers continue.
 - [ ] Archive upload failure retains hot JSON; hash mismatch blocks clearing; verified cold restore and PII erasure are tested.
 - [ ] Analytics and settlements never mix Provider Accounts or currencies.
@@ -309,12 +309,12 @@ UI sections may display several partitions but must not sum them into one money 
 
 The full scope ships as independently verifiable vertical slices:
 
-1. **Plans and architecture:** synchronize Q39–Q58, database contracts, shared flows, provider deltas, permissions, glossary, and `design.md`; pass engineering review.
-2. **Financial kernel:** provider registry/config, Product/Price, Checkout intent, Provider Transactions, hardened Ledger posting, outbox, and core tests.
-3. **Source-aware access:** generalize Courses grant/revoke once; preserve Library behavior and prove Payments parity.
-4. **ShamCash slice:** exact invoice, Unapplied Funds, reconciliation, maker/checker review, and sandbox proof.
-5. **Stripe slice:** Adaptive Pricing checkout, refund/dispute/payout behavior, and test-mode proof.
-6. **Aftercare and operations:** settlement, analytics, archive, reconciliation, monitoring, benchmarks, restore and runbooks.
+0. **Plans and architecture:** synchronize Q39–Q58, database contracts, shared flows, provider deltas, permissions, glossary, and `design.md`; pass engineering review.
+1. **Financial kernel:** provider registry/config, Product/Price, Checkout intent, Provider Transactions, hardened Ledger posting, outbox, and core tests.
+2. **Source-aware access:** generalize Courses grant/revoke once; preserve Library behavior and prove Payments parity.
+3. **ShamCash slice:** exact invoice, Unapplied Funds, reconciliation, maker/checker review, and sandbox proof.
+4. **Stripe slice:** Adaptive Pricing checkout, refund/dispute/payout behavior, and test-mode proof.
+5. **Aftercare and operations:** settlement, analytics, archive, reconciliation, monitoring, benchmarks, restore and runbooks.
 
 Financial kernel and source-aware access may run in parallel after architecture approval. Provider slices start only after both merge.
 
