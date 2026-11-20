@@ -2,7 +2,7 @@
 
 **Status:** Provider-specific source, synchronized 2026-11-18 with Q39–Q58.
 
-**Ownership:** [`transaction_flows.md`](transaction_flows.md) owns shared checkout, webhook, refund, dispute, settlement, access, outbox, lock, and Ledger workflows. [`database.md`](database.md) owns data invariants. This file owns only Stripe capabilities, wire contracts, normalization, and deltas. [`design.md`](design.md) owns implementation boundaries.
+**Ownership:** [`requirement.md`](requirement.md) owns product behavior. [`database.md`](database.md) owns schema and invariants. [`transaction_flows.md`](transaction_flows.md) owns shared checkout, webhook, refund, dispute, settlement, access, outbox, lock, and Ledger workflows. This file owns only Stripe capabilities, wire contracts, normalization, and deltas. [`design.md`](design.md) owns implementation boundaries; repository-root [`GLOSSARY.md`](../../GLOSSARY.md) owns terminology.
 
 Provider identity: `PaymentProviders.Name = 'stripe'`. MVP configures one Platform-owned account per enabled environment, initially with a USD integration/settlement route and `PresentmentMode = Adaptive`.
 
@@ -13,9 +13,9 @@ Provider identity: `PaymentProviders.Name = 'stripe'`. MVP configures one Platfo
 | Capability | Stripe MVP behavior |
 |---|---|
 | Hosted checkout | Checkout Sessions, one-time payment, instant capture only |
-| Customer identity | Inline one-time checkout data; no durable provider-customer mirror |
+| Student identity | Inline one-time checkout data; no durable provider-customer mirror |
 | Price identity | Inline price data from the locked immutable Price; no provider-price mirror |
-| Presentment | Adaptive Pricing may localize customer amount/currency |
+| Presentment | Adaptive Pricing may localize Student amount/currency |
 | Settlement truth | Integration amount/currency plus expanded balance transaction |
 | Refund | Partial/full, platform- or provider-originated, asynchronous |
 | Dispute | Open, funds withdrawn/reinstated, closed |
@@ -87,7 +87,7 @@ The normalized capture must contain:
 - integration/settlement gross and currency;
 - provider fee and net;
 - occurred time;
-- customer presentment amount/currency from `presentment_details`, when present;
+- Student presentment amount/currency from `presentment_details`, when present;
 - effective presentment-to-settlement rate when calculable.
 
 Validation:
@@ -95,7 +95,7 @@ Validation:
 1. `client_reference_id`/metadata resolve the local Checkout Session first; external ID is fallback evidence.
 2. Integration amount/currency must equal the locked Price/route contract.
 3. `payment_status = unpaid` never creates a Purchase.
-4. Commission and analytics use settlement gross. Stripe's customer-paid Adaptive Pricing markup never enters the Ledger.
+4. Commission and analytics use settlement gross. Stripe's Student-paid Adaptive Pricing markup never enters the Ledger.
 5. Provider Transaction dedupe uses the Stripe balance-transaction ID within the Provider Account, not Event ID, PaymentIntent, or Checkout Session ID.
 
 ---
@@ -105,10 +105,11 @@ Validation:
 - Stripe supports ordinary Refund Requests and direct Platform refund issuance.
 - Provider request idempotency key is `RefundId`; metadata includes `RefundId` and `PurchaseId`.
 - A provider call accepting a refund does not itself post the Ledger reversal. Confirmed Provider Transaction movement does.
-- `refund.created` may introduce a dashboard-originated refund absent locally; create `Refund(Source = Provider)` and reserve it in Remaining Refundable.
+- `refund.created` may introduce a dashboard-originated refund absent locally; create `Refund(Source = Provider)` and reserve it as external truth. If it raced local capacity, allow negative Remaining Refundable, block new local reservations, and raise a Critical finding.
+- If an already-confirmed dashboard Refund raced a local reservation, normalize and book the external movement once, allow negative refundable/payable state, and raise a Critical reconciliation finding; never omit provider cash to preserve a local cap.
 - Ambiguous API outcomes remain pending. Only definitive provider rejection or `refund.failed` marks failed.
 - Actual movement supplies settlement amount/currency and any returned fee. The shared workflow reverses the stored Commission Share pro rata.
-- Stripe may refund the customer in presentment currency while the Ledger records actual settlement movement in the Provider Account currency.
+- Stripe may refund the Student in presentment currency while the Ledger records actual settlement movement in the Provider Account currency.
 
 The adapter supports the approved partial/full refund contract.
 
