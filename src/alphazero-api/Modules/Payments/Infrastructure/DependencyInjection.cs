@@ -24,7 +24,6 @@ public static class DependencyInjection
                 h.MigrationsAssembly(typeof(AppDbContext).Assembly.FullName);
                 h.MigrationsHistoryTable("__PaymentsMigrationHistory", AppDbContext.Schema);
             });
-            opts.AddInterceptors(sp.GetRequiredService<SoftDeleteInterceptor>());
         });
 
         return services;

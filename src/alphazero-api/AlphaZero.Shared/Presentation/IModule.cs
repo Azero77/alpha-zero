@@ -119,7 +119,7 @@ public abstract class AppModule : Module, IModule
         return;
     }
 
-    public async Task RunMigrations()
+    public virtual async Task RunMigrations()
     {
         if (Scope is null) return;
 

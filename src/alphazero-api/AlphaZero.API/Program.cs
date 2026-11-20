@@ -2,6 +2,7 @@ using AlphaZero.Shared.Application;
 using AlphaZero.Shared.Authorization;
 using AlphaZero.Shared.Infrastructure;
 using AlphaZero.Shared.Infrastructure.Messaging;
+using AlphaZero.Modules.Payments.Infrastructure.Persistence.Migrations;
 using Autofac;
 using Autofac.Extensions.DependencyInjection;
 using FastEndpoints;
@@ -20,6 +21,15 @@ public class Program
 {
     public static async Task Main(string[] args)
     {
+        if (args.Contains("--apply-payments-migrations", StringComparer.Ordinal))
+        {
+            var migrationBuilder = WebApplication.CreateBuilder(args.Where(argument => argument != "--apply-payments-migrations").ToArray());
+            await PaymentsSqlMigrationRunner.ApplyConfiguredAsync(
+                migrationBuilder.Configuration,
+                allowRuntimeConnectionFallback: false);
+            return;
+        }
+
         var builder = CreateWebApplicationBuilder(args);
         var app = builder.Build();
 

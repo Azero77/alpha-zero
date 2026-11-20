@@ -1,4 +1,5 @@
 using AlphaZero.Modules.Payments.Infrastructure;
+using AlphaZero.Modules.Payments.Infrastructure.Persistence.Migrations;
 using AlphaZero.Shared.Application;
 using AlphaZero.Shared.Presentation;
 using Autofac;
@@ -10,6 +11,10 @@ namespace AlphaZero.Modules.Payments.Presentation;
 
 public class PaymentsModule : AppModule, AlphaZero.Modules.Payments.Application.IPaymentsModule
 {
+    public override Task RunMigrations() => PaymentsSqlMigrationRunner.ApplyConfiguredAsync(
+        Configuration!,
+        allowRuntimeConnectionFallback: true);
+
     // The module must never run with degraded persistence wiring: without its
     // persistence configuration the failure would otherwise be deferred to the
     // first request. Configuration is null exactly when the application wiring

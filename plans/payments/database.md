@@ -652,7 +652,7 @@ Standalone (no relationships drawn): `AcademyPaymentSettings` (one row per tenan
 | CreatedByUserId | uuid | yes | for manual adjustments / recorded actions |
 | Description | varchar(256) | yes | required for `ManualAdjustment` and unresolved `UnappliedReceipt` (CHECK) |
 
-**Constraints (exact reference sets):** Capture requires Purchase + ProviderAccount + ProviderTransaction only; RefundReversal requires Purchase + Refund + ProviderAccount + the outgoing/provider reversal transaction; Settlement requires Settlement + ProviderAccount; ProviderPayout requires ProviderAccount + ProviderTransaction; DisputeLoss/DisputeWon require Purchase + Dispute + ProviderAccount + the corresponding ProviderTransaction; UnappliedReceipt requires ProviderAccount + incoming ProviderTransaction; ApplyUnappliedFunds requires Purchase + ProviderAccount + incoming ProviderTransaction + PaymentReviewCase; ReturnUnappliedFunds requires ProviderAccount + outgoing ProviderTransaction + PaymentReviewCase; ManualAdjustment requires actor + description + PaymentReviewCase. CHECKs enforce both required presence and forbidden extra refs.
+**Constraints (exact reference sets):** Capture requires Purchase + ProviderAccount + ProviderTransaction only; RefundReversal requires Purchase + Refund + ProviderAccount + the outgoing/provider reversal transaction; Settlement requires Settlement + ProviderAccount + PaymentReviewCase; ProviderPayout requires ProviderAccount + ProviderTransaction; DisputeLoss/DisputeWon require Purchase + Dispute + ProviderAccount + the corresponding ProviderTransaction; UnappliedReceipt requires ProviderAccount + incoming ProviderTransaction; ApplyUnappliedFunds requires Purchase + ProviderAccount + incoming ProviderTransaction + PaymentReviewCase; ReturnUnappliedFunds requires ProviderAccount + outgoing ProviderTransaction + PaymentReviewCase; ManualAdjustment requires actor + description + PaymentReviewCase. CHECKs enforce both required presence and forbidden extra refs.
 **Business-event uniqueness (DB-enforced, third review High 7):** the tripwires are app-level; the DB now makes double-recording impossible:
 partial `UNIQUE (PurchaseId) WHERE Type IN ('Capture','ApplyUnappliedFunds')` — exactly one funding allocation per Purchase ·
 partial `UNIQUE (RefundId) WHERE Type = 'RefundReversal'` ·
@@ -934,7 +934,7 @@ PII redaction runs only through the `payments_migration`-owned hardened `SECURIT
 - `CHECK (Status <> 'Approved' OR (ApprovedAmount IS NOT NULL AND DecidedByUserId IS NOT NULL AND DecidedAt IS NOT NULL AND RefundId IS NOT NULL))`
 - `CHECK (Status <> 'Requested' OR (ApprovedAmount IS NULL AND DecidedByUserId IS NULL AND DecidedAt IS NULL AND RefundId IS NULL))`
 - `CHECK (Status <> 'Rejected' OR (DecidedByUserId IS NOT NULL AND DecidedAt IS NOT NULL AND ApprovedAmount IS NULL AND RefundId IS NULL))`
-- `CHECK (Status <> 'Cancelled' OR (ApprovedAmount IS NULL AND RefundId IS NULL))` — cancellation is the requester's act (`RequestedByUserId`), no separate actor column
+- `CHECK (Status <> 'Cancelled' OR (ApprovedAmount IS NULL AND RefundId IS NULL AND DecidedByUserId IS NULL AND DecidedAt IS NULL))` — cancellation is the requester's act (`RequestedByUserId`), no separate actor column; all decision fields remain unset
 - `CHECK (ApprovedAmount IS NULL OR ApprovedAmount > 0)`
 - `CHECK ((Status = 'Approved') = (RefundId IS NOT NULL))` — stated as the headline invariant
 
@@ -965,12 +965,12 @@ PII redaction runs only through the `payments_migration`-owned hardened `SECURIT
 | Type | varchar(24) | no | `Capture` \| `Refund` \| `Payout` \| `DisputeWithdrawal` \| `DisputeReinstatement` \| `Transfer`; CHECK |
 | Direction | varchar(8) | no | `Incoming` \| `Outgoing`; CHECK |
 | Amount | numeric(18,4) | no | positive gross movement amount |
-| Currency | varchar(3) | no | FK → Currencies; must be enabled for ProviderAccount |
+| Currency | varchar(3) | no | FK → Currencies; must have a configured route for ProviderAccount |
 | FeeAmount | numeric(18,4) | no | default 0; provider-reported only |
 | OccurredAt | timestamptz | no | provider event time |
 | RecordedAt | timestamptz | no | DB clock |
 
-**Identity/integrity:** `UNIQUE (ProviderAccountId, ExternalTransactionId)` is the cash dedupe bar across callbacks, invoice status reads, history overlap and manually supplied evidence. CHECK Amount > 0 and FeeAmount ≥ 0; Amount/Fee must be minor-unit granular for Currency; Currency must have an enabled route on the ProviderAccount. Amount/Currency/Fee/OccurredAt are insert-immutable; a provider correction is a new movement, never an UPDATE. Stripe uses the balance-transaction ID as ExternalTransactionId and keeps PaymentIntent/charge/refund/dispute IDs in the other two columns. ShamCash uses `(linked account, numeric transaction_id)` and invoice ID as ExternalPaymentId. A duplicate source that disagrees on immutable fields is a Critical reconciliation finding, not “last write wins.”
+**Identity/integrity:** `UNIQUE (ProviderAccountId, ExternalTransactionId)` is the cash dedupe bar across callbacks, invoice status reads, history overlap and manually supplied evidence. CHECK Amount > 0 and FeeAmount ≥ 0; Amount/Fee must be minor-unit granular for Currency; Currency must have a configured route on the ProviderAccount. The route need not still be enabled: disabling a route blocks new checkout, but existing attempts, webhook ingestion, reconciliation, and recording of provider movements remain available (Q55). Amount/Currency/Fee/OccurredAt are insert-immutable; a provider correction is a new movement, never an UPDATE. Stripe uses the balance-transaction ID as ExternalTransactionId and keeps PaymentIntent/charge/refund/dispute IDs in the other two columns. ShamCash uses `(linked account, numeric transaction_id)` and invoice ID as ExternalPaymentId. A duplicate source that disagrees on immutable fields is a Critical reconciliation finding, not “last write wins.”
 
 **Append-only:** UPDATE/DELETE/TRUNCATE denied. Indexes: `(ProviderAccountId, OccurredAt)`, `(ProviderAccountId, ExternalPaymentId)`, partial `(ExternalObjectId)`, `(WebhookEventId)`.
 
@@ -1364,8 +1364,8 @@ Rejected: none — every finding landed either as an engineering fix, a ratified
    - `"Payments".redact_webhook_pii(p_user_id uuid, p_actor_id uuid)`
    - Inside its transaction, the procedure sets `SET LOCAL payments.allow_pii_redaction = 'true';` (scoped strictly to the current transaction and automatically reset on commit/rollback).
    - The `deny_webhook_payload_amend` trigger checks `COALESCE(current_setting('payments.allow_pii_redaction', true), 'false') = 'true'` ONLY on the approved lifecycle transition (never `DELETE` or `TRUNCATE`) and keeps EventId/object identity immutable.
-   - For hot payloads, the procedure redacts Student-PII keys (`email`, `name`, `billing_details`, `shipping_details`, `phone`, `card.last4`, ShamCash `sender_name`, `sender_address`/`peer_address`) while retaining financial IDs/amount/currency/time.
-3. Archived cold payloads are tombstoned/replaced by deterministic object key; object-store proof is verified before the manifest transitions to `Redacted` and stamps `RedactedAt`.
+   - The SQL procedure handles **hot database payloads only**. It redacts Student-PII keys (`email`, `name`, `billing_details`, `shipping_details`, `phone`, `card.last4`, ShamCash `sender_name`, `sender_address`/`peer_address`) while retaining financial IDs/amount/currency/time. It does not read, rewrite, or tombstone cold-storage objects and does not transition an `Archived` manifest.
+3. Archived cold payloads require a separate authorized archive-erasure workflow: fetch the object, redact PII, replace/tombstone it at the deterministic object key, and verify the resulting object and hash. Only after that proof may a migration-owned, audited manifest transition set `ArchiveState = 'Redacted'`, update the redacted content hash as appropriate, and stamp `RedactedAt`. The current SQL migration provides no cold-object worker or verified manifest-finalization operation; the database procedure does not prove an object-store rewrite. This external workflow and its guarded database finalization operation must be implemented and tested before cold-archive PII erasure is considered supported.
 4. `PaymentsAuditLogs` is untouched by design (no Student PII, §3.15); `Purchases` keep `UserId` (financial-record retention lawful basis — documented in the ADR).
 5. Within the same transaction, `redact_webhook_pii` inserts a completed `ReconciliationRuns` row (kind `PiiErasure`, triggered by `p_actor_id`) for immutable compliance evidence.
 
