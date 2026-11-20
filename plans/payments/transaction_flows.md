@@ -2,7 +2,7 @@
 
 **Status:** Canonical shared workflow source, synchronized 2026-11-18 with Q39–Q58 and the approved engineering review.
 
-**Document ownership:** [`requirement.md`](requirement.md) owns product behavior. [`database.md`](database.md) owns schema and invariants. This file owns shared application sequencing, locks, transactions, outbox use, and Ledger effects. Provider documents own only capabilities, wire contracts, event normalization, and provider-specific deltas. [`design.md`](design.md) owns layer boundaries and implementation slices.
+**Document ownership:** [`requirement.md`](requirement.md) owns product behavior. [`database.md`](database.md) owns schema and invariants. This file owns shared application sequencing, locks, transactions, outbox use, and Ledger effects. [`stripe_payments_transaction_flows.md`](stripe_payments_transaction_flows.md) and [`sham_cash_payments_transaction_flows.md`](sham_cash_payments_transaction_flows.md) own only capabilities, wire contracts, event normalization, and provider-specific deltas. [`design.md`](design.md) owns layer boundaries and implementation slices; repository-root [`GLOSSARY.md`](../../GLOSSARY.md) owns terminology.
 
 ---
 
@@ -100,7 +100,7 @@ If real money cannot satisfy exact Purchase rules:
 
 1. Insert/reuse the Provider Transaction.
 2. Post `UnappliedReceipt`: Dr Provider Asset / Cr Unapplied Funds.
-3. Append audit and a reconciliation finding; optionally open the provider-defined review queue.
+3. Append audit and a reconciliation finding; surface the movement in the shared Payment Review queue. A case opens only through the canonical maker/evidence command.
 4. Do not create a Purchase, complete access, or credit Academy Payable.
 
 This path covers partial, overpaid, duplicate, after-window, unmatched, or otherwise non-attributable money. Provider docs define which conditions can occur.
@@ -160,11 +160,7 @@ sequenceDiagram
 ### 5.2 Platform decides a request
 
 1. Lock Refund Request, then Purchase.
-2. Recompute Remaining Refundable:
-
-   `SettlementAmount − Σ(Pending + Succeeded refunds) − Σ(dispute exposure currently withdrawn and not reinstated, including final Lost exposure)`
-
-   Merely opening a Dispute contributes zero. The policy consumes normalized exposure facts, not `Dispute.Status` alone.
+2. Recompute Remaining Refundable using the one canonical [`requirement.md` Q41 formula](requirement.md#52-refund-and-provider-amendments-q39q58). Merely opening a Dispute contributes zero. The policy consumes normalized exposure facts, not `Dispute.Status` alone.
 
 3. Reject: transition request and append audit; no money write.
 4. Approve: validate amount, reason, and `RevokeAccess`; atomically insert pending Refund and transition the request to approved.
@@ -181,12 +177,12 @@ sequenceDiagram
 
 1. Insert/reuse outgoing/refund Provider Transaction.
 2. Lock Refund and Purchase.
-3. Transition Refund to succeeded and post `RefundReversal` using actual provider settlement movement.
-4. Move Purchase along `Paid → PartiallyRefunded → Refunded` from total confirmed reversals.
+3. Consume the existing Pending reservation without running Q41 against it again; transition Refund to succeeded and post `RefundReversal` using actual provider settlement movement.
+4. Derive Purchase status from total confirmed reversals: `Paid → PartiallyRefunded` for a partial total, `Paid → Refunded` for a full first reversal, or `PartiallyRefunded → Refunded` when later reversals complete the gross.
 5. Publish source-aware revocation when the Purchase reaches fully refunded or this refund has `RevokeAccess = true`.
 6. Append audit and commit atomically.
 
-Provider-originated refunds create the missing Refund row with `Source = Provider`, then follow the same confirmation path. A definitive failed event transitions only a pending Refund and writes no Ledger entry.
+Provider-originated refunds create the missing Refund row with `Source = Provider`, then follow the same confirmation path. An accepted provider notice reserves under the Purchase lock even if it raced local capacity; negative Remaining Refundable writes a Critical finding and blocks new local reservations. Already-confirmed external money is always recorded exactly once even if it also makes the Academy Payable negative. A definitive failed event transitions only a pending Refund and writes no Ledger entry.
 
 ---
 
@@ -197,7 +193,7 @@ These flows run only for a provider with normalized dispute capability.
 1. **Opened:** insert/reuse Dispute in `Open`; no Ledger write.
 2. **Funds withdrawn:** insert Provider Transaction; post `DisputeLoss` immediately. Negative Academy Payable is legal and creates a reconciliation finding.
 3. **Funds reinstated:** insert Provider Transaction; post `DisputeWon` restoring the applicable split. Retained fees remain expensed.
-4. **Closed:** transition paperwork to `Won` or `Lost`; no cash entry. Lost outcome publishes source-aware access revocation exactly once.
+4. **Closed:** transition paperwork to `Won` or `Lost`; no cash entry. Lost outcome publishes source-aware access revocation exactly once using the immutable Dispute resolution Payments audit row; Purchase status still waits for confirmed withdrawal facts.
 
 Provider movement time, not dispute close time, controls accounting.
 
@@ -231,7 +227,11 @@ Approval alone never moves money.
 
 ### 7.4 Exceptional purchase reversal
 
-For providers without ordinary refund capability, an approved support case plus confirmed outgoing/reversal Provider Transaction creates a succeeded `Refund(Source = ProviderSupport)`, then follows the shared Refund reversal/status/revocation path. Email or approval without movement evidence is insufficient.
+For providers without ordinary refund capability, approval locks Purchase, applies Q41, and atomically creates a Pending `Refund(Source = ProviderSupport)` linked to the support case. The Pending Refund reserves the amount before external transfer. A confirmed outgoing/reversal Provider Transaction then follows the shared Refund confirmation/status/revocation path. Email or approval without movement evidence is insufficient.
+
+### 7.5 Manual adjustment
+
+A different Platform-finance checker approves a typed ManualCorrection case. Resolution locks the case and affected Ledger accounts, constructs the balanced `ManualAdjustment` posting from the approved amount/currency/reason, calls the posting function, resolves the case, and appends audit atomically. It requires `payments:AdjustLedger`, has no Courses integration event, and replays by PaymentReviewCase/Ledger business-reference uniqueness.
 
 ---
 
@@ -239,12 +239,12 @@ For providers without ordinary refund capability, an approved support case plus 
 
 ### 8.1 Academy Settlement
 
-1. Maker opens a Settlement review case with exact Academy, Provider Account, currency, destination snapshot, amount, and evidence.
-2. Different checker validates provider policy and approves durable transfer intent.
-3. Transfer occurs outside a database transaction.
-4. Result phase records movement evidence, locks the exact Academy payable, and recomputes Settleable Balance.
-5. Reject if amount exceeds Settleable Balance, account/currency differs, reconciliation is stale, or evidence/external reference was reused.
-6. Insert Settlement and post Dr Academy Payable / Cr same-currency source account atomically.
+1. Maker opens a Settlement review case with exact Academy, Provider Account, payable/source accounts, currency, destination snapshot, amount, and evidence.
+2. Different checker locks the exact payable, validates provider policy and Settleable Balance, and approves the durable typed transfer intent. One in-flight-case unique serializes settlement intents for that payable.
+3. Immediately before transfer, revalidate the approved intent under the payable lock. If amount, account/currency, reconciliation, evidence, or current Settleable Balance is stale, stop before external I/O and require re-approval.
+4. Transfer occurs outside a database transaction.
+5. Result phase records immutable movement evidence, locks the exact Academy payable, and recomputes Settleable Balance for comparison.
+6. If no transfer is confirmed, reject stale or reused evidence without booking. If transfer is confirmed, always insert Settlement and post Dr Academy Payable / Cr same-currency source account atomically and idempotently. When payable facts changed after preflight, allow the resulting negative payable and persist a Critical stale-settlement finding rather than hiding moved cash.
 
 Stripe policy includes hold/reserve/open-refund exposure. ShamCash requires successful daily reconciliation covering captures and otherwise has no rolling reserve. Unapplied Funds is never settleable.
 
@@ -268,7 +268,7 @@ Courses invokes `GrantCourseAccess(SourceType = Purchase, SourceId = PurchaseId,
 
 `PurchaseAccessRevocationRequestedIntegrationEvent(EventId, TenantId, PurchaseId, UserId, TargetResourceArn, CauseType, CauseId, AuditReference)`
 
-`CauseType` is `Refund` or `Dispute`; exactly one `CauseId` is supplied. Courses invokes `RevokeCourseAccess(SourceType = Purchase, SourceId = PurchaseId, ...)`. Deactivating already-inactive access is a successful no-op.
+`CauseType` is `Refund` or `Dispute`; exactly one `CauseId` is supplied. `AuditReference` is the cause's `PaymentsAuditLogs.Id` (the Refund audit includes its completed reversal LedgerEntry ID). Courses invokes `RevokeCourseAccess(SourceType = Purchase, SourceId = PurchaseId, ...)`. Deactivating already-inactive access is a successful no-op.
 
 Purchase IDs never occupy fields named `AccessCodeId`.
 
@@ -278,7 +278,7 @@ Purchase IDs never occupy fields named `AccessCodeId`.
 
 | Flow | Transaction and idempotency |
 |---|---|
-| Product mirror | Conditional upsert by `(ItemType, ItemId)` only when `SourceVersion` is newer; audit in same transaction. |
+| Product mirror | Courses emits `CoursePlanAvailabilityChangedIntegrationEvent` with a full source snapshot and monotonic per-Plan `SourceVersion`; Payments conditionally upserts `(ItemType, ItemId)` only when newer and audits in the same transaction. |
 | Price change | Archive current and insert replacement in one transaction; partial unique allows one active Product/currency Price. |
 | Academy settings | Upsert one row per tenant; absent row means checkout disabled. |
 | Provider route activation | Validate adapter/capability/environment; ensure structural Ledger accounts before enabling. |
