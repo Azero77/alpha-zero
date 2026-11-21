@@ -1,11 +1,13 @@
 using System.Reflection;
+using AlphaZero.Modules.Payments.Infrastructure.Persistance;
 using AlphaZero.Shared.Infrastructure;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Npgsql;
 
 namespace AlphaZero.Modules.Payments.Infrastructure.Persistence.Migrations;
 
-/// <summary>Applies the authoritative Payments PostgreSQL DDL as one tracked transaction.</summary>
+/// <summary>Applies the SQL baseline, then all generated EF Core Payments migrations.</summary>
 public static class PaymentsSqlMigrationRunner
 {
     public const string InitialMigrationId = "20261120000000_InitialPayments";
@@ -60,22 +62,47 @@ public static class PaymentsSqlMigrationRunner
             }
         }
 
-        if (historyExists && await IsAppliedAsync(connection, transaction, cancellationToken))
+        if (!historyExists || !await IsAppliedAsync(connection, transaction, cancellationToken))
         {
-            await transaction.CommitAsync(cancellationToken);
-            return;
-        }
-
-        var migrationSql = await ReadMigrationSqlAsync(cancellationToken);
-        await using (var migrationCommand = new NpgsqlCommand(migrationSql, connection, transaction)
-                     {
-                         CommandTimeout = 0
-                     })
-        {
+            var migrationSql = await ReadMigrationSqlAsync(cancellationToken);
+            await using var migrationCommand = new NpgsqlCommand(migrationSql, connection, transaction)
+            {
+                CommandTimeout = 0
+            };
             await migrationCommand.ExecuteNonQueryAsync(cancellationToken);
         }
 
         await transaction.CommitAsync(cancellationToken);
+        await ApplyEfMigrationsAsync(connectionString, cancellationToken);
+    }
+
+    private static async Task ApplyEfMigrationsAsync(string connectionString, CancellationToken cancellationToken)
+    {
+        await using var connection = new NpgsqlConnection(connectionString);
+        await connection.OpenAsync(cancellationToken);
+
+        await using (var roleCommand = new NpgsqlCommand(
+                         "SELECT pg_catalog.to_regrole('payments_migration') IS NOT NULL " +
+                         "AND pg_catalog.pg_has_role(current_user, 'payments_migration', 'MEMBER');",
+                         connection))
+        {
+            if ((bool)(await roleCommand.ExecuteScalarAsync(cancellationToken) ?? false))
+            {
+                await using var setRoleCommand = new NpgsqlCommand("SET ROLE payments_migration;", connection);
+                await setRoleCommand.ExecuteNonQueryAsync(cancellationToken);
+            }
+        }
+
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseNpgsql(connection, postgres =>
+            {
+                postgres.MigrationsAssembly(typeof(AppDbContext).Assembly.FullName);
+                postgres.MigrationsHistoryTable("__PaymentsMigrationHistory", AppDbContext.Schema);
+            })
+            .Options;
+
+        await using var context = new AppDbContext(options);
+        await context.Database.MigrateAsync(cancellationToken);
     }
 
     private static async Task<bool> TableExistsAsync(

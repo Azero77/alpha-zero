@@ -58,9 +58,11 @@ public sealed class PaymentsSchemaTests : IAsyncLifetime
 
         await using var connection = await OpenAsync();
         (await ScalarAsync<long>(connection, "SELECT count(*) FROM information_schema.tables WHERE table_schema = 'Payments' AND table_type = 'BASE TABLE';"))
-            .Should().Be(26);
-        (await ScalarAsync<string>(connection, "SELECT \"MigrationId\" FROM \"Payments\".\"__PaymentsMigrationHistory\";"))
-            .Should().Be(PaymentsSqlMigrationRunner.InitialMigrationId);
+            .Should().Be(29);
+        (await ScalarAsync<string[]>(connection, "SELECT array_agg(\"MigrationId\" ORDER BY \"MigrationId\") FROM \"Payments\".\"__PaymentsMigrationHistory\";"))
+            .Should().Equal(
+                PaymentsSqlMigrationRunner.InitialMigrationId,
+                "20261121181625_AddPaymentsOutboxTables");
         (await ScalarAsync<long>(connection, "SELECT count(*) FROM \"Payments\".\"Currencies\";"))
             .Should().Be(9);
         (await ScalarAsync<long>(connection, "SELECT count(*) FROM \"Payments\".\"PaymentProviders\" WHERE NOT \"IsEnabled\";"))
@@ -68,7 +70,11 @@ public sealed class PaymentsSchemaTests : IAsyncLifetime
         (await ScalarAsync<bool>(connection, "SELECT has_table_privilege('payments_runtime', '\"Payments\".\"Prices\"', 'INSERT');"))
             .Should().BeTrue();
         (await ScalarAsync<long>(connection, "SELECT count(*) FROM information_schema.tables WHERE table_schema = 'Payments' AND table_name IN ('InboxState','OutboxState','OutboxMessage');"))
-            .Should().Be(0);
+            .Should().Be(3);
+        (await ScalarAsync<bool>(connection, "SELECT has_table_privilege('payments_runtime', '\"Payments\".\"InboxState\"', 'SELECT,INSERT,UPDATE,DELETE');"))
+            .Should().BeTrue();
+        (await ScalarAsync<bool>(connection, "SELECT has_sequence_privilege('payments_runtime', '\"Payments\".\"InboxState_Id_seq\"', 'USAGE');"))
+            .Should().BeTrue();
         (await ScalarAsync<bool>(connection, "SELECT to_regclass('\"Payments\".\"UQ_CheckoutSessions_User_Product_Pending\"') IS NOT NULL;"))
             .Should().BeTrue();
         (await ScalarAsync<string>(connection, "SELECT pg_get_expr(indpred, indrelid) FROM pg_index WHERE indexrelid = '\"Payments\".\"UQ_CheckoutSessions_User_Product_Pending\"'::regclass;"))

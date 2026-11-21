@@ -1,4 +1,6 @@
 using AlphaZero.Modules.Payments.Infrastructure;
+using AlphaZero.Modules.Payments.Infrastructure.Persistance;
+using AlphaZero.Modules.Payments.Infrastructure.Persistence.Generated;
 using AlphaZero.Modules.Payments.Infrastructure.Persistence.Migrations;
 using AlphaZero.Shared.Application;
 using AlphaZero.Shared.Presentation;
@@ -45,7 +47,7 @@ public class PaymentsModule : AppModule, AlphaZero.Modules.Payments.Application.
 
     public override void ConfigureModuleBus(IBusRegistrationConfigurator configuration)
     {
-        configuration.AddEntityFrameworkOutbox<AlphaZero.Modules.Payments.Infrastructure.Persistance.AppDbContext>(o =>
+        configuration.AddEntityFrameworkOutbox<AppDbContext>(o =>
         {
             o.UsePostgres(false);
             o.UseBusOutbox();
@@ -53,6 +55,6 @@ public class PaymentsModule : AppModule, AlphaZero.Modules.Payments.Application.
             o.DuplicateDetectionWindow = TimeSpan.FromMinutes(30);
         });
 
-        configuration.AddModuleConsumers<Infrastructure.Persistance.AppDbContext>(typeof(PaymentsModule).Assembly);
+        configuration.AddModuleConsumers<AppDbContext>(typeof(PaymentsModule).Assembly);
     }
 }

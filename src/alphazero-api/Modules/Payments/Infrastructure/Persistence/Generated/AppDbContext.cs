@@ -1,9 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using AlphaZero.Modules.Payments.Infrastructure.Persistence.Generated.Entities;
+using MassTransit;
 using Microsoft.EntityFrameworkCore;
 
-namespace AlphaZero.Modules.Payments.Infrastructure.Persistence.Generated;
+namespace AlphaZero.Modules.Payments.Infrastructure.Persistance;
 
 public partial class AppDbContext : DbContext
 {
@@ -65,7 +66,9 @@ public partial class AppDbContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-
+        modelBuilder.AddInboxStateEntity();
+        modelBuilder.AddOutboxMessageEntity();
+        modelBuilder.AddOutboxStateEntity();
 
         modelBuilder.HasDefaultSchema(Schema);
         //modelBuilder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);

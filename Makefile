@@ -5,6 +5,9 @@ m ?= VideoUploading
 PROJECT = src/alphazero-api/Modules/$(m)/Infrastructure/Infrastructure.csproj
 API = src/alphazero-api/AlphaZero.API/AlphaZero.API.csproj
 o = Migrations
+ifeq ($(m),Payments)
+o = Persistence/Migrations/EF
+endif
 DbContext = AlphaZero.Modules.$(m).Infrastructure.Persistance.AppDbContext
 
 # ------------------------
@@ -12,9 +15,9 @@ DbContext = AlphaZero.Modules.$(m).Infrastructure.Persistance.AppDbContext
 # ------------------------
 migrations-help:
 	@echo "Makefile commands:"
-	@echo "  make migrations-create NAME=MigrationName [-m=ModuleName]  # Create an EF migration for an existing module"
-	@echo "  make migrations-migrate [-m=ModuleName]                   # Apply module migrations"
-	@echo "  make migrations-payments                                  # Apply SQL Payments migration(s)"
+	@echo "  make migrations-create NAME=MigrationName [m=ModuleName]  # Create an EF migration for an existing module"
+	@echo "  make migrations-migrate [m=ModuleName]                   # Apply module migrations"
+	@echo "  make migrations-payments                                  # Apply Payments SQL baseline and EF migrations"
 	@echo "  make migrations-clean [-m=ModuleName]                     # Remove last EF migration"
 
 # ------------------------
@@ -22,7 +25,7 @@ migrations-help:
 # ------------------------
 migrations-create:
 ifndef NAME
-	$(error "NAME variable is required. Usage: make migrations-create NAME=MigrationName [-m=ModuleName]")
+	$(error "NAME variable is required. Usage: make migrations-create NAME=MigrationName [m=ModuleName]")
 endif
 	dotnet ef migrations add $(NAME) --project $(PROJECT) --startup-project $(API) --output-dir $(o) --context $(DbContext)
 
@@ -30,7 +33,11 @@ endif
 # Apply migrations
 # ------------------------
 migrations-migrate:
-	dotnet ef database update --project $(PROJECT) --startup-project $(API)
+ifeq ($(m),Payments)
+	dotnet run --project $(API) -- --apply-payments-migrations
+else
+	dotnet ef database update --project $(PROJECT) --startup-project $(API) --context $(DbContext)
+endif
 
 # ------------------------
 # Remove last migration
@@ -38,7 +45,7 @@ migrations-migrate:
 migrations-clean:
 	dotnet ef migrations remove --project $(PROJECT) --startup-project $(API) --force --context $(DbContext)
 
-# Payments is SQL-first; this is the same tracked runner used by Payments module startup.
+# Payments applies its SQL baseline first, then EF Core migrations through the same runner used by module startup.
 migrations-payments:
 	dotnet run --project $(API) -- --apply-payments-migrations
 
