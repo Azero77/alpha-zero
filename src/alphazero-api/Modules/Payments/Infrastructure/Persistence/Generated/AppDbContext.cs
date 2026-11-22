@@ -4,7 +4,7 @@ using AlphaZero.Modules.Payments.Infrastructure.Persistence.Generated.Entities;
 using MassTransit;
 using Microsoft.EntityFrameworkCore;
 
-namespace AlphaZero.Modules.Payments.Infrastructure.Persistance;
+namespace AlphaZero.Modules.Payments.Infrastructure.Persistence;
 
 public partial class AppDbContext : DbContext
 {

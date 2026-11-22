@@ -13,11 +13,15 @@ public class CoursePlan : Entity
     /// expire automatically after <see cref="AccessWindowDays"/> days. Null = unlimited access.
     /// </summary>
     public int? AccessWindowDays { get; private set; }
+    public long CatalogSourceVersion { get; private set; }
+    public bool IsRemoved { get; private set; }
 
     private CoursePlan(Guid id, Guid courseId, string name, Guid principalId, int? accessWindowDays = null) : base(id)
     {
         CourseId = courseId;
         Name = name;
+        CatalogSourceVersion = 0;
+        IsRemoved = false;
         PrincipalId = principalId;
         AccessWindowDays = accessWindowDays;
     }
@@ -34,4 +38,18 @@ public class CoursePlan : Entity
         PrincipalId = principalId;
         AccessWindowDays = accessWindowDays;
     }
+
+    /// <summary>
+    /// The monotonically increasing per-plan version is persisted on the source aggregate and
+    /// stamped into catalog snapshots; timestamps are not suitable for ordering concurrent edits.
+    /// </summary>
+    public long AdvanceCatalogSourceVersion()
+    {
+        CatalogSourceVersion = checked(CatalogSourceVersion + 1);
+        return CatalogSourceVersion;
+    }
+
+    public void MarkRemoved() => IsRemoved = true;
+
+    public void Restore() => IsRemoved = false;
 }

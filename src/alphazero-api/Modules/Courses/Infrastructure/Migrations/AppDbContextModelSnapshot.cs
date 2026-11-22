@@ -182,6 +182,16 @@ namespace AlphaZero.Modules.Courses.Infrastructure.Migrations
                     b.Property<Guid>("CourseId")
                         .HasColumnType("uuid");
 
+                    b.Property<long>("CatalogSourceVersion")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasDefaultValue(0L);
+
+                    b.Property<bool>("IsRemoved")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(128)
@@ -865,7 +875,7 @@ namespace AlphaZero.Modules.Courses.Infrastructure.Migrations
             modelBuilder.Entity("AlphaZero.Modules.Courses.Domain.Aggregates.Courses.CoursePlan", b =>
                 {
                     b.HasOne("AlphaZero.Modules.Courses.Domain.Aggregates.Courses.Course", null)
-                        .WithMany("Plans")
+                        .WithMany("CatalogPlans")
                         .HasForeignKey("CourseId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -917,7 +927,7 @@ namespace AlphaZero.Modules.Courses.Infrastructure.Migrations
 
             modelBuilder.Entity("AlphaZero.Modules.Courses.Domain.Aggregates.Courses.Course", b =>
                 {
-                    b.Navigation("Plans");
+                    b.Navigation("CatalogPlans");
 
                     b.Navigation("Sections");
                 });

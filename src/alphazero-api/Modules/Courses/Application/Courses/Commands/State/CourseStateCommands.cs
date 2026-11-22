@@ -138,6 +138,7 @@ public sealed class CourseStateHandlers :
     public async Task<ErrorOr<Success>> Handle(ArchiveCourseCommand request, CancellationToken cancellationToken)
     {
         var course = await _courseRepository.Query(request.CourseId)
+            .WithPlans()
             .ExecuteAsync(cancellationToken);
         if (course is null) return Error.NotFound("Course.NotFound", "Course not found.");
         var result = course.Archive();

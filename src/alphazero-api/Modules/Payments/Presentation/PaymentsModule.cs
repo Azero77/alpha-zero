@@ -1,7 +1,7 @@
 using AlphaZero.Modules.Payments.Infrastructure;
-using AlphaZero.Modules.Payments.Infrastructure.Persistance;
-using AlphaZero.Modules.Payments.Infrastructure.Persistence.Generated;
+using AlphaZero.Modules.Payments.Infrastructure.Persistence;
 using AlphaZero.Modules.Payments.Infrastructure.Persistence.Migrations;
+using AlphaZero.Modules.Payments.Infrastructure.Consumers;
 using AlphaZero.Shared.Application;
 using AlphaZero.Shared.Presentation;
 using Autofac;
@@ -47,11 +47,12 @@ public class PaymentsModule : AppModule, AlphaZero.Modules.Payments.Application.
 
     public override void ConfigureModuleBus(IBusRegistrationConfigurator configuration)
     {
+        configuration.AddConsumer<CoursePlanAvailabilityChangedConsumer>();
         configuration.AddEntityFrameworkOutbox<AppDbContext>(o =>
         {
             o.UsePostgres(false);
             o.UseBusOutbox();
-            o.QueryDelay = TimeSpan.FromMinutes(5);
+            o.QueryDelay = TimeSpan.FromSeconds(5);
             o.DuplicateDetectionWindow = TimeSpan.FromMinutes(30);
         });
 

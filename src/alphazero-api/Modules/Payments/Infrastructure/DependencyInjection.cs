@@ -1,5 +1,9 @@
+using AlphaZero.Modules.Payments.Application.Catalog;
+using AlphaZero.Modules.Payments.Application.Checkout;
+using AlphaZero.Modules.Payments.Application.Settings;
+using AlphaZero.Modules.Payments.Application.Purchases;
 using AlphaZero.Modules.Payments.Infrastructure.Behaviors;
-using AlphaZero.Modules.Payments.Infrastructure.Persistance;
+using AlphaZero.Modules.Payments.Infrastructure.Persistence;
 using AlphaZero.Shared.Application;
 using AlphaZero.Shared.Infrastructure;
 using FluentValidation;
@@ -30,6 +34,14 @@ public static class DependencyInjection
     public static IServiceCollection AddPaymentsPrivateInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
         services.AddScoped<IUnitOfWork, UnitOfWork<AppDbContext>>();
+        services.AddScoped<ICatalogProductRepository, CatalogProductRepository>();
+        services.AddScoped<IPriceRepository, CatalogPriceRepository>();
+        services.AddScoped<IPaymentConfigurationRepository, PaymentConfigurationRepository>();
+        services.AddScoped<IPurchaseCaptureRepository, PurchaseCaptureRepository>();
+        services.AddScoped<IPurchaseCaptureUnitOfWork, PurchaseCaptureUnitOfWork>();
+        services.AddScoped<ICheckoutRepository, CheckoutRepository>();
+        services.AddScoped<ICheckoutSessionLifecycleRepository>(sp => sp.GetRequiredService<CheckoutRepository>());
+        services.AddScoped<CoursePlanAvailabilityConsumer>();
 
         // Register MediatR handlers and validators from the Application assembly
         var applicationAssembly = typeof(Application.IPaymentsModule).Assembly;

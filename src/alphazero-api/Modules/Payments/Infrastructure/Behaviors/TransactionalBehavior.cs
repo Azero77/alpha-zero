@@ -1,4 +1,4 @@
-using AlphaZero.Modules.Payments.Infrastructure.Persistance;
+using AlphaZero.Modules.Payments.Infrastructure.Persistence;
 using AlphaZero.Shared.Application;
 using ErrorOr;
 using MediatR;

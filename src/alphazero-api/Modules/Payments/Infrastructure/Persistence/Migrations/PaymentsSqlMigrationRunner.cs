@@ -1,5 +1,5 @@
 using System.Reflection;
-using AlphaZero.Modules.Payments.Infrastructure.Persistance;
+using AlphaZero.Modules.Payments.Infrastructure.Persistence;
 using AlphaZero.Shared.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;

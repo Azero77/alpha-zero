@@ -28,7 +28,8 @@ public class Course : TenantOwnedAggregate, ISoftDeletable
     public IReadOnlyCollection<CourseSection> Sections => _sections.AsReadOnly();
     private readonly List<CourseSection> _sections = new();
 
-    public IReadOnlyCollection<CoursePlan> Plans => _plans.AsReadOnly();
+    public IReadOnlyCollection<CoursePlan> Plans => _plans.Where(plan => !plan.IsRemoved).ToArray();
+    public IReadOnlyCollection<CoursePlan> CatalogPlans => _plans.AsReadOnly();
     private readonly List<CoursePlan> _plans = new();
 
     public bool IsDeleted { get; private set; }
@@ -125,11 +126,13 @@ public class Course : TenantOwnedAggregate, ISoftDeletable
         var input = ValidatePlan(name, accessWindowDays);
         if (input.IsError) return input.Errors;
 
-        if (_plans.Any(p => string.Equals(p.Name, name, StringComparison.OrdinalIgnoreCase)))
+        if (_plans.Any(p => !p.IsRemoved && string.Equals(p.Name, name, StringComparison.OrdinalIgnoreCase)))
             return Error.Conflict("Course.PlanExists", $"A plan with name '{name}' already exists.");
 
         var plan = CoursePlan.Create(Id, name, principalId, accessWindowDays, planId);
+        plan.AdvanceCatalogSourceVersion();
         _plans.Add(plan);
+        AddCoursePlanCatalogEvent(plan, CoursePlanCatalogAvailability.Available);
         return plan;
     }
 
@@ -138,13 +141,17 @@ public class Course : TenantOwnedAggregate, ISoftDeletable
         var input = ValidatePlan(name, accessWindowDays);
         if (input.IsError) return input.Errors;
 
-        var plan = _plans.FirstOrDefault(p => p.Id == planId);
+        var plan = _plans.FirstOrDefault(p => p.Id == planId && !p.IsRemoved);
         if (plan == null) return Error.NotFound("Course.Plan", "Plan not found.");
 
-        if (_plans.Any(p => p.Id != planId && string.Equals(p.Name, name, StringComparison.OrdinalIgnoreCase)))
+        if (_plans.Any(p => !p.IsRemoved && p.Id != planId && string.Equals(p.Name, name, StringComparison.OrdinalIgnoreCase)))
             return Error.Conflict("Course.PlanExists", $"A plan with name '{name}' already exists.");
 
         plan.Update(name, principalId, accessWindowDays);
+        plan.AdvanceCatalogSourceVersion();
+        AddCoursePlanCatalogEvent(plan, Status == CourseStatus.Published
+            ? CoursePlanCatalogAvailability.Available
+            : CoursePlanCatalogAvailability.Unavailable);
         return Result.Success;
     }
 
@@ -165,10 +172,12 @@ public class Course : TenantOwnedAggregate, ISoftDeletable
 
     public ErrorOr<Success> RemovePlan(Guid planId)
     {
-        var plan = _plans.FirstOrDefault(p => p.Id == planId);
+        var plan = _plans.FirstOrDefault(p => p.Id == planId && !p.IsRemoved);
         if (plan == null) return Error.NotFound("Course.Plan", "Plan not found.");
 
-        _plans.Remove(plan);
+        plan.MarkRemoved();
+        plan.AdvanceCatalogSourceVersion();
+        AddCoursePlanCatalogEvent(plan, CoursePlanCatalogAvailability.Unavailable);
         return Result.Success;
     }
 
@@ -202,9 +211,20 @@ public class Course : TenantOwnedAggregate, ISoftDeletable
 
     public void UpdateInformation(string title, string? description, Guid subjectId)
     {
+        var titleChanged = !string.Equals(Title, title, StringComparison.Ordinal);
         Title = title;
         Description = description;
         SubjectId = subjectId;
+        if (titleChanged)
+        {
+            foreach (var plan in _plans.Where(plan => !plan.IsRemoved))
+            {
+                plan.AdvanceCatalogSourceVersion();
+                AddCoursePlanCatalogEvent(plan, Status == CourseStatus.Published
+                    ? CoursePlanCatalogAvailability.Available
+                    : CoursePlanCatalogAvailability.Unavailable);
+            }
+        }
     }
 
     public ErrorOr<Success> SubmitForReview()
@@ -239,6 +259,11 @@ public class Course : TenantOwnedAggregate, ISoftDeletable
     {
         Status = CourseStatus.Published;
         AddDomainEvent(new CoursePublishedDomainEvent(Id));
+        foreach (var plan in _plans.Where(plan => !plan.IsRemoved))
+        {
+            plan.AdvanceCatalogSourceVersion();
+            AddCoursePlanCatalogEvent(plan, CoursePlanCatalogAvailability.Available);
+        }
         return Result.Success;
     }
 
@@ -247,7 +272,16 @@ public class Course : TenantOwnedAggregate, ISoftDeletable
         if (Status == CourseStatus.Archived) 
             return Error.Conflict("Course.Status", "Course is already archived.");
         
+        var wasPublished = Status == CourseStatus.Published;
         Status = CourseStatus.Archived;
+        if (wasPublished)
+        {
+            foreach (var plan in _plans.Where(plan => !plan.IsRemoved))
+            {
+                plan.AdvanceCatalogSourceVersion();
+                AddCoursePlanCatalogEvent(plan, CoursePlanCatalogAvailability.Unavailable);
+            }
+        }
         return Result.Success;
     }
 
@@ -324,6 +358,14 @@ public class Course : TenantOwnedAggregate, ISoftDeletable
 
         IsDeleted = true;
         OnDeleted = DateTime.UtcNow;
+        if (Status == CourseStatus.Published)
+        {
+            foreach (var plan in _plans.Where(plan => !plan.IsRemoved))
+            {
+                plan.AdvanceCatalogSourceVersion();
+                AddCoursePlanCatalogEvent(plan, CoursePlanCatalogAvailability.Unavailable);
+            }
+        }
         return Result.Success;
     }
 
@@ -334,7 +376,23 @@ public class Course : TenantOwnedAggregate, ISoftDeletable
 
         IsDeleted = false;
         OnDeleted = null;
+        if (Status == CourseStatus.Published)
+        {
+            foreach (var plan in _plans.Where(plan => !plan.IsRemoved))
+            {
+                plan.AdvanceCatalogSourceVersion();
+                AddCoursePlanCatalogEvent(plan, CoursePlanCatalogAvailability.Available);
+            }
+        }
         return Result.Success;
+    }
+
+    private void AddCoursePlanCatalogEvent(CoursePlan plan,
+        CoursePlanCatalogAvailability availability)
+    {
+        var arn = ResourceArn.ForCourse(TenantId, Id).ToString() + "/plan/" + plan.Id;
+        AddDomainEvent(new CoursePlanCatalogChangedDomainEvent(TenantId, Id, plan.Id, arn, Title,
+            availability, plan.CatalogSourceVersion, DateTime.UtcNow));
     }
 
     // ===================== Active-items mask (event-handler driven) =====================

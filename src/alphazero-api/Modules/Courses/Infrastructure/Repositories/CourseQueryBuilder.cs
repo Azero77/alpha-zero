@@ -150,7 +150,7 @@ public class CourseQueryBuilder : ICourseQueryBuilder
 
         if (_includePlans)
         {
-            query = query.Include(c => c.Plans);
+            query = query.Include(c => c.CatalogPlans);
         }
 
         return query;

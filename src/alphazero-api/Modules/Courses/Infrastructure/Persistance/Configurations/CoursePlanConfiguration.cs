@@ -24,6 +24,14 @@ public class CoursePlanConfiguration : IEntityTypeConfiguration<CoursePlan>
 
         builder.Property(p => p.AccessWindowDays);
 
+        builder.Property(p => p.CatalogSourceVersion)
+            .IsRequired()
+            .HasDefaultValue(0L);
+
+        builder.Property(p => p.IsRemoved)
+            .IsRequired()
+            .HasDefaultValue(false);
+
         // Ensure plan names are unique per course
         builder.HasIndex(p => new { p.CourseId, p.Name }).IsUnique();
     }
