@@ -2,7 +2,6 @@ using AlphaZero.Modules.Payments.Infrastructure.Persistance;
 using AlphaZero.Shared.Application;
 using ErrorOr;
 using MediatR;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 namespace AlphaZero.Modules.Payments.Infrastructure.Behaviors;

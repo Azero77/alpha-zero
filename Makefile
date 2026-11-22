@@ -29,6 +29,14 @@ ifndef NAME
 endif
 	dotnet ef migrations add $(NAME) --project $(PROJECT) --startup-project $(API) --output-dir $(o) --context $(DbContext)
 
+migrations-sql-generate-migration:
+
+ifndef NAME
+	$(error "NAME variable is required. Usage: make migrations-create NAME=MigrationName [m=ModuleName]")
+endif
+	dotnet ef migrations script -o src/alphazero-api/Modules/$(m)/Infrastructure/Persistence/Migrations/$(NAME).sql --project $(PROJECT) --startup-project $(API) --context $(DbContext)
+
+
 # ------------------------
 # Apply migrations
 # ------------------------
