@@ -71,7 +71,8 @@ public sealed class Purchase : AggregateRoot
             return Error.Validation("Purchase.FeeCurrency", "Provider fee must use the settlement currency.");
         if (commissionShare is < 0 or > 1)
             return Error.Validation("Purchase.CommissionShare", "Commission Share must be between zero and one.");
-        if (string.IsNullOrWhiteSpace(itemTitle) || itemTitle.Length > 255 || string.IsNullOrWhiteSpace(externalPaymentId))
+        if (string.IsNullOrWhiteSpace(itemTitle) || itemTitle.Length > 255 || string.IsNullOrWhiteSpace(externalPaymentId)
+            || externalPaymentId.Length > 255)
             return Error.Validation("Purchase.Snapshot", "Capture snapshot fields are required.");
 
         var purchase = new Purchase(id, tenantId, userId, productId, priceId, checkoutSessionId, providerAccountId,

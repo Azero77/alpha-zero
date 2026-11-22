@@ -1,4 +1,5 @@
 using AlphaZero.Modules.Courses.Domain.Aggregates.Courses;
+using AlphaZero.Modules.Courses.Domain.Events;
 using AlphaZero.Modules.Courses.Domain.Services;
 using AlphaZero.Shared.Domain;
 using FluentAssertions;
@@ -46,6 +47,21 @@ public class CourseAggregateTests
         var removeResult = course.RemovePlan(planResult.Value.Id);
         removeResult.IsError.Should().BeFalse();
         course.Plans.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void AddPlan_OnDraftCourse_ShouldPublishUnavailableCatalogSnapshot()
+    {
+        var course = CreateTestCourse();
+        course.PopDomainEvents();
+
+        var plan = course.AddPlan("Standard", Guid.NewGuid()).Value;
+
+        var catalogEvent = course.DomainEvents.Should().ContainSingle()
+            .Which.Should().BeOfType<CoursePlanCatalogChangedDomainEvent>().Subject;
+        catalogEvent.CoursePlanId.Should().Be(plan.Id);
+        catalogEvent.Availability.Should().Be(CoursePlanCatalogAvailability.Unavailable);
+        catalogEvent.SourceVersion.Should().Be(1);
     }
 
     [Fact]

@@ -95,6 +95,7 @@ public sealed class FinancialKernelTests
             .Should().Be(103.2m);
         posting.Lines.Single(line => line.AccountRole == LedgerAccountRole.AcademyPayable).Amount.Amount.Should().Be(75m);
         posting.Lines.Single(line => line.AccountRole == LedgerAccountRole.PlatformRevenue).Amount.Amount.Should().Be(25m);
+        posting.Lines.Should().OnlyContain(line => line.TenantId == tenant);
     }
 
     [Fact]

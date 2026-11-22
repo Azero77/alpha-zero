@@ -28,6 +28,8 @@ public sealed record ProviderTransaction(
         if (id == Guid.Empty || providerAccountId == Guid.Empty || string.IsNullOrWhiteSpace(externalTransactionId)
             || externalTransactionId.Length > 255)
             return Error.Validation("ProviderTransaction.Identity", "A stable Provider Transaction identity is required.");
+        if (webhookEventId == Guid.Empty || externalPaymentId?.Length > 255 || externalObjectId?.Length > 255)
+            return Error.Validation("ProviderTransaction.Reference", "Provider Transaction references are invalid.");
         if (amount.Amount <= 0 || fee.Amount < 0 || amount.Currency != fee.Currency)
             return Error.Validation("ProviderTransaction.Amount", "Movement amount and non-negative fee must use one currency.");
         return new ProviderTransaction(id, providerAccountId, webhookEventId, externalTransactionId,

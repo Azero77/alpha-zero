@@ -4,7 +4,6 @@ using AlphaZero.Modules.Payments.Domain.Checkout;
 using AlphaZero.Modules.Payments.Domain.Ledger;
 using AlphaZero.Modules.Payments.Domain.Providers;
 using AlphaZero.Modules.Payments.Domain.Settings;
-using ErrorOr;
 using Microsoft.EntityFrameworkCore;
 using CheckoutRow = AlphaZero.Modules.Payments.Infrastructure.Persistence.Generated.Entities.CheckoutSessionDataModel;
 
@@ -52,11 +51,6 @@ public sealed class CheckoutRepository(AppDbContext context) : ICheckoutReposito
                 row.WebhookSecretName, routes, row.CreatedAt, row.UpdatedAt);
         }).ToArray();
     }
-
-    // Courses owns enrollment lifecycle; Payments queries the access projection by ARN only through this seam.
-    public Task<ErrorOr<bool>> HasActiveEnrollmentAsync(Guid tenantId, Guid userId, string targetResourceArn, CancellationToken cancellationToken) =>
-        Task.FromResult<ErrorOr<bool>>(Error.Conflict("Checkout.EnrollmentCheckUnavailable",
-            "The Courses-owned enrollment query seam is not configured; Checkout remains fail-closed."));
 
     public async Task<CheckoutSession?> GetPendingSessionAsync(Guid userId, Guid productId, CancellationToken cancellationToken)
     {

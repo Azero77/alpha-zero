@@ -14,6 +14,10 @@ namespace AlphaZero.Modules.Courses.Application.Queries;
 /// </summary>
 public interface IEnrollmentQueryService
 {
+    /// <summary>Checkout eligibility: explicit tenant/course scope and effective access-window check.</summary>
+    Task<bool> HasActiveEnrollmentAsync(Guid tenantId, Guid studentId, Guid courseId, DateTime nowUtc,
+        CancellationToken cancellationToken = default);
+
     /// <summary>Support listing (GET /courses/enrollments): all statuses of one student, paged, tenant-scoped.</summary>
     Task<PagedResult<EnrollmentDto>> ListStudentEnrollmentsAsync(Guid studentId, int page, int perPage, CancellationToken cancellationToken = default);
 

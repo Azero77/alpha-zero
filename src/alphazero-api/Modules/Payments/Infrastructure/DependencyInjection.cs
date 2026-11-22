@@ -2,8 +2,12 @@ using AlphaZero.Modules.Payments.Application.Catalog;
 using AlphaZero.Modules.Payments.Application.Checkout;
 using AlphaZero.Modules.Payments.Application.Settings;
 using AlphaZero.Modules.Payments.Application.Purchases;
+using AlphaZero.Modules.Payments.Application.Queries;
+using AlphaZero.Modules.Payments.Application.Webhooks;
+using AlphaZero.Modules.Payments.Infrastructure.CrossModule;
 using AlphaZero.Modules.Payments.Infrastructure.Behaviors;
 using AlphaZero.Modules.Payments.Infrastructure.Persistence;
+using AlphaZero.Modules.Payments.Infrastructure.Webhooks;
 using AlphaZero.Shared.Application;
 using AlphaZero.Shared.Infrastructure;
 using FluentValidation;
@@ -27,6 +31,7 @@ public static class DependencyInjection
                 h.MigrationsHistoryTable("__PaymentsMigrationHistory", AppDbContext.Schema);
             });
         });
+        services.AddHostedService<WebhookSweeperWorker>();
 
         return services;
     }
@@ -41,6 +46,10 @@ public static class DependencyInjection
         services.AddScoped<IPurchaseCaptureUnitOfWork, PurchaseCaptureUnitOfWork>();
         services.AddScoped<ICheckoutRepository, CheckoutRepository>();
         services.AddScoped<ICheckoutSessionLifecycleRepository>(sp => sp.GetRequiredService<CheckoutRepository>());
+        services.AddScoped<ICourseAccessReader, BusCourseAccessReader>();
+        services.AddScoped<IPaymentsReadStore, PaymentsReadStore>();
+        services.AddScoped<IWebhookStore, WebhookStore>();
+        services.AddScoped<IProviderEventNormalizerRegistry, ProviderEventNormalizerRegistry>();
         services.AddScoped<CoursePlanAvailabilityConsumer>();
 
         // Register MediatR handlers and validators from the Application assembly

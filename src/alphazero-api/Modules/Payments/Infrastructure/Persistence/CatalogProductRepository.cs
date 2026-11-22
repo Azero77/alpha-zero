@@ -10,7 +10,7 @@ public sealed class CatalogProductRepository(AppDbContext context) : ICatalogPro
 {
     public async Task<Product?> FindBySourceIdentityAsync(Guid tenantId, string itemType, Guid itemId,
         CancellationToken cancellationToken) =>
-        await context.Products.SingleOrDefaultAsync(product => product.TenantId == tenantId
+        await context.Products.AsNoTracking().SingleOrDefaultAsync(product => product.TenantId == tenantId
             && product.ItemType == itemType && product.ItemId == itemId, cancellationToken) is { } product
                 ? ToDomain(product)
                 : null;
@@ -34,34 +34,22 @@ public sealed class CatalogProductRepository(AppDbContext context) : ICatalogPro
         await context.Products.AddAsync(model, cancellationToken);
     }
 
-    public Task UpdateAsync(Product product, CancellationToken cancellationToken)
-    {
-        var model = context.Products.Local.SingleOrDefault(candidate => candidate.Id == product.Id);
-        if (model is null)
-        {
-            model = new ProductDataModel { Id = product.Id };
-            context.Products.Attach(model);
-        }
-        model.TenantId = product.TenantId;
-        model.ItemType = product.ItemType;
-        model.ItemId = product.ItemId;
-        model.ParentContainerId = product.ParentContainerId;
-        model.TargetResourceArn = product.TargetResourceArn;
-        model.Title = product.Title;
-        model.SourceAvailability = product.SourceAvailability.ToString();
-        model.SourceVersion = product.SourceVersion;
-        model.CreatedAt = product.CreatedAt;
-        model.UpdatedAt = product.UpdatedAt;
-        context.Entry(model).State = EntityState.Modified;
-        return Task.CompletedTask;
-    }
+    public async Task<bool> UpdateAsync(Product product, CancellationToken cancellationToken) =>
+        await context.Products
+            .Where(model => model.Id == product.Id && model.SourceVersion < product.SourceVersion)
+            .ExecuteUpdateAsync(update => update
+                .SetProperty(model => model.TargetResourceArn, product.TargetResourceArn)
+                .SetProperty(model => model.Title, product.Title)
+                .SetProperty(model => model.SourceAvailability, product.SourceAvailability.ToString())
+                .SetProperty(model => model.SourceVersion, product.SourceVersion)
+                .SetProperty(model => model.UpdatedAt, product.UpdatedAt), cancellationToken) == 1;
 
     public Task SaveChangesAsync(CancellationToken cancellationToken) => context.SaveChangesAsync(cancellationToken);
 
-    public async Task<int> ApplyCatalogSnapshotAsync(IReadOnlyList<CatalogProductSnapshot> sourceSnapshot,
+    public async Task<IReadOnlyList<Product>> ApplyCatalogSnapshotAsync(IReadOnlyList<CatalogProductSnapshot> sourceSnapshot,
         CancellationToken cancellationToken)
     {
-        var applied = 0;
+        var applied = new List<Product>();
         foreach (var source in sourceSnapshot)
         {
             var existing = await FindBySourceIdentityAsync(source.TenantId, "CoursePlan", source.CoursePlanId, cancellationToken);
@@ -71,15 +59,14 @@ public sealed class CatalogProductRepository(AppDbContext context) : ICatalogPro
                     source.CourseId, source.TargetResourceArn, source.Title, source.Availability, source.SourceVersion, source.OccurredAt);
                 if (created.IsError) throw new InvalidOperationException(string.Join("; ", created.Errors.Select(error => error.Description)));
                 await AddAsync(created.Value, cancellationToken);
-                applied++;
+                applied.Add(created.Value);
                 continue;
             }
             var result = existing.ApplyMirrorUpdate(source.SourceVersion, source.Title, source.Availability,
                 source.TargetResourceArn, source.OccurredAt);
             if (result.IsError) throw new InvalidOperationException(string.Join("; ", result.Errors.Select(error => error.Description)));
             if (!result.Value) continue;
-            await UpdateAsync(existing, cancellationToken);
-            applied++;
+            if (await UpdateAsync(existing, cancellationToken)) applied.Add(existing);
         }
         return applied;
     }

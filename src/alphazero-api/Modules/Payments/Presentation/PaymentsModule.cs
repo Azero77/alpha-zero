@@ -48,6 +48,7 @@ public class PaymentsModule : AppModule, AlphaZero.Modules.Payments.Application.
     public override void ConfigureModuleBus(IBusRegistrationConfigurator configuration)
     {
         configuration.AddConsumer<CoursePlanAvailabilityChangedConsumer>();
+        configuration.AddConsumer<ProcessWebhookEventConsumer>();
         configuration.AddEntityFrameworkOutbox<AppDbContext>(o =>
         {
             o.UsePostgres(false);

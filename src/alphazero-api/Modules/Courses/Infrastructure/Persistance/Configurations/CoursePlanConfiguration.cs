@@ -32,7 +32,7 @@ public class CoursePlanConfiguration : IEntityTypeConfiguration<CoursePlan>
             .IsRequired()
             .HasDefaultValue(false);
 
-        // Ensure plan names are unique per course
-        builder.HasIndex(p => new { p.CourseId, p.Name }).IsUnique();
+        // Removed plans retain their history but must not block reusing a live plan name.
+        builder.HasIndex(p => new { p.CourseId, p.Name }).IsUnique().HasFilter("\"IsRemoved\" = FALSE");
     }
 }

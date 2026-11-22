@@ -24,7 +24,7 @@ public sealed class CoursePlanAvailabilityConsumer(ICatalogProductRepository pro
                 message.TargetResourceArn, message.OccurredAt);
             if (update.IsError) throw new InvalidOperationException(string.Join("; ", update.Errors.Select(error => error.Description)));
             if (!update.Value) return;
-            await products.UpdateAsync(product, cancellationToken);
+            if (!await products.UpdateAsync(product, cancellationToken)) return;
         }
         await products.SaveChangesAsync(cancellationToken);
     }

@@ -50,6 +50,17 @@ public class EnrollmentQueryService : IEnrollmentQueryService
         _context = context;
     }
 
+    public Task<bool> HasActiveEnrollmentAsync(Guid tenantId, Guid studentId, Guid courseId, DateTime nowUtc,
+        CancellationToken cancellationToken = default) =>
+        _context.Set<Enrollment>()
+            .IgnoreQueryFilters([DbContstants.TenantFilter])
+            .AsNoTracking()
+            .AnyAsync(enrollment => enrollment.TenantId == tenantId
+                && enrollment.StudentId == studentId
+                && enrollment.CourseId == courseId
+                && enrollment.Status == EnrollmentStatus.Active
+                && (enrollment.AccessExpiresOn == null || enrollment.AccessExpiresOn > nowUtc), cancellationToken);
+
     public async Task<PagedResult<EnrollmentDto>> ListStudentEnrollmentsAsync(Guid studentId, int page, int perPage, CancellationToken cancellationToken = default)
     {
         // All statuses on purpose: this is the support listing (status is an output field; a

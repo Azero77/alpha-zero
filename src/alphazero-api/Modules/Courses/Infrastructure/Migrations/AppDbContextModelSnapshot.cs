@@ -203,7 +203,8 @@ namespace AlphaZero.Modules.Courses.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("CourseId", "Name")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasFilter("\"IsRemoved\" = FALSE");
 
                     b.ToTable("CoursePlans", "Courses");
                 });

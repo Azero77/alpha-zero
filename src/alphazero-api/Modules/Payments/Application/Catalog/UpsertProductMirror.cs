@@ -34,9 +34,12 @@ public sealed class UpsertProductMirrorHandler(ICatalogProductRepository product
         if (update.IsError) return update.Errors;
         if (update.Value)
         {
-            await products.UpdateAsync(existing, cancellationToken);
-            await publisher.Publish(new CatalogProductMirrorAppliedIntegrationEvent(existing.Id,
-                existing.TenantId, existing.SourceVersion), cancellationToken);
+            if (await products.UpdateAsync(existing, cancellationToken))
+                await publisher.Publish(new CatalogProductMirrorAppliedIntegrationEvent(existing.Id,
+                    existing.TenantId, existing.SourceVersion), cancellationToken);
+            else
+                existing = await products.FindBySourceIdentityAsync(request.TenantId, request.ItemType,
+                    request.ItemId, cancellationToken) ?? existing;
         }
         return existing;
     }

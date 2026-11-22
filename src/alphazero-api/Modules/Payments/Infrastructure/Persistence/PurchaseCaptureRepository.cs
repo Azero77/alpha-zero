@@ -10,6 +10,8 @@ using AlphaZero.Modules.Payments.Infrastructure.Persistence.Generated.Entities;
 using AlphaZero.Shared.Application;
 using ErrorOr;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
+using Npgsql;
 using CheckoutRow = AlphaZero.Modules.Payments.Infrastructure.Persistence.Generated.Entities.CheckoutSessionDataModel;
 
 namespace AlphaZero.Modules.Payments.Infrastructure.Persistence;
@@ -58,6 +60,19 @@ public sealed class PurchaseCaptureRepository(AppDbContext context) : IPurchaseC
         return row is null ? null : ToDomain(row);
     }
 
+    public async Task LockMovementIdentityAsync(Guid providerAccountId, string externalTransactionId,
+        CancellationToken cancellationToken)
+    {
+        if (context.Database.CurrentTransaction is null)
+            throw new InvalidOperationException("Provider movement identity lock requires an ambient transaction.");
+        var connection = (NpgsqlConnection)context.Database.GetDbConnection();
+        await using var command = connection.CreateCommand();
+        command.Transaction = (NpgsqlTransaction)context.Database.CurrentTransaction.GetDbTransaction();
+        command.CommandText = "SELECT pg_advisory_xact_lock(hashtextextended(@identity, 0));";
+        command.Parameters.AddWithValue("identity", $"{providerAccountId:D}:{externalTransactionId}");
+        await command.ExecuteNonQueryAsync(cancellationToken);
+    }
+
     public async Task AddMovementAsync(ProviderTransaction movement, CancellationToken cancellationToken) =>
         await context.ProviderTransactions.AddAsync(new ProviderTransactionDataModel
         {
@@ -87,6 +102,9 @@ public sealed class PurchaseCaptureRepository(AppDbContext context) : IPurchaseC
             ExternalPaymentId = purchase.ExternalPaymentId, Status = purchase.Status.ToString(),
             PaidAt = purchase.PaidAt, RefundedAt = purchase.RefundedAt
         }, cancellationToken);
+
+    public Task FlushPendingRowsAsync(CancellationToken cancellationToken) =>
+        context.SaveChangesAsync(cancellationToken);
 
     public async Task<IReadOnlyDictionary<LedgerAccountRole, Guid>> GetCaptureAccountsAsync(Guid tenantId,
         Guid providerAccountId, string currency, CancellationToken cancellationToken)
@@ -124,13 +142,13 @@ public sealed class PurchaseCaptureRepository(AppDbContext context) : IPurchaseC
         return posting.Id;
     }
 
-    public async Task<Guid> AddAuditAsync(Guid purchaseId, Guid ledgerEntryId, string action, DateTime occurredAt,
-        CancellationToken cancellationToken)
+    public async Task<Guid> AddAuditAsync(Guid tenantId, Guid purchaseId, Guid ledgerEntryId, string action,
+        DateTime occurredAt, CancellationToken cancellationToken)
     {
         var auditId = Guid.NewGuid();
         await context.PaymentsAuditLogs.AddAsync(new PaymentsAuditLogDataModel
         {
-            Id = auditId, EventId = Guid.NewGuid(), AggregateId = purchaseId,
+            Id = auditId, EventId = Guid.NewGuid(), TenantId = tenantId, AggregateId = purchaseId,
             Action = action, Payload = JsonSerializer.Serialize(new { ledgerEntryId }), OccurredAt = occurredAt
         }, cancellationToken);
         return auditId;
@@ -170,17 +188,28 @@ public sealed class PurchaseCaptureRepository(AppDbContext context) : IPurchaseC
 /// <summary>Small transaction boundary so network-facing orchestration remains outside DB transactions.</summary>
 public sealed class PurchaseCaptureUnitOfWork(AppDbContext context) : IPurchaseCaptureUnitOfWork
 {
-    public async Task<T> InTransactionAsync<T>(Func<CancellationToken, Task<T>> action, CancellationToken cancellationToken)
+    public async Task<ErrorOr<T>> InTransactionAsync<T>(Func<CancellationToken, Task<ErrorOr<T>>> action,
+        CancellationToken cancellationToken)
     {
         await using var transaction = await context.Database.BeginTransactionAsync(cancellationToken);
-        var result = await action(cancellationToken);
-        if (result is ErrorOr<Purchase> errorOr && errorOr.IsError)
+        try
         {
-            await transaction.RollbackAsync(cancellationToken);
+            var result = await action(cancellationToken);
+            if (result.IsError)
+            {
+                await transaction.RollbackAsync(cancellationToken);
+                context.ChangeTracker.Clear();
+                return result;
+            }
+            await context.SaveChangesAsync(cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
             return result;
         }
-        await context.SaveChangesAsync(cancellationToken);
-        await transaction.CommitAsync(cancellationToken);
-        return result;
+        catch
+        {
+            await transaction.RollbackAsync(cancellationToken);
+            context.ChangeTracker.Clear();
+            throw;
+        }
     }
 }

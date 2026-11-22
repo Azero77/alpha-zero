@@ -15,10 +15,15 @@ public interface ICheckoutRepository
     Task<Price?> GetActivePriceAsync(Guid tenantId, Guid productId, Guid priceId, CancellationToken cancellationToken);
     Task<AcademyPaymentSettings?> GetSettingsAsync(Guid tenantId, CancellationToken cancellationToken);
     Task<IReadOnlyList<ProviderConfiguration>> GetProviderConfigurationsAsync(CancellationToken cancellationToken);
-    Task<ErrorOr<bool>> HasActiveEnrollmentAsync(Guid tenantId, Guid userId, string targetResourceArn, CancellationToken cancellationToken);
     Task<CheckoutSession?> GetPendingSessionAsync(Guid userId, Guid productId, CancellationToken cancellationToken);
     Task AddSessionAsync(CheckoutSession session, CancellationToken cancellationToken);
     Task UpdateSessionAsync(CheckoutSession session, CancellationToken cancellationToken);
+}
+
+public interface ICourseAccessReader
+{
+    Task<ErrorOr<bool>> HasActiveEnrollmentAsync(Guid tenantId, Guid userId, string targetResourceArn,
+        CancellationToken cancellationToken);
 }
 
 public interface ICheckoutProvider
@@ -31,14 +36,48 @@ public interface ICheckoutProvider
 public sealed record CreateCheckoutSession(Guid TenantId, Guid UserId, Guid ProductId, Guid PriceId,
     Guid ProviderCurrencyRouteId) : ICommand<CheckoutSession>;
 
+public sealed record CheckoutEligibilityResult(IReadOnlyList<PaymentMethod> Methods, bool HasActiveEnrollment);
+
+public sealed record GetAvailableCheckoutMethods(Guid TenantId, Guid UserId, Guid ProductId, Guid PriceId)
+    : IQuery<CheckoutEligibilityResult>;
+
+public sealed class GetAvailableCheckoutMethodsHandler(ICheckoutRepository repository, ICourseAccessReader courseAccess)
+    : IRequestHandler<GetAvailableCheckoutMethods, ErrorOr<CheckoutEligibilityResult>>
+{
+    public async Task<ErrorOr<CheckoutEligibilityResult>> Handle(GetAvailableCheckoutMethods request,
+        CancellationToken cancellationToken)
+    {
+        var product = await repository.GetProductAsync(request.TenantId, request.ProductId, cancellationToken);
+        if (product is null) return Error.NotFound("Product.NotFound", "Product was not found.");
+        var price = await repository.GetActivePriceAsync(request.TenantId, request.ProductId, request.PriceId,
+            cancellationToken);
+        if (price is null)
+            return Error.Conflict("Checkout.PriceUnavailable", "An active compatible Price is required.");
+        var enrollment = await courseAccess.HasActiveEnrollmentAsync(request.TenantId, request.UserId,
+            product.TargetResourceArn, cancellationToken);
+        if (enrollment.IsError) return enrollment.Errors;
+
+        var methods = CheckoutEligibilityPolicy.Decide(product, price,
+            await repository.GetSettingsAsync(request.TenantId, cancellationToken),
+            await repository.GetProviderConfigurationsAsync(cancellationToken), enrollment.Value);
+        return methods.IsError ? methods.Errors : new CheckoutEligibilityResult(methods.Value, enrollment.Value);
+    }
+}
+
 /// <summary>Public provider orchestrator. The durable intent phase commits before provider I/O.</summary>
 public sealed class CreateCheckoutSessionHandler(ISender sender, ICheckoutProvider provider)
     : IRequestHandler<CreateCheckoutSession, ErrorOr<CheckoutSession>>
 {
     public async Task<ErrorOr<CheckoutSession>> Handle(CreateCheckoutSession request, CancellationToken cancellationToken)
     {
+        var eligibility = await sender.Send(new GetAvailableCheckoutMethods(request.TenantId, request.UserId,
+            request.ProductId, request.PriceId), cancellationToken);
+        if (eligibility.IsError) return eligibility.Errors;
+        if (!eligibility.Value.Methods.Any(method => method.ProviderCurrencyRouteId == request.ProviderCurrencyRouteId))
+            return Error.Conflict("Checkout.RouteUnavailable", "Selected route is not an eligible Payment Method.");
+
         var intent = await sender.Send(new CreateCheckoutIntent(request.TenantId, request.UserId,
-            request.ProductId, request.PriceId, request.ProviderCurrencyRouteId), cancellationToken);
+            request.ProductId, request.PriceId, request.ProviderCurrencyRouteId, eligibility.Value.Methods), cancellationToken);
         if (intent.IsError) return intent.Errors;
 
         var external = await provider.CreateHostedCheckoutAsync(intent.Value.Session.ProviderCurrencyRouteId,
@@ -55,25 +94,17 @@ public sealed record CheckoutIntent(CheckoutSession Session, Money LockedPrice);
 
 /// <summary>Internal transactional phase; origins must call CreateCheckoutSession instead.</summary>
 public sealed record CreateCheckoutIntent(Guid TenantId, Guid UserId, Guid ProductId, Guid PriceId,
-    Guid ProviderCurrencyRouteId) : ICommand<CheckoutIntent>, ITransactionalCommand;
+    Guid ProviderCurrencyRouteId, IReadOnlyList<PaymentMethod> EligibleMethods)
+    : ICommand<CheckoutIntent>, ITransactionalCommand;
 
 public sealed class CreateCheckoutIntentHandler(ICheckoutRepository repository)
     : IRequestHandler<CreateCheckoutIntent, ErrorOr<CheckoutIntent>>
 {
     public async Task<ErrorOr<CheckoutIntent>> Handle(CreateCheckoutIntent request, CancellationToken cancellationToken)
     {
-        var product = await repository.GetProductAsync(request.TenantId, request.ProductId, cancellationToken);
-        if (product is null) return Error.NotFound("Product.NotFound", "Product was not found.");
         var price = await repository.GetActivePriceAsync(request.TenantId, request.ProductId, request.PriceId, cancellationToken);
         if (price is null) return Error.Conflict("Checkout.PriceUnavailable", "An active compatible Price is required.");
-        var settings = await repository.GetSettingsAsync(request.TenantId, cancellationToken);
-        var configurations = await repository.GetProviderConfigurationsAsync(cancellationToken);
-        var enrollment = await repository.HasActiveEnrollmentAsync(request.TenantId, request.UserId,
-            product.TargetResourceArn, cancellationToken);
-        if (enrollment.IsError) return enrollment.Errors;
-        var eligible = CheckoutEligibilityPolicy.Decide(product, price, settings, configurations, enrollment.Value);
-        if (eligible.IsError) return eligible.Errors;
-        if (!eligible.Value.Any(method => method.ProviderCurrencyRouteId == request.ProviderCurrencyRouteId))
+        if (!request.EligibleMethods.Any(method => method.ProviderCurrencyRouteId == request.ProviderCurrencyRouteId))
             return Error.Conflict("Checkout.RouteUnavailable", "Selected route is not an eligible Payment Method.");
 
         var pending = await repository.GetPendingSessionAsync(request.UserId, request.ProductId, cancellationToken);

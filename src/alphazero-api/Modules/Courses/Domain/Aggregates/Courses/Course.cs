@@ -132,7 +132,9 @@ public class Course : TenantOwnedAggregate, ISoftDeletable
         var plan = CoursePlan.Create(Id, name, principalId, accessWindowDays, planId);
         plan.AdvanceCatalogSourceVersion();
         _plans.Add(plan);
-        AddCoursePlanCatalogEvent(plan, CoursePlanCatalogAvailability.Available);
+        AddCoursePlanCatalogEvent(plan, Status == CourseStatus.Published
+            ? CoursePlanCatalogAvailability.Available
+            : CoursePlanCatalogAvailability.Unavailable);
         return plan;
     }
 

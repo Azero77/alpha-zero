@@ -110,18 +110,21 @@ public static class LedgerPostingFactory
         var academy = gross.Amount - commission;
         var lines = new List<LedgerLine>
         {
-            new(Guid.NewGuid(), providerAssetAccountId, LedgerAccountRole.ProviderAsset, LedgerDirection.Debit, Money.Create(gross.Amount, gross.Currency).Value)
+            new(Guid.CreateVersion7(), providerAssetAccountId, LedgerAccountRole.ProviderAsset,
+                LedgerDirection.Debit, Money.Create(gross.Amount, gross.Currency).Value, tenantId)
         };
         if (academy > 0)
-            lines.Add(new LedgerLine(Guid.NewGuid(), payableAccountId, LedgerAccountRole.AcademyPayable,
+            lines.Add(new LedgerLine(Guid.CreateVersion7(), payableAccountId, LedgerAccountRole.AcademyPayable,
                 LedgerDirection.Credit, Money.Create(academy, gross.Currency).Value, tenantId));
         if (commission > 0)
-            lines.Add(new LedgerLine(Guid.NewGuid(), revenueAccountId, LedgerAccountRole.PlatformRevenue,
-                LedgerDirection.Credit, Money.Create(commission, gross.Currency).Value));
+            lines.Add(new LedgerLine(Guid.CreateVersion7(), revenueAccountId, LedgerAccountRole.PlatformRevenue,
+                LedgerDirection.Credit, Money.Create(commission, gross.Currency).Value, tenantId));
         if (providerFee.Amount > 0)
         {
-            lines.Add(new LedgerLine(Guid.NewGuid(), feeAccountId, LedgerAccountRole.ProviderFees, LedgerDirection.Debit, providerFee));
-            lines.Add(new LedgerLine(Guid.NewGuid(), providerAssetAccountId, LedgerAccountRole.ProviderAsset, LedgerDirection.Credit, providerFee));
+            lines.Add(new LedgerLine(Guid.CreateVersion7(), feeAccountId, LedgerAccountRole.ProviderFees,
+                LedgerDirection.Debit, providerFee, tenantId));
+            lines.Add(new LedgerLine(Guid.CreateVersion7(), providerAssetAccountId, LedgerAccountRole.ProviderAsset,
+                LedgerDirection.Credit, providerFee, tenantId));
         }
         return LedgerPosting.Create(entryId, LedgerEntryType.Capture, tenantId, providerAccountId,
             providerTransactionId, purchaseId, null, null, null, null, null, effectiveAt, lines);

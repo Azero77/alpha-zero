@@ -28,6 +28,21 @@ public sealed class CatalogDomainTests
     }
 
     [Fact]
+    public void Product_rejects_target_identity_changes_while_unavailable()
+    {
+        var product = Product.Create(Guid.NewGuid(), Guid.NewGuid(), "CoursePlan", Guid.NewGuid(),
+            Guid.NewGuid(), "az:course:tenant:course/one/plan/one", "Plan", SourceAvailability.Unavailable,
+            1, DateTime.UtcNow).Value;
+
+        var result = product.ApplyMirrorUpdate(2, "Plan", SourceAvailability.Unavailable,
+            "az:course:tenant:course/two/plan/two", DateTime.UtcNow);
+
+        result.IsError.Should().BeTrue();
+        result.FirstError.Code.Should().Be("Product.IdentityChanged");
+        product.SourceVersion.Should().Be(1);
+    }
+
+    [Fact]
     public void Price_is_archived_without_mutating_its_amount_or_currency()
     {
         var price = Price.Create(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), Money.Create(19.99m, "USD").Value,

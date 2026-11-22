@@ -67,7 +67,7 @@ public sealed class Product : AggregateRoot
     {
         if (sourceVersion <= SourceVersion)
             return false;
-        if (availability == SourceAvailability.Available && !TargetResourceArn.Equals(targetResourceArn, StringComparison.Ordinal))
+        if (!TargetResourceArn.Equals(targetResourceArn, StringComparison.Ordinal))
             return Error.Conflict("Product.IdentityChanged", "A source Course Plan cannot change its target resource identity.");
         if (string.IsNullOrWhiteSpace(title) || title.Length > 255)
             return Error.Validation("Product.Title", "A title of at most 255 characters is required.");
