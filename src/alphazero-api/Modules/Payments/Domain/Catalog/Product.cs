@@ -42,8 +42,6 @@ public sealed class Product : AggregateRoot
             return Error.Validation("Product.Identity", "Product identity fields are required.");
         if (string.IsNullOrWhiteSpace(itemType) || itemType.Length > 32)
             return Error.Validation("Product.ItemType", "A valid item type is required.");
-        if (itemType == "CoursePlan" && parentContainerId is null)
-            return Error.Validation("Product.ParentContainer", "Course Plan products require their parent Course id.");
         if (string.IsNullOrWhiteSpace(targetResourceArn) || targetResourceArn.Length > 512)
             return Error.Validation("Product.TargetResourceArn", "A valid target resource ARN is required.");
         if (string.IsNullOrWhiteSpace(title) || title.Length > 255)
@@ -68,7 +66,7 @@ public sealed class Product : AggregateRoot
         if (sourceVersion <= SourceVersion)
             return false;
         if (!TargetResourceArn.Equals(targetResourceArn, StringComparison.Ordinal))
-            return Error.Conflict("Product.IdentityChanged", "A source Course Plan cannot change its target resource identity.");
+            return Error.Conflict("Product.IdentityChanged", "A source item cannot change its target resource identity.");
         if (string.IsNullOrWhiteSpace(title) || title.Length > 255)
             return Error.Validation("Product.Title", "A title of at most 255 characters is required.");
         if (string.IsNullOrWhiteSpace(targetResourceArn) || targetResourceArn.Length > 512)

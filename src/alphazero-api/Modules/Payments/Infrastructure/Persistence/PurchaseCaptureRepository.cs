@@ -20,7 +20,7 @@ public sealed class PurchaseCaptureRepository(AppDbContext context) : IPurchaseC
 {
     public async Task<CheckoutSession?> GetCheckoutSessionAsync(Guid sessionId, CancellationToken cancellationToken)
     {
-        var row = await context.CheckoutSessions.FromSqlInterpolated($"SELECT * FROM \"Payments\".\"CheckoutSessions\" WHERE \"Id\" = {sessionId} FOR NO KEY UPDATE")
+        var row = await context.CheckoutSessions.FromSqlInterpolated($@"SELECT * FROM ""Payments"".""CheckoutSessions"" WHERE ""Id"" = {sessionId} FOR NO KEY UPDATE")
             .SingleOrDefaultAsync(cancellationToken);
         return row is null ? null : CheckoutSession.Reconstitute(row.Id, row.TenantId, row.UserId, row.ProductId,
             row.PriceId, row.ProviderCurrencyRouteId, Enum.Parse<CheckoutSessionStatus>(row.Status),
@@ -124,24 +124,6 @@ public sealed class PurchaseCaptureRepository(AppDbContext context) : IPurchaseC
             .ToDictionary(group => group.Key, group => group.Single().Id);
     }
 
-    public async Task<Guid> PostLedgerEntryAsync(LedgerPosting posting, CancellationToken cancellationToken)
-    {
-        var payload = JsonSerializer.Serialize(new
-        {
-            entry = new { id = posting.Id, effectiveAt = posting.EffectiveAt, type = posting.Type.ToString(),
-                tenantId = posting.TenantId, providerAccountId = posting.ProviderAccountId,
-                providerTransactionId = posting.ProviderTransactionId, purchaseId = posting.PurchaseId,
-                refundId = posting.RefundId, settlementId = posting.SettlementId, disputeId = posting.DisputeId,
-                paymentReviewCaseId = posting.PaymentReviewCaseId, externalObjectId = posting.ExternalObjectId,
-                description = "Purchase capture" },
-            lines = posting.Lines.Select(line => new { id = line.Id, accountId = line.AccountId,
-                direction = line.Direction.ToString(), amount = line.Amount.Amount,
-                currency = line.Amount.Currency, tenantId = line.TenantId })
-        });
-        await context.Database.ExecuteSqlInterpolatedAsync($"SELECT \"Payments\".post_ledger_entry({payload}::jsonb)", cancellationToken);
-        return posting.Id;
-    }
-
     public async Task<Guid> AddAuditAsync(Guid tenantId, Guid purchaseId, Guid ledgerEntryId, string action,
         DateTime occurredAt, CancellationToken cancellationToken)
     {
@@ -183,33 +165,4 @@ public sealed class PurchaseCaptureRepository(AppDbContext context) : IPurchaseC
         Money.Create(row.SettlementAmount, row.SettlementCurrency).Value, row.FxRate,
         Money.Create(row.ProviderFee, row.SettlementCurrency, allowZero: true).Value, row.CommissionShare,
         row.ExternalPaymentId, Enum.Parse<PurchaseStatus>(row.Status), row.PaidAt, row.RefundedAt);
-}
-
-/// <summary>Small transaction boundary so network-facing orchestration remains outside DB transactions.</summary>
-public sealed class PurchaseCaptureUnitOfWork(AppDbContext context) : IPurchaseCaptureUnitOfWork
-{
-    public async Task<ErrorOr<T>> InTransactionAsync<T>(Func<CancellationToken, Task<ErrorOr<T>>> action,
-        CancellationToken cancellationToken)
-    {
-        await using var transaction = await context.Database.BeginTransactionAsync(cancellationToken);
-        try
-        {
-            var result = await action(cancellationToken);
-            if (result.IsError)
-            {
-                await transaction.RollbackAsync(cancellationToken);
-                context.ChangeTracker.Clear();
-                return result;
-            }
-            await context.SaveChangesAsync(cancellationToken);
-            await transaction.CommitAsync(cancellationToken);
-            return result;
-        }
-        catch
-        {
-            await transaction.RollbackAsync(cancellationToken);
-            context.ChangeTracker.Clear();
-            throw;
-        }
-    }
 }

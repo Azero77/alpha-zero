@@ -1,19 +1,23 @@
 using AlphaZero.Modules.Payments.Application.Catalog;
 using AlphaZero.Modules.Payments.Application.Checkout;
-using AlphaZero.Modules.Payments.Application.Settings;
+using AlphaZero.Modules.Payments.Application.Ledger;
 using AlphaZero.Modules.Payments.Application.Purchases;
 using AlphaZero.Modules.Payments.Application.Queries;
+using AlphaZero.Modules.Payments.Application.Settings;
 using AlphaZero.Modules.Payments.Application.Webhooks;
-using AlphaZero.Modules.Payments.Infrastructure.CrossModule;
 using AlphaZero.Modules.Payments.Infrastructure.Behaviors;
+using AlphaZero.Modules.Payments.Infrastructure.CrossModule;
+using AlphaZero.Modules.Payments.Infrastructure.Ledger;
 using AlphaZero.Modules.Payments.Infrastructure.Persistence;
 using AlphaZero.Modules.Payments.Infrastructure.Webhooks;
 using AlphaZero.Shared.Application;
+using AlphaZero.Shared.Domain;
 using AlphaZero.Shared.Infrastructure;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace AlphaZero.Modules.Payments.Infrastructure;
 
@@ -32,6 +36,7 @@ public static class DependencyInjection
             });
         });
         services.AddHostedService<WebhookSweeperWorker>();
+        services.TryAddSingleton<IClock, Clock>();
 
         return services;
     }
@@ -43,14 +48,13 @@ public static class DependencyInjection
         services.AddScoped<IPriceRepository, CatalogPriceRepository>();
         services.AddScoped<IPaymentConfigurationRepository, PaymentConfigurationRepository>();
         services.AddScoped<IPurchaseCaptureRepository, PurchaseCaptureRepository>();
-        services.AddScoped<IPurchaseCaptureUnitOfWork, PurchaseCaptureUnitOfWork>();
+        services.AddScoped<ILedgerWriter, LedgerWriter>();
         services.AddScoped<ICheckoutRepository, CheckoutRepository>();
         services.AddScoped<ICheckoutSessionLifecycleRepository>(sp => sp.GetRequiredService<CheckoutRepository>());
         services.AddScoped<ICourseAccessReader, BusCourseAccessReader>();
         services.AddScoped<IPaymentsReadStore, PaymentsReadStore>();
         services.AddScoped<IWebhookStore, WebhookStore>();
         services.AddScoped<IProviderEventNormalizerRegistry, ProviderEventNormalizerRegistry>();
-        services.AddScoped<CoursePlanAvailabilityConsumer>();
 
         // Register MediatR handlers and validators from the Application assembly
         var applicationAssembly = typeof(Application.IPaymentsModule).Assembly;

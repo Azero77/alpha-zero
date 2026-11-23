@@ -20,7 +20,7 @@ public sealed class LedgerPosting
     private LedgerPosting(Guid id, LedgerEntryType type, Guid? tenantId, Guid? providerAccountId,
         Guid? providerTransactionId, Guid? purchaseId, Guid? refundId, Guid? settlementId,
         Guid? disputeId, Guid? paymentReviewCaseId, string? externalObjectId, DateTime? effectiveAt,
-        IReadOnlyList<LedgerLine> lines)
+        IReadOnlyList<LedgerLine> lines, string? description = null)
     {
         Id = id;
         Type = type;
@@ -35,6 +35,7 @@ public sealed class LedgerPosting
         ExternalObjectId = externalObjectId;
         EffectiveAt = effectiveAt;
         Lines = lines;
+        Description = description;
     }
 
     public Guid Id { get; }
@@ -50,12 +51,13 @@ public sealed class LedgerPosting
     public string? ExternalObjectId { get; }
     public DateTime? EffectiveAt { get; }
     public IReadOnlyList<LedgerLine> Lines { get; }
+    public string? Description { get; }
     public string Currency => Lines[0].Amount.Currency;
 
     public static ErrorOr<LedgerPosting> Create(Guid id, LedgerEntryType type, Guid? tenantId,
         Guid? providerAccountId, Guid? providerTransactionId, Guid? purchaseId, Guid? refundId,
         Guid? settlementId, Guid? disputeId, Guid? paymentReviewCaseId, string? externalObjectId,
-        DateTime? effectiveAt, IEnumerable<LedgerLine> lines)
+        DateTime? effectiveAt, IEnumerable<LedgerLine> lines, string? description = null)
     {
         var materialized = lines.ToArray();
         if (id == Guid.Empty || materialized.Length < 2 || materialized.Any(line => line.Amount.Amount <= 0))
@@ -72,7 +74,7 @@ public sealed class LedgerPosting
                 settlementId, disputeId, paymentReviewCaseId))
             return Error.Validation("LedgerPosting.ReferenceSet", "Ledger typed references must exactly match the entry type.");
         return new LedgerPosting(id, type, tenantId, providerAccountId, providerTransactionId, purchaseId,
-            refundId, settlementId, disputeId, paymentReviewCaseId, externalObjectId, effectiveAt, materialized);
+            refundId, settlementId, disputeId, paymentReviewCaseId, externalObjectId, effectiveAt, materialized, description);
     }
 
     private static bool ReferencesAreExact(LedgerEntryType type, Guid? providerAccountId, Guid? providerTransactionId,
@@ -127,6 +129,6 @@ public static class LedgerPostingFactory
                 LedgerDirection.Credit, providerFee, tenantId));
         }
         return LedgerPosting.Create(entryId, LedgerEntryType.Capture, tenantId, providerAccountId,
-            providerTransactionId, purchaseId, null, null, null, null, null, effectiveAt, lines);
+            providerTransactionId, purchaseId, null, null, null, null, null, effectiveAt, lines, "Purchase capture");
     }
 }

@@ -3,6 +3,7 @@ using System.Text.Json;
 using AlphaZero.Modules.Payments.Application.Purchases;
 using AlphaZero.Modules.Payments.Domain.Providers;
 using AlphaZero.Shared.Application;
+using AlphaZero.Shared.Domain;
 using ErrorOr;
 using MassTransit;
 using MediatR;
@@ -81,7 +82,7 @@ public sealed record ReceiveProviderWebhook(string ProviderName, IReadOnlyDictio
     byte[] RawBody) : ICommand<WebhookIngestResult>;
 
 /// <summary>Signature verification runs before the transactional ingest phase and before any write.</summary>
-public sealed class ReceiveProviderWebhookHandler(IProviderEventNormalizerRegistry normalizers, ISender sender)
+public sealed class ReceiveProviderWebhookHandler(IProviderEventNormalizerRegistry normalizers, ISender sender, IClock clock)
     : IRequestHandler<ReceiveProviderWebhook, ErrorOr<WebhookIngestResult>>
 {
     public async Task<ErrorOr<WebhookIngestResult>> Handle(ReceiveProviderWebhook request,
@@ -107,7 +108,7 @@ public sealed class ReceiveProviderWebhookHandler(IProviderEventNormalizerRegist
         }
 
         return await sender.Send(new IngestVerifiedProviderWebhook(Guid.CreateVersion7(), request.ProviderName,
-            verified.Value, payloadJson, DateTime.UtcNow), cancellationToken);
+            verified.Value, payloadJson, clock.Now), cancellationToken);
     }
 
     private static bool IsValid(VerifiedProviderWebhook webhook) =>
@@ -197,14 +198,14 @@ public sealed class ProcessWebhookEventHandler(IWebhookStore store, IProviderEve
 public sealed record MarkWebhookOutcome(Guid EventId, WebhookProcessingOutcome Outcome)
     : ICommand<Success>, ITransactionalCommand;
 
-public sealed class MarkWebhookOutcomeHandler(IWebhookStore store)
+public sealed class MarkWebhookOutcomeHandler(IWebhookStore store, IClock clock)
     : IRequestHandler<MarkWebhookOutcome, ErrorOr<Success>>
 {
     public async Task<ErrorOr<Success>> Handle(MarkWebhookOutcome request, CancellationToken cancellationToken)
     {
         if (await store.LockForProcessingAsync(request.EventId, cancellationToken) is null)
             return Error.NotFound("Webhook.NotFound", "Webhook event was not found.");
-        await store.MarkOutcomeAsync(request.EventId, request.Outcome, DateTime.UtcNow, cancellationToken);
+        await store.MarkOutcomeAsync(request.EventId, request.Outcome, clock.Now, cancellationToken);
         return Result.Success;
     }
 }

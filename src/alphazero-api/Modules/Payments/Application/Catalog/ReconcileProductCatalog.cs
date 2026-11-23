@@ -1,24 +1,44 @@
 using AlphaZero.Modules.Payments.Domain.Catalog;
-using AlphaZero.Modules.Payments.IntegrationEvents;
-using MassTransit;
 using AlphaZero.Shared.Application;
 using ErrorOr;
 using MediatR;
 
 namespace AlphaZero.Modules.Payments.Application.Catalog;
 
+public sealed record CatalogProductSnapshot(
+    Guid TenantId,
+    string ItemType,
+    Guid ItemId,
+    Guid? ParentContainerId,
+    string TargetResourceArn,
+    string Title,
+    SourceAvailability Availability,
+    long SourceVersion,
+    DateTime OccurredAt)
+{
+    public CatalogProductSnapshot(
+        Guid tenantId,
+        Guid courseId,
+        Guid coursePlanId,
+        string targetResourceArn,
+        string title,
+        SourceAvailability availability,
+        long sourceVersion,
+        DateTime occurredAt)
+        : this(tenantId, "CoursePlan", coursePlanId, courseId, targetResourceArn, title, availability, sourceVersion, occurredAt)
+    {
+    }
+}
+
 public sealed record ReconcileProductCatalog(IReadOnlyList<CatalogProductSnapshot> SourceSnapshot)
     : ICommand<int>, ITransactionalCommand;
 
-public sealed class ReconcileProductCatalogHandler(ICatalogProductRepository products, IPublishEndpoint publisher)
+public sealed class ReconcileProductCatalogHandler(ICatalogProductRepository products)
     : IRequestHandler<ReconcileProductCatalog, ErrorOr<int>>
 {
     public async Task<ErrorOr<int>> Handle(ReconcileProductCatalog request, CancellationToken cancellationToken)
     {
         var applied = await products.ApplyCatalogSnapshotAsync(request.SourceSnapshot, cancellationToken);
-        foreach (var product in applied)
-            await publisher.Publish(new CatalogProductMirrorAppliedIntegrationEvent(product.Id, product.TenantId,
-                product.SourceVersion), cancellationToken);
         return applied.Count;
     }
 }

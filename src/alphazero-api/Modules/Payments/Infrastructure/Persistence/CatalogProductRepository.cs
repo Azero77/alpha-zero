@@ -52,11 +52,11 @@ public sealed class CatalogProductRepository(AppDbContext context) : ICatalogPro
         var applied = new List<Product>();
         foreach (var source in sourceSnapshot)
         {
-            var existing = await FindBySourceIdentityAsync(source.TenantId, "CoursePlan", source.CoursePlanId, cancellationToken);
+            var existing = await FindBySourceIdentityAsync(source.TenantId, source.ItemType, source.ItemId, cancellationToken);
             if (existing is null)
             {
-                var created = Product.Create(source.CoursePlanId, source.TenantId, "CoursePlan", source.CoursePlanId,
-                    source.CourseId, source.TargetResourceArn, source.Title, source.Availability, source.SourceVersion, source.OccurredAt);
+                var created = Product.Create(source.ItemId, source.TenantId, source.ItemType, source.ItemId,
+                    source.ParentContainerId, source.TargetResourceArn, source.Title, source.Availability, source.SourceVersion, source.OccurredAt);
                 if (created.IsError) throw new InvalidOperationException(string.Join("; ", created.Errors.Select(error => error.Description)));
                 await AddAsync(created.Value, cancellationToken);
                 applied.Add(created.Value);

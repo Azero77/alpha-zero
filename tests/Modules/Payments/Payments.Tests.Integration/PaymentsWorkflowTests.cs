@@ -133,6 +133,8 @@ public sealed class PaymentsWorkflowTests : IAsyncLifetime
             ("type", $"%{nameof(AlphaZero.Modules.Payments.IntegrationEvents.PurchaseActivatedIntegrationEvent)}%"));
         activationBody.Should().Contain(ledgerEntryId.ToString());
         activationBody.Should().Contain(_seed.PlanId.ToString());
+        activationBody.Should().Contain("itemId");
+        activationBody.Should().Contain("itemType");
     }
 
     [Fact]
@@ -226,7 +228,24 @@ public sealed class PaymentsWorkflowTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Catalog_reconciliation_applies_only_newer_snapshots_and_emits_outbox_facts()
+    public async Task Distinct_movement_for_already_completed_session_is_rejected()
+    {
+        await SeedCaptureAsync(includeLedgerAccounts: true);
+        await using var services = BuildServices();
+        var first = await SendAsync(services, new ReceiveProviderWebhook("stripe", ValidHeaders(), Payload("event-1")));
+        (await SendAsync(services, new ProcessWebhookEvent(first.Value.EventId))).IsError.Should().BeFalse();
+
+        var distinctCapture = new AlphaZero.Modules.Payments.Application.Purchases.CapturePurchase(
+            _seed.CheckoutSessionId, _seed.ProviderAccountId, "distinct-txn", "distinct-pmt", null,
+            100m, "USD", 1m, 100m, "USD", null, DateTime.UtcNow, false);
+        var result = await SendAsync(services, distinctCapture);
+
+        result.IsError.Should().BeTrue();
+        result.FirstError.Code.Should().Be("Capture.SessionAlreadyCompleted");
+    }
+
+    [Fact]
+    public async Task Catalog_reconciliation_applies_only_newer_snapshots()
     {
         await using var services = BuildServices();
         var occurredAt = _seed.OccurredAt;
@@ -250,9 +269,6 @@ public sealed class PaymentsWorkflowTests : IAsyncLifetime
         (await ScalarAsync<string>(connection,
             "SELECT \"SourceAvailability\" FROM \"Payments\".\"Products\" WHERE \"ItemId\"=@id;",
             ("id", _seed.PlanId))).Should().Be("Unavailable");
-        (await OutboxCountAsync(connection,
-            nameof(AlphaZero.Modules.Payments.IntegrationEvents.CatalogProductMirrorAppliedIntegrationEvent)))
-            .Should().Be(2);
     }
 
     private ServiceProvider BuildServices()
@@ -271,6 +287,7 @@ public sealed class PaymentsWorkflowTests : IAsyncLifetime
             configuration.UsingInMemory((context, bus) => bus.ConfigureEndpoints(context));
         });
         services.AddScoped<IProviderEventNormalizer>(_ => new FakeProviderEventNormalizer(_seed));
+        services.AddSingleton<AlphaZero.Shared.Domain.IClock, AlphaZero.Shared.Domain.Clock>();
         services.AddPaymentsPrivateInfrastructure(new ConfigurationBuilder().Build());
         return services.BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true });
     }

@@ -1,6 +1,7 @@
 using AlphaZero.Modules.Payments.Domain.Catalog;
 using AlphaZero.Modules.Payments.Domain.Ledger;
 using AlphaZero.Shared.Application;
+using AlphaZero.Shared.Domain;
 using ErrorOr;
 using MediatR;
 
@@ -20,7 +21,7 @@ public interface IPriceRepository
 public sealed record CreatePrice(Guid TenantId, Guid ProductId, decimal Amount, string Currency, Guid CreatedByUserId)
     : ICommand<Price>, ITransactionalCommand;
 
-public sealed class CreatePriceHandler(IPriceRepository prices)
+public sealed class CreatePriceHandler(IPriceRepository prices, IClock clock)
     : IRequestHandler<CreatePrice, ErrorOr<Price>>
 {
     public async Task<ErrorOr<Price>> Handle(CreatePrice request, CancellationToken cancellationToken)
@@ -32,7 +33,7 @@ public sealed class CreatePriceHandler(IPriceRepository prices)
         if (await prices.HasActivePriceAsync(request.ProductId, request.Currency, cancellationToken))
             return Error.Conflict("Price.ActiveExists", "An active Price already exists for this Product and currency.");
         var price = Price.Create(Guid.NewGuid(), request.TenantId, request.ProductId, money.Value,
-            request.CreatedByUserId, DateTime.UtcNow);
+            request.CreatedByUserId, clock.Now);
         if (price.IsError) return price.Errors;
         await prices.AddAsync(price.Value, cancellationToken);
         return price.Value;
@@ -41,14 +42,14 @@ public sealed class CreatePriceHandler(IPriceRepository prices)
 
 public sealed record ArchivePrice(Guid PriceId) : ICommand<Success>, ITransactionalCommand;
 
-public sealed class ArchivePriceHandler(IPriceRepository prices)
+public sealed class ArchivePriceHandler(IPriceRepository prices, IClock clock)
     : IRequestHandler<ArchivePrice, ErrorOr<Success>>
 {
     public async Task<ErrorOr<Success>> Handle(ArchivePrice request, CancellationToken cancellationToken)
     {
         var price = await prices.FindForArchiveAsync(request.PriceId, cancellationToken);
         if (price is null) return Error.NotFound("Price.NotFound", "Price was not found.");
-        var result = price.Archive(DateTime.UtcNow,
+        var result = price.Archive(clock.Now,
             await prices.HasActiveCheckoutAsync(price.Id, cancellationToken),
             await prices.HasPaidPurchaseAsync(price.Id, cancellationToken));
         if (result.IsError) return result.Errors;

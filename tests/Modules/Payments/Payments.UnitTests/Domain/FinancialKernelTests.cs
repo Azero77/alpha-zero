@@ -52,6 +52,23 @@ public sealed class FinancialKernelTests
     }
 
     [Fact]
+    public void Eligibility_rejects_unavailable_product_with_generic_message()
+    {
+        var now = DateTime.UtcNow;
+        var product = Product.Create(Guid.NewGuid(), Guid.NewGuid(), "GenericItem", Guid.NewGuid(), null,
+            "az:item:tenant/item", "Item", SourceAvailability.Unavailable, 1, now).Value;
+        var price = Price.Create(Guid.NewGuid(), product.TenantId, product.Id, Money.Create(20m, "USD").Value, Guid.NewGuid(), now).Value;
+        var settings = AcademyPaymentSettings.CreatePolicy(Guid.NewGuid(), product.TenantId, true, .25m, null, Guid.NewGuid(), now).Value;
+        var account = ProviderConfiguration.ConfigureAccount(Guid.NewGuid(), ProviderName.Create("stripe").Value,
+            ProviderEnvironment.Test, "acct_test", ProviderAccountStatus.Active, "vault/payments", "vault/hook", now).Value;
+
+        var result = CheckoutEligibilityPolicy.Decide(product, price, settings, [account], false);
+        result.IsError.Should().BeTrue();
+        result.FirstError.Code.Should().Be("Checkout.ProductUnavailable");
+        result.FirstError.Description.Should().Be("The source item is unavailable.");
+    }
+
+    [Fact]
     public void Expired_checkout_can_complete_only_from_valid_exact_late_movement()
     {
         var now = DateTime.UtcNow;

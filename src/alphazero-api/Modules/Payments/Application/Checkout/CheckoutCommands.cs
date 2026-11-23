@@ -4,6 +4,7 @@ using AlphaZero.Modules.Payments.Domain.Ledger;
 using AlphaZero.Modules.Payments.Domain.Providers;
 using AlphaZero.Modules.Payments.Domain.Settings;
 using AlphaZero.Shared.Application;
+using AlphaZero.Shared.Domain;
 using ErrorOr;
 using MediatR;
 
@@ -97,7 +98,7 @@ public sealed record CreateCheckoutIntent(Guid TenantId, Guid UserId, Guid Produ
     Guid ProviderCurrencyRouteId, IReadOnlyList<PaymentMethod> EligibleMethods)
     : ICommand<CheckoutIntent>, ITransactionalCommand;
 
-public sealed class CreateCheckoutIntentHandler(ICheckoutRepository repository)
+public sealed class CreateCheckoutIntentHandler(ICheckoutRepository repository, IClock clock)
     : IRequestHandler<CreateCheckoutIntent, ErrorOr<CheckoutIntent>>
 {
     public async Task<ErrorOr<CheckoutIntent>> Handle(CreateCheckoutIntent request, CancellationToken cancellationToken)
@@ -117,7 +118,7 @@ public sealed class CreateCheckoutIntentHandler(ICheckoutRepository repository)
         }
 
         var created = CheckoutSession.Create(Guid.NewGuid(), request.TenantId, request.UserId, request.ProductId,
-            request.PriceId, request.ProviderCurrencyRouteId, DateTime.UtcNow);
+            request.PriceId, request.ProviderCurrencyRouteId, clock.Now);
         if (created.IsError) return created.Errors;
         await repository.AddSessionAsync(created.Value, cancellationToken);
         return new CheckoutIntent(created.Value, price.Amount);
@@ -150,14 +151,14 @@ public interface ICheckoutSessionLifecycleRepository
     Task UpdateAsync(CheckoutSession session, CancellationToken cancellationToken);
 }
 
-public sealed class ExpireCheckoutSessionHandler(ICheckoutSessionLifecycleRepository repository)
+public sealed class ExpireCheckoutSessionHandler(ICheckoutSessionLifecycleRepository repository, IClock clock)
     : IRequestHandler<ExpireCheckoutSession, ErrorOr<Success>>
 {
     public async Task<ErrorOr<Success>> Handle(ExpireCheckoutSession request, CancellationToken cancellationToken)
     {
         var session = await repository.GetSessionAsync(request.SessionId, cancellationToken);
         if (session is null) return Error.NotFound("CheckoutSession.NotFound", "Checkout Session was not found.");
-        var expired = session.Expire(DateTime.UtcNow);
+        var expired = session.Expire(clock.Now);
         if (expired.IsError) return expired.Errors;
         await repository.UpdateAsync(session, cancellationToken);
         return Result.Success;

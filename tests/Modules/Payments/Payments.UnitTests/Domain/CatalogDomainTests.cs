@@ -7,6 +7,22 @@ namespace Payments.UnitTests.Domain;
 public sealed class CatalogDomainTests
 {
     [Fact]
+    public void Product_creates_successfully_without_parent_container_for_generic_item_types()
+    {
+        var productId = Guid.NewGuid();
+        var tenantId = Guid.NewGuid();
+        var itemId = Guid.NewGuid();
+        var now = DateTime.UtcNow;
+
+        var product = Product.Create(productId, tenantId, "StandaloneLicense", itemId,
+            null, "az:license:tenant/license/1", "License 1", SourceAvailability.Available, 1, now);
+
+        product.IsError.Should().BeFalse();
+        product.Value.ParentContainerId.Should().BeNull();
+        product.Value.ItemType.Should().Be("StandaloneLicense");
+    }
+
+    [Fact]
     public void Product_applies_only_newer_mirror_versions_and_preserves_source_truth()
     {
         var productId = Guid.NewGuid();
@@ -39,6 +55,7 @@ public sealed class CatalogDomainTests
 
         result.IsError.Should().BeTrue();
         result.FirstError.Code.Should().Be("Product.IdentityChanged");
+        result.FirstError.Description.Should().Be("A source item cannot change its target resource identity.");
         product.SourceVersion.Should().Be(1);
     }
 

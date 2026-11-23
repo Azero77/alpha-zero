@@ -1,6 +1,7 @@
 using AlphaZero.Modules.Payments.Domain.Providers;
 using AlphaZero.Modules.Payments.Domain.Settings;
 using AlphaZero.Shared.Application;
+using AlphaZero.Shared.Domain;
 using ErrorOr;
 using MediatR;
 
@@ -21,7 +22,7 @@ public interface IPaymentConfigurationRepository
 public sealed record UpdateAcademyPaymentSettings(Guid TenantId, bool OnlineSellingEnabled, decimal CommissionShare,
     short? RefundWindowDays, Guid ActorUserId) : ICommand<AcademyPaymentSettings>, ITransactionalCommand;
 
-public sealed class UpdateAcademyPaymentSettingsHandler(IPaymentConfigurationRepository repository)
+public sealed class UpdateAcademyPaymentSettingsHandler(IPaymentConfigurationRepository repository, IClock clock)
     : IRequestHandler<UpdateAcademyPaymentSettings, ErrorOr<AcademyPaymentSettings>>
 {
     public async Task<ErrorOr<AcademyPaymentSettings>> Handle(UpdateAcademyPaymentSettings request, CancellationToken cancellationToken)
@@ -31,13 +32,13 @@ public sealed class UpdateAcademyPaymentSettingsHandler(IPaymentConfigurationRep
         {
             var created = AcademyPaymentSettings.CreatePolicy(Guid.NewGuid(), request.TenantId,
                 request.OnlineSellingEnabled, request.CommissionShare, request.RefundWindowDays,
-                request.ActorUserId, DateTime.UtcNow);
+                request.ActorUserId, clock.Now);
             if (created.IsError) return created.Errors;
             await repository.AddSettingsAsync(created.Value, cancellationToken);
             return created.Value;
         }
         var update = settings.UpdatePolicy(request.OnlineSellingEnabled, request.CommissionShare,
-            request.RefundWindowDays, request.ActorUserId, DateTime.UtcNow);
+            request.RefundWindowDays, request.ActorUserId, clock.Now);
         if (update.IsError) return update.Errors;
         await repository.UpdateSettingsAsync(settings, cancellationToken);
         return settings;
@@ -48,7 +49,7 @@ public sealed record ConfigureProviderAccount(Guid Id, string ProviderName, Prov
     string ExternalAccountId, ProviderAccountStatus Status, string CredentialSecretName, string WebhookSecretName)
     : ICommand<ProviderConfiguration>, ITransactionalCommand;
 
-public sealed class ConfigureProviderAccountHandler(IPaymentConfigurationRepository repository)
+public sealed class ConfigureProviderAccountHandler(IPaymentConfigurationRepository repository, IClock clock)
     : IRequestHandler<ConfigureProviderAccount, ErrorOr<ProviderConfiguration>>
 {
     public async Task<ErrorOr<ProviderConfiguration>> Handle(ConfigureProviderAccount request, CancellationToken cancellationToken)
@@ -58,7 +59,7 @@ public sealed class ConfigureProviderAccountHandler(IPaymentConfigurationReposit
         if (!await repository.ProviderExistsAsync(provider.Value, cancellationToken))
             return Error.Conflict("Provider.Disabled", "Provider is not registered and enabled in Payments.");
         var account = ProviderConfiguration.ConfigureAccount(request.Id, provider.Value, request.Environment,
-            request.ExternalAccountId, request.Status, request.CredentialSecretName, request.WebhookSecretName, DateTime.UtcNow);
+            request.ExternalAccountId, request.Status, request.CredentialSecretName, request.WebhookSecretName, clock.Now);
         if (account.IsError) return account.Errors;
         if (!await repository.HasStructuralLedgerAccountsAsync(request.Id, cancellationToken))
             return Error.Conflict("ProviderAccount.LedgerAccounts", "Structural Ledger accounts must be provisioned before configuring this account.");
@@ -72,7 +73,7 @@ public sealed record ConfigureProviderCurrencyRoute(Guid ProviderAccountId, Guid
     decimal ReserveRate, short DisputeHoldDays, bool RequiresDailyReconciliation, bool AdapterSupportsRoute)
     : ICommand<ProviderCurrencyRoute>, ITransactionalCommand;
 
-public sealed class ConfigureProviderCurrencyRouteHandler(IPaymentConfigurationRepository repository)
+public sealed class ConfigureProviderCurrencyRouteHandler(IPaymentConfigurationRepository repository, IClock clock)
     : IRequestHandler<ConfigureProviderCurrencyRoute, ErrorOr<ProviderCurrencyRoute>>
 {
     public async Task<ErrorOr<ProviderCurrencyRoute>> Handle(ConfigureProviderCurrencyRoute request, CancellationToken cancellationToken)
@@ -82,7 +83,7 @@ public sealed class ConfigureProviderCurrencyRouteHandler(IPaymentConfigurationR
         var route = configuration.ConfigureCurrencyRoute(request.RouteId, request.IntegrationCurrency,
             request.SettlementCurrency, request.PresentmentMode, request.Enabled, request.ShortHoldDays,
             request.ReserveRate, request.DisputeHoldDays, request.RequiresDailyReconciliation,
-            request.AdapterSupportsRoute, DateTime.UtcNow);
+            request.AdapterSupportsRoute, clock.Now);
         if (route.IsError) return route.Errors;
         await repository.UpdateProviderConfigurationAsync(configuration, cancellationToken);
         return route.Value;

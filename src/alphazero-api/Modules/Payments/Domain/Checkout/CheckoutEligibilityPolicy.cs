@@ -14,7 +14,7 @@ public static class CheckoutEligibilityPolicy
         AcademyPaymentSettings? settings, IEnumerable<ProviderConfiguration> configurations, bool hasActiveEnrollment)
     {
         if (product.SourceAvailability != SourceAvailability.Available)
-            return Error.Conflict("Checkout.ProductUnavailable", "The source Course Plan is unavailable.");
+            return Error.Conflict("Checkout.ProductUnavailable", "The source item is unavailable.");
         if (!price.IsActive || price.ProductId != product.Id || price.TenantId != product.TenantId)
             return Error.Conflict("Checkout.PriceUnavailable", "An active compatible Price is required.");
         if (settings is null || !settings.OnlineSellingEnabled)
